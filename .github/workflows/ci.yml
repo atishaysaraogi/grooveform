@@ -1,0 +1,29 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Unit + API tests
+        run: npm test
+      - name: Browser end-to-end
+        run: |
+          npm i -g playwright@1.56.0
+          npx playwright install --with-deps chromium
+          NODE_PATH=$(npm root -g) npm run test:e2e && NODE_PATH=$(npm root -g) npm run test:solo
+      - name: Docker build
+        run: docker build -t fyzio:ci .
+  deploy:
+    # Deploys to Fly.io on every push to main once tests pass. Requires the FLY_API_TOKEN repository secret.
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

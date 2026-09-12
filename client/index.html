@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Grooveform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b1546">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@500;700;800;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <a class="brand" href="#/" aria-label="Grooveform home"><svg class="logo" viewBox="0 0 340 92" role="img" aria-label="Grooveform"><text x="4" y="52" font-size="56" fill="currentColor" style="font-family:var(--font-display)">Grooveform</text><rect x="4" y="62" width="300" height="6" fill="#ff2e88"/><rect x="4" y="70.5" width="300" height="6" fill="#ffb830"/><rect x="4" y="79" width="300" height="6" fill="#b8f542"/><circle cx="318" cy="18" r="13" fill="#ff2e88"/><circle cx="318" cy="18" r="5.8" fill="#b8f542"/></svg><span class="eyebrow" id="top-role"></span></a>
+  <nav class="topnav" id="topnav"></nav>
+  <div class="spacer"></div>
+  <span class="muted" id="top-user"></span>
+  <button class="btn primary small" id="btn-login" hidden>Sign in</button>
+  <button class="btn ghost small" id="btn-logout" hidden>Sign out</button>
+</header>
+<main id="view" class="wrap"></main>
+<div id="toast" class="toast" hidden></div>
+
+<!-- ===== Coach (camera session + review), shown over the portal while a set runs ===== -->
+<div id="coach" hidden>
+<!-- ===== Live ===== -->
+<section id="screen-live" class="screen">
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+  </div>
+  <div class="hud">
+    <div class="hud-top">
+      <button class="btn icon" id="btn-exit" aria-label="Exit">✕</button>
+      <span class="title" id="live-name"></span>
+      <div class="spacer"></div>
+      <span class="status" id="track-status"><span class="dot"></span><span id="track-text">Starting</span></span>
+      <button class="btn icon" id="btn-mute" aria-label="Mute voice">🔊</button>
+      <button class="btn icon" id="btn-flip" aria-label="Switch camera">🔄</button>
+    </div>
+    <div class="hud-side" id="hud-side">
+      <div class="rom" id="rom"><div class="mark" style="bottom:85%"></div><div class="mark" style="bottom:32%;opacity:.5"></div><div class="fill" id="rom-fill"></div></div>
+      <span class="rom-label">range</span>
+    </div>
+    <div class="hud-bottom">
+      <div class="cue" id="cue"></div>
+      <div class="readout" id="readout"><span class="val" id="ro-val">–</span><span class="tgt" id="ro-tgt"></span></div>
+      <div class="counter">
+        <span class="big" id="count">0</span><span class="of" id="count-of">/ 10</span>
+        <span class="phase" id="phase"></span>
+      </div>
+      <div class="hud-actions">
+        <button class="btn danger" id="btn-finish">Finish set</button>
+      </div>
+    </div>
+  </div>
+  <div class="overlay" id="overlay-msg">
+    <div class="card">
+      <div class="count" id="countdown" hidden></div>
+      <h2 id="ov-title">Starting camera…</h2>
+      <p id="ov-text"></p>
+      <div class="progress" id="ov-progress" hidden><div class="bar" id="ov-bar"></div></div>
+      <div class="check-row" id="ov-checks"></div>
+      <div class="row" id="ov-actions" style="justify-content:center"></div>
+      <span class="loading-note" id="ov-note"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Review ===== -->
+<section id="screen-review" class="screen coach-review">
+  <div class="wrap stack">
+    <span class="eyebrow">Set complete</span>
+    <div class="review-head">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="52"></circle><circle class="val" id="ring-val" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle><text id="ring-text" x="60" y="70" text-anchor="middle">0</text></svg>
+      <div class="stack" style="gap:4px">
+        <h1 id="rv-headline"></h1>
+        <p class="muted" id="rv-sub"></p>
+      </div>
+    </div>
+    <div class="stats" id="rv-stats"></div>
+    <div id="rv-reps-wrap" class="panel">
+      <h3>Rep by rep</h3>
+      <div class="repstrip" id="rv-reps"></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>Clean</span><span><i style="background:var(--bad)"></i>Fault flagged</span><span><i style="background:var(--warn)"></i>Partial (not counted)</span></div>
+      <svg class="trace" id="rv-trace" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
+      <div class="replist" id="rv-replist"></div>
+    </div>
+    <div class="panel">
+      <h3>Work on next</h3>
+      <div class="fault-list" id="rv-faults"></div>
+    </div>
+    <div class="panel" id="rv-diag" hidden>
+      <h3>Diagnostics</h3>
+      <p class="muted" id="rv-diag-info"></p>
+      <div class="row" style="margin-top:8px"><button class="btn ghost small" id="btn-diag-download">Download JSON</button><button class="btn ghost small" id="btn-diag-copy">Copy</button></div>
+      <p class="muted" id="rv-diag-status" style="margin-top:6px"></p>
+      <textarea id="rv-diag-text" hidden rows="4" style="width:100%"></textarea>
+    </div>
+</div>
+    <div id="rv-portal"></div>
+</div>
+</section>
+
+
+</div>
+<script src="coach/engine.js"></script>
+<script src="coach/guide.js"></script>
+<script src="coach/coach.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

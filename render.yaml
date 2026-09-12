@@ -1,0 +1,45 @@
+# Render.com alternative (Singapore region — closest to India on Render; use Fly.io for in-country hosting).
+services:
+  - type: web
+    name: fyzio
+    runtime: docker
+    region: singapore
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: fyzio-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /data/fyzio.sqlite
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATA_KEY
+        sync: false
+      - key: APP_SECRET
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: ADMIN_IDENTIFIER
+        sync: false
+      - key: APP_NAME
+        sync: false
+      - key: PAYMENT_PROVIDER
+        value: razorpay
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: NOTIFY_PROVIDER
+        sync: false
+      - key: MSG91_AUTHKEY
+        sync: false
+      - key: MSG91_TEMPLATE_ID
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
