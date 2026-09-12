@@ -9,9 +9,9 @@ const audit = require('./audit');
 const pay = require('./payments');
 const { Router, HttpError, readJson, send, clientIp, v } = require('./http');
 
+// engine.js loads every move in client/coach/library/ and exposes them as EXERCISES.
 const engine = require(path.join(__dirname, '..', 'client', 'coach', 'engine.js'));
-const guides = require(path.join(__dirname, '..', 'client', 'coach', 'guide.js'));
-const EXERCISES = engine.EXERCISES.map(e => ({ id: e.id, name: e.name, group: e.group, type: e.type, view: e.view, icon: e.icon, identifyLimb: e.identifyLimb || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map(f => ({ id: f.id, label: f.label, tip: f.tip })), guide: guides[e.id] || null, tier: config.freeExercises.includes('all') || config.freeExercises.includes(e.id) ? 'free' : 'pro' }));
+const EXERCISES = engine.EXERCISES.map(e => ({ id: e.id, name: e.name, group: e.group, type: e.type, view: e.view, icon: e.icon, identifyLimb: e.identifyLimb || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map(f => ({ id: f.id, label: f.label, tip: f.tip })), guide: e.guide, tier: config.freeExercises.includes('all') || config.freeExercises.includes(e.id) ? 'free' : 'pro' }));
 const EX_BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
 const SPECIALTIES = ['Knee rehab', 'Hip & glutes', 'Shoulder & neck', 'Back pain', 'Post-surgery', 'Runners', 'Seniors & balance', 'Strength', 'Mobility', 'Desk & posture', 'Sports'];
 const router = new Router();

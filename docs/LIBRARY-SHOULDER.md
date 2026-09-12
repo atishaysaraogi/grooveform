@@ -1,6 +1,6 @@
 # Fyzio exercise library — shoulder & neck (exercises 6–10)
 
-Companion to the five-exercise library. These five were picked from two shoulder home-exercise handouts (HEP2go / HEP.video programmes, 30 exercises between them) using the same test as before: one camera, a large joint movement in the camera plane, faults that show up as geometry the pose model can measure. The same conventions apply (landmark indices, `p`, persist/cooldown, calibration after 1.2 s of stillness). Rules live in `client/coach/engine.js`; position guides in `client/coach/guide.js`.
+Companion to the five-exercise library. These five were picked from two shoulder home-exercise handouts (HEP2go / HEP.video programmes, 30 exercises between them) using the same test as before: one camera, a large joint movement in the camera plane, faults that show up as geometry the pose model can measure. The same conventions apply (landmark indices, `p`, persist/cooldown, calibration after 1.2 s of stillness). Each move — rules, faults and position guide — is one file in `client/coach/library/` (see [EXERCISE-LIBRARY.md](EXERCISE-LIBRARY.md)).
 
 ## Screening the handouts
 

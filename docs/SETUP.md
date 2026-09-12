@@ -105,4 +105,4 @@ Prices: env vars, redeploy. Plan structure (period lengths, what each grants): `
 
 ## 9. Adding an exercise
 
-Exercises live in `client/coach/engine.js` (`EXERCISES`) with their position guides in `client/coach/guide.js`. The server derives the catalogue from the same file, so a new exercise appears everywhere (catalogue, builder, routines) once added there. Mark it free or not with `FREE_EXERCISES`.
+Each exercise is one file in `client/coach/library/` holding everything about it — metadata, camera set-up, measurement, faults with their cues and tips, and the position guide. Add a move by dropping a file there and adding one `<script>` tag in `client/index.html`; the server derives the catalogue from the same library, so it appears everywhere at once (catalogue, builder, routines). Mark it free or not with `FREE_EXERCISES`. Full reference: [EXERCISE-LIBRARY.md](EXERCISE-LIBRARY.md).

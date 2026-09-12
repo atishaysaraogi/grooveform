@@ -1,0 +1,88 @@
+/* Standing hip abduction — metadata, camera set-up, measurement, faults and guide.
+   Registered into the shared exercise library; see docs/EXERCISE-LIBRARY.md. */
+(function (root) {
+  'use strict';
+  const lib = (typeof module !== 'undefined' && module.exports)
+    ? require('../exercise-library.js') : root.ExerciseLibrary;
+
+  lib.define((k) => {
+    const { FULL, ATTEMPT, BAND, angle, dist, fromVertical, pelvisTilt, trunkLean } = k;
+
+    return {
+      id: 'hipabd', order: 20, name: 'Standing hip abduction', group: 'Hip strength', type: 'reps', view: 'front', icon: '🧍', identifyLimb: 'leg',
+      summary: 'Side leg raise for glute medius — the muscle that keeps the pelvis level when you walk and run.',
+      setup: 'Stand facing the camera, about 2.5 m away, camera at hip height, one hand lightly on a chair or wall. Whole body in frame. To progress, loop a band around both ankles. Lift one leg straight out to the side and lower with control; do all reps on one leg, then repeat facing the camera with the other.',
+      why: 'From the front, the leg swings across the camera plane, so raise angle, pelvis tilt, trunk lean and knee bend are all read directly with nothing in the way.',
+      defaultTarget: 10, targets: [6, 8, 10, 12, 15],
+      options: [{ key: 'rom', label: 'Raise target', values: [20, 25, 30, 35], unit: '°', default: 30 }, BAND('none')],
+      required: [11, 12, 23, 24, 25, 26, 27, 28],
+      calibrate(pts, S, opts) {
+        // leg baselines come from the still standing frame captured before the leg-identification step when available
+        const lb = opts && opts.legBase;
+        const base = { legL: lb ? lb.L : fromVertical(pts[23], pts[27]), legR: lb ? lb.R : fromVertical(pts[24], pts[28]), hipW: Math.max(dist(pts[23], pts[24]), 0.03), rom: (opts && opts.rom) || 30 };
+        // baseline trunk lean and pelvis tilt while standing, so only the CHANGE during the rep counts
+        base.lean0 = trunkLean(pts); base.tiltL = pelvisTilt(pts, true); base.tiltR = pelvisTilt(pts, false);
+        base.work = (opts && opts.work) || null;   // 'L' | 'R' chosen by the user lifting the leg at the start; null = auto
+        return base;
+      },
+      measure(pts, S, ref) {
+        const rL = fromVertical(pts[23], pts[27]) - ref.legL, rR = fromVertical(pts[24], pts[28]) - ref.legR;
+        const useL = ref.work ? ref.work === 'L' : rL >= rR; const raise = useL ? rL : rR;
+        const knee = useL ? angle(pts[23], pts[25], pts[27]) : angle(pts[24], pts[26], pts[28]);
+        const stanceKnee = useL ? angle(pts[24], pts[26], pts[28]) : angle(pts[23], pts[25], pts[27]);
+        const workHip = useL ? pts[23] : pts[24], otherHip = useL ? pts[24] : pts[23];
+        const away = Math.sign(otherHip.x - workHip.x) || 1;                   // image direction from the working hip toward the stance leg
+        const lean = trunkLean(pts) - ref.lean0;                                // signed, + = shoulders toward image right
+        const leanAway = lean * away;                                           // + = leaning toward the stance leg (away from the lifting leg)
+        const hike = pelvisTilt(pts, useL) - (useL ? ref.tiltL : ref.tiltR);   // + = working-side hip higher than the other
+        return { p: raise / ref.rom, raise, knee, stanceKnee, hike, leanAway, useL, away, focus: [useL ? 27 : 28], side: useL ? 'L' : 'R' };
+      },
+      faults: [
+        { id: 'lean', label: 'Leaning away to lift higher', cue: 'Stay tall — shoulders over hips', tip: 'Leaning the trunk away makes the leg look higher without the glute doing the work. Keep the torso upright and accept a smaller raise.', weight: 3, persist: 400, cooldown: 4500, phase: 'moving', check: m => m.p > 0.3 && m.leanAway > 15 },
+        { id: 'hike', label: 'Hip hiking', cue: 'Hips level — lift from the hip, not the waist', tip: 'The pelvis should stay level; lifting the hip on the working side uses the back muscles instead of the glute. (The camera sees some pelvis tilt on every raise; only a tilt well beyond what the raise explains is flagged.)', weight: 1, persist: 500, cooldown: 6000, phase: 'moving', check: m => m.p > 0.3 && m.hike > 12 + 0.35 * m.raise },
+        { id: 'bend', label: 'Knee bending', cue: 'Keep the leg straight', tip: 'Lead with the heel and keep the knee locked so the movement comes from the hip.', weight: 2, persist: 400, cooldown: 5000, phase: 'moving', check: m => m.p > 0.3 && m.knee < 160 },
+        { id: 'stance', label: 'Standing knee bending', cue: 'Stand tall on the standing leg', tip: 'A bent standing knee lets the pelvis drop and the trunk lean. Keep it straight but not locked.', weight: 1, persist: 700, cooldown: 7000, check: m => m.p > 0.3 && m.stanceKnee < 160 },
+        { id: 'high', label: 'Swinging too high', cue: 'Not so high — control it', tip: 'Above about 45° the pelvis has to tilt; keep the raise modest and slow.', weight: 1, persist: 300, cooldown: 5000, phase: 'moving', check: m => m.raise > 48 },
+        { id: 'shallow', label: 'Not reaching the target', cue: 'Lift a little higher', tip: 'Aim for the raise target without leaning; if it is not reachable, lower the target rather than cheat.', weight: 1, onRep: true, check: rep => rep.peak < FULL && rep.peak > ATTEMPT },
+        { id: 'fast', label: 'Too fast', cue: 'Slower — two seconds up, two down', tip: 'Momentum does the work if the leg swings. Two seconds up, brief pause, two seconds down.', weight: 1, onRep: true, check: rep => rep.duration < 1800 },
+      ],
+      guide: {
+        surface: 'Standing on a firm floor, barefoot or in flat shoes. A chair back, counter or wall within reach of one hand.',
+        regions: [
+          { name: 'Stance & feet', points: [
+            { t: 'Stand tall on the standing leg, weight through the middle of the foot, knee straight but not locked back.', tracked: true },
+            { t: 'Both feet point straight ahead. As the leg lifts the working foot stays pointing forward — toes do not turn up to the ceiling. Turning the foot out switches the work to the hip flexors.', tracked: false },
+            { t: 'Working leg lifts straight out to the side, in line with the body, not drifting forward.', tracked: false },
+          ] },
+          { name: 'Working leg', points: [
+            { t: 'Knee straight throughout; lead with the heel.', tracked: true },
+            { t: 'To add load, loop a resistance band around both ankles (start yellow/light; move up a colour when 15 clean reps are easy). The band must not pull the standing leg over — if it does, go lighter.', tracked: false },
+            { t: 'Raise to 25–35°: about 30–40 cm off the floor for most people. Higher than this the pelvis has to tilt.', tracked: true },
+            { t: 'Lower under control to just above the floor, then lift again without resting the foot.', tracked: true },
+          ] },
+          { name: 'Hips & pelvis', points: [
+            { t: 'Pelvis level and facing forward. Imagine a glass of water balanced on each hip bone.', tracked: true },
+            { t: 'No sway or hitch: the hip of the working leg should not pop up as the leg lifts.', tracked: true },
+          ] },
+          { name: 'Back & trunk', points: [
+            { t: 'Torso upright and still; ribs stacked over the pelvis. Leaning the trunk away makes the leg look higher without the glute doing more.', tracked: true },
+            { t: 'Gently brace the abdominals as if about to be nudged.', tracked: false },
+          ] },
+          { name: 'Shoulders, arms & hands', points: [
+            { t: 'Fingertips of one hand resting lightly on the support — for balance only, not weight. Gripping and leaning on it hides trunk lean and takes load off the glute.', tracked: false },
+            { t: 'Other hand on the hip (to feel the pelvis stay level) or hanging relaxed.', tracked: false },
+            { t: 'Shoulders level and down.', tracked: false },
+          ] },
+          { name: 'Head', points: [
+            { t: 'Eyes forward at the camera, chin level. Looking down at the leg tips the trunk.', tracked: false },
+          ] },
+          { name: 'Breathing & tempo', points: [
+            { t: 'Breathe out as the leg lifts, in as it lowers.', tracked: false },
+            { t: '2 s up, brief pause, 2 s down. No swinging.', tracked: true },
+          ] },
+        ],
+        stop: 'Pinching at the front of the hip, low-back pain, or you cannot keep balance without gripping the support.',
+      },
+    };
+  });
+})(typeof window !== 'undefined' ? window : globalThis);
