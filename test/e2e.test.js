@@ -57,7 +57,7 @@ async function runCoachedSet(page, side = 'right') {
   });
   await step('visitor: pro exercise is locked, free exercise can start', async () => {
     await visitor.goto(base + '/?mock=1#/exercise/heelslide'); await visitor.waitForSelector('.card.upgrade'); assert.equal(await visitor.$('#do-start'), null, 'locked exercise has no start button');
-    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start'); const t = await text(visitor); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone') && t.includes('The move') && t.includes('sign in')); assert.ok(await visitor.$('svg.demo-fig') && await visitor.$('svg.cam-diagram.top'), 'demo and camera diagrams present'); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-exercise.png'), fullPage: true });
+    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start'); const t = await text(visitor); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone') && t.includes('The move') && t.includes('sign in')); assert.ok(await visitor.$('canvas.demo-fig[data-anat]') && await visitor.$('svg.cam-diagram.top'), 'anatomical figure and camera diagram present'); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-exercise.png'), fullPage: true });
   });
   await step('first-time visitor: sees the three-step intro, and only once', async () => {
     /* A bare context: newPage() pre-dismisses the intro for every other test, and its init

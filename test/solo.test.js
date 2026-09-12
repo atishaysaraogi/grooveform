@@ -23,7 +23,7 @@ const SHOTS = path.join(__dirname, '..', 'docs', 'screenshots');
   // exercise page: one config tile with reps + sets + rest, top-down camera diagram only, no side view
   await page.goto(base + '/#/exercise/heelslide'); await page.waitForSelector('#do-start');
   const cfg = await page.innerText('.card.config'); assert.ok(/Reps per set|Hold time/.test(cfg) && cfg.includes('Sets') && cfg.includes('Rest between sets'), 'reps, sets and rest in one tile');
-  assert.ok(await page.$('svg.cam-diagram.top') && !(await page.$('svg.cam-diagram:not(.top)')), 'only the from-above diagram');
+  assert.ok(await page.$('svg.cam-diagram.top') && !(await page.$('svg.cam-diagram:not(.top)')), 'only the from-above diagram'); assert.ok(await page.$('canvas.demo-fig[data-anat]'), 'anatomical move figure');
   assert.ok(/Phone on the floor/.test(await page.innerText('#view')), 'camera sentence'); assert.ok((await page.$$('.guide .tag.cam')).length > 3 && (await page.$$('.guide .tag.you')).length > 1, 'guide uses camera/you tags, no bullets');
   assert.equal(await page.$('.card.upgrade'), null, 'nothing locked');
   await page.screenshot({ path: path.join(SHOTS, 'solo-exercise.png'), fullPage: true });

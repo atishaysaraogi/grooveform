@@ -43,7 +43,7 @@
 
   /* ---------- routing ---------- */
   function nav(items) { $('topnav').innerHTML = items.map(([href, label]) => `<a href="${href}" class="${(href === '#/' ? location.hash === '#/' || !location.hash : location.hash.startsWith(href)) ? 'active' : ''}">${label}</a>`).join(''); }
-  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); }
+  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); if (window.FyzioAnatomy) FyzioAnatomy.mountAll(view); }
   function requireLogin(next) { if (me) return true; sessionStorage.setItem('fz.next', next || location.hash); location.hash = '#/login'; return false; }
   async function route() {
     const hash = location.hash || '#/'; const [, p1, p2, p3] = hash.split('?')[0].split('/');
@@ -152,7 +152,7 @@
       ${cat.locked ? upgradeCard(`${cat.name} is a Pro exercise`) : ''}
       <div class="ex-grid">
         <div class="stack">
-          <div class="card"><h3>The move</h3>${FyzioCoach.demo(ex)}</div>
+          <div class="card"><h3>The move</h3>${FyzioAnatomy.demo(cat)}</div>
           <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p><p class="muted" style="margin-top:6px;font-size:.9rem">${esc(cat.why)}</p></div>
         </div>
         <div class="stack">
