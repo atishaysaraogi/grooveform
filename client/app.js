@@ -25,7 +25,7 @@
 
   /* ---------- routing ---------- */
   function nav(items) { $('topnav').innerHTML = items.map(([href, label]) => `<a href="${href}" class="${(href === '#/' ? location.hash === '#/' || !location.hash : location.hash.startsWith(href)) ? 'active' : ''}">${label}</a>`).join(''); }
-  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); }
+  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); }
   function requireLogin(next) { if (me) return true; sessionStorage.setItem('fz.next', next || location.hash); location.hash = '#/login'; return false; }
   async function route() {
     const hash = location.hash || '#/'; const [, p1, p2, p3] = hash.split('?')[0].split('/');
@@ -82,19 +82,29 @@
     return `<div class="stats">${stats.map(([v, k]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`).join('')}</div>${strip ? `<div class="mini-strip">${strip}</div>` : ''}${Object.keys(rv.faults || {}).length ? `<div class="fault-list">${Object.values(rv.faults).map(f => `<div class="fault"><span class="n">×${f.n}</span><span><span class="l">${esc(f.label)}</span></span></div>`).join('')}</div>` : '<p class="muted">No faults flagged.</p>'}${(rv.tips || []).length ? `<div class="notice">${rv.tips.map(t => `<strong>${esc(t.label)}:</strong> ${esc(t.tip)}`).join('<br>')}</div>` : ''}`; }
   function wireSessionCards(container, byId, extraFn, wireFn) { container.querySelectorAll('.card[data-sid]').forEach(card => card.addEventListener('click', (e) => { if (e.target.closest('button, textarea, input, a')) return; const det = card.querySelector('.session-detail'); if (!det.hidden) { det.hidden = true; return; } const s = byId[card.dataset.sid]; det.innerHTML = sessionDetailHtml(s) + (extraFn ? extraFn(s) : ''); det.hidden = false; if (wireFn) wireFn(det, s); })); }
 
+  /* The brand wordmark at hero scale. Same artwork as the topbar mark, so the homepage
+     leads with the logo itself rather than repeating a small copy of it. */
+  const heroMark = () => `<svg class="hero-logo" viewBox="0 0 340 92" role="img" aria-label="Grooveform">
+      <text x="4" y="52" font-size="56" fill="currentColor" style="font-family:var(--font-display)">Grooveform</text>
+      <rect x="4" y="62" width="300" height="6" fill="#ff2e88"/><rect x="4" y="70.5" width="300" height="6" fill="#ffb830"/><rect x="4" y="79" width="300" height="6" fill="#b8f542"/>
+      <circle cx="318" cy="18" r="13" fill="#ff2e88"/><circle cx="318" cy="18" r="5.8" fill="#b8f542"/></svg>`;
+
   /* ================= PUBLIC ================= */
   async function renderHome() {
     await refreshMe(); await loadExercises(); const pre = (await api('GET', '/api/routines/prebuilt')).routines;
     const free = exercises.filter(e => e.tier === 'free'); const order = (t) => t === 'free' ? 0 : 1;
     const exs = [...exercises].sort((a, b) => order(a.tier) - order(b.tier)); const rtFree = r => r.items.every(i => i.exercise && i.exercise.tier === 'free'); const rts = [...pre].sort((a, b) => (rtFree(a) ? 0 : 1) - (rtFree(b) ? 0 : 1));
     render(`<div class="stack">
-      <section class="hero"><h1><span class="l1">Sweat.</span> <span class="l2">Count.</span> <span class="l3">Repeat.</span></h1>
+      <section class="hero"><div class="hero-brand">${heroMark()}<span class="hero-tag">camera form coach</span></div>
+        <h1><span class="l1">Sweat.</span> <span class="l2">Count.</span> <span class="l3">Repeat.</span></h1>
         <p class="hero-copy">Your camera counts the reps and cheers the good ones. Out loud. Like a coach who actually likes you.${solo() ? '' : ' Free moves need no sign-up; the Pass unlocks every move — or a coach sends you a playlist.'}</p>
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
-      <section><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.</p><div class="tiles wide">${exs.map(exTile).join('')}</div></section>
-      <section><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
+      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.</p><div class="tiles wide">${exs.map(exTile).join('')}</div></section>
+      <section class="home-sec"><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
       <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'Grooveform')} is a fitness tool, not a medical service.</p></div>
     </div>`);
+    /* The hero carries the wordmark on this page, so the topbar does not repeat it. */
+    $('topbar').classList.add('at-home');
   }
   function rtRow(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); const tone = ['tangerine', 'lime', 'pink'][Math.abs(hash(r.title)) % 3];
     return `<a class="playlist ${tone}" href="#/routine/${r.id}"><span class="count">${r.items.length}</span><span class="body"><span class="title">${esc(r.title)}</span><span class="desc">${esc(r.description || '')}</span><span class="tracks">${names.map(esc).join(' · ')}</span></span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pass</span>`}</a>`; }
@@ -110,7 +120,6 @@
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const cat = exById(id); if (!cat) return renderHome(); const ex = coachEx(id); const g = cat.guide;
     let itemCtx = null; if (sub && sub.startsWith('item-')) { try { const [rid, iid] = sub.slice(5).split('_'); const r = (await api('GET', '/api/routines/' + rid)).routine; itemCtx = { routine: r, item: r.items.find(i => i.id === iid) }; if (!itemCtx.item) itemCtx = null; } catch { } }
     const opts = itemCtx ? { rest: 60, ...itemCtx.item.options } : { target: cat.defaultTarget, sets: 1, rest: 60, ...Object.fromEntries(cat.options.map(o => [o.key, o.default])) };
-    const chips = (key, values, fmt) => `<div class="opts" data-optkey="${key}">${values.map(vv => `<button class="chip" data-opt="${vv}" aria-pressed="${opts[key] === vv}">${fmt(vv)}</button>`).join('')}</div>`;
     render(`<div class="stack">
       <div class="row"><a class="btn ghost small" href="${itemCtx ? '#/routine/' + itemCtx.routine.id : '#/'}">← ${itemCtx ? esc(itemCtx.routine.title) : 'All moves'}</a></div>
       <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}</span><h1>${esc(cat.name)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
@@ -123,36 +132,75 @@
           <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p><p class="muted" style="margin-top:6px;font-size:.9rem">${esc(cat.why)}</p></div>
         </div>
         <div class="stack">
-          ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config"><h3>${cat.type === 'reps' ? 'Reps per set' : 'Hold time'}</h3>${chips('target', cat.targets, t => t + (cat.type === 'hold' ? ' s' : ''))}<h3>Sets</h3>${chips('sets', [1, 2, 3, 4, 5], n => n)}<h3>Rest between sets</h3>${chips('rest', [30, 45, 60, 90, 120], n => n + ' s')}${cat.options.map(o => `<h3>${esc(o.label)}</h3>${chips(o.key, o.values, vv => optLabel(o, vv))}`).join('')}</div>`}
+          ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config">${configBlock(cat, opts)}</div>`}
         </div>
       </div>
       ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div><p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
     </div>`);
-    view.querySelectorAll('[data-optkey]').forEach(row => row.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => { const vv = b.dataset.opt; opts[row.dataset.optkey] = isNaN(vv) ? vv : Number(vv); row.querySelectorAll('[data-opt]').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+    wireChips(view, {}, opts);
     if (cat.locked) return;
     const begin = (file) => runCoach(ex, opts, itemCtx, file);
     $('do-start').onclick = () => begin(null); $('do-file').onclick = () => $('do-file-input').click(); $('do-file-input').onchange = () => { const f = $('do-file-input').files[0]; $('do-file-input').value = ''; if (f) begin(f); };
   }
 
+  /* ---------- option chips (shared by the exercise page and the routine page) ---------- */
+  function optChips(opts, key, values, fmt) {
+    return `<div class="opts" data-optkey="${key}">${values.map(vv => `<button class="chip" data-opt="${esc(vv)}" aria-pressed="${opts[key] === vv}">${fmt(vv)}</button>`).join('')}</div>`;
+  }
+  /* Every knob for one exercise: reps/hold, sets, rest, plus whatever that move defines (band, side, range…). */
+  function configBlock(cat, opts) {
+    return `<h3>${cat.type === 'reps' ? 'Reps per set' : 'Hold time'}</h3>${optChips(opts, 'target', cat.targets, t => t + (cat.type === 'hold' ? ' s' : ''))}<h3>Sets</h3>${optChips(opts, 'sets', [1, 2, 3, 4, 5], n => n)}<h3>Rest between sets</h3>${optChips(opts, 'rest', [30, 45, 60, 90, 120], n => n + ' s')}${cat.options.map(o => `<h3>${esc(o.label)}</h3>${optChips(opts, o.key, o.values, vv => optLabel(o, vv))}`).join('')}`;
+  }
+  /* Chip rows inside a [data-item] host write to bags[thatId]; loose rows write to `loose`. */
+  function wireChips(root, bags, loose, onChange) {
+    root.querySelectorAll('[data-optkey]').forEach(row => {
+      const host = row.closest('[data-item]'); const bag = host ? bags[host.dataset.item] : loose;
+      if (!bag) return;
+      row.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+        const vv = b.dataset.opt; bag[row.dataset.optkey] = isNaN(vv) ? vv : Number(vv);
+        row.querySelectorAll('[data-opt]').forEach(x => x.setAttribute('aria-pressed', x === b));
+        if (onChange) onChange(host, bag);
+      });
+    });
+  }
+
   function runCoach(ex, opts, itemCtx, file) {
+    runSequence([{ ex, opts, itemId: itemCtx ? itemCtx.item.id : undefined }], { file, back: itemCtx ? '#/routine/' + itemCtx.routine.id : '#/exercise/' + ex.id });
+  }
+
+  /* Runs one or more exercises back to back: each step's sets, a rest, then the next step.
+     A single exercise is a sequence of one, so both paths share the rest / review / save flow. */
+  function runSequence(steps, { file = null, back = '#/' } = {}) {
     const coach = $('coach'); coach.hidden = false; document.body.style.overflow = 'hidden';
     const portal = coach.querySelector('#rv-portal');
     const close = () => { clearInterval(restTimer); coach.hidden = true; document.body.style.overflow = ''; coach.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); };
-    const total = file ? 1 : Math.max(1, Math.min(10, Number(opts.sets) || 1)); const rest = Math.max(10, Math.min(600, Number(opts.rest) || 60));
-    const o = { ...opts }; const target = o.target; delete o.target; delete o.sets; delete o.side; delete o.rest; o.sets = total;
-    const back = itemCtx ? '#/routine/' + itemCtx.routine.id : '#/exercise/' + ex.id;
-    const results = []; let setNo = 0, restTimer = null;
+    const results = []; let restTimer = null, si = -1, step = null, total = 1, rest = 60, target = null, o = {}, setNo = 0;
     const showLive = () => { coach.querySelector('#screen-live').classList.add('active'); coach.querySelector('#screen-review').classList.remove('active'); portal.innerHTML = ''; };
     const showReview = () => { coach.querySelector('#screen-live').classList.remove('active'); coach.querySelector('#screen-review').classList.add('active'); };
-    const startSet = () => { setNo++; showLive(); FyzioCoach.start({ exercise: ex, target, options: { ...o, set: setNo }, file, exit: () => { close(); location.hash = back; }, done: onDone }); };
+    const beginStep = () => {
+      si++; step = steps[si]; setNo = 0;
+      total = file ? 1 : Math.max(1, Math.min(10, Number(step.opts.sets) || 1)); rest = Math.max(10, Math.min(600, Number(step.opts.rest) || 60));
+      o = { ...step.opts }; target = o.target; delete o.target; delete o.sets; delete o.side; delete o.rest; o.sets = total;
+      startSet();
+    };
+    const startSet = () => { setNo++; showLive(); FyzioCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone }); };
     const onDone = ({ review, rec, opts: usedOpts, startedAt }) => {
-      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: file ? 'file' : 'camera' }); showReview();
-      if (setNo < total) restScreen(); else savePanel();
+      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: file ? 'file' : 'camera', routineItemId: step.itemId }); showReview();
+      if (setNo < total) restScreen(); else if (si < steps.length - 1) nextStepPanel(); else savePanel();
     };
     const restScreen = () => {
       let left = rest; FyzioCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
       portal.innerHTML = `<div class="panel stack rest"><h3>Set ${setNo} of ${total} done</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">Set ${setNo + 1} starts by itself — get back into position.</p><div class="row"><button class="btn primary" id="rest-go">Start set ${setNo + 1} now</button><button class="btn ghost" id="rest-stop">Stop here</button></div></div>`;
       const go = () => { clearInterval(restTimer); startSet(); };
+      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
+      portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
+    };
+    /* Between two exercises of a routine: same rest clock, but it rolls into the next move. */
+    const nextStepPanel = () => {
+      const next = steps[si + 1]; let left = rest;
+      FyzioCoach.voice.say(`${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
+      portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>Next up: ${esc(next.ex.name)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p><div class="row"><button class="btn primary" id="rest-go">Start ${esc(next.ex.name)} now</button><button class="btn ghost" id="rest-stop">Finish here</button></div></div>`;
+      const go = () => { clearInterval(restTimer); beginStep(); };
       restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
       portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
     };
@@ -166,20 +214,30 @@
       portal.querySelectorAll('#effort button').forEach(b => b.onclick = () => { effort = Number(b.dataset.v); portal.querySelectorAll('#effort button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
       portal.querySelector('#rv-discard').onclick = () => { close(); location.hash = back; };
       portal.querySelector('#rv-submit').onclick = async () => { const btn = portal.querySelector('#rv-submit'); btn.disabled = true; try {
-          for (const r of results) await api('POST', '/api/sessions', { routineItemId: itemCtx ? itemCtx.item.id : undefined, review: r.review, opts: r.opts, diagnostics: me.prefs.store_diagnostics !== false ? r.diagnostics : undefined, effort, note: portal.querySelector('#rv-note').value, startedAt: r.startedAt, source: r.source });
+          for (const r of results) await api('POST', '/api/sessions', { routineItemId: r.routineItemId, review: r.review, opts: r.opts, diagnostics: me.prefs.store_diagnostics !== false ? r.diagnostics : undefined, effort, note: portal.querySelector('#rv-note').value, startedAt: r.startedAt, source: r.source });
           close(); toast(n > 1 ? `${n} sets saved` : 'Saved'); location.hash = back; } catch (err) { portal.querySelector('#rv-err').textContent = err.message; btn.disabled = false; } };
     };
-    startSet();
+    beginStep();
   }
 
   async function renderRoutines() { await loadExercises(); const pre = (await api('GET', '/api/routines/prebuilt')).routines; render(`<div class="stack"><h1>Playlists</h1><p class="muted">${allFree() ? 'Ready-made plans. Each exercise runs with its own reps, sets and rest.' : 'Ready-made plans. Free ones work without an account; Pro ones unlock with a subscription or when a curator sends them to you.'}${ent && ent.canBuild ? ' You can copy any of these into <a href="#/build">My routines</a> and edit them.' : ''}</p><div class="playlists">${pre.map(rtRow).join('')}</div>${me && me.role === 'member' ? `<a class="btn ghost small" href="#/dashboard">My plan →</a>` : ''}</div>`); }
   async function renderRoutine(id) {
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ let r; try { r = (await api('GET', '/api/routines/' + id)).routine; } catch (e) { return render(`<div class="card"><h3>Routine not found</h3></div>`); }
+    /* One editable option set per item, seeded from the routine's saved options. */
+    const plan = {}; for (const it of r.items) { const cat = exById(it.exerciseId); if (cat) plan[it.id] = { target: cat.defaultTarget, sets: 1, rest: 60, ...Object.fromEntries(cat.options.map(o => [o.key, o.default])), ...it.options }; }
+    const runnable = r.items.filter(it => !it.locked && exById(it.exerciseId));
+    const startBar = runnable.length ? `<div class="row rt-start-bar"><button class="btn primary rt-start">▶ Start routine</button><span class="muted">${runnable.length} move${runnable.length > 1 ? 's' : ''} back to back, with rests</span></div>` : '';
     render(`<div class="stack"><div class="row"><a class="btn ghost small" href="#/routines">← Routines</a></div>
       <div><span class="eyebrow">${r.kind === 'prebuilt' ? 'prebuilt' : r.ownerName ? 'from ' + esc(r.ownerName) : 'my routine'}${r.tags.length ? ' · ' + r.tags.map(esc).join(', ') : ''}</span><h1>${esc(r.title)} ${r.kind === 'prebuilt' && !allFree() ? lockBadge(r.locked) : ''}</h1><p class="muted">${esc(r.description || '')}</p></div>
       ${r.locked ? upgradeCard('Some exercises in this routine are Pro') : ''}
-      <div class="list">${r.items.map(it => { const cat = exById(it.exerciseId); return `<div class="card item-row"><span class="glyph">${FyzioCoach.thumb(coachEx(cat.id))}</span><span><strong>${esc(cat.name)}</strong> ${it.locked ? '<span class="badge warn">Pro</span>' : ''}<br><span class="meta">${esc(optionSummary(cat, it.options))}</span>${it.notes ? `<br><span class="meta">📝 ${esc(it.notes)}</span>` : ''}</span>${it.locked ? '<a class="btn ghost small" href="#/pricing">Unlock</a>' : `<a class="btn primary small" href="#/exercise/${it.exerciseId}/item-${r.id}_${it.id}">Start</a>`}</div>`; }).join('')}</div>
+      ${startBar}
+      <p class="muted" style="font-size:.9rem">Tune any move below — the routine runs with whatever you pick here.</p>
+      <div class="list">${r.items.map((it, i) => { const cat = exById(it.exerciseId); if (!cat) return '';
+        return `<div class="card rt-item" data-item="${esc(it.id)}"><div class="item-row"><span class="glyph">${FyzioCoach.thumb(coachEx(cat.id))}</span><span><span class="eyebrow">${i + 1} of ${r.items.length}</span><br><strong>${esc(cat.name)}</strong> ${it.locked ? '<span class="badge warn">Pro</span>' : ''}<br><span class="meta" data-summary>${esc(optionSummary(cat, plan[it.id]))}</span>${it.notes ? `<br><span class="meta">📝 ${esc(it.notes)}</span>` : ''}</span>${it.locked ? '<a class="btn ghost small" href="#/pricing">Unlock</a>' : ''}</div>${it.locked ? '' : `<div class="rt-config">${configBlock(cat, plan[it.id])}</div>`}</div>`; }).join('')}</div>
       <div class="row">${ent && ent.canBuild && !solo() ? `<button class="btn ghost small" id="rt-copy">Copy to my routines</button>` : ''}${me && me.role === 'curator' && (r.ownerId === me.id || r.kind === 'prebuilt') ? `<a class="btn ghost small" href="#/curator">Send to a member →</a>` : ''}</div></div>`);
+    /* Keep each item's one-line summary in step with its chips. */
+    wireChips(view, plan, null, (host, bag) => { const it = r.items.find(x => x.id === host.dataset.item); const el = host.querySelector('[data-summary]'); if (it && el) el.textContent = optionSummary(exById(it.exerciseId), bag); });
+    view.querySelectorAll('.rt-start').forEach(b => b.onclick = () => runSequence(runnable.map(it => ({ ex: coachEx(it.exerciseId), opts: plan[it.id], itemId: it.id })), { back: '#/routine/' + r.id }));
     const cp = $('rt-copy'); if (cp) cp.onclick = async () => { try { const d = await api('POST', `/api/routines/${r.id}/copy`); location.hash = '#/build/' + d.routine.id; } catch (e) { toast(e.message); } };
   }
   async function renderCurators() {

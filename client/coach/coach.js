@@ -223,9 +223,16 @@
     ov.prog.hidden = progress === null; if (progress !== null) ov.bar.style.width = Math.round(progress * 100) + '%';
     ov.count.hidden = count === null; ov.count.textContent = count ?? '';
     ov.checks.innerHTML = checks ? checks.map(c => `<span class="check ${c.ok === null ? '' : c.ok ? 'ok' : 'bad'}">${c.label}</span>`).join('') : '';
-    ov.actions.innerHTML = ''; if (actions) for (const a of actions) { const b = document.createElement('button'); b.className = 'btn ' + (a.cls || 'primary'); b.textContent = a.label; b.onclick = a.fn; ov.actions.appendChild(b); }
+    /* The positioning overlay re-renders every animation frame. Rebuilding the buttons each time
+       would replace the node between mousedown and mouseup, so a tap never lands — only rebuild
+       when the set of labels actually changes, and just refresh the handlers otherwise. */
+    const sig = actions ? actions.map(a => a.label).join('|') : '';
+    if (sig !== ov.sig) {
+      ov.sig = sig; ov.actions.innerHTML = '';
+      if (actions) for (const a of actions) { const b = document.createElement('button'); b.className = 'btn ' + (a.cls || 'primary'); b.textContent = a.label; b.onclick = a.fn; ov.actions.appendChild(b); }
+    } else if (actions) actions.forEach((a, i) => { const b = ov.actions.children[i]; if (b) b.onclick = a.fn; });
   }
-  function hideOverlay() { ov.el.hidden = true; }
+  function hideOverlay() { ov.el.hidden = true; ov.sig = null; ov.actions.innerHTML = ''; }
 
   async function startLive(ex, target, file = null) {
     current.ex = ex; current.target = target; mockT = 0;   /* mock clock restarts per set */
@@ -323,6 +330,12 @@
     return { ok, checks: out, msg };
   }
 
+  /* Stable array identity: overlay() diffs on the labels, so this must not be rebuilt per frame. */
+  const POSITION_EXITS = [
+    { label: '← Back to setup', cls: 'ghost', fn: () => exitLive() },
+    { label: 'Home', cls: 'ghost', fn: () => exitLive('#/') },
+  ];
+
   function positionStep(pts, aspect, now, lost) {
     const c = checksFor(lost ? null : pts, aspect);
     setStatus(c.ok ? 'ok' : 'warn', c.ok ? 'Tracking' : 'Positioning'); setFrame(c.ok ? 'ok' : 'bad');
@@ -340,7 +353,9 @@
     } else {
       live.steadySince = 0;
       if (now - (live.lastPosCue || 0) > 6000 && c.msg) { live.lastPosCue = now; voice.say(c.msg, { priority: 1 }); }
-      overlay('Get into position', c.msg, { checks: c.checks, note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') });
+      /* Always offer a way out: if the camera cannot see the whole body the set never starts,
+         and without these the overlay is a dead end. */
+      overlay('Get into position', c.msg, { checks: c.checks, note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on'), actions: POSITION_EXITS });
     }
   }
   // how far each limb is lifted from hanging/standing, degrees — legs for hip work, arms for shoulder work
@@ -702,7 +717,8 @@
     }
   }
   /* ---------- portal API ---------- */
-  function exitLive() { cancelAnimationFrame(rafId); voice.stop(); stopCamera(); try { wakeLock?.release(); } catch { } live = null; if (onExit) onExit(); }
+  /* dest: optional hash to land on instead of the caller's default (used by the "Home" escape). */
+  function exitLive(dest) { cancelAnimationFrame(rafId); voice.stop(); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); if (onExit) onExit(typeof dest === 'string' ? dest : undefined); }
   function start({ exercise, target, options = {}, file = null, done, exit }) {
     current.ex = exercise; current.target = target || exercise.defaultTarget; current.opts = { ...options }; onDone = done; onExit = exit; lastRec = null;
     return startLive(exercise, current.target, file);

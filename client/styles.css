@@ -4,6 +4,12 @@
   --bg: var(--cream); --surface: #fffaf2; --surface-2: #ffe8c9; --line: #e9d6bf;
   --text: var(--grape); --muted: var(--plum); --accent: var(--pink); --accent-ink: var(--grape);
   --good: #4f9a1e; --warn: #b8760a; --bad: #d1206b; --skeleton: var(--cream); --video-bg: var(--violet);
+  /* Ink that must stay readable when the theme flips. --grape/--violet/--plum are literal
+     brand colours and become the *background* in dark mode, so text can never name them directly. */
+  --ink: var(--text); --ink-soft: var(--muted); --accent-2: var(--violet);
+  --hero-1: var(--text); --hero-2: var(--pink); --hero-3: var(--violet);
+  /* Ink on the coach's translucent dark overlay — that backdrop does not flip, so it is fixed. */
+  --over-ink: var(--cream); --over-ink-soft: #e3d3f2;
   --radius: 26px; --shadow: 6px 6px 0 var(--grape);
   --font-display: "Righteous", "Arial Rounded MT Bold", sans-serif;
   --font-body: "Nunito", "Trebuchet MS", sans-serif;
@@ -14,12 +20,14 @@
     --bg: var(--grape); --surface: #3a2260; --surface-2: #4a2f78; --line: #5b3f8a;
     --text: var(--cream); --muted: #e3d3f2; --accent: var(--pink); --accent-ink: var(--grape);
     --good: var(--lime); --warn: var(--tangerine); --bad: var(--pink); --shadow: 6px 6px 0 #170a2a;
+    --accent-2: var(--tangerine); --hero-3: var(--tangerine);
   }
 }
 :root[data-theme="dark"] {
   --bg: var(--grape); --surface: #3a2260; --surface-2: #4a2f78; --line: #5b3f8a;
   --text: var(--cream); --muted: #e3d3f2; --accent: var(--pink); --accent-ink: var(--grape);
   --good: var(--lime); --warn: var(--tangerine); --bad: var(--pink); --shadow: 6px 6px 0 #170a2a;
+  --accent-2: var(--tangerine); --hero-3: var(--tangerine);
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -42,8 +50,8 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 999px; font-weight: 600; background: var(--surface-2); color: var(--text); transition: transform .08s ease, background .15s ease; min-height: 44px; }
 .btn:active { transform: scale(0.97); }
 a.btn { text-decoration: none; }
-.btn { font-weight: 900; border: 2px solid var(--grape); box-shadow: 4px 4px 0 var(--grape); background: var(--surface); color: var(--grape); }
-.btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--grape); }
+.btn { font-weight: 900; border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); background: var(--surface); color: var(--ink); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
 .btn.primary { background: var(--pink); color: var(--grape); }
 .btn.secondary { background: var(--tangerine); color: var(--grape); }
 .btn.ghost { background: var(--surface); }
@@ -81,12 +89,12 @@ a.btn { text-decoration: none; }
 .cam-diagram .floor { stroke: var(--line); stroke-width: 2; }
 .cam-diagram .ink.far { stroke: var(--muted); opacity: .45; stroke-width: 2.5; }
 .cam-diagram text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
-.panel { background: var(--surface); border: 2px solid var(--grape); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.panel { background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
 .panel h3 { margin-bottom: 6px; }
 .opts { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); font-family: var(--font-mono); font-size: 0.9rem; min-height: 40px; }
 .chip { font-weight: 800; border: 2px solid var(--line); background: var(--surface); }
-.chip[aria-pressed="true"] { background: var(--grape); color: var(--cream); border-color: var(--grape); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .checklist { display: grid; gap: 6px; padding-left: 0; list-style: none; margin: 0; }
 .checklist li { display: flex; gap: 8px; align-items: flex-start; }
 .checklist li::before { content: "✓"; color: var(--accent); font-weight: 700; }
@@ -94,7 +102,7 @@ a.btn { text-decoration: none; }
 select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); min-height: 40px; }
 
 .guide-region { margin-top: 12px; }
-.guide-name { font-size: .78rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); margin-bottom: 6px; }
+.guide-name { font-size: .78rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 6px; }
 .guide-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .guide-points li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: .93rem; line-height: 1.45; max-width: 68ch; }
 .guide-points .mark { color: var(--accent); font-size: .8rem; line-height: 1.7; }
@@ -134,12 +142,14 @@ select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid
 .cue.good { background: var(--lime); color: var(--grape); }
 .cue.info { background: var(--cream); color: var(--grape); }
 .hud-actions { display: flex; gap: 10px; justify-content: center; }
-.overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(43, 21, 70, 0.7); text-align: center; padding: 24px; }
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(43, 21, 70, 0.7); text-align: center; padding: 24px; z-index: 1; }
+/* The exit / mute / flip row stays above any overlay, so there is always a way out of a stuck camera. */
+.hud-top { position: relative; z-index: 2; }
 .overlay[hidden] { display: none; }
 .overlay .card { max-width: 420px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .overlay .count { font-family: var(--font-display); font-size: 7rem; line-height: 1; color: var(--lime); }
-.overlay h2 { color: var(--grape); }
-.overlay p { color: var(--plum); }
+.overlay h2 { color: var(--over-ink); }
+.overlay p { color: var(--over-ink-soft); }
 .check-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .check { font-family: var(--font-mono); font-size: 0.75rem; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); color: #B7C4CC; }
 .check.ok { background: rgba(46,211,165,.18); color: #2ED3A5; }
@@ -186,7 +196,7 @@ select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid
 .topbar-old { background: var(--surface); position: sticky; top: 0; z-index: 3; flex-wrap: wrap; }
 .topbar .brand { text-decoration: none; color: inherit; }
 .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
-.topnav a { text-decoration: none; color: var(--grape); padding: 8px 14px; border-radius: 999px; font-weight: 900; }
+.topnav a { text-decoration: none; color: var(--ink); padding: 8px 14px; border-radius: 999px; font-weight: 900; }
 .topnav a.active, .topnav a:hover { background: var(--surface-2); }
 .btn.small { min-height: 36px; padding: 6px 12px; font-size: .9rem; }
 .btn.tiny { min-height: 30px; padding: 4px 10px; font-size: .8rem; }
@@ -230,7 +240,7 @@ table.plain { width: 100%; border-collapse: collapse; font-size: .9rem; } table.
 @media (max-width: 600px) { .topbar { padding: 8px 14px; } .item-row { grid-template-columns: 40px 1fr; } .item-row > :last-child { grid-column: 1 / -1; } }
 
 /* ---- marketplace ---- */
-.hero { padding: 12px 0 8px; } .hero h1 { font-size: clamp(2.6rem, 9vw, 5.2rem); line-height: .95; margin: 4px 0 12px; max-width: none; } .hero h1 .l1 { color: var(--grape); } .hero h1 .l2 { color: var(--pink); } .hero h1 .l3 { color: var(--violet); }
+.hero { padding: 12px 0 8px; } .hero h1 { font-size: clamp(2.6rem, 9vw, 5.2rem); line-height: .95; margin: 4px 0 12px; max-width: none; } .hero h1 .l1 { color: var(--hero-1); } .hero h1 .l2 { color: var(--hero-2); } .hero h1 .l3 { color: var(--hero-3); }
 .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .plan .price { font-family: var(--font-mono); font-size: 2rem; font-weight: 600; margin: 6px 0; } .plan .price .muted { font-size: 1rem; }
 .plan.featured { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
@@ -311,7 +321,7 @@ a.ex-card .name { color: var(--text, inherit); }
 
 /* ---- playlists (routines as mixtape rows) ---- */
 .playlists { display: grid; gap: 14px; }
-.playlist { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: var(--radius); border: 2px solid var(--grape); box-shadow: var(--shadow); text-decoration: none; color: var(--grape); background: var(--surface); }
+.playlist { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: var(--radius); border: 2px solid var(--grape); box-shadow: var(--shadow); text-decoration: none; color: var(--ink); background: var(--surface); }
 .playlist.tangerine { background: var(--tangerine); } .playlist.lime { background: var(--lime); } .playlist.pink { background: var(--pink); }
 .playlist .count { font-family: var(--font-display); font-size: 2.4rem; line-height: 1; text-align: center; }
 .playlist .body { display: grid; gap: 3px; min-width: 0; }
@@ -322,7 +332,7 @@ a.ex-card .name { color: var(--text, inherit); }
 /* ---- guide tags instead of bullets ---- */
 .guide .gp { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 8px; font-size: .95rem; }
 .guide .tag { flex: 0 0 auto; min-width: 68px; text-align: center; margin-top: 3px; border-radius: 999px; padding: 2px 8px; font-size: .68rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
-.guide .tag.cam { background: var(--lime); color: var(--grape); } .guide .tag.you { background: transparent; color: var(--plum); border: 1.5px solid var(--plum); }
+.guide .tag.cam { background: var(--lime); color: var(--grape); } .guide .tag.you { background: transparent; color: var(--ink-soft); border: 1.5px solid var(--ink-soft); }
 .guide-key { display: inline-flex; gap: 6px; }
 /* ---- rep list in the recap ---- */
 .replist { display: grid; gap: 8px; margin-top: 12px; }
@@ -331,8 +341,27 @@ a.ex-card .name { color: var(--text, inherit); }
 .replist summary::-webkit-details-marker { display: none; }
 .replist summary .meta { margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 700; }
 .replist .pill { border-radius: 999px; padding: 2px 8px; font-size: .68rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
-.replist .pill.clean { background: var(--lime); color: var(--grape); } .replist .pill.fault { background: var(--tangerine); color: var(--grape); } .replist .pill.partial { background: var(--surface-2); color: var(--plum); }
+.replist .pill.clean { background: var(--lime); color: var(--grape); } .replist .pill.fault { background: var(--tangerine); color: var(--grape); } .replist .pill.partial { background: var(--surface-2); color: var(--ink-soft); }
 .replist .rep-body { padding: 8px 0 4px; } .stats.small .stat { padding: 8px 10px; } .stats.small .stat .v { font-size: 1.05rem; }
 .rep-faults { margin: 8px 0 0; padding-left: 18px; font-size: .9rem; }
 .card h3, .panel h3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 400; }
 .card.config h3 { font-family: var(--font-body); font-size: .95rem; font-weight: 900; }
+
+/* ---------- Routine page: per-move options + one start button ---------- */
+.rt-start-bar { gap: 12px; }
+.rt-item { display: grid; gap: 10px; }
+.rt-item .item-row { align-items: start; }
+.rt-config { border-top: 2px dashed var(--line); padding-top: 10px; }
+.rt-config h3 { font-family: var(--font-body); font-size: .95rem; font-weight: 900; margin-top: 14px; }
+.rt-config h3:first-child { margin-top: 0; }
+
+/* ---------- Homepage brand lockup ---------- */
+.hero-brand { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.hero-logo { width: 100%; max-width: 460px; height: auto; display: block; color: var(--ink); }
+.hero-tag { font-family: var(--font-body); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .18em; color: var(--ink-soft); }
+/* The logo's three bars, reused as a section rule so the mark reads as part of the page. */
+.home-sec h2 { position: relative; padding-top: 15px; }
+.home-sec h2::before { content: ''; position: absolute; top: 0; left: 0; width: 64px; height: 9px; background: linear-gradient(to bottom, var(--pink) 0 3px, var(--tangerine) 3px 6px, var(--lime) 6px 9px); }
+@media (max-width: 600px) { .hero-logo { max-width: 300px; } }
+/* On the homepage the hero is the logo, so the topbar mark would be a duplicate. */
+.topbar.at-home .brand { display: none; }
