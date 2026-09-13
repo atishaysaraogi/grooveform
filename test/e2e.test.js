@@ -83,10 +83,11 @@ async function runCoachedSet(page, side = 'right') {
     const chips = await visitor.$$eval('[data-optkey="side"] .chip', (n) => n.map((x) => x.textContent.trim()));
     assert.deepEqual(chips, ['Left', 'Right', 'Both (one then the other)'], 'left / right / both offered');
     /* A move worked with both limbs at once must not offer the choice. */
-    await visitor.goto(base + '/?mock=1#/exercise/plank'); await visitor.waitForSelector('#do-start');
+    /* Same document, only the hash changes — the previous page's #do-start is still there, so wait for the new heading. */
+    await visitor.goto(base + '/?mock=1#/exercise/plank'); await visitor.waitForFunction(() => /Plank/.test((document.querySelector('.ex-head h1') || {}).textContent || ''));
     assert.equal((await visitor.$$('[data-optkey="side"]')).length, 0, 'plank is not one-sided');
     /* Picking a side sends it straight into the set: no identify state, and the HUD names the limb. */
-    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start');
+    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForFunction(() => /abduction/i.test((document.querySelector('.ex-head h1') || {}).textContent || ''));
     await visitor.click('[data-optkey="side"] [data-opt="right"]');
     await visitor.click('#do-start');
     await visitor.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 25000 });
