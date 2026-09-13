@@ -198,29 +198,35 @@
     const manual = cat.tracking === 'none';
     render(`<div class="stack">
       <div class="row"><a class="btn ghost small" href="${itemCtx ? '#/routine/' + itemCtx.routine.id : '#/'}">← ${itemCtx ? esc(itemCtx.routine.title) : 'All moves'}</a></div>
-      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}${cat.level ? ' · ' + esc(cat.level) : ''}</span><h1>${esc(cat.name)} ${trackBadge(cat)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
+      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}${cat.level ? ' · ' + esc(cat.level) : ''}</span><h1>${esc(cat.name)} <button type="button" class="info-btn" id="do-details" aria-haspopup="dialog" aria-controls="ex-details" aria-label="Details: how it is measured, set-up and form, what goes wrong, dosage" title="Details">i</button> ${trackBadge(cat)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
         ${cat.locked ? '' : manual ? `<div class="row ex-actions"><button class="btn primary" id="do-log">✓ Log a set by hand</button></div>` : `<div class="row ex-actions"><button class="btn primary" id="do-start">▶ Start camera</button><button class="btn ghost" id="do-file">Analyze a video…</button><input type="file" id="do-file-input" accept="video/*" hidden></div>`}</div>
       ${cat.tracking !== 'form' ? `<p class="notice track-note">${esc(trackInfo(cat)[2])}</p>` : ''}
       <p class="muted">${esc(cat.summary)}${me || cat.locked || solo() ? '' : ' You can do this without an account — <a href="#/login">sign in</a> to save history.'}</p>
       ${cat.locked ? upgradeCard(`${cat.name} is a Pro exercise`) : ''}
       <div class="ex-grid">
         <div class="stack">
-          <div class="card"><h3>The move</h3>${FyzioCoach.demo(cat)}</div>
+          <div class="card move-card"><h3>The move</h3>${FyzioCoach.phoneInset(ex)}${FyzioCoach.demo(cat)}</div>
           <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p></div>
         </div>
         <div class="stack">
           ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config">${configBlock(cat, opts)}</div>`}
-          <div class="row"><button class="btn ghost" id="do-details" aria-expanded="false" aria-controls="ex-details">See details</button></div>
         </div>
       </div>
-      <div id="ex-details" class="stack" hidden>
+      <div id="ex-details" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="det-title"><div class="modal-card stack">
+        <div class="row" style="align-items:center"><h2 id="det-title" style="margin:0">${esc(cat.name)}</h2><span class="spacer"></span><button type="button" class="btn icon" id="det-close" aria-label="Close">✕</button></div>
         <div class="card"><h3>How the camera reads it</h3><p>${esc(cat.why)}</p>${g && g.cannotSee ? `<p class="muted" style="font-size:.9rem;margin-top:8px"><strong>What it cannot see:</strong> ${esc(g.cannotSee)}</p>` : ''}</div>
         ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div><p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
         ${faultsCard(cat)}
         ${physioCard(cat)}
-      </div>
+      </div></div>
     </div>`);
-    const det = $('do-details'); det.onclick = () => { const d = $('ex-details'); d.hidden = !d.hidden; det.textContent = d.hidden ? 'See details' : 'Hide details'; det.setAttribute('aria-expanded', String(!d.hidden)); };
+    /* Details live in a pop-up behind the ⓘ next to the name: backdrop, ✕ or Escape close it. */
+    const det = $('do-details'), dlg = $('ex-details');
+    const openD = () => { dlg.hidden = false; document.body.style.overflow = 'hidden'; $('det-close').focus(); };
+    const closeD = () => { dlg.hidden = true; document.body.style.overflow = ''; det.focus(); };
+    det.onclick = openD; $('det-close').onclick = closeD;
+    dlg.onclick = (e) => { if (e.target === dlg) closeD(); };
+    dlg.onkeydown = (e) => { if (e.key === 'Escape') closeD(); };
     wireChips(view, {}, opts);
     if (cat.locked) return;
     const begin = (file) => runCoach(ex, opts, itemCtx, file);

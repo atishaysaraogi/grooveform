@@ -489,3 +489,21 @@ h1 .track { font-size: .56rem; }
 
 /* ---- compact nav on phones: icon-only Settings, narrow search ---- */
 @media (max-width: 600px) { #btn-settings { font-size: 0; padding: 6px 10px; } #btn-settings::before { content: '⚙'; font-size: 1.05rem; } .nav-search { flex: 1 1 90px; min-width: 90px; } .topbar { gap: 6px 8px; padding: 8px 12px 6px; } .brand .wordmark { font-size: 1.4rem; } }
+
+/* ---- phone framing inset, top-right of the move panel ---- */
+.move-card { position: relative; }
+.phone-inset { position: absolute; top: 12px; right: 12px; width: 84px; height: auto; overflow: visible; }
+.phone-inset[viewBox="0 0 100 74"] { width: 92px; }
+.phone-inset .ph { fill: var(--ink); }
+.phone-inset .scr { fill: var(--surface); }
+.phone-inset .ink { stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.phone-inset .floor { stroke: var(--line); stroke-width: 1.5; }
+.phone-inset .lbl { font-family: var(--font-body); font-weight: 800; font-size: 9.5px; fill: var(--ink-soft); }
+@media (max-width: 480px) { .phone-inset { width: 72px; } .phone-inset[viewBox="0 0 100 74"] { width: 80px; } }
+
+/* ---- the ⓘ next to the name, and the details pop-up it opens ---- */
+.info-btn { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; font-size: .95rem; line-height: 1; vertical-align: middle; cursor: pointer; padding: 0; margin: 0 2px; }
+.info-btn:hover, .info-btn:focus-visible { background: var(--ink); color: var(--bg); outline: none; }
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(43, 21, 70, .72); overflow-y: auto; padding: 16px; }
+.modal-card { background: var(--bg); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; max-width: 760px; width: 100%; margin: 16px auto; box-sizing: border-box; }
+.modal-card h2 { font-size: 1.3rem; }

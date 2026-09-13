@@ -122,7 +122,7 @@
     const b = r ? figureBox(r) : lying ? { x0: 210, y0: 78, w: 190, h: 92 } : { x0: 210, y0: 22, w: 190, h: 145 };
     return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${escT(ex.name)}: ${ex.type === 'hold' ? 'timed hold' : 'repetitions'}">
       <line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>${figureFor(ex)}
-      <text x="${b.x0 + b.w / 2}" y="${b.y0 + 12}" text-anchor="middle" class="lbl">${ex.type === 'hold' ? 'hold still' : 'repeat slowly'}</text></svg>`;
+      <text x="${b.x0 + 10}" y="${b.y0 + 12}" text-anchor="start" class="lbl">${ex.type === 'hold' ? 'hold still' : 'repeat slowly'}</text></svg>`;
   }
   /* Where to put the phone. Two pictures, both of a person — not a top-down map, which read as a
      puzzle. Left: what the phone should see (front-on, side-on, or lying), framed as its screen.
@@ -148,6 +148,24 @@
     const lying = ['lying', 'prone', 'sidelying'].includes(c.posture);
     const seesWord = lying ? 'you lying down, from the side' : front ? 'you from the front' : 'you from the side';
     return `<p class="cam-sentence">The phone should see <strong>${seesWord}</strong>${front ? ' (chest facing it)' : lying ? '' : ' (turn 90° from it)'}, placed <strong>${HEIGHT_WORD[c.height] || escT(c.height)}</strong>, about <strong>${escT(c.distance)}</strong> away.</p>`;
+  }
+  /* Option D: the phone itself, its screen showing the framing to match — whole body front-on,
+     side-on, or lying across a landscape screen — with the height and distance under it. Sits in
+     the top-right corner of the move panel. */
+  function phoneInset(ex) {
+    const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };
+    const lying = ['lying', 'prone', 'sidelying'].includes(c.posture), front = ex.view === 'front';
+    const cap = `${escT(c.height)} · ${escT(c.distance)}`;
+    const label = lying ? 'lying down, from the side' : front ? 'from the front' : 'from the side';
+    if (lying) return `<svg class="phone-inset" viewBox="0 0 100 74" role="img" aria-label="Phone on the floor, seeing you ${label}, ${escT(c.distance)} away">
+      <rect class="ph" x="2" y="2" width="96" height="52" rx="9"/><rect class="scr" x="8" y="7" width="84" height="42" rx="4"/>
+      <g class="ink"><circle cx="24" cy="34" r="4.5"/><path d="M28.5 34h30M58.5 34l9-11M67.5 23l6 11"/></g><line class="floor" x1="12" y1="41" x2="88" y2="41"/>
+      <text class="lbl" x="50" y="68" text-anchor="middle">${cap}</text></svg>`;
+    const body = front ? `<circle cx="30" cy="22" r="5"/><path d="M30 27v22M20 34l10-4 10 4M30 49l-7 24M30 49l7 24"/>` : `<circle cx="30" cy="22" r="5"/><path d="M30 27v22M30 35l6 10M30 49l-3 24M30 49l5 24"/>`;
+    return `<svg class="phone-inset" viewBox="0 0 90 118" role="img" aria-label="Phone at ${escT(c.height)} height, seeing you ${label}, ${escT(c.distance)} away">
+      <g transform="translate(15 0)"><rect class="ph" x="2" y="2" width="56" height="96" rx="9"/><rect class="scr" x="7" y="8" width="46" height="84" rx="4"/>
+      <g class="ink">${body}</g><line class="floor" x1="12" y1="78" x2="48" y2="78"/></g>
+      <text class="lbl" x="45" y="112" text-anchor="middle">${cap}</text></svg>`;
   }
   function cameraDiagramPicture(ex) {
     const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };
@@ -824,5 +842,5 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.FyzioAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
-  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
+  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
 })();
