@@ -23,6 +23,24 @@
   const exById = (id) => (exercises || []).find(e => e.id === id);
   const coachEx = (id) => FyzioCoach.exercises.find(e => e.id === id);
 
+  /* ---------- first-run intro ---------- */
+  const SEEN_INTRO = 'fyzio.seenIntro';
+  const seenIntro = () => { try { return localStorage.getItem(SEEN_INTRO) === '1'; } catch { return true; } };
+  /* force=true replays it from Settings; otherwise it shows once, to a new user. */
+  function showIntro(force) {
+    if (!force && seenIntro()) return;
+    const el = $('intro'); if (!el) return;
+    el.hidden = false;
+    const close = () => { el.hidden = true; try { localStorage.setItem(SEEN_INTRO, '1'); } catch { } document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    $('intro-go').onclick = close;
+    el.onclick = (e) => { if (e.target === el) close(); };      // tapping the backdrop dismisses
+    document.addEventListener('keydown', onKey);
+    $('intro-go').focus();
+  }
+  /* view is never replaced, only its contents, so this is wired once for every settings page. */
+  view.addEventListener('click', (e) => { if (e.target.closest('#cs-intro')) showIntro(true); });
+
   /* ---------- routing ---------- */
   function nav(items) { $('topnav').innerHTML = items.map(([href, label]) => `<a href="${href}" class="${(href === '#/' ? location.hash === '#/' || !location.hash : location.hash.startsWith(href)) ? 'active' : ''}">${label}</a>`).join(''); }
   function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); }
@@ -72,7 +90,13 @@
   const lockBadge = (locked) => locked ? '<span class="badge warn">Pro</span>' : '<span class="badge good">Free</span>';
   const optLabel = (o, vv) => o.swatches ? `<i class="swatch big" title="${esc((o.labels && o.labels[vv]) || vv)}" aria-label="${esc((o.labels && o.labels[vv]) || vv)}" style="background:${o.swatches[vv]}${vv === 'none' ? ';border:2px dashed var(--muted)' : ''}">${vv === 'none' ? '<span class="x">✕</span>' : ''}</i>` : esc((o.labels && o.labels[vv]) || (vv + (o.unit || '')));
   const tierBadge = (ex) => ex.tier === 'pro' ? `<span class="badge ${ex.locked ? 'warn' : 'accent'}">Pro</span>` : '<span class="badge good">Free</span>';
-  function optionSummary(ex, o) { const parts = [ex.type === 'reps' ? `${o.target} reps` : `${o.target} s hold`]; if (o.rom) parts.push(`${o.rom}° target`); if (o.variant) { const vo = (ex.options || []).find(x => x.key === 'variant'); parts.push((vo && vo.labels && vo.labels[o.variant]) || o.variant); } if (o.band && o.band !== 'none') parts.push(o.band + ' band'); else if (o.band === 'none' && (ex.options || []).some(x => x.key === 'band' && x.default !== 'none')) parts.push('no band'); if (o.side && o.side !== 'both') parts.push(o.side + ' side'); if (o.sets > 1) parts.push(`${o.sets} sets${o.rest ? ', ' + o.rest + ' s rest' : ''}`); return parts.join(' · '); }
+  const SIDE_WORD = { left: 'left', right: 'right' };
+  /* "left leg" / "right arm" / "left side" — the limb word comes from the move. */
+  function sideLabel(ex, side) {
+    const w = SIDE_WORD[side]; if (!w || !ex || !ex.sided) return '';
+    return ex.sided.limb === 'side' ? `${w} side` : `${w} ${ex.sided.limb}`;
+  }
+  function optionSummary(ex, o) { const parts = [ex.type === 'reps' ? `${o.target} reps` : `${o.target} s hold`]; if (o.rom) parts.push(`${o.rom}° target`); if (o.variant) { const vo = (ex.options || []).find(x => x.key === 'variant'); parts.push((vo && vo.labels && vo.labels[o.variant]) || o.variant); } if (o.band && o.band !== 'none') parts.push(o.band + ' band'); else if (o.band === 'none' && (ex.options || []).some(x => x.key === 'band' && x.default !== 'none')) parts.push('no band'); if (o.side) parts.push(o.side === 'both' ? 'both sides' : (sideLabel(ex, o.side) || o.side + ' side')); if (o.sets > 1) parts.push(`${o.sets} sets${o.rest ? ', ' + o.rest + ' s rest' : ''}`); return parts.join(' · '); }
   function upgradeCard(reason) { return `<div class="card upgrade"><h3>${esc(reason || 'This needs Pro')}</h3><p class="muted">Pro unlocks every exercise and lets you build your own routines. Or connect with a curator — routines they send you are unlocked at no cost.</p><div class="row" style="margin-top:10px"><a class="btn primary small" href="#/pricing">See plans</a><a class="btn ghost small" href="#/curators">Find a curator</a></div></div>`; }
   function faultsSummary(rv) { const f = rv.faults || {}; const k = Object.keys(f); return k.length ? k.map(x => `${esc(f[x].label || x)} ×${f[x].n}`).join(', ') : 'no faults'; }
   function sessionCard(s, { extra = '' } = {}) { const rv = s.review || {}; const cls = rv.score >= 75 ? 'good' : rv.score >= 55 ? 'warn' : 'bad';
@@ -168,9 +192,23 @@
     runSequence([{ ex, opts, itemId: itemCtx ? itemCtx.item.id : undefined }], { file, back: itemCtx ? '#/routine/' + itemCtx.routine.id : '#/exercise/' + ex.id });
   }
 
+  /* A one-sided move set to "both" runs as two halves: every set on one side, a prompt to
+     switch, then the same on the other. Everything downstream just sees two ordinary steps. */
+  function expandSides(steps) {
+    const out = [];
+    for (const st of steps) {
+      if (st.ex && st.ex.sided && (st.opts.side || 'both') === 'both') {
+        out.push({ ...st, opts: { ...st.opts, side: 'left' }, half: 1 });
+        out.push({ ...st, opts: { ...st.opts, side: 'right' }, half: 2 });
+      } else out.push(st);
+    }
+    return out;
+  }
+
   /* Runs one or more exercises back to back: each step's sets, a rest, then the next step.
      A single exercise is a sequence of one, so both paths share the rest / review / save flow. */
-  function runSequence(steps, { file = null, back = '#/' } = {}) {
+  function runSequence(rawSteps, { file = null, back = '#/' } = {}) {
+    const steps = expandSides(rawSteps);
     const coach = $('coach'); coach.hidden = false; document.body.style.overflow = 'hidden';
     const portal = coach.querySelector('#rv-portal');
     const close = () => { clearInterval(restTimer); coach.hidden = true; document.body.style.overflow = ''; coach.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); };
@@ -180,26 +218,56 @@
     const beginStep = () => {
       si++; step = steps[si]; setNo = 0;
       total = file ? 1 : Math.max(1, Math.min(10, Number(step.opts.sets) || 1)); rest = Math.max(10, Math.min(600, Number(step.opts.rest) || 60));
-      o = { ...step.opts }; target = o.target; delete o.target; delete o.sets; delete o.side; delete o.rest; o.sets = total;
+      o = { ...step.opts }; target = o.target; delete o.target; delete o.sets; delete o.rest; o.sets = total;
       startSet();
     };
-    const startSet = () => { setNo++; showLive(); FyzioCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone }); };
-    const onDone = ({ review, rec, opts: usedOpts, startedAt }) => {
-      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: file ? 'file' : 'camera', routineItemId: step.itemId }); showReview();
-      if (setNo < total) restScreen(); else if (si < steps.length - 1) nextStepPanel(); else savePanel();
+    const startSet = () => {
+      setNo++; showLive();
+      const more = setNo < total || si < steps.length - 1;   // keep the camera up for the rest
+      FyzioCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, keepCameraAfter: more, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone });
     };
-    const restScreen = () => {
-      let left = rest; FyzioCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
+    const onDone = ({ review, rec, opts: usedOpts, startedAt, cameraHeld }) => {
+      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: file ? 'file' : 'camera', routineItemId: step.itemId });
+      if (setNo >= total && si >= steps.length - 1) { showReview(); savePanel(); return; }
+      if (!cameraHeld) showReview();          // a video-file run has no camera to hold open
+      if (setNo < total) restScreen(review, cameraHeld); else nextStepPanel(review, cameraHeld);
+    };
+    /* What to fix next set, from the set just finished. */
+    const coaching = (rv) => {
+      const tips = (rv && rv.tips) || [];
+      const did = rv.type === 'reps' ? `${rv.reps} of ${rv.target} reps${rv.partials ? `, ${rv.partials} partial` : ''}` : `held ${Math.round(rv.holdSec)} s of ${rv.target}`;
+      if (!tips.length) return { did, text: `${did} — nothing to correct. Same again.`, checks: [] };
+      return { did, text: `${tips[0].label}: ${tips[0].tip}`, checks: tips.slice(0, 3).map((t) => ({ label: `${t.label} ×${t.n}`, ok: false })) };
+    };
+    /* Rest with the camera, skeleton and your last count still on screen. */
+    const restOnCamera = ({ title, review, note, goLabel, onGo }) => {
+      let left = rest; const c = coaching(review);
+      const stop = () => { clearInterval(restTimer); FyzioCoach.endRest(); showReview(); savePanel(); };
+      const go = () => { clearInterval(restTimer); onGo(); };
+      const paint = () => FyzioCoach.restOverlay({ title, text: c.text, checks: c.checks, count: left, note, actions: [{ label: goLabel, fn: go }, { label: 'Stop here', cls: 'ghost', fn: stop }] });
+      paint();
+      restTimer = setInterval(() => { left--; paint(); if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
+    };
+    const restScreen = (review, held) => {
+      FyzioCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
+      if (held) return restOnCamera({ title: `Set ${setNo} of ${total} done · ${coaching(review).did}`, review, note: `Set ${setNo + 1} starts by itself — get back into position.`, goLabel: `Start set ${setNo + 1}`, onGo: startSet });
+      let left = rest;
       portal.innerHTML = `<div class="panel stack rest"><h3>Set ${setNo} of ${total} done</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">Set ${setNo + 1} starts by itself — get back into position.</p><div class="row"><button class="btn primary" id="rest-go">Start set ${setNo + 1} now</button><button class="btn ghost" id="rest-stop">Stop here</button></div></div>`;
       const go = () => { clearInterval(restTimer); startSet(); };
       restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
       portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
     };
     /* Between two exercises of a routine: same rest clock, but it rolls into the next move. */
-    const nextStepPanel = () => {
+    const nextStepPanel = (review, held) => {
       const next = steps[si + 1]; let left = rest;
-      FyzioCoach.voice.say(`${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
-      portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>Next up: ${esc(next.ex.name)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p><div class="row"><button class="btn primary" id="rest-go">Start ${esc(next.ex.name)} now</button><button class="btn ghost" id="rest-stop">Finish here</button></div></div>`;
+      /* Two halves of one move read as "switch sides", not as a new exercise. */
+      const switching = next.half === 2 && next.ex.id === step.ex.id;
+      const nextSide = sideLabel(next.ex, next.opts.side);
+      const title = switching ? `Switch sides — now your ${nextSide}` : `Next up: ${next.ex.name}`;
+      const goLabel = switching ? `Start ${nextSide}` : `Start ${next.ex.name} now`;
+      FyzioCoach.voice.say(switching ? `Now the other side. ${nextSide}. Rest ${rest} seconds.` : `${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
+      if (held) return restOnCamera({ title, review, note: (switching ? 'Swap over — ' : '') + optionSummary(exById(next.ex.id) || next.ex, next.opts), goLabel, onGo: beginStep });
+      portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>${esc(title)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p><div class="row"><button class="btn primary" id="rest-go">${esc(goLabel)}</button><button class="btn ghost" id="rest-stop">Finish here</button></div></div>`;
       const go = () => { clearInterval(restTimer); beginStep(); };
       restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
       portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
@@ -359,7 +427,7 @@
         <div class="card"><h3>Add exercise</h3><div class="row">${exercises.map(ex => `<button class="btn ghost small" data-add="${ex.id}">${esc(ex.name)}</button>`).join('')}</div></div>
         <div class="row"><button class="btn primary" id="rb-save">${r ? 'Save' : 'Create routine'}</button>${r ? '<button class="btn ghost" id="rb-archive">Delete</button>' : ''}</div><p class="error" id="rb-err"></p></div>`);
       $('rb-title').oninput = (e) => title = e.target.value; $('rb-desc').oninput = (e) => description = e.target.value;   // keep text across redraws
-      view.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const ex = exById(b.dataset.add); const o = { target: ex.defaultTarget, sets: 1 }; ex.options.forEach(op => o[op.key] = op.default); if (ex.identifyLimb) o.side = 'both'; items.push({ exerciseId: ex.id, options: o, notes: '' }); draw(); });
+      view.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const ex = exById(b.dataset.add); const o = { target: ex.defaultTarget, sets: 1 }; ex.options.forEach(op => o[op.key] = op.default); items.push({ exerciseId: ex.id, options: o, notes: '' }); draw(); });
       view.querySelectorAll('[data-i]').forEach(node => { const i = Number(node.dataset.i); const it = items[i];
         node.querySelectorAll('[data-target]').forEach(c => c.onclick = () => { it.options.target = Number(c.dataset.target); draw(); });
         node.querySelectorAll('[data-opt]').forEach(c => c.onclick = () => { const [k, vv] = c.dataset.opt.split(':'); it.options[k] = isNaN(vv) ? vv : Number(vv); draw(); });
@@ -379,7 +447,6 @@
     return `<div class="card editor-item" data-i="${i}"><div class="head"><h3>${esc(ex.name)}</h3><span class="badge">${ex.type === 'reps' ? 'reps' : 'hold'} · ${ex.view === 'front' ? 'face camera' : 'side-on'}</span><button class="btn ghost tiny it-up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost tiny it-down" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost tiny it-remove">Remove</button></div>
       <div><span class="meta">${ex.type === 'reps' ? 'Reps per set' : 'Hold seconds'}</span><div class="opts">${ex.targets.map(t => `<button class="chip" data-target="${t}" aria-pressed="${o.target === t}">${t}${ex.type === 'hold' ? ' s' : ''}</button>`).join('')}<input class="it-custom" type="number" min="1" max="600" placeholder="custom" style="width:110px;min-height:40px" value="${ex.targets.includes(o.target) ? '' : o.target}"></div></div>
       ${ex.options.map(op => `<div><span class="meta">${esc(op.label)}</span><div class="opts">${op.values.map(vv => `<button class="chip" data-opt="${op.key}:${vv}" aria-pressed="${o[op.key] === vv}">${optLabel(op, vv)}</button>`).join('')}</div></div>`).join('')}
-      ${ex.identifyLimb ? `<div><span class="meta">Side</span><div class="opts">${['left', 'right', 'both'].map(s => `<button class="chip" data-opt="side:${s}" aria-pressed="${o.side === s}">${s}</button>`).join('')}</div></div>` : ''}
       <div style="display:grid;grid-template-columns:90px 110px 1fr;gap:12px;align-items:start"><label class="field"><span>Sets</span><input class="it-sets" type="number" min="1" max="10" value="${o.sets || 1}"></label><label class="field"><span>Rest</span><select class="it-rest">${[30, 45, 60, 90, 120].map(r => `<option value="${r}" ${(o.rest || 60) === r ? 'selected' : ''}>${r} s</option>`).join('')}</select></label><label class="field"><span>Notes / watch-outs</span><textarea class="it-notes" maxlength="1000" placeholder="e.g. only to 75° this week">${esc(it.notes || '')}</textarea></label></div></div>`;
   }
   async function renderConnections() {
@@ -394,6 +461,7 @@
       <div class="card"><h3>Plan</h3><p><strong>${esc(ent.tier === 'anon' ? 'Free' : ent.tier)}</strong>${subs.filter(s => s.active).map(s => ` · ${esc(s.title)} until ${fmtDay(s.periodEnd)}${s.status === 'cancelled' ? ' (not renewing)' : ''}`).join('')}</p><div class="row" style="margin-top:8px"><a class="btn ghost small" href="#/pricing">${subs.some(s => s.active) ? 'Extend or change plan' : 'See plans'}</a>${subs.filter(s => s.active && s.status === 'active').map(s => `<button class="btn ghost small" data-cancel="${s.id}">Cancel ${esc(s.title)}</button>`).join('')}</div>${subs.length ? `<table class="plain" style="margin-top:10px"><thead><tr><th>Plan</th><th>Status</th><th>Until</th><th>Paid</th></tr></thead><tbody>${subs.map(s => `<tr><td>${esc(s.title)} (${esc(s.period)})</td><td>${esc(s.status)}</td><td>${fmtDay(s.periodEnd)}</td><td>${rupees(s.amountPaise)}</td></tr>`).join('')}</tbody></table>` : ''}</div>
       ${me.role === 'member' ? `<div class="card"><h3>Are you a physio or trainer?</h3><p class="muted" style="font-size:.9rem">Switch to a curator account to get a listing and send routines to clients. Your history stays.</p><button class="btn ghost small" id="acc-curator" style="margin-top:8px">Switch to curator account</button></div>` : ''}
       <div class="card"><h3>Coach settings (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto (most natural available)</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
+      <div class="card"><h3>How it works</h3><p class="muted">The three steps of a session: position the camera, follow the voice, review the set.</p><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-intro">Show me again</button></div></div>
       <div class="card"><h3>Privacy</h3><label class="row"><input type="checkbox" id="acc-diag" ${me.prefs.store_diagnostics !== false ? 'checked' : ''}> <span>Store movement keypoints (never video) to improve the coach</span></label><div class="row" style="margin-top:10px"><a class="btn ghost small" href="/api/me/export" download="fyzio-my-data.json">Download my data</a>${me.status === 'erasure_requested' ? '<button class="btn ghost small" id="acc-cancel-erase">Cancel deletion</button>' : '<button class="btn danger small" id="acc-erase">Delete my account</button>'}</div><p class="meta" style="margin-top:8px">Grievances: ${esc(notice.grievanceContact)} · Notice v${esc(me.consentVersion || '')}</p></div></div>`);
     $('f-acc').onsubmit = async (e) => { e.preventDefault(); await api('PATCH', '/api/me', { name: e.target.name.value }); await refreshMe(); toast('Saved'); route(); };
     wireCoachSettings();
@@ -407,6 +475,7 @@
   function renderSettings() {
     render(`<div class="stack" style="max-width:640px"><h1>Settings</h1>
       <div class="card"><h3>Coach (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
+      <div class="card"><h3>How it works</h3><p class="muted">The three steps of a session: position the camera, follow the voice, review the set.</p><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-intro">Show me again</button></div></div>
       <div class="card"><h3>Privacy</h3><p class="muted">Camera video is processed on this device and never uploaded. Nothing is stored anywhere but this browser.</p></div></div>`);
     wireCoachSettings();
   }
@@ -465,6 +534,6 @@
   }
 
   /* ---------- boot ---------- */
-  (async () => { try { await refreshMe(); if (me && !me.consentRequired) await flushPending(); } catch (e) { console.error(e); } route(); })();
+  (async () => { try { await refreshMe(); if (me && !me.consentRequired) await flushPending(); } catch (e) { console.error(e); } route(); showIntro(false); })();
   window.__portal = { get me() { return me; }, get ent() { return ent; }, api, route, refreshMe };
 })();

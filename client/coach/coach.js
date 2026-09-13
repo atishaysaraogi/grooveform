@@ -188,16 +188,23 @@
   /* ---------- camera ---------- */
   const video = $('video'), canvas = $('overlay'), ctx = canvas.getContext('2d'), stage = $('stage');
   let stream = null, facing = store.get('facing', 'user');
+  let streamFacing = null;   // which camera the open stream is, so a held stream is only reused when it matches
   async function startCamera() {
     if (MOCK) { video.width = 640; video.height = 360; return; }
+    /* The camera is held open through a rest between sets. Reuse that stream rather than
+       tearing it down and re-acquiring it, which flashes black and drops a second of video. */
+    if (stream && streamFacing === facing && video.srcObject === stream && stream.getVideoTracks().some((t) => t.readyState === 'live')) {
+      try { await video.play(); } catch { }
+      return;
+    }
     stopCamera();
     const tryGet = c => navigator.mediaDevices.getUserMedia({ video: c, audio: false });
     const base = { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
     try { stream = await tryGet(base); } catch (e) { stream = await tryGet({ facingMode: facing }); }
-    video.srcObject = stream; await video.play();
+    streamFacing = facing; video.srcObject = stream; await video.play();
     await new Promise(r => { if (video.videoWidth) r(); else video.onloadedmetadata = () => r(); });
   }
-  function stopCamera() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } video.srcObject = null; if (video.src) { try { URL.revokeObjectURL(video.src); } catch { } video.removeAttribute('src'); video.load(); } }
+  function stopCamera() { streamFacing = null; if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } video.srcObject = null; if (video.src) { try { URL.revokeObjectURL(video.src); } catch { } video.removeAttribute('src'); video.load(); } }
   async function startFile(file) {
     stopCamera();
     video.src = URL.createObjectURL(file); video.loop = false; video.muted = true; video.playbackRate = 1;
@@ -242,7 +249,11 @@
     $('phase').textContent = ''; $('cue').className = 'cue'; $('btn-mute').textContent = voice.muted ? '🔇' : '🔊';
     $('hud-side').style.display = ex.type === 'reps' ? '' : 'none'; $('btn-flip').style.display = file ? 'none' : '';
     setStatus('warn', 'Starting'); setFrame(''); applyVoiceButton();
-    if (ex.identifyLimb) delete current.opts.work;
+    /* A one-sided move used to ask you to lift the limb you were about to work. The side is
+       now chosen up front: for a 'pick' move that choice IS the working limb; for a 'camera'
+       move the limb nearest the lens is the one being worked, so the pose decides and the
+       choice only tells you how to lie or stand (checked during positioning). */
+    current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
     live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0 };
     smoother.reset();
     try {
@@ -307,10 +318,18 @@
     const lost = now - live.lastPoseT > 400;
     draw(pts, aspect, W, H, lost);
     if (live.state === 'position') positionStep(pts, aspect, now, lost);
-    else if (live.state === 'identify') identifyStep(pts, now);
     else if (live.state === 'countdown') countdownStep(pts, now);
     else if (live.state === 'active') activeStep(lost ? null : pts, now, lost);
   }
+
+  const SIDE_CODE = { left: 'L', right: 'R' };            // 'both' and undefined -> null (auto)
+  const sideName = (c) => (c === 'L' ? 'left' : c === 'R' ? 'right' : '');
+  /* Which limb this set is working, as 'L' | 'R' | null when it is not yet known. */
+  function wantedSide() {
+    if (!live || !live.ex.sided) return null;
+    return SIDE_CODE[live.session.opts.side] || null;
+  }
+  function limbWord(ex) { return ex.sided ? (ex.sided.limb === 'side' ? 'side' : ex.sided.limb) : ''; }
 
   function checksFor(pts, aspect) {
     const ex = live.ex; const out = []; let ok = true;
@@ -321,12 +340,19 @@
     const accept = ex.id === 'sidelying' ? ['front', 'unclear'] : [ex.view];
     const orientOk = accept.includes(o.view); out.push({ label: orientOk ? (ex.view === 'front' ? 'Facing camera' : 'Side-on') : (ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on'), ok: orientOk });
     const size = ex.upperBody ? E.dist(pts[0], E.mid(pts[23], pts[24])) : E.bodyHeight(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22); out.push({ label: sizeOk ? 'Good distance' : 'Come closer', ok: sizeOk });
-    ok = visOk && frameOk && orientOk && sizeOk;
+    /* On a camera-side move the working limb is whichever one the lens can see, so the person
+       has to be lying or standing the right way round for the side they picked. */
+    const want = ex.sided && ex.sided.by === 'camera' ? wantedSide() : null;
+    const seen = want ? E.nearSide(pts) : null;
+    const sideOk = !want || seen === want;
+    if (want) out.push({ label: sideOk ? `${sideName(want)} ${limbWord(ex)} nearest the camera` : `Turn: ${sideName(want)} ${limbWord(ex)} should be nearest the camera`, ok: sideOk });
+    ok = visOk && frameOk && orientOk && sizeOk && sideOk;
     let msg = '';
     if (!visOk) msg = 'Some joints are hidden — make sure ' + (ex.upperBody ? 'your head, both arms and your hips' : ex.view === 'side' ? 'the whole side of your body' : 'both legs and both arms') + ' can be seen.';
     else if (!frameOk) msg = 'You\'re cut off at the ' + edges.join(' and ') + '. Move the camera back or reposition.';
     else if (!orientOk) msg = ex.view === 'front' ? 'Turn so your chest faces the camera.' : 'Turn 90° so the camera sees your side.';
     else if (!sizeOk) msg = 'Move a little closer to the camera.';
+    else if (!sideOk) msg = `You picked the ${sideName(want)} ${limbWord(ex)}, but the camera is on your ${sideName(seen)}. Turn around so it can see the ${sideName(want)} ${limbWord(ex)}.`;
     return { ok, checks: out, msg };
   }
 
@@ -347,8 +373,9 @@
       const held = now - live.steadySince;
       overlay('Hold your start position', live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.', { checks: c.checks, progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') });
       if (held > (live.file ? 400 : 1200)) {
-        if (live.ex.identifyLimb && !live.file) { live.state = 'identify'; live.identifyAt = now; live.idBase = limbRaise(pts); live.idCandidate = null; voice.say(live.ex.identifyLimb === 'arm' ? 'Lift the arm you will be working, then lower it' : 'Lift the leg you will be working, then put it down', { priority: 2 }); }
-        else { live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0; }
+        /* The side was chosen before the set, so there is nothing to identify — start counting in. */
+        live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0;
+        live.legBase = { L: E.fromVertical(pts[23], pts[27]), R: E.fromVertical(pts[24], pts[28]) };
       }
     } else {
       live.steadySince = 0;
@@ -358,32 +385,19 @@
       overlay('Get into position', c.msg, { checks: c.checks, note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on'), actions: POSITION_EXITS });
     }
   }
-  // how far each limb is lifted from hanging/standing, degrees — legs for hip work, arms for shoulder work
-  function limbRaise(pts) { return live.ex.identifyLimb === 'arm' ? { L: E.armAngle(pts[11], pts[15]), R: E.armAngle(pts[12], pts[16]) } : { L: E.fromVertical(pts[23], pts[27]), R: E.fromVertical(pts[24], pts[28]) }; }
-  function identifyStep(pts, now) {
-    if (!pts) return;
-    const limb = live.ex.identifyLimb === 'arm' ? 'arm' : 'leg'; const cur = limbRaise(pts);
-    const rL = cur.L - live.idBase.L, rR = cur.R - live.idBase.R;
-    const lifted = rL > 12 ? 'L' : rR > 12 ? 'R' : null;
-    if (lifted && !live.idCandidate) { live.idCandidate = lifted; live.idSeenAt = now; }
-    const back = live.idCandidate && (live.idCandidate === 'L' ? rL : rR) < 6;
-    const name = side => side === 'L' ? 'left' : 'right';
-    if (live.idCandidate && back) {
-      current.opts.work = live.idCandidate; live.session.opts.work = live.idCandidate; live.session.opts.legBase = live.idBase;
-      voice.say(name(live.idCandidate) + ' ' + limb, { priority: 2 }); voice.beep(990, 0.1);
-      live.state = 'countdown'; live.countdownAt = now; live.lastCountSpoken = 0; return;
-    }
-    const waited = now - live.identifyAt;
-    if (waited > 12000) { current.opts.work = null; live.session.opts.work = null; live.session.opts.legBase = live.idBase; live.state = 'countdown'; live.countdownAt = now; live.lastCountSpoken = 0; return; }
-    overlay(limb === 'arm' ? 'Which arm?' : 'Which leg?', live.idCandidate ? `${name(live.idCandidate)} ${limb} — now ${limb === 'arm' ? 'lower it' : 'put it down'}` : limb === 'arm' ? 'Lift the arm you\'ll be working out to the side, then lower it.' : 'Lift the leg you\'ll be working out to the side, then put it down.', { checks: [{ label: 'Left', ok: live.idCandidate === 'L' ? true : null }, { label: 'Right', ok: live.idCandidate === 'R' ? true : null }], note: 'Or wait — the coach will follow whichever leg moves' });
-  }
   function countdownStep(pts, now) {
     const elapsed = now - live.countdownAt; const n = 3 - Math.floor(elapsed / 1000);
     if (n !== live.lastCountSpoken && n > 0) { live.lastCountSpoken = n; voice.say(String(n), { priority: 2 }); voice.beep(660, 0.06); }
     overlay('', 'Get ready…', { count: n > 0 ? n : 'GO' });
     if (elapsed >= 3000) {
-      const side = E.nearSide(pts); live.session.calibrate(pts, side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref });
-      if (live.session.opts.work) $('live-name').textContent = live.ex.name + ' · ' + (live.session.opts.work === 'L' ? 'left' : 'right') + ' leg';
+      /* A 'pick' move works the limb the person chose; otherwise the side the lens can see. */
+      const want = live.ex.sided && live.ex.sided.by === 'pick' ? wantedSide() : null;
+      const side = want || E.nearSide(pts);
+      if (live.legBase) live.session.opts.legBase = live.legBase;
+      /* On a camera-side move the visible limb IS the working one, so record it for the review. */
+      if (live.ex.sided && live.ex.sided.by === 'camera') live.session.opts.work = side;
+      live.session.calibrate(pts, side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref });
+      if (live.session.opts.work) $('live-name').textContent = `${live.ex.name} · ${sideName(live.session.opts.work)} ${limbWord(live.ex)}`;
       live.state = 'active'; hideOverlay(); voice.say('Go', { priority: 2 }); voice.beep(990, 0.12);
       showCue(live.ex.type === 'reps' ? 'Go — the coach is counting' : 'Hold it — timer running', 'good');
       live.startedAt = now;
@@ -451,12 +465,19 @@
     if (!live || live.state !== 'active') { if (live && live.state !== 'active') exitLive(); return; }
     const review = live.session.review();
     live.state = 'done'; recEvent('finish', { auto }); live.rec.review = { score: review.score, reps: review.reps, partials: review.partials, holdSec: review.holdSec, faults: Object.fromEntries(Object.entries(review.faults).map(([k, v]) => [k, v.n])) }; lastRec = live.rec;
-    cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { }
+    /* When another set follows, the camera, skeleton and the count you just posted stay on
+       screen through the rest — you can see yourself reset while the coach says what to fix.
+       Only the last set of the last move tears the camera down and shows the full review. */
+    const keep = !!current.keepCameraAfter;
+    if (!keep) { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } }
     voice.beep(990, 0.1); setTimeout(() => voice.beep(1320, 0.15), 120);
-    renderReview(review);
+    if (!keep) renderReview(review);
     const summary = spokenSummary(review); setTimeout(() => voice.say(summary, { priority: 2 }), 500);
-    const rec = live.rec; live = null;
-    if (onDone) onDone({ review, rec, opts: { ...current.opts, ...(rec.opts || {}) }, startedAt: Date.parse(rec.started) });
+    const rec = live.rec;
+    /* A stub keeps the frame loop alive so the video and skeleton keep drawing; it carries no
+       session, so record() and the step handlers all no-op. */
+    live = keep ? { ex: live.ex, target: live.target, file: null, state: 'rest', session: null, rec: null, lastPoseT: performance.now() } : null;
+    if (onDone) onDone({ review, rec, opts: { ...current.opts, ...(rec.opts || {}) }, startedAt: Date.parse(rec.started), cameraHeld: keep });
   }
 
   /* ---------- drawing ---------- */
@@ -719,9 +740,16 @@
   /* ---------- portal API ---------- */
   /* dest: optional hash to land on instead of the caller's default (used by the "Home" escape). */
   function exitLive(dest) { cancelAnimationFrame(rafId); voice.stop(); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); if (onExit) onExit(typeof dest === 'string' ? dest : undefined); }
-  function start({ exercise, target, options = {}, file = null, done, exit }) {
+  function start({ exercise, target, options = {}, file = null, done, exit, keepCameraAfter = false }) {
+    current.keepCameraAfter = keepCameraAfter && !file;
     current.ex = exercise; current.target = target || exercise.defaultTarget; current.opts = { ...options }; onDone = done; onExit = exit; lastRec = null;
     return startLive(exercise, current.target, file);
   }
-  window.FyzioCoach = { start, exitLive, diagram, demo, cameraDiagram, thumb, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
+  /* Shown over the live camera between sets. app.js owns the clock and calls this each tick. */
+  function restOverlay(opts) { if (live && live.state === 'rest') overlay(opts.title || '', opts.text || '', opts); }
+  function restActive() { return !!live && live.state === 'rest'; }
+  /* Tear down a held-open camera when the person stops instead of starting the next set. */
+  function endRest() { if (live && live.state === 'rest') { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); } }
+
+  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, thumb, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
 })();

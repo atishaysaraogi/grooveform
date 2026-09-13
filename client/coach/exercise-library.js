@@ -16,6 +16,18 @@
   'use strict';
 
   const TEXT = ['id', 'name', 'group', 'summary', 'setup', 'why'];
+  const LIMBS = ['leg', 'arm', 'side'];
+  /* How a one-sided move decides which limb is being worked:
+       pick   — the person chooses, and that choice is the working limb (front-on moves)
+       camera — the limb nearest the camera is the working one, so the pose decides and the
+                choice only says how to set up (lying or standing side-on) */
+  const SIDE_BY = ['pick', 'camera'];
+  /* Every one-sided move offers the same choice, so it is added here rather than
+     repeated in ten files. 'both' runs the sets on one side, then asks to switch. */
+  const SIDE_OPTION = Object.freeze({
+    key: 'side', label: 'Which side', values: ['left', 'right', 'both'], default: 'both',
+    labels: Object.freeze({ left: 'Left', right: 'Right', both: 'Both (one then the other)' }),
+  });
   const TYPES = ['reps', 'hold'];
   const VIEWS = ['front', 'side'];
 
@@ -36,6 +48,11 @@
     if (!TYPES.includes(ex.type)) fail(id, `type must be one of ${TYPES.join(' | ')}`);
     if (!VIEWS.includes(ex.view)) fail(id, `view must be one of ${VIEWS.join(' | ')}`);
     if (!isStr(ex.icon)) fail(id, 'icon must be a string');
+    if (ex.sided !== undefined) {
+      if (!ex.sided || typeof ex.sided !== 'object') fail(id, 'sided must be an object when present');
+      if (!LIMBS.includes(ex.sided.limb)) fail(id, `sided.limb must be one of ${LIMBS.join(' | ')}`);
+      if (!SIDE_BY.includes(ex.sided.by)) fail(id, `sided.by must be one of ${SIDE_BY.join(' | ')}`);
+    }
     if (!Number.isFinite(ex.order)) fail(id, 'order must be a number (it sets where the move appears in lists)');
     if (!Number.isFinite(ex.defaultTarget)) fail(id, 'defaultTarget must be a number');
     if (!isArr(ex.targets) || !ex.targets.every(Number.isFinite)) fail(id, 'targets must be a non-empty array of numbers');
@@ -96,7 +113,13 @@
     define(factory) {
       if (!isFn(factory)) throw new Error('ExerciseLibrary.define expects a function');
       if (!library.kinematics) throw new Error('ExerciseLibrary: engine.js must load before any exercise');
-      const ex = validate(factory(library.kinematics));
+      const ex = factory(library.kinematics);
+      /* A one-sided move always offers Left / Right / Both. Adding it here keeps the
+         choice identical everywhere and out of every move file. */
+      if (ex && ex.sided && !(ex.options || []).some((o) => o.key === 'side')) {
+        ex.options = [...(ex.options || []), SIDE_OPTION];
+      }
+      validate(ex);
       if (index[ex.id]) throw new Error(`exercise "${ex.id}" is already registered`);
       index[ex.id] = ex;
       /* Insert in `order`, so the catalogue reads the same however the files were
@@ -107,6 +130,7 @@
       return ex;
     },
 
+    SIDE_OPTION,
     all() { return list.slice(); },
     get(id) { return index[id] || null; },
     ids() { return list.map((e) => e.id); },

@@ -8,8 +8,6 @@
      brand colours and become the *background* in dark mode, so text can never name them directly. */
   --ink: var(--text); --ink-soft: var(--muted); --accent-2: var(--violet);
   --hero-1: var(--text); --hero-2: var(--pink); --hero-3: var(--violet);
-  /* Ink on the coach's translucent dark overlay — that backdrop does not flip, so it is fixed. */
-  --over-ink: var(--cream); --over-ink-soft: #e3d3f2;
   --radius: 26px; --shadow: 6px 6px 0 var(--grape);
   --font-display: "Righteous", "Arial Rounded MT Bold", sans-serif;
   --font-body: "Nunito", "Trebuchet MS", sans-serif;
@@ -148,8 +146,8 @@ select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid
 .overlay[hidden] { display: none; }
 .overlay .card { max-width: 420px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .overlay .count { font-family: var(--font-display); font-size: 7rem; line-height: 1; color: var(--lime); }
-.overlay h2 { color: var(--over-ink); }
-.overlay p { color: var(--over-ink-soft); }
+.overlay h2 { color: var(--ink); }
+.overlay p { color: var(--ink-soft); }
 .check-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .check { font-family: var(--font-mono); font-size: 0.75rem; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); color: #B7C4CC; }
 .check.ok { background: rgba(46,211,165,.18); color: #2ED3A5; }
@@ -365,3 +363,31 @@ a.ex-card .name { color: var(--text, inherit); }
 @media (max-width: 600px) { .hero-logo { max-width: 300px; } }
 /* On the homepage the hero is the logo, so the topbar mark would be a duplicate. */
 .topbar.at-home .brand { display: none; }
+
+/* ---------- First-run intro ---------- */
+/* Block layout, not grid centring: a card taller than the phone must scroll from its top
+   rather than being centred and clipped at both ends. */
+.intro { position: fixed; inset: 0; z-index: 30; background: rgba(43, 21, 70, .72); display: block; overflow-y: auto; padding: 16px; }
+.intro[hidden] { display: none; }
+.intro-card { background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; max-width: 560px; width: 100%; margin: 16px auto; display: flex; flex-direction: column; gap: 10px; }
+.intro-card h2 { font-size: clamp(1.35rem, 5vw, 1.9rem); }
+.intro-steps { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 14px; }
+.intro-steps li { display: grid; grid-template-columns: 26px 76px 1fr; grid-template-areas: "n art name" "n art copy"; column-gap: 10px; row-gap: 2px; align-items: start; }
+.intro-steps .n { grid-area: n; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--grape); font-family: var(--font-display); font-size: .95rem; display: grid; place-items: center; }
+.intro-steps .art { grid-area: art; width: 76px; height: auto; align-self: center; }
+.intro-steps strong { grid-area: name; align-self: end; }
+.intro-steps .muted { grid-area: copy; font-size: .9rem; line-height: 1.35; }
+.intro-steps .art .ink { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.intro-steps .art .floor { stroke: var(--line); stroke-width: 4; stroke-linecap: round; }
+.intro-steps .art .dot { fill: var(--accent); }
+.intro-steps .art .beam { stroke: var(--accent-2); stroke-width: 2.5; stroke-dasharray: 5 5; fill: none; }
+.intro-steps .art .bubble { fill: var(--accent); stroke: var(--ink); stroke-width: 4; }
+.intro-steps .art .cue-line { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.intro-steps .art .bubble + .cue-line { stroke: var(--grape); }
+.intro-steps .art .bar { stroke: var(--ink); stroke-width: 3; }
+.intro-steps .art .bar.a { fill: var(--pink); } .intro-steps .art .bar.b { fill: var(--tangerine); } .intro-steps .art .bar.c { fill: var(--lime); }
+.intro-actions { margin-top: 4px; }
+@media (max-width: 360px) {
+  .intro-steps li { grid-template-columns: 26px 1fr; grid-template-areas: "n name" "n copy"; }
+  .intro-steps .art { display: none; }
+}

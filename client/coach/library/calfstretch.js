@@ -9,7 +9,7 @@
     const { SIDE, angle, dist, fromVertical, sideJoints } = k;
 
     return {
-      id: 'calfstretch', order: 50, name: 'Wall calf stretch', group: 'Foot & ankle', type: 'hold', view: 'side', icon: '🧗',
+      id: 'calfstretch', order: 50, sided: { limb: 'leg', by: 'camera' }, name: 'Wall calf stretch', group: 'Foot & ankle', type: 'hold', view: 'side', icon: '🧗',
       summary: 'Gastrocnemius (straight knee) or soleus (bent knee) stretch, verified heel-down and knee-correct.',
       setup: 'Stand facing a wall with both hands on it, side-on to the camera at hip height, 2–3 m away. Step the stretching leg back so it is the leg nearest the camera; toes pointing at the wall. Whole body from hands to back heel in frame.',
       why: 'Side-on, the three things that make or break the stretch — back heel on the floor, back knee straight or bent, shin leaning toward the wall — are each a direct height or angle read.',

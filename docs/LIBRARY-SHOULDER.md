@@ -192,7 +192,7 @@ Every band exercise (and standing hip abduction, with the band around the ankles
 
 ## Validation status
 
-All five have synthetic-pose unit tests (`test/engine.test.js`: rep counts, partials, and each fault firing on a deliberately faulty rep and staying silent on clean ones) and the browser suite runs a full coached abduction set with arm identification. None has been tuned on a real recording yet — as with the first five, record 3–5 sessions per exercise (clean form plus each deliberate fault), export the diagnostics JSON from the app, and replay them to set the thresholds. The two most likely to need tuning: the ER forearm-length estimate (0.85 × upper arm) and the pull-apart arm-length estimate (1.15 × torso).
+All five have synthetic-pose unit tests (`test/engine.test.js`: rep counts, partials, and each fault firing on a deliberately faulty rep and staying silent on clean ones) and the browser suite runs a full coached abduction set on a chosen arm. None has been tuned on a real recording yet — as with the first five, record 3–5 sessions per exercise (clean form plus each deliberate fault), export the diagnostics JSON from the app, and replay them to set the thresholds. The two most likely to need tuning: the ER forearm-length estimate (0.85 × upper arm) and the pull-apart arm-length estimate (1.15 × torso).
 
 ## Sources consulted
 

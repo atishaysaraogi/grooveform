@@ -85,9 +85,26 @@ needs and never reaches into engine internals. Available in `k`:
 | `options` | extra per-set choices (band, range, variant); each needs `key`, `label`, `values`, `default` |
 | `required` | landmark indices that must be visible before a set can start |
 | `upperBody` | `true` when head-to-hips is enough, so the framing check stops asking for legs |
-| `identifyLimb` | `'arm'` / `'leg'` to have the user pick a side by lifting it |
+| `sided` | `{ limb, by }` when the move works one limb at a time — see below |
 | `calibrate` | reads the still start frame, returns the baselines `measure` compares against |
 | `measure` | per frame; returns `p` (0→1 through the movement) plus whatever the faults check |
+
+### One-sided moves
+
+A move that works one limb at a time declares `sided`, and the library then offers a
+**Left / Right / Both** choice automatically — you do not add that option yourself.
+
+```js
+sided: { limb: 'leg', by: 'pick' }
+```
+
+| `limb` | `'leg'`, `'arm'` or `'side'` — only the word used in the UI ("left leg", "right arm") |
+|---|---|
+| `by: 'pick'` | the person's choice **is** the working limb. For moves facing the camera, where either limb can be worked from the same set-up. |
+| `by: 'camera'` | the limb nearest the lens is the working one, so the *pose* decides. The choice only tells the person how to lie or stand, and positioning will not pass until the camera can see the side they picked. Use this for side-on moves. |
+
+Choosing **Both** runs every set on one side, then prompts to switch and repeats on the
+other. Nothing in the move has to handle that: it is expanded into two ordinary steps.
 
 ### Faults
 

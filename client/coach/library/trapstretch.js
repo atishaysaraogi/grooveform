@@ -9,7 +9,7 @@
     const { SIDE, dist, headTilt, lineTilt, mid } = k;
 
     return {
-      id: 'trapstretch', order: 100, upperBody: true, name: 'Upper trapezius stretch', group: 'Neck', type: 'hold', view: 'front', icon: '🧘', identifyLimb: null,
+      id: 'trapstretch', order: 100, sided: { limb: 'side', by: 'pick' }, upperBody: true, name: 'Upper trapezius stretch', group: 'Neck', type: 'hold', view: 'front', icon: '🧘',
       enterCue: 'Ear toward the shoulder — and keep the other shoulder down',
       summary: 'Ear toward the opposite shoulder with the stretched-side hand behind your back — checked for the shoulder creeping up, the head turning and the hand coming out.',
       setup: 'Sit or stand facing the camera about 1.5 m away, camera at chest height, head to hips in frame. Put the hand of the side you are stretching behind your back (or sit on it). Tuck the chin slightly, then tilt the ear toward the opposite shoulder; the other hand may rest on the head to add gentle weight. Hold, breathe, keep the stretched shoulder down.',

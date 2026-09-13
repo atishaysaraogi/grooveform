@@ -14,7 +14,8 @@ const MOCK = `
   function frame(map) { const pts = []; for (let i = 0; i < 33; i++) pts.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 }); for (const k in map) { const [x, y] = map[k]; pts[+k] = { x: x / (16 / 9) + 0.5 - 0.5 / (16 / 9), y, z: 0, visibility: 0.95 }; } return pts; }
   function hipabd(raise, lean = 0) { const hipL = [0.45, 0.50], hipR = [0.55, 0.50], leg = 0.35, a = raise * Math.PI / 180; const kneeR = [hipR[0] + Math.sin(a) * leg * 0.5, hipR[1] + Math.cos(a) * leg * 0.5], ankR = [hipR[0] + Math.sin(a) * leg, hipR[1] + Math.cos(a) * leg]; const shift = Math.tan(lean * Math.PI / 180) * 0.22;
     return frame({ 0: [0.5 - shift, 0.15], 7: [0.48 - shift, 0.16], 8: [0.52 - shift, 0.16], 11: [0.42 - shift, 0.28], 12: [0.58 - shift, 0.28], 13: [0.38 - shift, 0.40], 14: [0.62 - shift, 0.40], 15: [0.36 - shift, 0.50], 16: [0.64 - shift, 0.50], 23: hipL, 24: hipR, 25: [0.45, 0.675], 26: kneeR, 27: [0.45, 0.85], 28: ankR, 29: [0.44, 0.87], 30: [ankR[0] - 0.01, ankR[1] + 0.02], 31: [0.46, 0.88], 32: [ankR[0] + 0.01, ankR[1] + 0.02] }); }
-  window.__mockPose = t => { if (t > 4000 && t < 5600) return hipabd(22 * Math.sin(Math.PI * (t - 4000) / 1600)); if (t < 10500) return hipabd(0); const tt = t - 10500, rep = Math.floor(tt / 2600), ph = (tt % 2600) / 2600; if (rep >= 8) return hipabd(0); const k = Math.sin(Math.PI * ph); const f = hipabd(32 * k, rep === 1 ? 24 * k : 0); for (const p of f) { p.x += (Math.random() - 0.5) * 0.004; p.y += (Math.random() - 0.5) * 0.004; } return f; };`;
+  try { localStorage.setItem('fyzio.seenIntro', '1'); } catch (e) {}
+  window.__mockPose = t => { if (t < 10500) return hipabd(0); const tt = t - 10500, rep = Math.floor(tt / 2600), ph = (tt % 2600) / 2600; if (rep >= 8) return hipabd(0); const k = Math.sin(Math.PI * ph); const f = hipabd(32 * k, rep === 1 ? 24 * k : 0); for (const p of f) { p.x += (Math.random() - 0.5) * 0.004; p.y += (Math.random() - 0.5) * 0.004; } return f; };`;
 
 let base;
 async function otpLogin(page, identifier, { name, role } = {}) {
@@ -26,11 +27,18 @@ async function otpLogin(page, identifier, { name, role } = {}) {
   await page.waitForFunction(() => window.__portal && window.__portal.me);
   if (await page.$('#f-consent')) { await page.$eval('#f-consent', f => f.requestSubmit()); await page.waitForSelector('#f-consent', { state: 'detached' }); }
 }
-async function runCoachedSet(page) {
+async function runCoachedSet(page, side = 'right') {
+  /* A one-sided move must be set to whichever limb the synthetic pose actually moves: the
+     default is "both", which starts on the left and would never register a rep on a
+     right-sided fixture. Routine items carry their own side and have no chips, so this is a
+     no-op there. */
+  const chip = await page.$(`[data-optkey="side"] [data-opt="${side}"]`);
+  if (chip) await chip.click();
   await page.click('#do-start');
-  await page.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'identify', null, { timeout: 20000 });
   await page.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 20000 });
-  await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null, null, { timeout: 45000 });   // auto-finishes at 8 reps
+  // auto-finishes at the target: the last set lands on the review panel, an earlier one on the
+  // rest overlay that keeps the camera up.
+  await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.FyzioCoach.restActive(), null, { timeout: 45000 });
 }
 (async () => {
   await start(); base = `http://127.0.0.1:${server.address().port}`;
@@ -51,9 +59,65 @@ async function runCoachedSet(page) {
     await visitor.goto(base + '/?mock=1#/exercise/heelslide'); await visitor.waitForSelector('.card.upgrade'); assert.equal(await visitor.$('#do-start'), null, 'locked exercise has no start button');
     await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start'); const t = await text(visitor); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone') && t.includes('The move') && t.includes('sign in')); assert.ok(await visitor.$('svg.demo-fig') && await visitor.$('svg.cam-diagram.top'), 'demo and camera diagrams present'); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-exercise.png'), fullPage: true });
   });
+  await step('first-time visitor: sees the three-step intro, and only once', async () => {
+    /* A bare context: newPage() pre-dismisses the intro for every other test, and its init
+       script would re-dismiss it on the reload below, so this one starts genuinely fresh. */
+    const ctx = await browser.newContext({ viewport: { width: 400, height: 820 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const fresh = await ctx.newPage();
+    fresh.on('pageerror', (e) => errors.push(String(e)));
+    await fresh.goto(base + '/#/');
+    await fresh.waitForSelector('#intro:not([hidden])', { timeout: 15000 });
+    const t = await fresh.innerText('#intro');
+    for (const want of ['Position the camera', 'Follow the voice', 'Review the set']) assert.ok(t.includes(want), want);
+    assert.equal((await fresh.$$('.intro-steps li')).length, 3);
+    await fresh.screenshot({ path: path.join(SHOTS, 'intro.png') });
+    await fresh.click('#intro-go');
+    assert.ok(await fresh.$eval('#intro', (e) => e.hidden), 'dismissed');
+    await fresh.reload(); await fresh.waitForSelector('.tile');
+    assert.ok(await fresh.$eval('#intro', (e) => e.hidden), 'stays dismissed on the next visit');
+    await ctx.close();
+  });
+
+  await step('one-sided move: the side is chosen up front, no lift-the-limb gesture', async () => {
+    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start');
+    const chips = await visitor.$$eval('[data-optkey="side"] .chip', (n) => n.map((x) => x.textContent.trim()));
+    assert.deepEqual(chips, ['Left', 'Right', 'Both (one then the other)'], 'left / right / both offered');
+    /* A move worked with both limbs at once must not offer the choice. */
+    await visitor.goto(base + '/?mock=1#/exercise/plank'); await visitor.waitForSelector('#do-start');
+    assert.equal((await visitor.$$('[data-optkey="side"]')).length, 0, 'plank is not one-sided');
+    /* Picking a side sends it straight into the set: no identify state, and the HUD names the limb. */
+    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start');
+    await visitor.click('[data-optkey="side"] [data-opt="right"]');
+    await visitor.click('#do-start');
+    await visitor.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 25000 });
+    const named = await visitor.evaluate(() => ({ work: window.FyzioCoach.live.session.opts.work, hud: document.querySelector('#live-name').textContent }));
+    assert.equal(named.work, 'R', 'the chosen side is the working limb');
+    assert.ok(named.hud.includes('right leg'), named.hud);
+    await visitor.click('#btn-exit'); await visitor.waitForSelector('#do-start');
+  });
+
   await step('visitor: completes a coached set with the mock camera, then signs up and the set is saved', async () => {
     await visitor.click('[data-optkey="target"] [data-opt="8"]'); await visitor.click('[data-optkey="sets"] [data-opt="2"]'); await visitor.click('[data-optkey="rest"] [data-opt="30"]'); await runCoachedSet(visitor); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-review.png') });
-    await visitor.waitForSelector('#rest-go'); assert.ok((await visitor.innerText('#rv-portal')).includes('Set 1 of 2 done')); await visitor.screenshot({ path: path.join(SHOTS, 'rest-between-sets.png') }); await visitor.click('#rest-go');
+    await visitor.waitForFunction(() => window.FyzioCoach.restActive(), null, { timeout: 20000 });
+    const rest = await visitor.evaluate(() => ({
+      live: document.querySelector('#screen-live').classList.contains('active'),
+      video: !!document.querySelector('#stage #video'),
+      count: document.querySelector('#count').textContent,
+      title: document.querySelector('#ov-title').textContent,
+      tip: document.querySelector('#ov-text').textContent,
+      buttons: [...document.querySelectorAll('#ov-actions .btn')].map(b => b.textContent),
+    }));
+    assert.ok(rest.live, 'the camera screen stays up between sets');
+    /* restActive() is only true while the frame loop is still running (it bails without a live
+       session), so this is the real check that the camera view was not torn down. The mock pose
+       source attaches no MediaStream, so there is no srcObject to assert on here. */
+    assert.ok(rest.video, 'the camera view is still mounted between sets');
+    assert.ok(/^[1-9]/.test(rest.count), `the set's count stays on screen between sets (saw "${rest.count}")`);
+    assert.ok(rest.title.includes('Set 1 of 2 done'), rest.title);
+    assert.ok(rest.tip.length > 10, 'the rest screen says what to work on');
+    assert.ok(rest.buttons.some(b => /Start set 2/.test(b)), rest.buttons.join(','));
+    await visitor.screenshot({ path: path.join(SHOTS, 'rest-between-sets.png') });
+    await visitor.click('#ov-actions .btn');
     await visitor.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 25000 }); await visitor.waitForSelector('#rv-login', { timeout: 45000 });
     assert.ok((await visitor.innerText('#rv-portal')).includes('these 2 sets')); await visitor.click('#rv-login'); await visitor.waitForSelector('#l-id');
     await otpLogin(visitor, '+91 98765 43210', { name: 'Arjun Mehta' });
@@ -127,7 +191,7 @@ async function runCoachedSet(page) {
     await pro.goto(base + '/?mock=1#/account'); await pro.waitForSelector('[data-cancel]'); await pro.click('[data-cancel]'); await pro.waitForFunction(() => /not renewing/i.test(document.body.innerText)); await pro.screenshot({ path: path.join(SHOTS, 'account.png'), fullPage: true });
     assert.ok((await pro.evaluate(() => window.__portal.ent.pro)), 'access continues after cancelling until period end');
   });
-  await step('pro: shoulder exercises render (diagram + guide); coached band abduction set with arm identification', async () => {
+  await step('pro: shoulder exercises render (diagram + guide); coached band abduction set on the chosen arm', async () => {
     for (const id of ['shoulder_er', 'shoulder_abd', 'band_row', 'pullapart', 'trapstretch']) { await pro.goto(base + '/?mock=1#/exercise/' + id); await pro.waitForSelector('#do-start'); const t = await text(pro); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone'), id + ' page'); assert.ok(await pro.$('svg.cam-diagram'), id + ' diagram'); }
     await pro.screenshot({ path: path.join(SHOTS, 'exercise-trapstretch.png'), fullPage: true });
     await pro.goto(base + '/?mock=1#/exercise/shoulder_abd'); await pro.waitForSelector('#do-start');
@@ -135,11 +199,11 @@ async function runCoachedSet(page) {
       function frame(map) { const pts = []; for (let i = 0; i < 33; i++) pts.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 }); for (const k in map) { const [x, y] = map[k]; pts[+k] = { x: x / (16 / 9) + 0.5 - 0.5 / (16 / 9), y, z: 0, visibility: 0.95 }; } return pts; }
       function abd(raise) { const sh = [0.59, 0.30], a = raise * Math.PI / 180, up = 0.13, fo = 0.12; const el = [sh[0] + Math.sin(a) * up, sh[1] + Math.cos(a) * up], wr = [el[0] + Math.sin(a) * fo, el[1] + Math.cos(a) * fo];
         return frame({ 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15], 11: sh, 12: [0.41, 0.30], 13: el, 14: [0.39, 0.42], 15: wr, 16: [0.38, 0.53], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95], 29: [0.55, 0.97], 30: [0.43, 0.97], 31: [0.57, 0.98], 32: [0.45, 0.98] }); }
-      window.__mockPose = t => { if (t > 4000 && t < 5600) return abd(40 * Math.sin(Math.PI * (t - 4000) / 1600)); if (t < 10500) return abd(0); const tt = t - 10500, rep = Math.floor(tt / 2800), ph = (tt % 2800) / 2800; if (rep >= 8) return abd(0); return abd(92 * Math.sin(Math.PI * ph)); };
+      window.__mockPose = t => { if (t < 10500) return abd(0); const tt = t - 10500, rep = Math.floor(tt / 2800), ph = (tt % 2800) / 2800; if (rep >= 8) return abd(0); return abd(92 * Math.sin(Math.PI * ph)); };
     });
-    await pro.click('[data-optkey="target"] [data-opt="8"]'); await runCoachedSet(pro);
+    await pro.click('[data-optkey="target"] [data-opt="8"]'); await runCoachedSet(pro, 'left');   // this fixture raises the LEFT arm
     const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted: ' + JSON.stringify(rec));
-    assert.equal(rec.work, 'L', 'left arm identified by lifting it: ' + JSON.stringify(rec));
+    assert.equal(rec.work, 'L', 'the chosen left arm is the working limb: ' + JSON.stringify(rec));
     await pro.screenshot({ path: path.join(SHOTS, 'review-shoulder-abd.png') }); await pro.click('#rv-submit'); await pro.waitForFunction(() => location.hash === '#/exercise/shoulder_abd' && !document.querySelector('#coach:not([hidden])'));
     await pro.goto(base + '/?mock=1#/history'); await pro.waitForFunction(() => document.body.innerText.includes('Shoulder abduction'));
   });

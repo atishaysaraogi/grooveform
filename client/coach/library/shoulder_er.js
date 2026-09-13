@@ -10,7 +10,7 @@
       stickySide, trunkLean } = k;
 
     return {
-      id: 'shoulder_er', order: 60, upperBody: true, name: 'Standing shoulder rotation (band)', group: 'Shoulder — rotator cuff', type: 'reps', view: 'front', icon: '💪', identifyLimb: 'arm',
+      id: 'shoulder_er', order: 60, sided: { limb: 'arm', by: 'pick' }, upperBody: true, name: 'Standing shoulder rotation (band)', group: 'Shoulder — rotator cuff', type: 'reps', view: 'front', icon: '💪',
       summary: 'External or internal rotation with the elbow pinned to your side — the classic rotator-cuff exercise, checked for elbow drift, shrugging and trunk twist.',
       setup: 'Anchor the band at elbow height beside you (door handle, railing). Stand facing the camera about 2 m away, camera at chest height, head to hips in frame. Elbow bent to 90° and touching your ribs, forearm across your stomach for external rotation (or out to the side for internal rotation). Rotate the forearm against the band, elbow glued to your side, then return slowly.',
       why: 'Facing the camera, the forearm swings across the picture like a clock hand, so rotation angle is read directly, and the elbow leaving the ribs, the shoulder rising toward the ear and the torso twisting are all visible as changes the camera can measure.',

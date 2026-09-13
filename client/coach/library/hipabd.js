@@ -9,7 +9,7 @@
     const { FULL, ATTEMPT, BAND, angle, dist, fromVertical, pelvisTilt, trunkLean } = k;
 
     return {
-      id: 'hipabd', order: 20, name: 'Standing hip abduction', group: 'Hip strength', type: 'reps', view: 'front', icon: '🧍', identifyLimb: 'leg',
+      id: 'hipabd', order: 20, sided: { limb: 'leg', by: 'pick' }, name: 'Standing hip abduction', group: 'Hip strength', type: 'reps', view: 'front', icon: '🧍',
       summary: 'Side leg raise for glute medius — the muscle that keeps the pelvis level when you walk and run.',
       setup: 'Stand facing the camera, about 2.5 m away, camera at hip height, one hand lightly on a chair or wall. Whole body in frame. To progress, loop a band around both ankles. Lift one leg straight out to the side and lower with control; do all reps on one leg, then repeat facing the camera with the other.',
       why: 'From the front, the leg swings across the camera plane, so raise angle, pelvis tilt, trunk lean and knee bend are all read directly with nothing in the way.',
