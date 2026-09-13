@@ -77,7 +77,7 @@
 
   /* ---------- routing ---------- */
   function nav(items) { $('topnav').innerHTML = items.map(([href, label]) => `<a href="${href}" class="${(href === '#/' ? location.hash === '#/' || !location.hash : location.hash.startsWith(href)) ? 'active' : ''}">${label}</a>`).join(''); }
-  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); if (window.FyzioAnatomy) FyzioAnatomy.mountAll(view); }
+  function render(html) { view.innerHTML = html; window.scrollTo(0, 0); $('topbar').classList.remove('at-home'); }
   function requireLogin(next) { if (me) return true; sessionStorage.setItem('fz.next', next || location.hash); location.hash = '#/login'; return false; }
   async function route() {
     const hash = location.hash || '#/'; const [, p1, p2, p3] = hash.split('?')[0].split('/');
@@ -153,7 +153,7 @@
       <section class="hero"><div class="hero-brand">${heroMark()}<span class="hero-tag">camera form coach</span></div>
         <p class="hero-copy">Your camera counts the reps and cheers the good ones. Out loud. Like a coach who actually likes you.${solo() ? '' : ' Free moves need no sign-up; the Pass unlocks every move — or a coach sends you a playlist.'}</p>
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
-      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.${libAll() ? '' : ` <a href="#/exercises" data-lib-all>Full library: ${exercises.length} moves →</a>`}</p>${exs.length > 16 ? `<input type="search" id="ex-q" class="search" placeholder="Search ${exs.length} moves…" aria-label="Search moves">` : ''}${tilesHtml(exs)}</section>
+      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.${libAll() ? '' : ` <a href="#/exercises" data-lib-all>Full library: ${exercises.length} moves →</a>`}</p>${listHtml(exs)}<p class="muted search-none" hidden>No move matches that search.</p></section>
       <section class="home-sec"><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
       <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'Grooveform')} is a fitness tool, not a medical service.</p></div>
     </div>`);
@@ -165,26 +165,32 @@
     return `<a class="playlist ${tone}" href="#/routine/${r.id}"><span class="count">${r.items.length}</span><span class="body"><span class="title">${esc(r.title)}</span><span class="desc">${esc(r.description || '')}</span><span class="tracks">${names.map(esc).join(' · ')}</span></span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pass</span>`}</a>`; }
   function hash(str) { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return h; }
   const allFree = () => (exercises || []).every(e => e.tier === 'free');
-  function exTile(ex) { return `<a class="tile" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span>${trackBadge(ex)}${allFree() ? '' : tierBadge(ex)}</a>`; }
-  /* Tiles for a list of moves: one grid while the list is short, one grid per body region once
-     the full library is in. */
-  function tilesHtml(list) {
-    if (list.length <= 16) return `<div class="tiles wide">${list.map(exTile).join('')}</div>`;
+  function exRow(ex) { return `<a class="ex-row" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="body"><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span></span>${trackBadge(ex)}${allFree() ? '' : tierBadge(ex)}</a>`; }
+  /* The moves as a list: one list while it is short, one per body region once the full library is in. */
+  function listHtml(list) {
+    if (list.length <= 16) return `<div class="ex-list">${list.map(exRow).join('')}</div>`;
     const groups = []; for (const e of list) { const name = e.vetted ? 'Vetted moves' : e.group; let g = groups.find(x => x.name === name); if (!g) groups.push(g = { name, items: [] }); g.items.push(e); }
-    return groups.map(g => `<section class="ex-group" data-group="${esc(g.name)}"><h3 class="group-h">${esc(g.name)} <span class="muted">${g.items.length}</span></h3><div class="tiles wide">${g.items.map(exTile).join('')}</div></section>`).join('');
+    return groups.map(g => `<section class="ex-group" data-group="${esc(g.name)}"><h3 class="group-h">${esc(g.name)} <span class="muted">${g.items.length}</span></h3><div class="ex-list">${g.items.map(exRow).join('')}</div></section>`).join('');
   }
-  /* A search box over the tiles: hides tiles (and empty groups) whose name does not match. */
-  function wireSearch(root) {
-    const q = root.querySelector('#ex-q'); if (!q) return;
-    q.oninput = () => { const s = q.value.trim().toLowerCase(); root.querySelectorAll('.tile[data-name]').forEach(t => t.hidden = !!s && !t.dataset.name.includes(s) && !t.dataset.group.toLowerCase().includes(s)); root.querySelectorAll('.ex-group').forEach(g => g.hidden = ![...g.querySelectorAll('.tile')].some(t => !t.hidden)); };
+  /* The search box lives in the nav bar; it filters whatever list is on the page (and opens the
+     full list from any other page). */
+  let navQuery = '';
+  function applySearch(root) {
+    const s = navQuery.trim().toLowerCase();
+    root.querySelectorAll('.ex-row[data-name]').forEach(t => t.hidden = !!s && !t.dataset.name.includes(s) && !t.dataset.group.toLowerCase().includes(s));
+    root.querySelectorAll('.ex-group').forEach(g => g.hidden = ![...g.querySelectorAll('.ex-row')].some(t => !t.hidden));
+    const none = root.querySelector('.search-none'); if (none) none.hidden = !s || !!root.querySelector('.ex-row:not([hidden])');
   }
+  function wireSearch(root) { applySearch(root); }
+  $('nav-q').oninput = (e) => { navQuery = e.target.value; const h = location.hash; if (!h || h === '#/' || h.startsWith('#/exercises')) applySearch(view); else if (navQuery.trim()) location.hash = '#/exercises'; };
+  window.addEventListener('scroll', () => $('topbar').classList.toggle('scrolled', window.scrollY > 24), { passive: true });
   function rtTile(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); return `<a class="tile routine" href="#/routine/${r.id}"><span class="glyph"><span class="rt-count">${r.items.length}</span></span><span class="name">${esc(r.title)}</span><span class="meta">${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' …' : ''}</span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pro</span>`}</a>`; }
 
   function exCard(ex) { return `<a class="ex-card" href="#/exercise/${ex.id}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span><span class="name">${esc(ex.name)}</span><br><span class="sum">${esc(ex.summary)}</span></span>${tierBadge(ex)}</a>`; }
   function routineCard(r) { return `<a class="card link" href="#/routine/${r.id}" style="text-decoration:none;color:inherit"><div class="row"><strong>${esc(r.title)}</strong>${r.kind === 'prebuilt' ? lockBadge(r.locked) : r.ownerName ? `<span class="badge accent">from ${esc(r.ownerName)}</span>` : '<span class="badge">mine</span>'}<div class="spacer"></div><span class="meta">${r.items.length} exercises</span></div><p class="meta" style="margin-top:4px">${esc(r.description || '')}</p><p class="meta">${r.items.map(i => i.exercise ? i.exercise.name : i.exerciseId).join(' · ')}</p></a>`; }
   async function renderExercises() { await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const list = visibleEx();
     render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'}${libAll() ? ' The full library includes moves the camera can only count, or not see at all — each tile says which.' : ` Showing the vetted moves; switch to the full library above for ${exercises.length} more.`}</p>
-      ${list.length > 16 ? `<input type="search" id="ex-q" class="search" placeholder="Search ${list.length} moves…" aria-label="Search moves">` : ''}${tilesHtml(list)}${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
+      ${listHtml(list)}<p class="muted search-none" hidden>No move matches that search.</p>${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
   async function renderExercise(id, sub) {
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const cat = exById(id); if (!cat) return renderHome(); const ex = coachEx(id); const g = cat.guide;
     let itemCtx = null; if (sub && sub.startsWith('item-')) { try { const [rid, iid] = sub.slice(5).split('_'); const r = (await api('GET', '/api/routines/' + rid)).routine; itemCtx = { routine: r, item: r.items.find(i => i.id === iid) }; if (!itemCtx.item) itemCtx = null; } catch { } }
@@ -199,17 +205,22 @@
       ${cat.locked ? upgradeCard(`${cat.name} is a Pro exercise`) : ''}
       <div class="ex-grid">
         <div class="stack">
-          <div class="card"><h3>The move</h3>${FyzioAnatomy.demo(cat)}</div>
-          <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p><p class="muted" style="margin-top:6px;font-size:.9rem">${esc(cat.why)}</p></div>
+          <div class="card"><h3>The move</h3>${FyzioCoach.demo(cat)}</div>
+          <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p></div>
         </div>
         <div class="stack">
           ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config">${configBlock(cat, opts)}</div>`}
+          <div class="row"><button class="btn ghost" id="do-details" aria-expanded="false" aria-controls="ex-details">See details</button></div>
         </div>
       </div>
-      ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div>${g.cannotSee ? `<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>What the camera cannot see:</strong> ${esc(g.cannotSee)}</p>` : ''}<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
-      ${physioCard(cat)}
-      ${faultsCard(cat)}
+      <div id="ex-details" class="stack" hidden>
+        <div class="card"><h3>How the camera reads it</h3><p>${esc(cat.why)}</p>${g && g.cannotSee ? `<p class="muted" style="font-size:.9rem;margin-top:8px"><strong>What it cannot see:</strong> ${esc(g.cannotSee)}</p>` : ''}</div>
+        ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div><p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
+        ${faultsCard(cat)}
+        ${physioCard(cat)}
+      </div>
     </div>`);
+    const det = $('do-details'); det.onclick = () => { const d = $('ex-details'); d.hidden = !d.hidden; det.textContent = d.hidden ? 'See details' : 'Hide details'; det.setAttribute('aria-expanded', String(!d.hidden)); };
     wireChips(view, {}, opts);
     if (cat.locked) return;
     const begin = (file) => runCoach(ex, opts, itemCtx, file);
@@ -221,7 +232,7 @@
     const rows = [['Level', cat.level], ['Equipment', (cat.equipment || []).join(', ')], ['Muscles', cat.muscles ? [...(cat.muscles.primary || []), ...(cat.muscles.secondary || []).map(m => m + ' (secondary)')].join(', ') : ''], ['Tempo', cat.tempo], ['Dosage', cat.dosage], ['Progression', cat.progression], ['Regression', cat.regression], ['Do not do this if', cat.contraindications]].filter(r => r[1]);
     if (!rows.length) return '';
     const src = (cat.sources || []).filter(s => s && s.name);
-    return `<div class="card physio"><h3>Prescription</h3><dl class="physio-dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${src.length ? `<p class="muted sources">Based on: ${src.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)).join(' · ')}. Wording is ours; check the source for the clinical detail.</p>` : ''}</div>`;
+    return `<div class="card physio"><h3>Dosage and notes</h3><dl class="physio-dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${src.length ? `<p class="muted sources">Based on: ${src.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)).join(' · ')}. Wording is ours; check the source for the clinical detail.</p>` : ''}</div>`;
   }
   /* Every fault the move lists, with the spoken cue and the written tip, marked by who watches for it. */
   function faultsCard(cat) {
@@ -236,12 +247,15 @@
   /* The bubble shows only the value; the setting's name sits beside it as plain text. */
   function bubbleTexts(cat, key, values, o) {
     return values.map(vv => {
-      if (key === 'target' || key === 'sets' || key === 'rest') return String(vv);
+      if (key === 'target') return cat.type === 'hold' ? `${vv} s` : String(vv);
+      if (key === 'rest') return `${vv} s`;
+      if (key === 'sets') return String(vv);
+      if (o.swatches) return optLabel(o, vv);   // a coloured circle says the band; the name is in its title
       const lab = (o.labels && o.labels[vv]) || (vv + (o.unit || ''));
-      return (o.swatches ? optLabel(o, vv) + ' ' : '') + esc(key === 'side' && vv === 'both' ? 'Both' : lab);
+      return esc(key === 'side' && vv === 'both' ? 'Both' : lab);
     });
   }
-  const bubbleLabel = (cat, key, o) => key === 'target' ? (cat.type === 'hold' ? 'Hold (s)' : 'Reps') : key === 'sets' ? 'Sets' : key === 'rest' ? 'Rest (s)' : key === 'side' ? 'Side' : o.label;
+  const bubbleLabel = (cat, key, o) => key === 'target' ? (cat.type === 'hold' ? 'Hold' : 'Reps') : key === 'sets' ? 'Sets' : key === 'rest' ? 'Rest' : key === 'side' ? 'Side' : o.label;
   function bubble(cat, opts, key, values, o = {}) {
     const texts = bubbleTexts(cat, key, values, o); let i = values.indexOf(opts[key]); if (i < 0) i = 0;
     const label = bubbleLabel(cat, key, o);

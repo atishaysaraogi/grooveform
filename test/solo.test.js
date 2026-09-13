@@ -9,12 +9,13 @@ const SHOTS = path.join(__dirname, '..', 'docs', 'screenshots');
   await start(); const base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }); const errors = [];
   const page = await (await browser.newContext({ viewport: { width: 400, height: 860 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage(); page.on('pageerror', e => errors.push(String(e)));
-  await page.goto(base + '/#/'); await page.waitForSelector('.tile');
+  await page.goto(base + '/#/'); await page.waitForSelector('.ex-row');
+  await page.evaluate(() => { try { localStorage.setItem('fyzio.seenIntro', '1'); } catch { } const i = document.getElementById('intro'); if (i) i.hidden = true; });
   const body = await page.innerText('body');
   for (const banned of [/Sign in/, /Find a (curator|coach)/, /Pricing/, /\bPro\b/, /\bPass\b/, /\bFree\b/, /₹/]) assert.ok(!banned.test(body), 'solo home must not mention: ' + banned);
   assert.equal(await page.$('#btn-login:not([hidden])'), null, 'no sign-in button');
   assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(body), 'no emoji on the home page');
-  const titles = await page.$$eval('.tiles', cols => cols.map(c => [...c.querySelectorAll('.tile .name')].map(n => n.textContent.trim())));
+  const titles = await page.$$eval('.ex-list', cols => cols.map(c => [...c.querySelectorAll('.ex-row .name')].map(n => n.textContent.trim())));
   assert.equal(titles[0].length, 10, 'ten moves'); assert.ok((await page.$$('.playlist')).length >= 6, 'six playlists, one per row');
   await page.screenshot({ path: path.join(SHOTS, 'solo-home.png'), fullPage: true });
   // routines are distinct sets of exercises
@@ -22,9 +23,9 @@ const SHOTS = path.join(__dirname, '..', 'docs', 'screenshots');
   assert.equal(new Set(pre).size, pre.length, 'every prebuilt routine has a different exercise set: ' + pre.join(' | '));
   // exercise page: one config tile with reps + sets + rest, top-down camera diagram only, no side view
   await page.goto(base + '/#/exercise/heelslide'); await page.waitForSelector('#do-start');
-  const cfg = await page.innerText('.card.config'); assert.ok(/Reps|Hold \(s\)/.test(cfg) && cfg.includes('Sets') && cfg.includes('Rest (s)'), 'reps, sets and rest in one tile');
-  assert.ok(await page.$('.cam-sentence') && !(await page.$('svg.cam-diagram')), 'phone position is a sentence, not a diagram'); assert.ok(await page.$('canvas.demo-fig[data-anat]'), 'anatomical move figure');
-  assert.ok(/The phone should see you lying down, from the side, placed on the floor/.test(await page.innerText('#view')), 'camera sentence'); assert.ok((await page.$$('.guide .tag.cam')).length > 3 && (await page.$$('.guide .tag.you')).length > 1, 'guide uses camera/you tags, no bullets');
+  const cfg = await page.innerText('.card.config'); assert.ok(/Reps|Hold/.test(cfg) && cfg.includes('Sets') && /Rest\s+\d+ s/.test(cfg), 'reps, sets and rest in one tile');
+  assert.ok(await page.$('.cam-sentence') && !(await page.$('svg.cam-diagram')), 'phone position is a sentence, not a diagram'); assert.ok(await page.$('svg.demo-fig'), 'stick-figure demo');
+  assert.ok(/The phone should see you lying down, from the side, placed on the floor/.test(await page.innerText('#view')), 'camera sentence'); await page.click('#do-details'); assert.ok((await page.$$('.guide .tag.cam')).length > 3 && (await page.$$('.guide .tag.you')).length > 1, 'guide uses camera/you tags, no bullets');
   assert.equal(await page.$('.card.upgrade'), null, 'nothing locked');
   await page.screenshot({ path: path.join(SHOTS, 'solo-exercise.png'), fullPage: true });
   // settings page exists with voice toggle

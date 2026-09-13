@@ -160,7 +160,7 @@ client/coach/spec.js        spec → exercise compiler (also validates a spec, i
 client/studio/index.html    the Studio page
 client/studio/studio.js     screens, recorder, simulator, charts, figure builder, export
 client/studio/studio.css
-client/coach/anatomy.js     register(id, figure) — spec moves supply their own keyframes
+client/coach/coach.js       FyzioAnatomy.register(id, figure) — spec moves supply their own keyframes (drawn as the animated stick figure; the anatomical renderer is archived in coach/archive/)
 test/spec.test.js           a spec compiles, counts reps, fires faults as the numbers say
 test/e2e.test.js            "studio:" step — the whole flow in a browser with a synthetic stream
 ```

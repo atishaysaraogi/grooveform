@@ -89,7 +89,7 @@ physio fills in:
 
 `pose` gives the two keyframes of the figure as **joint angles** (see the header
 of `catalog.js` for the conventions) and `catalog.js` turns them into the
-points the anatomy figure draws, so a hundred figures can be written by hand
+points the stick figure draws (the fuller anatomical figure is parked in `coach/archive/`), so a hundred figures can be written by hand
 without any of them getting a limb of the wrong length. `face` is the way the
 front of the body points ('right' by default), which is what puts the chest
 and quads on one side and the back and glutes on the other. Both keyframes

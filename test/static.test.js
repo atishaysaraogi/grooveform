@@ -10,21 +10,21 @@ srv.listen(0, async () => {
   // Every page here starts with the intro already seen; the intro itself is covered in e2e.
   const openPage = async (opts) => { const pg = await browser.newPage(opts); await pg.addInitScript("try { localStorage.setItem('fyzio.seenIntro', '1'); } catch (e) {}"); return pg; };
   const page = await openPage({ viewport: { width: 400, height: 860 } }); page.on('pageerror', e => errors.push(String(e)));
-  await page.goto(base); await page.waitForSelector('.tile', { timeout: 15000 });
-  assert.equal((await page.$$('.tile')).length, 10, 'ten moves from the static catalogue'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
+  await page.goto(base); await page.waitForSelector('.ex-row', { timeout: 15000 });
+  assert.equal((await page.$$('.ex-row')).length, 10, 'ten moves from the static catalogue'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
   await page.click('.playlist'); await page.waitForSelector('.rt-item'); assert.ok((await page.$$('.rt-item')).length >= 2, 'playlist detail loaded from api/routines/<id>');
   assert.ok((await page.$$('.rt-config .bubble')).length > 0, 'every move on the playlist is configurable in place');
   assert.equal((await page.$$('.rt-start')).length, 1, 'one start button for the whole routine');
   assert.equal((await page.$$('.rt-item .item-row a.btn.primary')).length, 0, 'no per-exercise start buttons');
   // a single move still opens on its own, with its own options
-  await page.goto(base); await page.waitForSelector('.tile'); await page.click('.tile'); await page.waitForSelector('#do-start');
+  await page.goto(base); await page.waitForSelector('.ex-row'); await page.click('.ex-row'); await page.waitForSelector('#do-start');
   assert.ok((await page.$$('.card.config .bubble')).length > 0, 'move page keeps its own options');
   assert.deepEqual(errors, []);
 
   // The Studio ships with the static site, under /studio/, with the same relative asset paths.
   const studio = await openPage({ viewport: { width: 1100, height: 800 } }); studio.on('pageerror', e => errors.push('studio: ' + e));
   await studio.goto(base + 'studio/'); await studio.waitForSelector('#btn-new2', { timeout: 15000 });
-  assert.ok(await studio.evaluate(() => !!(window.MoveSpec && window.FormEngine && window.ExerciseLibrary.all().length === 10)), 'studio loads the engine, the spec compiler and every move');
+  assert.ok(await studio.evaluate(() => !!(window.MoveSpec && window.FormEngine && window.ExerciseLibrary.all().length === window.FormEngine.EXERCISES.length && window.ExerciseLibrary.all().length >= 135)), 'studio loads the engine, the spec compiler and every move, catalogue included');
   await studio.close(); assert.deepEqual(errors, []);
 
   // Text must stay legible in both themes: the palette's grape/violet become the *background* in
@@ -56,7 +56,7 @@ srv.listen(0, async () => {
   // The camera overlay used to cover the HUD, so a person the model could not find had no way
   // out: no buttons on the overlay and an unclickable exit. The ✕ must win the hit test.
   const esc = await openPage({ viewport: { width: 400, height: 860 } });
-  await esc.goto(base); await esc.waitForSelector('.tile');
+  await esc.goto(base); await esc.waitForSelector('.ex-row');
   const hit = await esc.evaluate(() => {
     document.getElementById('coach').hidden = false;
     document.getElementById('screen-live').classList.add('active');

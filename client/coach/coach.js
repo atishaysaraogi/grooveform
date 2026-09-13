@@ -5,7 +5,10 @@
 (function () {
   'use strict';
   const E = window.FormEngine;
-  const $ = id => document.getElementById(id);
+  /* The Studio loads this file for the figures and has none of the coach's screen; a missing
+     element resolves to a detached div so the wiring below is harmless there. */
+  const detached = {};
+  const $ = id => document.getElementById(id) || (detached[id] = detached[id] || document.createElement('canvas'));
   const MP_VER = '0.10.21';
   const MODEL_URLS = {
     lite: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
@@ -55,6 +58,7 @@
                     B: { h: [288, 50], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [274, 92], elR: [332, 62], wrL: [290, 112], wrR: [300, 42] } },
   };
   const P = (...pts) => 'M' + pts.map(p => p.join(' ')).join(' L ');
+  const escT = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   function profilePath(j) { return P(j.sh, j.hip, j.kn, j.an, j.ft) + ' ' + P(j.sh, j.el, j.wr); }
   function frontPath(j) { return P(j.h, [(j.shL[0] + j.shR[0]) / 2, j.shL[1]]) + ' ' + P(j.shL, j.shR) + ' ' + P(j.shL, j.hipL, j.hipR, j.shR) + ' ' + P(j.hipL, j.knL, j.anL) + ' ' + P(j.hipR, j.knR, j.anR) + ' ' + P(j.shL, j.elL, [j.elL[0] - 12, j.elL[1] + 4]) + ' ' + P(j.shR, j.elR); }
   function frontPath2(j) { return P(j.h, [(j.shL[0] + j.shR[0]) / 2, j.shL[1]]) + ' ' + P(j.shL, j.shR) + ' ' + P(j.shL, j.hipL, j.hipR, j.shR) + ' ' + P(j.hipL, j.knL, j.anL) + ' ' + P(j.hipR, j.knR, j.anR) + ' ' + P(j.shL, j.elL, j.wrL) + ' ' + P(j.shR, j.elR, j.wrR); }
@@ -67,9 +71,40 @@
     const an = (attr, v0, v1) => (b && !reduceMotion && v0 !== v1) ? `<animate attributeName="${attr}" values="${v0};${v1};${v0}" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" keyTimes="0;0.5;1"/>` : '';
     return `<circle class="ink" cx="${a[0]}" cy="${a[1]}" r="10">${an('cx', a[0], b && b[0])}${an('cy', a[1], b && b[1])}</circle>`;
   }
+  /* Catalogue and Studio moves register their two keyframes (built from joint angles or a
+     recorded take); they are drawn with the same animated stick figure as the hand-written ones. */
+  const REGISTERED = {};
+  function registerFigure(id, fig) { if (id && fig && fig.A) REGISTERED[id] = fig; }
+  (window.__pendingFigures || []).forEach((e) => registerFigure(e[0], e[1])); window.__pendingFigures = [];
+  const MUSCLE_REGIONS = ['shoulder', 'arm', 'forearm', 'thigh', 'ham', 'calf', 'chest', 'back', 'abs', 'oblique', 'neck', 'glute'];
+  const farPath = (j) => (j.knF ? P(j.hip, j.knF, j.anF, j.ftF) : '') + (j.elF ? ' ' + P(j.sh, j.elF, j.wrF) : '');
+  const propSvg = (p) => p.kind === 'box' ? `<rect class="prop" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>`
+    : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>`
+    : p.kind === 'disc' ? `<circle class="prop" cx="${p.x}" cy="${p.y}" r="${p.r}"/>`
+    : p.kind === 'band' ? `<line class="band" x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}"/>` : '';
+  /* The drawing's extent: the two keyframes and any equipment, floor always in view. */
+  function figureBox(r) {
+    const pts = [...Object.values(r.A), ...Object.values(r.B || {})];
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    (r.props || []).forEach((p) => { if (p.kind === 'box') { xs.push(p.x, p.x + p.w); ys.push(p.y); } else if (p.kind === 'bar') { xs.push(p.x1, p.x2); ys.push(p.y); } else if (p.kind === 'disc') ys.push(p.y - p.r); });
+    if (r.wall) xs.push(r.wall);
+    const x0 = Math.min(210, Math.min(...xs) - 14), x1 = Math.max(400, Math.max(...xs) + 14), y0 = Math.min(...ys) - 20;
+    return { x0, y0, w: x1 - x0, h: 168 - y0 };
+  }
   // What the figure does (animated), shown big — no camera in it.
   function figureFor(ex) {
     const f = FIG[ex.id], ff = FRONTS[ex.id]; let figure = '';
+    const r = !f && !ff && ex.id !== 'hipabd' ? REGISTERED[ex.id] : null;
+    if (r) {
+      if (r.wall) figure += `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>`;
+      figure += (r.props || []).map(propSvg).join('');
+      if (r.view === 'front') figure += animPath(frontPath2(r.A), r.B && frontPath2(r.B)) + animHead(r.A.h, r.B && r.B.h);
+      else {
+        if (r.A.knF || r.A.elF) figure += animPath(farPath(r.A), r.B && farPath(r.B), 'ink far');
+        figure += animPath(profilePath(r.A), r.B && profilePath(r.B)) + animHead(r.A.h, r.B && r.B.h);
+      }
+      return figure;
+    }
     if (ff) figure = (ex.id === 'shoulder_er' ? `<line class="floor" x1="366" y1="60" x2="366" y2="160" stroke-width="3"/><line class="floor" x1="348" y1="92" x2="366" y2="92" stroke-dasharray="3 3"/>` : '') + animPath(frontPath2(ff.A), frontPath2(ff.B)) + animHead(ff.A.h, ff.B.h);
     else if (ex.id === 'hipabd') figure = `<line class="floor" x1="258" y1="100" x2="258" y2="160" stroke-width="3"/>` + animPath(frontPath(FRONT.A), frontPath(FRONT.B)) + animHead(FRONT.A.h, FRONT.B.h);
     else if (f) {
@@ -81,10 +116,13 @@
     return figure;
   }
   function demo(ex) {
+    if (typeof ex === 'string') ex = E.EXERCISES.find((x) => x.id === ex) || { id: ex, name: ex, type: (REGISTERED[ex] && REGISTERED[ex].hold) ? 'hold' : 'reps' };
     const lying = ex.id === 'heelslide' || ex.id === 'plank';
-    return `<svg class="demo-fig${lying ? ' lying' : ''}" viewBox="${lying ? '210 78 190 92' : '210 22 190 145'}" role="img" aria-label="${ex.name}: ${ex.type === 'hold' ? 'timed hold' : 'repetitions'}">
-      <line class="floor" x1="210" y1="162" x2="400" y2="162"/>${figureFor(ex)}
-      <text x="305" y="${lying ? 90 : 34}" text-anchor="middle" class="lbl">${ex.type === 'hold' ? 'hold still' : 'repeat slowly'}</text></svg>`;
+    const r = !FIG[ex.id] && !FRONTS[ex.id] && ex.id !== 'hipabd' ? REGISTERED[ex.id] : null;
+    const b = r ? figureBox(r) : lying ? { x0: 210, y0: 78, w: 190, h: 92 } : { x0: 210, y0: 22, w: 190, h: 145 };
+    return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${escT(ex.name)}: ${ex.type === 'hold' ? 'timed hold' : 'repetitions'}">
+      <line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>${figureFor(ex)}
+      <text x="${b.x0 + b.w / 2}" y="${b.y0 + 12}" text-anchor="middle" class="lbl">${ex.type === 'hold' ? 'hold still' : 'repeat slowly'}</text></svg>`;
   }
   /* Where to put the phone. Two pictures, both of a person — not a top-down map, which read as a
      puzzle. Left: what the phone should see (front-on, side-on, or lying), framed as its screen.
@@ -92,7 +130,6 @@
      move's `camera` field; the ten hand-written moves carry theirs, anything else gets a default. */
   const HEIGHT_Y = { floor: 138, knee: 112, hip: 84, chest: 56, eye: 34 };
   const HEIGHT_WORD = { floor: 'on the floor', knee: 'at knee height', hip: 'at hip height', chest: 'at chest height', eye: 'at eye level' };
-  const escT = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   function silhouette(kind, cx, cy, sc) {
     const g = (inner) => `<g transform="translate(${cx} ${cy}) scale(${sc})">${inner}</g>`;
     if (kind === 'front') return g(`<circle class="sil" cx="0" cy="-34" r="8"/><rect class="sil" x="-13" y="-24" width="26" height="30" rx="7"/>
@@ -145,7 +182,7 @@
     else if (f) { const j = f.B || f.A; fig = (f.wall ? `<line class="floor" x1="${f.wall}" y1="30" x2="${f.wall}" y2="160" stroke-width="4"/>` : '') + `<path class="ink" d="${profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`; }
     else {
       /* Catalogue and Studio moves register their keyframes with the anatomy figure; draw the end pose from those. */
-      const r = window.FyzioAnatomy && FyzioAnatomy.figure && FyzioAnatomy.figure(ex.id);
+      const r = REGISTERED[ex.id];
       if (r) { const j = r.B || r.A; const props = (r.props || []).map((p) => p.kind === 'box' ? `<rect class="prop" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>` : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>` : '').join('');
         fig = (r.wall ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>` : '') + props + `<path class="ink" d="${r.view === 'front' ? frontPath2(j) : profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`;
         const pts = Object.values(j); const ys = pts.map((p) => p[1]), xs = pts.map((p) => p[0]);
@@ -785,5 +822,7 @@
   /* Tear down a held-open camera when the person stops instead of starting the next set. */
   function endRest() { if (live && live.state === 'rest') { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); } }
 
-  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, thumb, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
+  /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
+  window.FyzioAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
+  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
 })();

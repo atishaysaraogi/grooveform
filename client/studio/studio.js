@@ -695,7 +695,7 @@
         <div class="card"><h3>Muscles the figure should light up</h3><p class="muted" style="font-size:.85rem;margin-bottom:8px">Tap to cycle: off → some → most.</p><div class="muscles">${ANAT.regions.map((r) => `<button type="button" class="chip small" data-mus="${r}" aria-pressed="${(s.muscles[r] || 0) > 0}">${r}${s.muscles[r] ? ' · ' + (s.muscles[r] >= 1 ? 'most' : 'some') : ''}</button>`).join('')}</div></div>
         <div class="card"><h3>Demo figure</h3><p class="muted" style="font-size:.85rem">Built from a clean take: the start pose and the peak of the best rep become the two keyframes.</p>
           <div class="row" style="margin:8px 0"><button class="btn secondary small" id="build-fig" ${state.takes.some((t) => t.label === 'clean') ? '' : 'disabled'}>Build from the best clean take</button>${s.figure ? '<span class="muted" style="font-size:.85rem">built ✓</span>' : ''}</div>
-          ${s.figure ? `<canvas class="demo-fig" data-anat="${esc(s.id || 'draft')}"></canvas>` : ''}</div>
+          ${s.figure ? (ANAT.register(s.id || 'draft', s.figure), ANAT.demo(s.id || 'draft')) : ''}</div>
       </div></div>
       <div class="row"><button class="btn ghost" id="back">← Faults</button><span class="spacer"></span><button class="btn primary" id="next">Check &amp; export →</button></div></div>`;
   }
