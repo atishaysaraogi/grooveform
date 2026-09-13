@@ -220,6 +220,75 @@ async function runCoachedSet(page, side = 'right') {
     admin.on('dialog', d => d.accept('Checked IAP registration')); await admin.click('.a-verify'); await admin.waitForFunction(() => document.body.innerText.includes('Checked IAP registration')); await admin.screenshot({ path: path.join(SHOTS, 'admin.png'), fullPage: true });
     await member.goto(base + '/?mock=1#/curators'); await member.waitForFunction(() => document.body.innerText.includes('Dr Priya Nair, PT') && /verified/i.test(document.body.innerText), null, { timeout: 10000 });
   });
+  await step('studio: a physio builds a move from a recording — screen, describe, record, measure, faults, guide, export, try', async () => {
+    const st = await newPage();
+    /* The app's stream, time-warped: still for 1.5 s (calibration) instead of 10.5, then the same 2.6 s reps — the second one leans. */
+    await st.addInitScript(`const __orig = window.__mockPose; window.__mockPose = (t) => (t < 1500 ? __orig(0) : __orig(10500 + (t - 1500)));`);
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2'); await st.click('#btn-new2');
+    // 1 · screen: six yeses
+    await st.waitForSelector('[data-chips="screen.big"]');
+    for (const q of ['big', 'across', 'visible', 'home', 'geometry', 'helps']) await st.click(`[data-chips="screen.${q}"] [data-v="true"]`);
+    assert.ok((await st.$eval('#verdict', (e) => e.className)).includes('go'), 'all six yes → coachable');
+    await st.click('#next');
+    // 2 · describe
+    await st.waitForSelector('[data-k="name"]'); await st.fill('[data-k="name"]', 'Side leg raise');
+    assert.equal(await st.$eval('[data-k="id"]', (e) => e.value), 'side_leg_raise', 'id made from the name');
+    await st.fill('[data-k="group"]', 'Hip strength'); await st.fill('[data-k="summary"]', 'Straight-leg raise to the side.'); await st.fill('[data-k="setup"]', 'Face the camera, 2.5 m away, hip height.'); await st.fill('[data-k="why"]', 'The leg swings across the camera plane.');
+    await st.click('[data-chips="sidedKind"] [data-v="leg"]'); await st.waitForSelector('[data-chips="sided.by"]');
+    await st.click('#next');
+    // 3 · record a clean take on the right leg
+    await st.waitForSelector('#btn-cam'); await st.click('#take-side [data-v="R"]'); await st.click('#btn-cam');
+    await st.waitForFunction(() => !document.querySelector('#btn-rec').disabled);
+    await st.click('#btn-rec'); await st.waitForSelector('#rec-badge', { timeout: 8000 });
+    await st.waitForTimeout(11000); await st.click('#btn-rec');
+    await st.waitForFunction(() => window.GrooveformStudio.state.takes.length === 1, null, { timeout: 5000 });
+    const take = await st.evaluate(() => { const t = window.GrooveformStudio.state.takes[0]; return { label: t.label, side: t.side, frames: t.frames.length, ms: t.durationMs }; });
+    assert.equal(take.label, 'clean'); assert.equal(take.side, 'R'); assert.ok(take.frames > 100 && take.ms > 9000, JSON.stringify(take));
+    await st.click('#next');
+    // 4 · measure: thigh from vertical, hip → knee; suggest the target from the take
+    await st.waitForSelector('[data-mpath="progress.metric"]'); await st.selectOption('[data-mpath="progress.metric"] [data-mkind]', 'vertical');
+    await st.waitForSelector('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="KNEE"]');
+    await st.waitForSelector('#suggest:not([disabled])'); await st.click('#suggest');
+    await st.waitForFunction(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; return typeof m.progress.target === 'number' && m.progress.target >= 20 && m.progress.target <= 40; });
+    const counted = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.sims[s.takes[0].id].full; });
+    assert.ok(counted >= 3, 'clean take counts reps: ' + counted);
+    await st.screenshot({ path: path.join(SHOTS, 'studio-measure.png'), fullPage: true });
+    await st.click('#next');
+    // 5 · faults: a leaning fault on the trunk-lean metric, then see it fire on the leaning rep only
+    await st.waitForSelector('#addf'); await st.click('#addf'); await st.waitForSelector('[data-fi="0"]');
+    await st.fill('[data-k="faults.0.label"]', 'Leaning away'); await st.fill('[data-k="faults.0.cue"]', 'Stay tall'); await st.fill('[data-k="faults.0.tip"]', 'Do not tip the trunk to lift the leg higher.');
+    await st.selectOption('[data-mpath="faults.0.metric"] [data-mkind]', 'lean'); await st.waitForSelector('[data-fi="0"] [data-chips="faults.0.op"]');
+    await st.click('[data-chips="faults.0.op"] [data-v="<"]'); await st.fill('[data-k="faults.0.threshold"]', '-8'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
+    try { await st.waitForFunction(() => /fires on 1\/1 clean/.test(document.querySelector('[data-fi="0"] .fires').textContent), null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.GrooveformStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }
+    await st.click('#add-fast'); await st.waitForSelector('[data-fi="1"]');
+    await st.screenshot({ path: path.join(SHOTS, 'studio-faults.png'), fullPage: true });
+    await st.click('#next');
+    // 6 · guide + figure
+    await st.waitForSelector('[data-k="guide.surface"]'); await st.fill('[data-k="guide.surface"]', 'Firm floor, shoes on.'); await st.fill('[data-k="guide.cannotSee"]', 'Whether the foot is turned out.'); await st.fill('[data-k="guide.stop"]', 'Groin pain.');
+    await st.click('[data-addp="0"]'); await st.waitForSelector('[data-k="guide.regions.0.points.0.t"]'); await st.fill('[data-k="guide.regions.0.points.0.t"]', 'Stand tall, hip bones level.'); await st.click('[data-tr="0.0"]');
+    await st.click('[data-mus="glute"]'); await st.click('[data-mus="thigh"]');
+    await st.click('#build-fig'); await st.waitForSelector('canvas.demo-fig');
+    const fig = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.moves[s.current].figure; });
+    assert.equal(fig.view, 'front'); assert.ok(fig.A.hipR && fig.B.knR && fig.A.hipR[1] < 161 && fig.B.anR[1] <= 161, JSON.stringify(fig.B));
+    await st.click('#next');
+    // 7 · export: complete, accepted, and the emitted move compiles in Node too
+    await st.waitForSelector('#dl-js'); await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
+    const spec = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.moves[s.current]; });
+    const SPEC = require('../client/coach/spec.js'); const LIB = require('../client/coach/exercise-library.js');
+    assert.doesNotThrow(() => LIB.validate(SPEC.compile(spec, LIB.kinematics)), 'the exported spec compiles on the build side');
+    const src = await st.evaluate(() => window.GrooveformStudio.moveFileSource(window.GrooveformStudio.state.moves[window.GrooveformStudio.state.current]));
+    assert.ok(/lib\.define\(\(k\) => spec\.compile\(SPEC, k\)\)/.test(src) && !/"_key"/.test(src), 'move file embeds the spec without studio bookkeeping');
+    await st.screenshot({ path: path.join(SHOTS, 'studio-export.png'), fullPage: true });
+    // try it in the app: the draft appears on the exercise page with its figure and guide
+    await st.evaluate(() => { const s = window.GrooveformStudio.state; const d = {}; d[s.moves[s.current].id] = s.moves[s.current]; localStorage.setItem('grooveform.drafts', JSON.stringify(d)); });
+    await st.goto(base + '/?mock=1#/exercise/side_leg_raise'); await st.waitForSelector('#do-start');
+    const pageText = await st.evaluate(() => document.body.innerText);
+    assert.ok(/Side leg raise \(draft\)/.test(pageText) && /cannot see/i.test(pageText), 'draft renders with its guide');
+    assert.ok(await st.$('canvas[data-anat="side_leg_raise"]'), 'the figure built from the recording is on the page');
+    await st.waitForTimeout(1200); await st.screenshot({ path: path.join(SHOTS, 'studio-try.png') });
+    await st.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');

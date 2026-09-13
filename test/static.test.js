@@ -21,6 +21,12 @@ srv.listen(0, async () => {
   assert.ok((await page.$$('.card.config .chip')).length > 0, 'move page keeps its own options');
   assert.deepEqual(errors, []);
 
+  // The Studio ships with the static site, under /studio/, with the same relative asset paths.
+  const studio = await openPage({ viewport: { width: 1100, height: 800 } }); studio.on('pageerror', e => errors.push('studio: ' + e));
+  await studio.goto(base + 'studio/'); await studio.waitForSelector('#btn-new2', { timeout: 15000 });
+  assert.ok(await studio.evaluate(() => !!(window.MoveSpec && window.FormEngine && window.ExerciseLibrary.all().length === 10)), 'studio loads the engine, the spec compiler and every move');
+  await studio.close(); assert.deepEqual(errors, []);
+
   // Text must stay legible in both themes: the palette's grape/violet become the *background* in
   // dark mode, so anything that named them directly used to vanish. Guard the worst offenders.
   const contrast = `(() => {

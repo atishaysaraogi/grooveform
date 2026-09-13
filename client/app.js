@@ -19,7 +19,21 @@
   }
   async function refreshMe() { const d = await api('GET', '/api/me'); me = d.user; ent = d.entitlements; notice = d.notice; env = d.env; exercises = null; return d; }
   function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, ms); }
-  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises; specialties = d.specialties; } return exercises; }
+  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises.concat(studioDrafts()); specialties = d.specialties; } return exercises; }
+  /* Moves being built in the Studio (client/studio/) can be tried here before they ship: "Try it in the app" stores the
+     spec in this browser only, and it is compiled into the library on the fly. Never sent anywhere. */
+  function studioDrafts() {
+    let drafts; try { drafts = JSON.parse(localStorage.getItem('grooveform.drafts') || '{}'); } catch { return []; }
+    const out = [];
+    for (const id in drafts) {
+      try {
+        const spec = drafts[id]; if (!window.MoveSpec || !window.ExerciseLibrary) break;
+        const e = ExerciseLibrary.get(id) || ExerciseLibrary.define((k) => MoveSpec.compile(spec, k));
+        out.push({ id: e.id, name: e.name + ' (draft)', group: e.group, type: e.type, view: e.view, icon: e.icon, sided: e.sided || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map((f) => ({ id: f.id, label: f.label, tip: f.tip })), guide: e.guide, tier: 'free', locked: false, draft: true });
+      } catch (err) { console.warn('draft move skipped:', id, err.message); }
+    }
+    return out;
+  }
   const exById = (id) => (exercises || []).find(e => e.id === id);
   const coachEx = (id) => FyzioCoach.exercises.find(e => e.id === id);
 
@@ -159,7 +173,7 @@
           ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config">${configBlock(cat, opts)}</div>`}
         </div>
       </div>
-      ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div><p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
+      ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div>${g.cannotSee ? `<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>What the camera cannot see:</strong> ${esc(g.cannotSee)}</p>` : ''}<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
     </div>`);
     wireChips(view, {}, opts);
     if (cat.locked) return;

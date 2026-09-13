@@ -4,6 +4,8 @@ This is the intake for putting a new exercise into the camera coach. It is writt
 
 Budget per exercise: about 25 minutes of the PT's time — ten minutes on the form, ten on the recording, five reviewing the result a week later. Ten moves is an afternoon.
 
+> **This intake now has a tool.** `/studio/` on the site walks a physio through these same steps with the camera on: it records takes, plots the measurements, and shows each fault threshold firing (or not) on the recordings before the move is exported. `docs/STUDIO.md` is the session runbook. This document remains the reasoning behind each field.
+
 ---
 
 ## 0. First: the screening test

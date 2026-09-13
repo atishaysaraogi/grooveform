@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Grooveform Studio — build a move</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<header class="st-top">
+  <a class="st-brand" href="../" title="Back to Grooveform"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h3l2-6 3 12 3-9 2 3h3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Grooveform</span> <span class="st-studio">Studio</span></a>
+  <div class="st-move">
+    <select id="move-select" aria-label="Move"></select>
+    <button class="btn small" id="btn-new">New move</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="row st-tools">
+    <button class="btn ghost small" id="btn-import">Import…</button>
+    <input type="file" id="import-input" accept="application/json,.json" hidden>
+    <button class="btn secondary small" id="btn-bundle">Save session file</button>
+  </div>
+</header>
+
+<nav class="st-steps" id="steps" aria-label="Steps">
+  <button data-step="screen">1 · Screen</button>
+  <button data-step="describe">2 · Describe</button>
+  <button data-step="record">3 · Record</button>
+  <button data-step="measure">4 · Measure</button>
+  <button data-step="faults">5 · Faults</button>
+  <button data-step="guide">6 · Guide</button>
+  <button data-step="export">7 · Check &amp; export</button>
+</nav>
+
+<main class="st-main" id="main"></main>
+
+<div id="player" class="st-player" hidden>
+  <div class="st-player-box">
+    <div class="row"><h3 id="pl-title">Take</h3><span class="spacer"></span><button class="btn ghost small" id="pl-close">Close</button></div>
+    <div class="st-player-stage"><video id="pl-video" playsinline muted hidden></video><canvas id="pl-canvas"></canvas></div>
+    <div class="row"><button class="btn small" id="pl-play">Play</button><input type="range" id="pl-scrub" min="0" max="1000" value="0" style="flex:1"><span id="pl-time" class="muted mono">0.0 s</span></div>
+    <p class="muted" id="pl-readout" style="font-size:.9rem"></p>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="../coach/exercise-library.js"></script>
+<script src="../coach/engine.js"></script>
+<script src="../coach/spec.js"></script>
+<script src="../coach/anatomy.js"></script>
+<script src="../coach/library/heelslide.js"></script>
+<script src="../coach/library/hipabd.js"></script>
+<script src="../coach/library/wallsit.js"></script>
+<script src="../coach/library/plank.js"></script>
+<script src="../coach/library/calfstretch.js"></script>
+<script src="../coach/library/shoulder_er.js"></script>
+<script src="../coach/library/shoulder_abd.js"></script>
+<script src="../coach/library/band_row.js"></script>
+<script src="../coach/library/pullapart.js"></script>
+<script src="../coach/library/trapstretch.js"></script>
+<script src="studio.js"></script>
+</body>
+</html>

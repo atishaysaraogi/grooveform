@@ -20,6 +20,16 @@ client/coach/
 derives `/api/exercises` from it, so a new move shows up everywhere at once:
 catalogue, exercise page, routine builder, static build.
 
+## Two ways to write a move
+
+A move is either **hand-written** (a factory returning the object below — the ten
+shipped moves) or a **spec** written in the Studio (`/studio/`, see
+`docs/STUDIO.md`): a JSON of named landmarks and thresholds that
+`coach/spec.js` compiles into the same shape at load time. Both register through
+`define()` and pass the same validator. Spec moves are the normal path for a
+move that comes out of a session with a physio; hand-written ones are for
+anything the spec language cannot say (a phase machine, a custom side rule).
+
 ## Adding a move
 
 Two steps.

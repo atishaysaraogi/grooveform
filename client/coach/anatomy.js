@@ -247,6 +247,12 @@
     ctx.fillStyle = P.skin; ctx.fill(); ctx.strokeStyle = P.skinline; ctx.lineWidth = 1.3; ctx.stroke();
   }
 
+  /* ---- moves defined by a spec (Studio) register their own keyframes here ----
+     fig = { view: 'front'|'side', A, B, hold, side, flip, w: {region: weight}, wall } */
+  var REGISTERED = {};
+  function register(id, fig) { if (id && fig && fig.A) REGISTERED[id] = fig; }
+  (root.__pendingFigures || []).forEach(function (e) { register(e[0], e[1]); }); root.__pendingFigures = [];
+
   /* ---- mounting ---- */
   var running = [];
   function stopAll() {
@@ -255,9 +261,10 @@
   }
   function mount(canvas) {
     var id = canvas.getAttribute('data-anat'); if (!id) return;
-    var cfg = WORK[id] || { hold: false, side: 'both', w: {} };
-    var view = FRONTP[id] ? 'front' : 'side', data = FRONTP[id] || SIDE[id];
-    if (!data) return;
+    var reg = REGISTERED[id];
+    var cfg = reg ? { hold: !!reg.hold, side: reg.side || 'both', flip: !!reg.flip, w: reg.w || {} } : (WORK[id] || { hold: false, side: 'both', w: {} });
+    var view = reg ? reg.view : (FRONTP[id] ? 'front' : 'side'), data = reg || FRONTP[id] || SIDE[id];
+    if (!data || !data.A) return;
     var A = unify(data.A, view), B = data.B ? unify(data.B, view) : null;
     var wall = data.wall || null, ctx = canvas.getContext('2d');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -329,5 +336,5 @@
     stopAll();
     Array.prototype.forEach.call((rootEl || document).querySelectorAll('canvas[data-anat]'), mount);
   }
-  root.FyzioAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK };
+  root.FyzioAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
 })(typeof window !== 'undefined' ? window : globalThis);

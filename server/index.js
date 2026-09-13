@@ -30,6 +30,10 @@ function serveStatic(req, res, pathname) {
   const file = path.normalize(path.join(CLIENT_DIR, rel));
   if (!file.startsWith(CLIENT_DIR)) return send(res, 400, 'Bad path');
   fs.stat(file, (err, st) => {
+    if (!err && st.isDirectory()) {   // a folder with its own index.html (the Studio) — served the way GitHub Pages would
+      if (!pathname.endsWith('/')) { res.writeHead(301, { Location: pathname + '/' }); return res.end(); }
+      return streamFile(path.join(file, 'index.html'), res, 'no-cache');
+    }
     if (err || !st.isFile()) { // SPA fallback for client-side routes
       if (!path.extname(rel)) return streamFile(path.join(CLIENT_DIR, 'index.html'), res, 'no-cache');
       return send(res, 404, 'Not found');
