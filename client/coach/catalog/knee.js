@@ -64,7 +64,7 @@
       faults: [ lean('lean', 72), { id: 'hips', label: 'Hips pushing back', cue: 'Hips forward', tip: 'The band should straighten the knee, not fold you at the hip. Keep the hips over the feet.', severity: 2 } ],
       guide: { surface: 'Any firm floor; the anchor must not move.', stop: 'Pain behind the knee, or the knee not straightening at all.', cannotSee: 'Whether the kneecap is tracking straight.',
         regions: [{ name: 'Knee', points: [{ t: 'Straightens fully against the band each rep.', tracked: true }, { t: 'Kneecap points straight ahead, not inward.', tracked: false }] }, { name: 'Trunk', points: [{ t: 'Upright — the knee moves, the body does not.', tracked: true }] }] },
-      pose: { A: { face: 'right', torso: 0, thigh: 12, shin: -12 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0 }, work: { thigh: 1, glute: .3 }, wall: 'ahead' },
+      pose: { A: { face: 'right', torso: 0, thigh: 12, shin: -12 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0 }, work: { thigh: 1, glute: .3 }, wall: 'ahead', props: [{ kind: 'band', at: 'kn' }] },
     },
     {
       id: 'step_up', name: 'Step-up', type: 'reps', view: 'side', tracking: 'form', level: 'intermediate', equipment: ['step or stair'],
@@ -78,7 +78,7 @@
       faults: [ lean('lean', 65, 0.3), { id: 'push', label: 'Pushing off the back foot', cue: 'Lead leg does the work', tip: 'The floor foot should be almost weightless. If you bounce off it, the lead leg is not lifting you.', severity: 2 } ],
       guide: { surface: 'A stable step that cannot tip; a wall or rail within reach.', stop: 'Sharp kneecap pain, or the knee collapsing inward.', cannotSee: 'The knee drifting inward — that needs a front view.',
         regions: [{ name: 'Lead leg', points: [{ t: 'Whole foot on the step; knee finishes straight at the top.', tracked: true }, { t: 'Knee tracks over the middle toes, not inward.', tracked: false }] }, { name: 'Trunk', points: [{ t: 'Tall through the lift; a little forward lean is fine, folding is not.', tracked: true }] }] },
-      pose: { A: { face: 'right', torso: 8, thigh: 80, shin: 0, thighF: 0, shinF: 0 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0, thighF: 0, shinF: 0 }, work: { thigh: 1, glute: .8, calf: .4 } },
+      pose: { A: { face: 'right', torso: 8, thigh: 80, shin: 0, thighF: 0, shinF: 0 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0, thighF: 0, shinF: 0 }, work: { thigh: 1, glute: .8, calf: .4 }, anchor: 'an', props: [{ kind: 'box', at: 'an', w: 44, dy: 4 }] },
     },
     {
       id: 'mini_squat', name: 'Mini squat', type: 'reps', view: 'front', tracking: 'form', level: 'beginner', equipment: ['none', 'chair for support (optional)'],
@@ -107,7 +107,7 @@
       faults: [ { id: 'hands', label: 'Pushing up with the hands', cue: 'No hands', tip: 'Cross the arms over the chest so the legs must do all the work.', severity: 2 }, { id: 'drop', label: 'Dropping into the seat', cue: 'Lower slowly', tip: 'The sit-down is half the exercise. Take three seconds and touch the seat lightly.', severity: 2 } ],
       guide: { surface: 'A stable chair against a wall so it cannot slide.', stop: 'Dizziness, or knee pain on the way down.', cannotSee: 'The hands pushing on the thighs or the chair.',
         regions: [{ name: 'Feet', points: [{ t: 'Flat, slightly behind the knees, hip-width apart.', tracked: false }] }, { name: 'Trunk', points: [{ t: 'Nose over toes to start the stand, then tall at the top.', tracked: true }] }] },
-      pose: { A: { face: 'right', torso: 15, thigh: 90, shin: 0, uarm: 30, farm: 100 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0, uarm: 30, farm: 100 }, work: { thigh: 1, glute: .8 } },
+      pose: { A: { face: 'right', torso: 15, thigh: 90, shin: 0, uarm: 30, farm: 100 }, B: { face: 'right', torso: 0, thigh: 0, shin: 0, uarm: 30, farm: 100 }, work: { thigh: 1, glute: .8 }, props: [{ kind: 'box', at: 'hip', w: 34, dy: 2 }] },
     },
     {
       id: 'standing_ham_curl', name: 'Standing hamstring curl', type: 'reps', view: 'side', tracking: 'form', level: 'beginner', equipment: ['none', 'ankle weight or band (optional)'],
@@ -136,7 +136,7 @@
       faults: [ { id: 'leanback', label: 'Leaning back to help', cue: 'Sit tall', tip: 'Leaning back lets the hip flexors join in. Keep the trunk upright and the thigh on the seat.', severity: 2, metric: TRUNK, op: '<', threshold: 68, minP: 0.3, persist: 300 }, { id: 'drop', label: 'Letting the leg drop', cue: 'Lower slowly', tip: 'The lowering builds the muscle. Three seconds down, every rep.', severity: 1 } ],
       guide: { surface: 'A chair high enough that the feet hang or just touch.', stop: 'Kneecap pain, or the knee locking with a clunk.', cannotSee: 'The thigh lifting off the seat.',
         regions: [{ name: 'Working leg', points: [{ t: 'Straightens fully with the thigh tight; toes pulled up.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Upright, hands resting on the seat edge, not gripping.', tracked: true }] }] },
-      pose: { A: { face: 'right', torso: 0, thigh: 90, shin: 0, uarm: 20, farm: 40 }, B: { face: 'right', torso: 0, thigh: 90, shin: 90, foot: 90, uarm: 20, farm: 40 }, work: { thigh: 1 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 90, shin: 0, uarm: 20, farm: 40 }, B: { face: 'right', torso: 0, thigh: 90, shin: 90, foot: 90, uarm: 20, farm: 40 }, work: { thigh: 1 }, props: [{ kind: 'box', at: 'hip', w: 34, dy: 2 }] },
     },
     {
       id: 'split_squat', name: 'Split squat', type: 'reps', view: 'side', tracking: 'reps', level: 'intermediate', equipment: ['none', 'dumbbells (optional)'],

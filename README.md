@@ -1,4 +1,6 @@
-# Grooveform — camera-guided exercise
+# Motus — camera-guided exercise
+
+(Repository name: grooveform. The product is called Motus in the app.)
 
 **Current mode: solo.** `SOLO_MODE=true` (the default) hides sign-in, plans, prices and curators and makes every exercise free; the app runs entirely anonymously on the device. Set `SOLO_MODE=false` to bring the marketplace back (accounts, Pro/Curator plans, directory) — all of that code and its tests are still here.
 

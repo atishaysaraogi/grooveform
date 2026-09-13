@@ -238,10 +238,11 @@
       ctx.fillStyle = heat(P, h); ctx.fill(); ctx.strokeStyle = P.skinline; ctx.lineWidth = 1; ctx.stroke();
     }
     (view === 'side' ? [flip ? -1 : 1] : [1, -1]).forEach(function (sgn) {
-      torsoBlob(TORSO_SHAPES[view === 'side' ? 'back' : 'chest'], sgn, view === 'side' ? heats.back : Math.max(heats.chest, heats.back * 0.6));
+      /* side view: +sgn is the front of the body (chest, abs), so the back and the glutes go on -sgn */
+      if (view === 'side') { torsoBlob(TORSO_SHAPES.chest, sgn, heats.chest); torsoBlob(TORSO_SHAPES.back, -sgn, heats.back); torsoBlob(TORSO_SHAPES.glute, -sgn, heats.glute); }
+      else { torsoBlob(TORSO_SHAPES.chest, sgn, Math.max(heats.chest, heats.back * 0.6)); torsoBlob(TORSO_SHAPES.glute, sgn, heats.glute); }
       torsoBlob(TORSO_SHAPES.abs, sgn, heats.abs);
       torsoBlob(TORSO_SHAPES.oblique, sgn, heats.oblique);
-      torsoBlob(TORSO_SHAPES.glute, sgn, heats.glute);
       torsoBlob(TORSO_SHAPES.neck, sgn, heats.neck);
     });
 
@@ -280,7 +281,7 @@
     var view = reg ? reg.view : (FRONTP[id] ? 'front' : 'side'), data = reg || FRONTP[id] || SIDE[id];
     if (!data || !data.A) return;
     var A = unify(data.A, view), B = data.B ? unify(data.B, view) : null;
-    var wall = data.wall || null, ctx = canvas.getContext('2d');
+    var wall = data.wall || null, props = data.props || [], ctx = canvas.getContext('2d');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var rec = { raf: 0, io: null, visible: true, t: reduce ? 1.4 : 0, last: null };
 
@@ -290,7 +291,7 @@
         muscle: cssVar(canvas, '--fig-muscle', '#e7cda9'), far: cssVar(canvas, '--fig-far', '#efe0c8'),
         farline: cssVar(canvas, '--fig-farline', '#dcc6a4'),
         warm: cssVar(canvas, '--tangerine', '#ffb830'), hot: cssVar(canvas, '--pink', '#ff2e88'),
-        floor: cssVar(canvas, '--line', '#e9d6bf')
+        floor: cssVar(canvas, '--line', '#e9d6bf'), prop: cssVar(canvas, '--surface-2', '#fbe9d2')
       };
     }
     function size() {
@@ -300,6 +301,14 @@
       return { w: r.width, h: r.height };
     }
     var dims = size();
+    /* The view fits the figure's two keyframes plus any equipment; the floor line stays in it. */
+    var fitBox = (function () {
+      var xs = [216, 400], ys = [26, 168];
+      [A, B].forEach(function (K) { if (!K) return; Object.keys(K).forEach(function (k) { if (K[k] && typeof K[k].x === 'number') { xs.push(K[k].x); ys.push(K[k].y); } }); });
+      props.forEach(function (p) { if (p.kind === 'box') { xs.push(p.x, p.x + p.w); ys.push(p.y); } else if (p.kind === 'bar') { xs.push(p.x1, p.x2); ys.push(p.y); } else if (p.kind === 'disc') { ys.push(p.y - p.r); } });
+      var x0 = Math.min.apply(null, xs) - 10, x1 = Math.max.apply(null, xs) + 10, y0 = Math.min.apply(null, ys) - 16;
+      return { x: x0, y: y0, w: x1 - x0, h: 168 - y0 };
+    })();
 
     function frame(now) {
       rec.raf = requestAnimationFrame(frame);
@@ -320,7 +329,7 @@
 
       var P = palette(), w = dims.w, h = dims.h;
       ctx.clearRect(0, 0, w, h);
-      var box = { x: 218, y: 26, w: 176, h: 146 };
+      var box = fitBox;
       var s = Math.min(w / box.w, h / box.h) * 0.94;
       ctx.save();
       ctx.translate(w / 2 - (box.x + box.w / 2) * s, h / 2 - (box.y + box.h / 2) * s);
@@ -328,6 +337,7 @@
       ctx.strokeStyle = P.floor; ctx.lineWidth = 2 / s; ctx.lineCap = 'butt';
       ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
       if (wall) { ctx.lineWidth = 3 / s; ctx.beginPath(); ctx.moveTo(wall, 34); ctx.lineTo(wall, 164); ctx.stroke(); }
+      drawProps(ctx, props, P, s);
       drawFigure(ctx, pose, P, heats, view, cfg);
       ctx.restore();
     }
@@ -341,6 +351,16 @@
     running.push(rec);
   }
 
+  /* Equipment behind the figure: a box/bench/step to the floor, a bar, a roller, a band to the wall. */
+  function drawProps(ctx, props, P, s) {
+    props.forEach(function (p) {
+      ctx.strokeStyle = P.floor; ctx.fillStyle = P.prop; ctx.lineWidth = 2.5 / s; ctx.lineCap = 'round';
+      if (p.kind === 'box') { ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.fill(); ctx.stroke(); }
+      else if (p.kind === 'bar') { ctx.lineWidth = 4 / s; ctx.beginPath(); ctx.moveTo(p.x1, p.y); ctx.lineTo(p.x2, p.y); ctx.stroke(); }
+      else if (p.kind === 'disc') { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); ctx.stroke(); }
+      else if (p.kind === 'band') { ctx.strokeStyle = P.hot; ctx.lineWidth = 2 / s; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke(); ctx.setLineDash([]); }
+    });
+  }
   function demo(ex) {
     var id = typeof ex === 'string' ? ex : ex.id;
     var name = typeof ex === 'string' ? id : ex.name;

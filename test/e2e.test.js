@@ -62,7 +62,7 @@ async function runCoachedSet(page, side = 'right') {
   });
   await step('visitor: pro exercise is locked, free exercise can start', async () => {
     await visitor.goto(base + '/?mock=1#/exercise/heelslide'); await visitor.waitForSelector('.card.upgrade'); assert.equal(await visitor.$('#do-start'), null, 'locked exercise has no start button');
-    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start'); const t = await text(visitor); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone') && t.includes('The move') && t.includes('sign in')); assert.ok(await visitor.$('canvas.demo-fig[data-anat]') && await visitor.$('svg.cam-diagram.two'), 'anatomical figure and camera diagram present'); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-exercise.png'), fullPage: true });
+    await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForSelector('#do-start'); const t = await text(visitor); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone') && t.includes('The move') && t.includes('sign in')); assert.ok(await visitor.$('canvas.demo-fig[data-anat]') && await visitor.$('.cam-sentence'), 'anatomical figure and phone-position sentence present'); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-exercise.png'), fullPage: true });
   });
   await step('first-time visitor: sees the three-step intro, and only once', async () => {
     /* A bare context: newPage() pre-dismisses the intro for every other test, and its init
@@ -198,7 +198,7 @@ async function runCoachedSet(page, side = 'right') {
     assert.ok((await pro.evaluate(() => window.__portal.ent.pro)), 'access continues after cancelling until period end');
   });
   await step('pro: shoulder exercises render (diagram + guide); coached band abduction set on the chosen arm', async () => {
-    for (const id of ['shoulder_er', 'shoulder_abd', 'band_row', 'pullapart', 'trapstretch']) { await pro.goto(base + '/?mock=1#/exercise/' + id); await pro.waitForSelector('#do-start'); const t = await text(pro); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone'), id + ' page'); assert.ok(await pro.$('svg.cam-diagram'), id + ' diagram'); }
+    for (const id of ['shoulder_er', 'shoulder_abd', 'band_row', 'pullapart', 'trapstretch']) { await pro.goto(base + '/?mock=1#/exercise/' + id); await pro.waitForSelector('#do-start'); const t = await text(pro); assert.ok(t.includes('Set-up and form') && t.includes('Where to put the phone'), id + ' page'); assert.ok(await pro.$('.cam-sentence'), id + ' phone sentence'); }
     await pro.screenshot({ path: path.join(SHOTS, 'exercise-trapstretch.png'), fullPage: true });
     await pro.goto(base + '/?mock=1#/exercise/shoulder_abd'); await pro.waitForSelector('#do-start');
     await pro.evaluate(() => {   // synthetic front-facing upper body: the LEFT arm (image right) raises out to the side

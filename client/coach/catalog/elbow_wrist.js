@@ -141,7 +141,7 @@
       contraindications: 'Sharp pain or locking in the joint.',
       faults: [ { id: 'swing', label: 'Upper arm swinging forward', cue: 'Upper arm still', tip: 'Pin the elbow to the side; only the forearm moves.', severity: 2, metric: { kind: 'tilt', pts: ['SH', 'EL'] }, op: '<', threshold: 68, minP: 0.2, persist: 300 }, { id: 'short', label: 'Not straightening fully', cue: 'All the way straight', tip: 'Full straightening is the range that gets lost after injury; finish each rep.', severity: 2 } ],
       guide: { surface: 'Anywhere.', stop: 'Sharp pain or locking.', cannotSee: 'The palm turning.', regions: [{ name: 'Elbow', points: [{ t: 'Bends fully and straightens fully.', tracked: true }] }, { name: 'Upper arm', points: [{ t: 'Hangs still by the side.', tracked: true }] }] },
-      pose: { A: { ...seated, uarm: 0, farm: 0 }, B: { ...seated, uarm: 0, farm: 150 }, work: { arm: 1, forearm: .3 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 90, shin: 0, uarm: 0, farm: 0 }, B: { face: 'right', torso: 0, thigh: 90, shin: 0, uarm: 0, farm: 150 }, work: { arm: 1, forearm: .3 }, props: [{ kind: 'box', at: 'hip', w: 34, dy: 2 }] },
     },
   ]);
 })(typeof window !== 'undefined' ? window : globalThis);

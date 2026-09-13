@@ -85,7 +85,7 @@
     $('btn-login').hidden = !!me || !!env.solo;
     if (me && me.consentRequired && hash !== '#/consent') { location.hash = '#/consent'; return; }
     const pub = [['#/', 'Home'], ['#/exercises', 'Exercises'], ['#/routines', 'Routines'], ['#/curators', 'Find a curator'], ['#/pricing', 'Pricing']];
-    if (solo()) nav([['#/settings', 'Settings']]);
+    if (solo()) nav([]);
     else if (!me) nav(pub);
     else if (me.role === 'curator') nav([['#/curator', 'My members'], ['#/build', 'My routines'], ['#/exercises', 'Exercises'], ['#/curators', 'Directory'], ['#/curator-profile', 'My listing'], ['#/account', 'Account']]);
     else if (me.role === 'admin') nav([['#/admin', 'Admin'], ['#/exercises', 'Exercises'], ['#/routines', 'Routines'], ['#/curators', 'Curators'], ['#/account', 'Account']]);
@@ -142,10 +142,7 @@
 
   /* The brand wordmark at hero scale. Same artwork as the topbar mark, so the homepage
      leads with the logo itself rather than repeating a small copy of it. */
-  const heroMark = () => `<svg class="hero-logo" viewBox="0 0 340 92" role="img" aria-label="Grooveform">
-      <text x="4" y="52" font-size="56" fill="currentColor" style="font-family:var(--font-display)">Grooveform</text>
-      <rect x="4" y="62" width="300" height="6" fill="#ff2e88"/><rect x="4" y="70.5" width="300" height="6" fill="#ffb830"/><rect x="4" y="79" width="300" height="6" fill="#b8f542"/>
-      <circle cx="318" cy="18" r="13" fill="#ff2e88"/><circle cx="318" cy="18" r="5.8" fill="#b8f542"/></svg>`;
+  const heroMark = () => `<span class="wordmark hero-wordmark" role="img" aria-label="Motus">Motus</span>`;
 
   /* ================= PUBLIC ================= */
   async function renderHome() {
@@ -154,7 +151,6 @@
     const exs = [...visibleEx()].sort((a, b) => order(a.tier) - order(b.tier)); const rtFree = r => r.items.every(i => i.exercise && i.exercise.tier === 'free'); const rts = [...pre].sort((a, b) => (rtFree(a) ? 0 : 1) - (rtFree(b) ? 0 : 1));
     render(`<div class="stack">
       <section class="hero"><div class="hero-brand">${heroMark()}<span class="hero-tag">camera form coach</span></div>
-        <h1><span class="l1">Sweat.</span> <span class="l2">Count.</span> <span class="l3">Repeat.</span></h1>
         <p class="hero-copy">Your camera counts the reps and cheers the good ones. Out loud. Like a coach who actually likes you.${solo() ? '' : ' Free moves need no sign-up; the Pass unlocks every move — or a coach sends you a playlist.'}</p>
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
       <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.${libAll() ? '' : ` <a href="#/exercises" data-lib-all>Full library: ${exercises.length} moves →</a>`}</p>${exs.length > 16 ? `<input type="search" id="ex-q" class="search" placeholder="Search ${exs.length} moves…" aria-label="Search moves">` : ''}${tilesHtml(exs)}</section>
@@ -237,24 +233,24 @@
      One pill per setting showing its current value; a tap cycles to the next value and wraps.
      Every value's display text is precomputed onto the element, so a tap needs no lookup. */
   const SETS = [1, 2, 3, 4, 5], RESTS = [30, 45, 60, 90, 120];
+  /* The bubble shows only the value; the setting's name sits beside it as plain text. */
   function bubbleTexts(cat, key, values, o) {
     return values.map(vv => {
-      if (key === 'target') return cat.type === 'hold' ? `${vv} s hold` : `${vv} reps`;
-      if (key === 'sets') return `${vv} ${vv === 1 ? 'set' : 'sets'}`;
-      if (key === 'rest') return `${vv} s rest`;
+      if (key === 'target' || key === 'sets' || key === 'rest') return String(vv);
       const lab = (o.labels && o.labels[vv]) || (vv + (o.unit || ''));
-      const sw = o.swatches ? optLabel(o, vv) + ' ' : '';
-      return key === 'side' ? sw + esc(lab) : `<span class="k">${esc(o.label)}</span> ${sw}${esc(lab)}`;
+      return (o.swatches ? optLabel(o, vv) + ' ' : '') + esc(key === 'side' && vv === 'both' ? 'Both' : lab);
     });
   }
+  const bubbleLabel = (cat, key, o) => key === 'target' ? (cat.type === 'hold' ? 'Hold (s)' : 'Reps') : key === 'sets' ? 'Sets' : key === 'rest' ? 'Rest (s)' : key === 'side' ? 'Side' : o.label;
   function bubble(cat, opts, key, values, o = {}) {
     const texts = bubbleTexts(cat, key, values, o); let i = values.indexOf(opts[key]); if (i < 0) i = 0;
-    return `<button type="button" class="bubble" data-optkey="${key}" data-i="${i}" data-value="${esc(values[i])}" data-values='${esc(JSON.stringify(values))}' data-texts='${esc(JSON.stringify(texts))}' aria-label="${esc(o.label || key)}, tap to change">${texts[i]}</button>`;
+    const label = bubbleLabel(cat, key, o);
+    return `<span class="knob"><span class="k">${esc(label)}</span><button type="button" class="bubble" data-optkey="${key}" data-i="${i}" data-value="${esc(values[i])}" data-values='${esc(JSON.stringify(values))}' data-texts='${esc(JSON.stringify(texts))}' aria-label="${esc(label)}, tap to change" title="${esc(key === 'side' && values[i] === 'both' ? 'Both — one side, then the other' : '')}">${texts[i]}</button></span>`;
   }
   /* Every knob for one exercise: reps/hold, sets, rest, plus whatever that move defines (band, side, range…). */
   function configBlock(cat, opts) {
     const rows = [bubble(cat, opts, 'target', cat.targets), bubble(cat, opts, 'sets', SETS), bubble(cat, opts, 'rest', RESTS), ...cat.options.map(o => bubble(cat, opts, o.key, o.values, o))];
-    return `<div class="bubbles">${rows.join('')}</div><p class="muted bubbles-hint">Tap a setting to change it.</p>`;
+    return `<div class="bubbles">${rows.join('')}</div><p class="muted bubbles-hint">Tap a value to change it.</p>`;
   }
   /* Bubbles inside a [data-item] host write to bags[thatId]; loose bubbles write to `loose`. */
   function wireChips(root, bags, loose, onChange) {

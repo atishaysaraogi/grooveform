@@ -29,7 +29,7 @@
       faults: [ { id: 'muscle', label: 'Swinging with the shoulder muscles', cue: 'Let it hang', tip: 'The body rocks and the arm follows like a rope; if the shoulder is working, it is not a pendulum.', severity: 3 }, { id: 'big', label: 'Circles too big too soon', cue: 'Small circles', tip: 'Dinner-plate size to start; grow it over days, not minutes.', severity: 2 } ],
       guide: { surface: 'A stable table to lean on.', stop: 'Pain that grows during the swings.', cannotSee: 'Whether the shoulder is relaxed or working.',
         regions: [{ name: 'Arm', points: [{ t: 'Hangs loose; movement comes from the trunk rocking.', tracked: false }] }, { name: 'Trunk', points: [{ t: 'Bent forward, other hand supporting on the table.', tracked: false }] }] },
-      pose: { A: { ...standing, torso: 55, uarm: 40, farm: 40, uarmF: 100, farmF: 100 }, B: { ...standing, torso: 55, uarm: 62, farm: 62, uarmF: 100, farmF: 100 }, work: { shoulder: .3 } },
+      pose: { A: { face: 'right', torso: 55, thigh: 0, shin: 0, uarm: 40, farm: 40, uarmF: 100, farmF: 100 }, B: { face: 'right', torso: 55, thigh: 0, shin: 0, uarm: 62, farm: 62, uarmF: 100, farmF: 100 }, work: { shoulder: .3 }, props: [{ kind: 'box', at: 'wrF', w: 30, dy: 2 }] },
     },
     {
       id: 'wall_slide', name: 'Wall slide', type: 'reps', view: 'front', tracking: 'form', level: 'beginner', equipment: ['wall'], upperBody: true,
@@ -72,7 +72,7 @@
       faults: [ { id: 'neck', label: 'Lifting the head and neck', cue: 'Nose down', tip: 'Keep the forehead on the floor or a towel; the arms lift, not the head.', severity: 2 }, { id: 'shrug', label: 'Shrugging into the ears', cue: 'Blades down and back', tip: 'Each letter starts by pulling the shoulder blades down; the arms follow.', severity: 3 } ],
       guide: { surface: 'Mat or bench, face down.', stop: 'Neck pain.', cannotSee: 'The shoulder blades — the movement is under the body from the phone’s angle.',
         regions: [{ name: 'Shoulder blades', points: [{ t: 'Squeeze down and back before each lift.', tracked: false }] }, { name: 'Head', points: [{ t: 'Nose down, neck long.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: -90, neck: 10, thigh: 90, shin: 90, uarm: 120, farm: 120 }, B: { face: 'left', torso: -90, neck: 10, thigh: 90, shin: 90, uarm: 150, farm: 150 }, work: { back: 1, shoulder: .6 } },
+      pose: { A: { face: 'right', torso: 90, neck: -10, thigh: -90, shin: -90, uarm: -120, farm: -120, foot: 180 }, B: { face: 'right', torso: 90, neck: -10, thigh: -90, shin: -90, uarm: -150, farm: -150, foot: 180 }, work: { back: 1, shoulder: .6 } },
     },
     {
       id: 'pushup_plus', name: 'Push-up plus', type: 'reps', view: 'side', tracking: 'reps', level: 'intermediate', equipment: ['none'],

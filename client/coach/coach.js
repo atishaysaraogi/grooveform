@@ -104,7 +104,15 @@
     return g(`<circle class="sil" cx="-36" cy="-3" r="8"/><rect class="sil" x="-28" y="-9" width="30" height="14" rx="6"/>
       <line class="sil-l" x1="-20" y1="-4" x2="6" y2="2" stroke-width="6"/><line class="sil-l" x1="2" y1="-1" x2="40" y2="-1" stroke-width="10"/><line class="sil-l" x1="40" y1="-1" x2="40" y2="-9" stroke-width="7"/>`);
   }
+  /* One sentence, matching the figure above it: which way the phone should see you, how high, how far. */
   function cameraDiagram(ex) {
+    const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };
+    const front = ex.view === 'front';
+    const lying = ['lying', 'prone', 'sidelying'].includes(c.posture);
+    const seesWord = lying ? 'you lying down, from the side' : front ? 'you from the front' : 'you from the side';
+    return `<p class="cam-sentence">The phone should see <strong>${seesWord}</strong>${front ? ' (chest facing it)' : lying ? '' : ' (turn 90° from it)'}, placed <strong>${HEIGHT_WORD[c.height] || escT(c.height)}</strong>, about <strong>${escT(c.distance)}</strong> away.</p>`;
+  }
+  function cameraDiagramPicture(ex) {
     const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };
     const front = ex.view === 'front';
     const lying = ['lying', 'prone', 'sidelying'].includes(c.posture);
@@ -131,16 +139,20 @@
   // Small static figure for tiles (start pose only, no animation, no camera).
   function thumb(ex) {
     if (!ex) return '';
-    const f = FIG[ex.id], ff = FRONTS[ex.id]; let fig = '';
+    const f = FIG[ex.id], ff = FRONTS[ex.id]; let fig = '', box = '215 24 180 142';
     if (ff) fig = `<path class="ink" d="${frontPath2(ff.B || ff.A)}"/><circle class="ink" cx="${(ff.B || ff.A).h[0]}" cy="${(ff.B || ff.A).h[1]}" r="10"/>`;
     else if (ex.id === 'hipabd') fig = `<path class="ink" d="${frontPath(FRONT.B)}"/><circle class="ink" cx="${FRONT.B.h[0]}" cy="${FRONT.B.h[1]}" r="10"/>`;
     else if (f) { const j = f.B || f.A; fig = (f.wall ? `<line class="floor" x1="${f.wall}" y1="30" x2="${f.wall}" y2="160" stroke-width="4"/>` : '') + `<path class="ink" d="${profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`; }
     else {
       /* Catalogue and Studio moves register their keyframes with the anatomy figure; draw the end pose from those. */
       const r = window.FyzioAnatomy && FyzioAnatomy.figure && FyzioAnatomy.figure(ex.id);
-      if (r) { const j = r.B || r.A; fig = (r.wall ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>` : '') + `<path class="ink" d="${r.view === 'front' ? frontPath2(j) : profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`; }
+      if (r) { const j = r.B || r.A; const props = (r.props || []).map((p) => p.kind === 'box' ? `<rect class="prop" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>` : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>` : '').join('');
+        fig = (r.wall ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>` : '') + props + `<path class="ink" d="${r.view === 'front' ? frontPath2(j) : profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`;
+        const pts = Object.values(j); const ys = pts.map((p) => p[1]), xs = pts.map((p) => p[0]);
+        const top = Math.min(24, Math.min(...ys) - 14), left = Math.min(215, Math.min(...xs) - 12), right = Math.max(395, Math.max(...xs) + 12);
+        box = `${left} ${top} ${right - left} ${166 - top}`; }
     }
-    return `<svg class="thumb-fig" viewBox="215 24 180 142" aria-hidden="true"><line class="floor" x1="215" y1="162" x2="395" y2="162"/>${fig}</svg>`;
+    return `<svg class="thumb-fig" viewBox="${box}" aria-hidden="true"><line class="floor" x1="215" y1="162" x2="395" y2="162"/>${fig}</svg>`;
   }
   const diagram = cameraDiagram;
   /* ---------- voice & sound ---------- */

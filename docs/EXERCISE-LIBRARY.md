@@ -90,8 +90,18 @@ physio fills in:
 `pose` gives the two keyframes of the figure as **joint angles** (see the header
 of `catalog.js` for the conventions) and `catalog.js` turns them into the
 points the anatomy figure draws, so a hundred figures can be written by hand
-without any of them getting a limb of the wrong length. `work` is the heat map
-(which muscle regions light up). `sources` on the group or the entry are shown
+without any of them getting a limb of the wrong length. `face` is the way the
+front of the body points ('right' by default), which is what puts the chest
+and quads on one side and the back and glutes on the other. Both keyframes
+are placed with one transform and the joint that is on the floor in both
+(the planted foot) is held still, so a sit-to-stand keeps its feet where they
+were; `anchor` names another joint (or `null` for none), `lift` raises the
+second keyframe (a jump), `raise` lifts both off the floor (a hang). `props`
+draws the equipment: `{ kind: 'box', at: 'hip' }` is a chair under the hips of
+keyframe A (`'B.an'` reads keyframe B; a box always reaches the floor),
+`bar` spans two joints or a length, `disc` is a roller, `band` runs from a
+joint to the wall (`wall: 'ahead' | 'behind'`). `work` is the heat map (which
+muscle regions light up). `sources` on the group or the entry are shown
 on the exercise page; the prose is always ours.
 
 A tracked entry (`reps`/`form`) is compiled through `spec.js` exactly like a

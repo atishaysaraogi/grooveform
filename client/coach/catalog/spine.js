@@ -61,7 +61,7 @@
       contraindications: 'Osteoporosis, or pain in the lower back during the arch.',
       faults: [ { id: 'lowback', label: 'Arching the lower back instead', cue: 'Ribs down', tip: 'Keep the buttocks on the floor and the stomach lightly braced so the arch stays in the upper back.', severity: 2 }, { id: 'neck', label: 'Pulling on the neck', cue: 'Hands support, not pull', tip: 'Cradle the head; the neck should feel no strain.', severity: 2 } ],
       guide: { surface: 'Firm floor with the roller across the shoulder blades.', stop: 'Lower back pain, or tingling in the arms.', cannotSee: 'The arch — the head and arms are in the way.', regions: [{ name: 'Upper back', points: [{ t: 'Arches over the roller, one segment at a time.', tracked: false }] }, { name: 'Pelvis', points: [{ t: 'Stays on the floor.', tracked: false }] }] },
-      pose: { A: { ...supine, torso: -80, thigh: 130, shin: -25, uarm: 150, farm: 60 }, B: { ...supine, torso: -105, neck: -20, thigh: 130, shin: -25, uarm: 165, farm: 60 }, work: { back: 1, abs: .2 } },
+      pose: { A: { face: 'right', torso: -80, uarm: 150, farm: 60, thigh: 130, shin: -25 }, B: { face: 'right', torso: -105, uarm: 165, farm: 60, neck: -20, thigh: 130, shin: -25 }, work: { back: 1, abs: .2 }, props: [{ kind: 'disc', at: 'sh', dy: 8, r: 8 }] },
     },
     {
       id: 'levator_stretch', name: 'Levator scapulae stretch', type: 'hold', view: 'front', tracking: 'reps', level: 'beginner', equipment: ['chair'],
@@ -89,7 +89,7 @@
       contraindications: 'Wrist pain that stops weight-bearing; pain on either end of the movement.',
       faults: [ { id: 'neckonly', label: 'Only the neck moving', cue: 'Move the whole back', tip: 'Start each direction at the tailbone and let it travel up; the head is last, not first.', severity: 2 }, { id: 'rush', label: 'Rushing', cue: 'One breath each way', tip: 'The movement follows the breath; it should take at least two seconds each direction.', severity: 1 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Pain at either end of the range.', cannotSee: 'Whether the lower back is moving or only the neck.', regions: [{ name: 'Spine', points: [{ t: 'Rounds fully, then sags fully — tailbone to head.', tracked: false }, { t: 'Head follows the spine.', tracked: true }] }, { name: 'Arms', points: [{ t: 'Straight, hands under the shoulders.', tracked: false }] }] },
-      pose: { A: { ...quadruped, torso: -80, neck: 20 }, B: { ...quadruped, torso: -95, neck: -50 }, work: { back: 1, abs: .5, neck: .5 } },
+      pose: { A: { face: 'right', torso: 80, neck: -20, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 95, neck: 50, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, work: { back: 1, abs: .5, neck: .5 } },
     },
     {
       id: 'prone_press_up', name: 'Prone press-up (McKenzie)', type: 'reps', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],
@@ -103,7 +103,7 @@
       contraindications: 'Pain moving further down the leg on the press — stop and tell your physio.',
       faults: [ { id: 'hips', label: 'Hips lifting off the floor', cue: 'Hips down', tip: 'Let the pelvis hang heavy; if the hips lift, the arms are doing a push-up instead of an extension.', severity: 3 }, { id: 'brace', label: 'Tensing the back muscles', cue: 'Let the back relax', tip: 'The arms lift you; the back muscles stay soft so the joints can move.', severity: 2 } ],
       guide: { surface: 'Firm floor or mat.', stop: 'Pain spreading further down the leg.', cannotSee: 'The hips lifting, and whether the back is relaxed.', regions: [{ name: 'Upper body', points: [{ t: 'Arms straighten; chest lifts.', tracked: true }] }, { name: 'Pelvis', points: [{ t: 'Stays on the floor.', tracked: false }] }] },
-      pose: { A: { ...prone, uarm: -20, farm: 60 }, B: { ...prone, torso: -58, neck: -20, uarm: -55, farm: 45 }, work: { back: .8, arm: .4 } },
+      pose: { A: { face: 'right', torso: 90, thigh: -90, shin: -90, foot: 250, uarm: 20, farm: -60 }, B: { face: 'right', torso: 58, thigh: -90, shin: -90, foot: 250, neck: 20, uarm: 55, farm: -45 }, work: { back: .8, arm: .4 } },
     },
     {
       id: 'pelvic_tilt', name: 'Pelvic tilt', type: 'reps', view: 'side', tracking: 'none', level: 'beginner', equipment: ['mat'],
@@ -168,7 +168,7 @@
       contraindications: 'Sharp pain in the mid-back during the turn.',
       faults: [ { id: 'hips', label: 'Hips turning too', cue: 'Knees still', tip: 'Squeeze the knees together so the turn happens above the waist.', severity: 2 }, { id: 'lean', label: 'Leaning instead of turning', cue: 'Turn, do not lean', tip: 'Keep the head level and the trunk tall.', severity: 1 } ],
       guide: { surface: 'A chair without arms.', stop: 'Sharp mid-back pain.', cannotSee: 'The turn.', regions: [{ name: 'Chest', points: [{ t: 'Turns fully each way.', tracked: false }] }, { name: 'Hips', points: [{ t: 'Face the phone throughout.', tracked: false }] }] },
-      pose: { A: { armL: 60, foreL: 110, armR: 60, foreR: 110 }, B: { lean: -8, armL: 40, foreL: 120, armR: 75, foreR: 100 }, work: { back: .8, oblique: .5 } },
+      pose: { A: { armL: 60, foreL: 110, armR: 60, foreR: 110 }, B: { lean: -8, armL: 40, foreL: 120, armR: 75, foreR: 100 }, work: { back: .8, oblique: .5 }, props: [{ kind: 'box', at: 'hipL', dx: 11, w: 44, dy: 2 }] },
     },
     {
       id: 'child_pose', name: "Child's pose", type: 'hold', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],
@@ -182,7 +182,7 @@
       contraindications: 'Knee pain when folding; pregnancy after the second trimester.',
       faults: [ { id: 'hips', label: 'Hips coming up', cue: 'Hips to the heels', tip: 'If the hips hover, put a cushion behind the knees so you can rest rather than hold.', severity: 1 }, { id: 'shrug', label: 'Shoulders up around the ears', cue: 'Shoulders soft', tip: 'Let the arms be heavy; the reach comes from the hips going back.', severity: 1 } ],
       guide: { surface: 'A mat.', stop: 'Knee pain.', cannotSee: 'How relaxed the back is.', regions: [{ name: 'Hips', points: [{ t: 'Resting toward the heels.', tracked: true }] }, { name: 'Arms', points: [{ t: 'Long on the floor ahead.', tracked: false }] }] },
-      pose: { A: { ...quadruped, torso: -70, neck: 0 }, B: { face: 'left', torso: -140, neck: 20, thigh: 60, shin: -90, foot: -20, uarm: 165, farm: 165 }, work: { back: 1, glute: .3 } },
+      pose: { A: { face: 'right', torso: 70, neck: 0, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 140, neck: -20, thigh: -60, shin: 90, foot: 200, uarm: -165, farm: -165 }, work: { back: 1, glute: .3 } },
     },
     {
       id: 'knee_to_chest', name: 'Knee to chest', type: 'hold', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],

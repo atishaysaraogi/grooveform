@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Grooveform</title>
+<title>Motus</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2b1546">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,13 +13,14 @@
 </head>
 <body>
 <header class="topbar" id="topbar">
-  <a class="brand" href="#/" aria-label="Grooveform home"><svg class="logo" viewBox="0 0 340 92" role="img" aria-label="Grooveform"><text x="4" y="52" font-size="56" fill="currentColor" style="font-family:var(--font-display)">Grooveform</text><rect x="4" y="62" width="300" height="6" fill="#ff2e88"/><rect x="4" y="70.5" width="300" height="6" fill="#ffb830"/><rect x="4" y="79" width="300" height="6" fill="#b8f542"/><circle cx="318" cy="18" r="13" fill="#ff2e88"/><circle cx="318" cy="18" r="5.8" fill="#b8f542"/></svg><span class="eyebrow" id="top-role"></span></a>
+  <a class="brand" href="#/" aria-label="Motus home"><span class="wordmark">Motus</span><span class="eyebrow" id="top-role"></span></a>
   <nav class="topnav" id="topnav"></nav>
-  <div class="lib-switch" id="lib-switch" role="group" aria-label="Which moves to show"></div>
   <div class="spacer"></div>
   <span class="muted" id="top-user"></span>
   <button class="btn primary small" id="btn-login" hidden>Sign in</button>
   <button class="btn ghost small" id="btn-logout" hidden>Sign out</button>
+  <div class="lib-switch" id="lib-switch" role="group" aria-label="Which moves to show"></div>
+  <a class="btn ghost small" id="btn-settings" href="#/settings" aria-label="Settings">⚙ Settings</a>
 </header>
 <main id="view" class="wrap"></main>
 <div id="toast" class="toast" hidden></div>
@@ -27,7 +28,7 @@
 <!-- ===== First run: the three steps of a session ===== -->
 <div id="intro" class="intro" hidden>
   <div class="intro-card">
-    <span class="eyebrow">How Grooveform works</span>
+    <span class="eyebrow">How Motus works</span>
     <h2>Three steps, then you put the phone down.</h2>
     <ol class="intro-steps">
       <li>

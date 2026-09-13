@@ -75,7 +75,7 @@
       contraindications: 'Wrist pain that stops weight-bearing.',
       faults: [ { id: 'twist', label: 'Hips twisting', cue: 'Hips level', tip: 'Imagine a glass of water on the lower back; the leg lifts only as high as the hips can stay square.', severity: 3 }, { id: 'arch', label: 'Lower back arching', cue: 'Ribs down', tip: 'Lift the leg to level with the back, no higher.', severity: 2 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Wrist or back pain.', cannotSee: 'The hips twisting.', regions: [{ name: 'Arm', points: [{ t: 'Reaches forward to level.', tracked: true }] }, { name: 'Leg', points: [{ t: 'Extends back to level, not above.', tracked: true }] }, { name: 'Back', points: [{ t: 'Flat and square throughout.', tracked: false }] }] },
-      pose: { A: { ...quadruped }, B: { ...quadruped, uarm: 178, farm: 178, thighF: 88, shinF: 90, footF: -60 }, work: { back: 1, glute: .8, abs: .6, shoulder: .4 } },
+      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 0, farm: 0 }, B: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 92, farm: 92, thighF: -88, shinF: -90, footF: 200 }, work: { back: 1, glute: .8, abs: .6, shoulder: .4 } },
     },
     {
       id: 'mcgill_curl_up', name: 'McGill curl-up', type: 'hold', view: 'side', tracking: 'none', level: 'beginner', equipment: ['mat'],
@@ -154,7 +154,7 @@
       contraindications: 'Pain in the lower back at the top.',
       faults: [ { id: 'high', label: 'Lifting too high', cue: 'A few centimetres', tip: 'Higher pinches the lower back; a small lift with a long reach is the aim.', severity: 2 }, { id: 'neck', label: 'Looking up', cue: 'Look at the floor', tip: 'The head stays in line with the spine.', severity: 1 } ],
       guide: { surface: 'A mat.', stop: 'Lower back pain.', cannotSee: 'How high the legs are — the arms hide them.', regions: [{ name: 'Upper body', points: [{ t: 'Chest and arms lift a little; long reach.', tracked: true }] }, { name: 'Legs', points: [{ t: 'Lift together, knees straight.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: -90, thigh: 90, shin: 90, foot: -70, uarm: 178, farm: 178 }, B: { face: 'left', torso: -78, neck: -5, thigh: 100, shin: 100, foot: -60, uarm: 170, farm: 170 }, work: { back: 1, glute: .8, shoulder: .3 } },
+      pose: { A: { face: 'right', torso: 90, thigh: -90, shin: -90, foot: 250, uarm: 90, farm: 90 }, B: { face: 'right', torso: 78, neck: 5, thigh: -100, shin: -100, foot: 240, uarm: 100, farm: 100 }, work: { back: 1, glute: .8, shoulder: .3 } },
     },
     {
       id: 'supine_march', name: 'Supine march', type: 'reps', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],

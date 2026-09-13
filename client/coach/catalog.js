@@ -93,29 +93,66 @@
     return { h, shL, shR, elL: aL.el, elR: aR.el, wrL: aL.wr, wrR: aR.wr, hipL, hipR, knL: lL.kn, knR: lR.kn, anL: lL.an, anR: lR.an };
   }
 
-  /* Place a pose in the 400x175 diagram space: lowest point on the floor (y 161), centred at x 306. */
-  function place(pose, view) {
-    const keys = Object.keys(pose).filter((k) => k !== 'dir' && pose[k] && typeof pose[k].x === 'number');
-    const xs = keys.map((k) => pose[k].x), ys = keys.map((k) => pose[k].y);
-    const maxY = Math.max(...ys), cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const out = {};
-    keys.forEach((k) => { out[k] = [Math.round(306 + pose[k].x - cx), Math.round(161 - (maxY - pose[k].y))]; });
-    return out;
+  const FLOOR_Y = 161, CENTRE_X = 306;
+  const isPt = (p) => p && typeof p.x === 'number';
+  const ptKeys = (pose) => Object.keys(pose).filter((k) => k !== 'dir' && isPt(pose[k]));
+  const shift = (pose, dx, dy) => { const o = {}; ptKeys(pose).forEach((k) => { o[k] = { x: pose[k].x + dx, y: pose[k].y + dy }; }); return o; };
+  const maxY = (pose) => Math.max(...ptKeys(pose).map((k) => pose[k].y));
+  /* The joint to hold still: the first (near foot first, then the far one, then hands, knees)
+     that touches the floor in both keyframes. None → the keyframes are simply placed together. */
+  const ANCHOR_ORDER = ['ft', 'an', 'anL', 'anR', 'ftF', 'anF', 'kn', 'knF', 'wr', 'wrF', 'wrL', 'wrR', 'h'];
+  function plantedKey(A, B) {
+    const fa = maxY(A), fb = maxY(B);
+    return ANCHOR_ORDER.find((k) => isPt(A[k]) && isPt(B[k]) && A[k].y > fa - 3 && B[k].y > fb - 3) || null;
   }
 
-  /* pose: { A: angles, B: angles, work: {region: 0..1}, wall: 'behind'|'ahead'|null, side } */
+  /* Place both keyframes in the 400x175 diagram space with ONE transform, so a limb that does not
+     move stays put between them. B is first shifted so its anchor joint — by default whatever
+     touches the floor in A, i.e. the planted foot — sits where A's does; then the pair is floored
+     (y 161) and centred (x 306) together. pose.anchor names another joint or null for none;
+     pose.lift raises B (a jump, landing on a box); pose.raise lifts both off the floor (a hang). */
+  function placePair(A, B, pose) {
+    const anchor = pose.anchor === undefined ? plantedKey(A, B) : pose.anchor;
+    let Bs = B;
+    if (anchor && isPt(A[anchor]) && isPt(B[anchor])) Bs = shift(B, A[anchor].x - B[anchor].x, A[anchor].y - B[anchor].y);
+    if (pose.lift) Bs = shift(Bs, 0, -pose.lift);
+    const all = [...ptKeys(A).map((k) => A[k]), ...ptKeys(Bs).map((k) => Bs[k])];
+    const maxY = Math.max(...all.map((p) => p.y)), xs = all.map((p) => p.x), cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const raise = pose.raise || 0;
+    const fix = (p) => { const o = {}; ptKeys(p).forEach((k) => { o[k] = [Math.round(CENTRE_X + p[k].x - cx), Math.round(FLOOR_Y - raise - (maxY - p[k].y))]; }); return o; };
+    return { A: fix(A), B: fix(Bs) };
+  }
+
+  /* Equipment, named by the joint it sits at: { kind: 'box', at: 'hip' } is a chair under the hips
+     of keyframe A ('B.an' reads keyframe B); a box always reaches the floor. 'bar' spans two joints
+     or a length; 'disc' is a roller; 'band' runs from a joint to the wall. */
+  function resolveProps(list, A, B, wall) {
+    const joint = (ref) => { const [kf, key] = ref.includes('.') ? ref.split('.') : ['A', ref]; const P = kf === 'B' ? B : A; return P[key] ? { x: P[key][0], y: P[key][1] } : null; };
+    return (list || []).map((p) => {
+      const j = joint(p.at); if (!j) return null;
+      if (p.kind === 'box') { const top = j.y + (p.dy || 0), w = p.w || 34; return { kind: 'box', x: Math.round(j.x - w / 2 + (p.dx || 0)), y: Math.round(top), w, h: Math.round(FLOOR_Y - top) }; }
+      if (p.kind === 'bar') { const j2 = p.to ? joint(p.to) : null, ext = p.extend || 14, len = p.len || 60; return { kind: 'bar', x1: Math.round(j2 ? Math.min(j.x, j2.x) - ext : j.x - len / 2), x2: Math.round(j2 ? Math.max(j.x, j2.x) + ext : j.x + len / 2), y: Math.round(j.y + (p.dy || 0)) }; }
+      if (p.kind === 'disc') return { kind: 'disc', x: Math.round(j.x + (p.dx || 0)), y: Math.round(j.y + (p.dy || 0)), r: p.r || 8 };
+      if (p.kind === 'band') return wall == null ? null : { kind: 'band', x1: Math.round(j.x), y1: Math.round(j.y), x2: wall, y2: Math.round(j.y + (p.dy || 0)) };
+      return null;
+    }).filter(Boolean);
+  }
+
+  /* pose: { A: angles, B: angles, work: {region: 0..1}, wall: 'behind'|'ahead'|null, anchor, lift, raise, props } */
   function poseToFigure(view, pose, opts) {
     const build = view === 'front' ? frontPose : sidePose;
     const rawA = build(pose.A || {}), rawB = build(pose.B || pose.A || {});
-    const A = place(rawA, view), B = place(rawB, view);
+    const { A, B } = placePair(rawA, rawB, pose);
     let wall = null;
     if (pose.wall && view === 'side') {
-      const xs = Object.values(A).map((p) => p[0]);
+      const xs = [...Object.values(A), ...Object.values(B)].map((p) => p[0]);
       const behindIsLeft = (rawA.dir || 1) > 0;
       wall = (pose.wall === 'behind') === behindIsLeft ? Math.min(...xs) - 6 : Math.max(...xs) + 6;
     }
-    const flip = view === 'side' ? A.ft[0] < A.an[0] : false;
-    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall };
+    /* `face` is the way the front of the body points, so the figure's muscles follow it. */
+    const flip = view === 'side' ? (rawA.dir || 1) < 0 : false;
+    const props = resolveProps(pose.props, A, B, wall);
+    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props };
   }
 
   function registerFigure(id, fig) {

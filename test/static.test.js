@@ -41,14 +41,14 @@ srv.listen(0, async () => {
     document.getElementById('ov-title').textContent = 'Get into position';
     document.getElementById('ov-text').textContent = 'Step into view.';
     const card = getComputedStyle(document.querySelector('#overlay-msg .card')).backgroundColor;
-    const out = { l1: at('.hero h1 .l1'), l2: at('.hero h1 .l2'), l3: at('.hero h1 .l3'), nav: at('.topnav a'),
+    const out = { tag: at('.hero-tag'), copy: at('.hero-copy'), settings: at('#btn-settings'),
                   ovTitle: at('#ov-title', card), ovText: at('#ov-text', card) };
     document.getElementById('coach').hidden = true;
     return out;
   })()`;
   for (const scheme of ['dark', 'light']) {
     const pg = await openPage({ viewport: { width: 400, height: 860 }, colorScheme: scheme });
-    await pg.goto(base); await pg.waitForSelector('.hero h1 .l1');
+    await pg.goto(base); await pg.waitForSelector('.hero-wordmark');
     const r = await pg.evaluate(contrast);
     for (const [k, v] of Object.entries(r)) { assert.ok(v !== null, `${k} present in ${scheme}`); assert.ok(v >= 3, `${k} contrast ${Number(v).toFixed(2)} too low on ${scheme} background`); }
     await pg.close();

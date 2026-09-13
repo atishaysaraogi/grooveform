@@ -70,7 +70,7 @@
       contraindications: 'Kneecap pain on the front leg; balance problems.',
       faults: [ lean(62), { id: 'kneefwd', label: 'Front knee shooting past the toes', cue: 'Shin near vertical', tip: 'Take a longer step so the shin stays close to upright; the knee should stay over the foot.', severity: 2 }, { id: 'short', label: 'Not lowering enough', cue: 'Back knee to the floor', tip: 'Drop the back knee toward the floor; the front thigh should reach level.', severity: 1 } ],
       guide: { surface: 'Enough floor for a long step.', stop: 'Kneecap pain.', cannotSee: 'The front knee drifting inward.', regions: [{ name: 'Front leg', points: [{ t: 'Thigh reaches level; shin near vertical.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Tall; lower straight down.', tracked: true }] }] },
-      pose: { A: { ...standing, uarm: 8, farm: 8 }, B: { ...standing, thigh: 85, shin: -5, thighF: -30, shinF: -120, footF: -60, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9, calf: .3 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 0, shin: 0, uarm: 8, farm: 8 }, B: { face: 'right', torso: 0, thigh: 85, shin: -5, thighF: -35, shinF: -95, footF: -75, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9, calf: .3 }, anchor: 'ftF' },
     },
     {
       id: 'reverse_lunge', name: 'Reverse lunge', type: 'reps', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['none', 'dumbbells (optional)'],
@@ -83,7 +83,7 @@
       contraindications: 'Kneecap pain on the front leg.',
       faults: [ { id: 'lean', label: 'Trunk tipping forward', cue: 'Chest up', tip: 'Lower straight down; the back knee travels to the floor, the chest stays up.', severity: 2 }, { id: 'push', label: 'Pushing off the back foot', cue: 'Front heel drives', tip: 'The back foot is a kickstand; the front leg does the work.', severity: 2 } ],
       guide: { surface: 'Enough floor behind you.', stop: 'Kneecap pain.', cannotSee: 'Which leg is doing the pushing.', regions: [{ name: 'Front leg', points: [{ t: 'Thigh reaches level; heel stays down.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Tall.', tracked: false }] }] },
-      pose: { A: { ...standing, uarm: 8, farm: 8 }, B: { ...standing, thigh: 85, shin: -5, thighF: -30, shinF: -120, footF: -60, uarm: 8, farm: 8 }, work: { glute: 1, thigh: .9 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 0, shin: 0, uarm: 8, farm: 8 }, B: { face: 'right', torso: 0, thigh: 85, shin: -5, thighF: -35, shinF: -95, footF: -75, uarm: 8, farm: 8 }, work: { glute: 1, thigh: .9 }, anchor: 'ft' },
     },
     {
       id: 'walking_lunge', name: 'Walking lunge', type: 'reps', view: 'side', tracking: 'none', level: 'intermediate', equipment: ['none', 'dumbbells (optional)'],
@@ -95,7 +95,7 @@
       contraindications: 'Kneecap pain; balance problems.',
       faults: [ { id: 'lean', label: 'Trunk tipping forward', cue: 'Chest up', tip: 'Lower straight down each step.', severity: 2 }, { id: 'wobble', label: 'Wobbling side to side', cue: 'Feet on two rails', tip: 'Keep the feet hip-width apart, not on a tightrope.', severity: 1 } ],
       guide: { surface: 'A clear walkway.', stop: 'Kneecap pain.', cannotSee: 'You — the exercise walks out of frame.', regions: [{ name: 'Front leg', points: [{ t: 'Thigh to level each step.', tracked: false }] }, { name: 'Trunk', points: [{ t: 'Tall, steady.', tracked: false }] }] },
-      pose: { A: { ...standing, thigh: 85, shin: -5, thighF: -30, shinF: -120, footF: -60, uarm: 8, farm: 8 }, B: { ...standing, thigh: -30, shin: -120, foot: -60, thighF: 85, shinF: -5, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 85, shin: -5, thighF: -35, shinF: -95, footF: -75, uarm: 8, farm: 8 }, B: { face: 'right', torso: 0, thigh: -35, shin: -95, foot: -75, thighF: 85, shinF: -5, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9 }, anchor: null },
     },
     {
       id: 'lateral_lunge', name: 'Lateral lunge', type: 'reps', view: 'front', tracking: 'reps', level: 'intermediate', equipment: ['none', 'dumbbell (optional)'],
@@ -173,7 +173,7 @@
       contraindications: 'Kneecap pain; balance problems.',
       faults: [ { id: 'lean', label: 'Trunk folding forward', cue: 'Chest up', tip: 'A slight forward lean is fine; folding shifts the work to the back.', severity: 2 }, { id: 'kneein', label: 'Front knee caving inward', cue: 'Knee over the foot', tip: 'Push the knee out over the little toe.', severity: 3 } ],
       guide: { surface: 'A stable bench that will not slide.', stop: 'Kneecap pain.', cannotSee: 'The front knee caving.', regions: [{ name: 'Front leg', points: [{ t: 'Thigh reaches level; heel down.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Tall or slightly forward.', tracked: false }] }] },
-      pose: { A: { ...standing, thigh: 20, shin: 0, thighF: -35, shinF: -120, footF: -60, uarm: 8, farm: 8 }, B: { ...standing, torso: 10, thigh: 85, shin: -5, thighF: -40, shinF: -130, footF: -60, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9 } },
+      pose: { A: { face: 'right', torso: 0, thigh: 20, shin: 0, thighF: -35, shinF: -120, footF: -60, uarm: 8, farm: 8 }, B: { face: 'right', torso: 10, thigh: 85, shin: -5, thighF: -40, shinF: -130, footF: -60, uarm: 8, farm: 8 }, work: { thigh: 1, glute: .9 }, anchor: 'an', props: [{ kind: 'box', at: 'anF', w: 30, dy: 4 }] },
     },
     {
       id: 'curtsy_lunge', name: 'Curtsy lunge', type: 'reps', view: 'front', tracking: 'none', level: 'intermediate', equipment: ['none'],
@@ -199,7 +199,7 @@
       contraindications: 'Lower back pain on the lift; wrist pain.',
       faults: [ { id: 'arch', label: 'Lower back arching', cue: 'Thigh to level, no higher', tip: 'Higher than the back means the spine is lifting, not the glute.', severity: 2 }, { id: 'shift', label: 'Weight shifting to one side', cue: 'Hips square', tip: 'Keep the weight even over both hands and the resting knee.', severity: 1 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Lower back or wrist pain.', cannotSee: 'The hips twisting.', regions: [{ name: 'Working leg', points: [{ t: 'Thigh lifts to level with the back; knee bent.', tracked: true }] }, { name: 'Back', points: [{ t: 'Flat and still.', tracked: false }] }] },
-      pose: { A: { ...quadruped }, B: { ...quadruped, thigh: 88, shin: 0, foot: -60, thighF: 0, shinF: -90 }, work: { glute: 1, ham: .5 } },
+      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 88, neck: 25, thigh: -88, shin: 0, uarm: 0, farm: 0, foot: 240, thighF: 0, shinF: 90, footF: 180 }, work: { glute: 1, ham: .5 } },
     },
     {
       id: 'wall_sit', name: 'Wall sit', type: 'hold', view: 'side', tracking: 'form', level: 'beginner', equipment: ['wall'],
@@ -226,7 +226,7 @@
       contraindications: 'Knee or ankle injury; anyone told to avoid impact.',
       faults: [ { id: 'stiff', label: 'Landing with stiff legs', cue: 'Land soft', tip: 'Bend the knees and hips on landing so it is quiet.', severity: 3 }, { id: 'valgus', label: 'Knees caving on landing', cue: 'Knees out', tip: 'Land with the knees over the toes.', severity: 3 } ],
       guide: { surface: 'A floor with some give; not concrete.', stop: 'Knee or ankle pain.', cannotSee: 'Landing mechanics — too fast.', regions: [{ name: 'Knees', points: [{ t: 'Dip into a quarter squat before every jump.', tracked: true }, { t: 'Bend on the landing; track over the toes.', tracked: false }] }, { name: 'Feet', points: [{ t: 'Land quietly, whole foot.', tracked: false }] }] },
-      pose: { A: { legL: 8, legR: 8, squat: .5, armL: 40, armR: 40 }, B: { legL: 4, legR: 4, armL: 170, armR: 170 }, work: { thigh: 1, glute: .9, calf: .8 } },
+      pose: { A: { legL: 8, legR: 8, squat: .5, armL: 40, armR: 40 }, B: { legL: 4, legR: 4, armL: 170, armR: 170 }, work: { thigh: 1, glute: .9, calf: .8 }, lift: 14 },
     },
     {
       id: 'box_jump', name: 'Box jump', type: 'reps', view: 'side', tracking: 'none', level: 'advanced', equipment: ['sturdy box'],
@@ -238,7 +238,7 @@
       contraindications: 'Knee, ankle or Achilles injury; anyone told to avoid impact.',
       faults: [ { id: 'deep', label: 'Landing in a deep squat', cue: 'Land tall', tip: 'A deep landing means the box is too high; the hips should land above the knees.', severity: 2 }, { id: 'jumpdown', label: 'Jumping down', cue: 'Step down', tip: 'The jump down loads the tendons more than the jump up. Step.', severity: 2 } ],
       guide: { surface: 'A box that cannot tip.', stop: 'Knee or Achilles pain.', cannotSee: 'The landing.', regions: [{ name: 'Landing', points: [{ t: 'Whole foot on the box; knees soft; hips above the knees.', tracked: false }] }] },
-      pose: { A: { ...standing, torso: 20, thigh: 50, shin: -20, uarm: -40, farm: -40 }, B: { ...standing, torso: 5, thigh: 30, shin: -10, uarm: 60, farm: 60 }, work: { thigh: 1, glute: 1, calf: .8 } },
+      pose: { A: { face: 'right', torso: 20, thigh: 50, shin: -20, uarm: -40, farm: -40 }, B: { face: 'right', torso: 5, thigh: 30, shin: -10, uarm: 60, farm: 60 }, work: { thigh: 1, glute: 1, calf: .8 }, anchor: 'an', lift: 30, props: [{ kind: 'box', at: 'B.an', w: 44, dy: 4 }] },
     },
   ]);
 })(typeof window !== 'undefined' ? window : globalThis);

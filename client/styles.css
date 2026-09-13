@@ -358,12 +358,12 @@ a.ex-card .name { color: var(--text, inherit); }
 
 /* ---------- Homepage brand lockup ---------- */
 .hero-brand { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
-.hero-logo { width: 100%; max-width: 460px; height: auto; display: block; color: var(--ink); }
+.hero-wordmark { font-size: clamp(3rem, 12vw, 6rem); line-height: 1; }
 .hero-tag { font-family: var(--font-body); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .18em; color: var(--ink-soft); }
 /* The logo's three bars, reused as a section rule so the mark reads as part of the page. */
 .home-sec h2 { position: relative; padding-top: 15px; }
 .home-sec h2::before { content: ''; position: absolute; top: 0; left: 0; width: 64px; height: 9px; background: linear-gradient(to bottom, var(--pink) 0 3px, var(--tangerine) 3px 6px, var(--lime) 6px 9px); }
-@media (max-width: 600px) { .hero-logo { max-width: 300px; } }
+
 /* On the homepage the hero is the logo, so the topbar mark would be a duplicate. */
 .topbar.at-home .brand { display: none; }
 
@@ -420,13 +420,13 @@ a.ex-card .name { color: var(--text, inherit); }
 .lib-switch button b { font-family: var(--font-mono); font-weight: 700; opacity: .7; margin-left: 2px; }
 .lib-switch button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 .lib-switch button[aria-pressed="true"] b { opacity: .85; }
-@media (max-width: 600px) { .lib-switch { order: 11; } }
+@media (max-width: 600px) { .lib-switch button { padding: 5px 9px; } .lib-switch button b { display: none; } }
 /* ---- what the camera does with a move ---- */
-.track { display: inline-block; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; border: 1.5px solid currentColor; line-height: 1.3; vertical-align: middle; }
+.track { display: inline-block; font-family: var(--font-mono); font-size: .56rem; letter-spacing: .04em; text-transform: uppercase; padding: 1px 5px; border-radius: 5px; border: 1px solid currentColor; line-height: 1.3; vertical-align: middle; opacity: .9; }
 .track.form { color: var(--good); } .track.reps { color: var(--accent); } .track.none { color: var(--muted); }
-.tile .track { position: absolute; top: 8px; left: 8px; background: var(--surface); }
+.tile .track { position: absolute; top: 7px; left: 7px; background: var(--surface); }
 .tile .badge { top: 8px; right: 8px; }
-h1 .track { font-size: .7rem; }
+h1 .track { font-size: .56rem; }
 .track-note { margin: 0; }
 .group-h { font-family: var(--font-body); font-size: 1rem; font-weight: 900; margin: 18px 0 8px; }
 .group-h .muted { font-family: var(--font-mono); font-weight: 700; font-size: .8rem; }
@@ -447,3 +447,18 @@ h1 .track { font-size: .7rem; }
 .panel.manual .counter .btn { min-width: 52px; font-size: 1.4rem; }
 #screen-review.manual > .wrap { display: none; }
 #screen-review.manual #rv-portal { padding-top: 16px; }
+
+/* ---- wordmark: the name in the theme's three colours, nothing else ---- */
+.wordmark { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.01em; line-height: 1; display: inline-block;
+  background: linear-gradient(90deg, var(--pink) 0%, var(--pink) 28%, var(--tangerine) 58%, var(--lime) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.brand .wordmark { font-size: 1.7rem; }
+.hero-brand { align-items: flex-start; }
+/* ---- topbar: brand, nav, then the library switch and Settings in the right corner ---- */
+#btn-settings { text-decoration: none; }
+.topbar .lib-switch { margin-left: auto; }
+.topbar .spacer { display: none; }
+/* ---- settings: name beside the bubble, only the value inside ---- */
+.knob { display: inline-flex; align-items: center; gap: 6px; }
+.knob .k { font-size: .82rem; font-weight: 800; color: var(--ink-soft); }
+.bubble { min-width: 44px; justify-content: center; }

@@ -159,7 +159,7 @@
       faults: [ { id: 'ribs', label: 'Ribs flaring at the top', cue: 'Chin tucked, ribs down', tip: 'Finish with a posterior tilt — buttocks tight, ribs pulled down — not an arched back.', severity: 3 }, { id: 'height', label: 'Stopping short of level thighs', cue: 'All the way up', tip: 'Thighs parallel to the floor at the top; if that is too hard, reduce the load.', severity: 1 } ],
       guide: { surface: 'A bench that will not slide; floor with grip.', stop: 'Lower back pain or a bench that shifts.', cannotSee: 'The ribs flaring and the chin position.',
         regions: [{ name: 'Hips', points: [{ t: 'Rise until the thighs are level; squeeze at the top.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Chin tucked, ribs down, upper back resting on the bench.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: -50, neck: 20, thigh: 100, shin: -10, foot: 0, uarm: 100, farm: 130 }, B: { face: 'right', torso: -90, neck: 25, thigh: 90, shin: 0, foot: 0, uarm: 100, farm: 130 }, work: { glute: 1, ham: .5, thigh: .3 } },
+      pose: { A: { face: 'right', torso: -50, neck: 20, thigh: 100, shin: -10, foot: 0, uarm: 100, farm: 130 }, B: { face: 'right', torso: -90, neck: 25, thigh: 90, shin: 0, foot: 0, uarm: 100, farm: 130 }, work: { glute: 1, ham: .5, thigh: .3 }, props: [{ kind: 'box', at: 'sh', w: 30, dy: 4 }] },
     },
     {
       id: 'fire_hydrant', name: 'Fire hydrant', type: 'reps', view: 'side', tracking: 'none', level: 'beginner', equipment: ['none', 'loop band (optional)'],
@@ -173,7 +173,7 @@
       faults: [ { id: 'twist', label: 'Twisting the trunk to lift higher', cue: 'Hips square', tip: 'Both hip bones stay pointing at the floor. The lift stops where the pelvis would start to turn.', severity: 3 }, { id: 'arms', label: 'Elbows locked and shoulders sagging', cue: 'Push the floor away', tip: 'Soft elbows, shoulder blades spread, back flat.', severity: 1 } ],
       guide: { surface: 'Mat under the knees and hands.', stop: 'Wrist pain or hip pinching.', cannotSee: 'The knee lifting sideways and the trunk twisting — both are along the phone axis.',
         regions: [{ name: 'Trunk', points: [{ t: 'Square to the floor, back flat, no rotation.', tracked: false }] }, { name: 'Working leg', points: [{ t: 'Knee stays bent at 90° as it lifts out to the side.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: -88, neck: -25, thigh: 0, shin: -90, uarm: 0, farm: 0 }, B: { face: 'left', torso: -88, neck: -25, thigh: -8, shin: -100, thighF: 0, shinF: -90, uarm: 0, farm: 0 }, work: { glute: 1 } },
+      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 88, neck: 25, thigh: 8, shin: 100, thighF: 0, shinF: 90, uarm: 0, farm: 0, foot: 180, footF: 180 }, work: { glute: 1 } },
     },
     {
       id: 'lateral_band_walk', name: 'Lateral band walk', type: 'reps', view: 'front', tracking: 'none', level: 'intermediate', equipment: ['loop band'],

@@ -44,7 +44,7 @@
       contraindications: 'Wrist or shoulder pain.',
       faults: [ { id: 'sag', label: 'Hips sagging', cue: 'Hips up', tip: 'Brace so the body stays one line.', severity: 2 }, { id: 'short', label: 'Cutting depth', cue: 'Chest to the edge', tip: 'Touch the chest to the surface each rep.', severity: 1 } ],
       guide: { surface: 'A surface that cannot slide.', stop: 'Wrist or shoulder pain.', cannotSee: 'The hips when the bench is in the way.', regions: [{ name: 'Body line', points: [{ t: 'Straight from head to heels.', tracked: false }] }, { name: 'Depth', points: [{ t: 'Chest reaches the surface.', tracked: true }] }] },
-      pose: { A: { face: 'left', torso: 55, neck: -15, thigh: -55, shin: -55, foot: -70, uarm: 0, farm: 0 }, B: { face: 'left', torso: 62, neck: -15, thigh: -55, shin: -55, foot: -70, uarm: -75, farm: 40 }, work: { chest: 1, arm: .7 } },
+      pose: { A: { face: 'left', torso: 55, neck: -15, thigh: -55, shin: -55, foot: -70, uarm: 0, farm: 0 }, B: { face: 'left', torso: 62, neck: -15, thigh: -55, shin: -55, foot: -70, uarm: -75, farm: 40 }, work: { chest: 1, arm: .7 }, anchor: 'ft', props: [{ kind: 'box', at: 'wr', w: 34, dy: 3 }] },
     },
     {
       id: 'knee_push_up', name: 'Knee push-up', type: 'reps', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],
@@ -85,7 +85,7 @@
       contraindications: 'Front-of-shoulder pain — this move is hard on irritable shoulders.',
       faults: [ { id: 'deep', label: 'Going too deep', cue: 'Elbows to 90°', tip: 'Below 90° the front of the shoulder takes the strain.', severity: 2 }, { id: 'drift', label: 'Hips drifting forward', cue: 'Back near the bench', tip: 'Keep the back brushing the bench so the triceps do the work.', severity: 1 } ],
       guide: { surface: 'A bench that cannot slide.', stop: 'Front-of-shoulder pain.', cannotSee: 'Shoulder rounding forward.', regions: [{ name: 'Elbows', points: [{ t: 'Bend to a right angle; point straight back.', tracked: true }] }, { name: 'Hips', points: [{ t: 'Close to the bench.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: 5, thigh: 70, shin: 10, foot: 0, uarm: -30, farm: -30 }, B: { face: 'left', torso: 5, thigh: 99, shin: 7, foot: 0, uarm: -85, farm: 10 }, work: { arm: 1, shoulder: .4, chest: .3 } },
+      pose: { A: { face: 'left', torso: 5, thigh: 70, shin: 10, foot: 0, uarm: -30, farm: -30 }, B: { face: 'left', torso: 5, thigh: 99, shin: 7, foot: 0, uarm: -85, farm: 10 }, work: { arm: 1, shoulder: .4, chest: .3 }, anchor: 'ft', props: [{ kind: 'box', at: 'wr', w: 40, dy: 2 }] },
     },
     {
       id: 'pull_up', name: 'Pull-up', type: 'reps', view: 'front', tracking: 'reps', level: 'advanced', equipment: ['pull-up bar'],
@@ -99,7 +99,7 @@
       contraindications: 'Shoulder or elbow pain hanging.',
       faults: [ { id: 'kip', label: 'Swinging or kicking', cue: 'Dead still', tip: 'Legs quiet, no swing; if you need momentum, use a band.', severity: 2 }, { id: 'short', label: 'Not lowering fully', cue: 'Straight arms at the bottom', tip: 'Each rep starts from a full hang.', severity: 1 } ],
       guide: { surface: 'A bar rated for body weight.', stop: 'Shoulder or elbow pain.', cannotSee: 'The chin clearing the bar.', regions: [{ name: 'Arms', points: [{ t: 'Straight at the bottom; elbows drive down to the ribs.', tracked: true }] }, { name: 'Body', points: [{ t: 'Still — no swing.', tracked: false }] }] },
-      pose: { A: { armL: 165, armR: 165, foreL: 178, foreR: 178, legL: 4, legR: 4 }, B: { armL: 120, armR: 120, foreL: 178, foreR: 178, legL: 4, legR: 4 }, work: { back: 1, arm: .8 } },
+      pose: { A: { armL: 165, armR: 165, foreL: 178, foreR: 178, legL: 4, legR: 4 }, B: { armL: 120, armR: 120, foreL: 178, foreR: 178, legL: 4, legR: 4 }, work: { back: 1, arm: .8 }, anchor: 'wrL', raise: 16, props: [{ kind: 'bar', at: 'wrL', to: 'wrR' }] },
     },
     {
       id: 'chin_up', name: 'Chin-up', type: 'reps', view: 'front', tracking: 'reps', level: 'advanced', equipment: ['pull-up bar'],
@@ -113,7 +113,7 @@
       contraindications: 'Elbow or wrist pain with the underhand grip.',
       faults: [ { id: 'kip', label: 'Swinging', cue: 'Dead still', tip: 'No momentum; use a band if needed.', severity: 2 }, { id: 'short', label: 'Not lowering fully', cue: 'Straight arms at the bottom', tip: 'Each rep starts from a full hang.', severity: 1 } ],
       guide: { surface: 'A bar rated for body weight.', stop: 'Elbow or shoulder pain.', cannotSee: 'The chin clearing the bar.', regions: [{ name: 'Arms', points: [{ t: 'Straight at the bottom; full pull.', tracked: true }] }] },
-      pose: { A: { armL: 172, armR: 172, foreL: 178, foreR: 178, legL: 4, legR: 4 }, B: { armL: 130, armR: 130, foreL: 176, foreR: 176, legL: 4, legR: 4 }, work: { arm: 1, back: .8 } },
+      pose: { A: { armL: 172, armR: 172, foreL: 178, foreR: 178, legL: 4, legR: 4 }, B: { armL: 130, armR: 130, foreL: 176, foreR: 176, legL: 4, legR: 4 }, work: { arm: 1, back: .8 }, anchor: 'wrL', raise: 16, props: [{ kind: 'bar', at: 'wrL', to: 'wrR' }] },
     },
     {
       id: 'inverted_row', name: 'Inverted row', type: 'reps', view: 'side', tracking: 'reps', level: 'intermediate', equipment: ['low bar, rings or sturdy table'],
@@ -127,7 +127,7 @@
       contraindications: 'Shoulder pain at the top.',
       faults: [ { id: 'sag', label: 'Hips sagging', cue: 'Plank the body', tip: 'Squeeze the glutes so the body moves as one plank.', severity: 2 }, { id: 'short', label: 'Not reaching the bar', cue: 'Chest to the bar', tip: 'Pull until the chest touches; if you cannot, raise the bar.', severity: 1 } ],
       guide: { surface: 'A bar that cannot roll or tip.', stop: 'Shoulder pain.', cannotSee: 'The hips when the bar hides them.', regions: [{ name: 'Arms', points: [{ t: 'Elbows drive back; chest reaches the bar.', tracked: true }] }, { name: 'Body', points: [{ t: 'One straight plank.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: -70, thigh: 105, shin: 105, foot: 60, uarm: 20, farm: 20 }, B: { face: 'right', torso: -70, thigh: 105, shin: 105, foot: 60, uarm: -70, farm: 60 }, work: { back: 1, arm: .7 } },
+      pose: { A: { face: 'right', torso: -70, thigh: 105, shin: 105, foot: 60, uarm: 165, farm: 165 }, B: { face: 'right', torso: -58, thigh: 100, shin: 100, foot: 60, uarm: -120, farm: 120 }, work: { back: 1, arm: .7 }, anchor: 'ft', props: [{ kind: 'bar', at: 'wr', len: 70 }] },
     },
     {
       id: 'bent_over_row', name: 'Bent-over dumbbell row', type: 'reps', view: 'side', tracking: 'form', level: 'intermediate', equipment: ['dumbbells'],
@@ -153,7 +153,7 @@
       contraindications: 'Lower back pain.',
       faults: [ { id: 'twist', label: 'Trunk twisting to lift', cue: 'Shoulders square', tip: 'The chest stays facing the floor; the arm does the work.', severity: 2 }, { id: 'short', label: 'Not reaching the hip', cue: 'Elbow past the ribs', tip: 'Finish with the elbow behind the body.', severity: 1 } ],
       guide: { surface: 'A stable bench.', stop: 'Lower back pain.', cannotSee: 'The trunk twisting.', regions: [{ name: 'Working arm', points: [{ t: 'Elbow drives back past the ribs.', tracked: true }] }, { name: 'Back', points: [{ t: 'Flat and square.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 82, neck: -20, thigh: -10, shin: 10, thighF: 80, shinF: -90, uarm: 175, farm: 175, uarmF: 100, farmF: 100 }, B: { face: 'right', torso: 82, neck: -20, thigh: -10, shin: 10, thighF: 80, shinF: -90, uarm: -20, farm: 100, uarmF: 100, farmF: 100 }, work: { back: 1, arm: .6 } },
+      pose: { A: { face: 'right', torso: 82, neck: -20, thigh: -10, shin: 10, thighF: 80, shinF: -90, uarm: 175, farm: 175, uarmF: 100, farmF: 100 }, B: { face: 'right', torso: 82, neck: -20, thigh: -10, shin: 10, thighF: 80, shinF: -90, uarm: -20, farm: 100, uarmF: 100, farmF: 100 }, work: { back: 1, arm: .6 }, props: [{ kind: 'box', at: 'wrF', w: 30, dy: 2 }] },
     },
     {
       id: 'overhead_press', name: 'Overhead press', type: 'reps', view: 'front', tracking: 'form', level: 'intermediate', equipment: ['dumbbells'],
