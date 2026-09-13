@@ -347,8 +347,12 @@
      registers itself into library.list, which EXERCISES points at. */
   if (typeof module !== 'undefined' && module.exports) {
     const fs = require('node:fs'), path = require('node:path');
-    const dir = path.join(__dirname, 'library');
-    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.js')).sort()) require(path.join(dir, f));
+    /* library/ holds the hand-written moves, catalog/ the data-defined ones (see coach/catalog.js). */
+    for (const sub of ['library', 'catalog']) {
+      const dir = path.join(__dirname, sub);
+      if (!fs.existsSync(dir)) continue;
+      for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.js')).sort()) require(path.join(dir, f));
+    }
   }
 
   if (typeof module !== 'undefined' && module.exports) module.exports = FormEngine; else root.FormEngine = FormEngine;

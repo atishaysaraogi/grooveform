@@ -9,7 +9,7 @@
     const { SIDE, FULL, ATTEMPT, BAND, angle, armAngle, dist, mid, stickySide, trunkLean } = k;
 
     return {
-      id: 'shoulder_abd', order: 70, sided: { limb: 'arm', by: 'pick' }, upperBody: true, name: 'Shoulder abduction (band)', group: 'Shoulder — rotator cuff', type: 'reps', view: 'front', icon: '🙋',
+      id: 'shoulder_abd', order: 70, vetted: true, tracking: 'form', camera: { height: 'chest', distance: '2 m', posture: 'standing' }, sided: { limb: 'arm', by: 'pick' }, upperBody: true, name: 'Shoulder abduction (band)', group: 'Shoulder — rotator cuff', type: 'reps', view: 'front', icon: '🙋',
       summary: 'Straight-arm raise out to the side against a band, to shoulder height — checked for shrugging, leaning, bending the elbow and swinging too high.',
       setup: 'Stand on the band, hold the other end at your side. Face the camera about 2.5 m away, camera at chest height, whole body in frame. Raise the arm straight out to the side, thumb slightly up, no higher than shoulder level, then lower slowly.',
       why: 'From the front the arm swings across the camera plane, so the raise angle, a bending elbow, a rising shoulder and a trunk leaning the other way are all measured directly — the same geometry that makes standing hip abduction easy to track.',

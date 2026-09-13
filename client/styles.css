@@ -394,3 +394,56 @@ a.ex-card .name { color: var(--text, inherit); }
   .intro-steps li { grid-template-columns: 26px 1fr; grid-template-areas: "n name" "n copy"; }
   .intro-steps .art { display: none; }
 }
+
+/* ---------- Option bubbles: one pill per setting, tap to cycle ---------- */
+.bubbles { display: flex; flex-wrap: wrap; gap: 8px; }
+.bubble { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font-weight: 900; font-size: .92rem; line-height: 1.1; box-shadow: 3px 3px 0 var(--ink); cursor: pointer; }
+.bubble .k { font-weight: 700; color: var(--ink-soft); }
+.bubble:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.bubble.bump { animation: bubble-bump .18s ease-out; }
+@keyframes bubble-bump { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.bubbles-hint { font-size: .8rem; margin-top: 8px; }
+.card.config h3 { display: none; }
+
+/* ---------- Camera placement: silhouettes, not a map ---------- */
+.cam-diagram.two { max-width: 460px; }
+.cam-diagram .phone { fill: var(--ink); }
+.cam-diagram .screen { fill: var(--surface); }
+.cam-diagram .sil { fill: var(--text); }
+.cam-diagram .sil-l { stroke: var(--text); fill: none; stroke-linecap: round; }
+.cam-diagram .tick { stroke: var(--line); stroke-width: 2; }
+.cam-diagram .tick.on { stroke: var(--accent); stroke-width: 3.5; }
+
+/* ---- vetted / full library switch (topbar) ---- */
+.lib-switch { display: inline-flex; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.lib-switch button { border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 900; font-size: .8rem; padding: 6px 12px; cursor: pointer; }
+.lib-switch button b { font-family: var(--font-mono); font-weight: 700; opacity: .7; margin-left: 2px; }
+.lib-switch button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.lib-switch button[aria-pressed="true"] b { opacity: .85; }
+@media (max-width: 600px) { .lib-switch { order: 11; } }
+/* ---- what the camera does with a move ---- */
+.track { display: inline-block; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; border: 1.5px solid currentColor; line-height: 1.3; vertical-align: middle; }
+.track.form { color: var(--good); } .track.reps { color: var(--accent); } .track.none { color: var(--muted); }
+.tile .track { position: absolute; top: 8px; left: 8px; background: var(--surface); }
+.tile .badge { top: 8px; right: 8px; }
+h1 .track { font-size: .7rem; }
+.track-note { margin: 0; }
+.group-h { font-family: var(--font-body); font-size: 1rem; font-weight: 900; margin: 18px 0 8px; }
+.group-h .muted { font-family: var(--font-mono); font-weight: 700; font-size: .8rem; }
+.ex-group:first-of-type .group-h { margin-top: 4px; }
+.search { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font: inherit; }
+/* ---- physio prescription and faults on the move page ---- */
+.physio-dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 8px 0 0; }
+.physio-dl dt { font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 3px; }
+.physio-dl dd { margin: 0; }
+.physio .sources { font-size: .85rem; margin-top: 10px; }
+.fault-list { display: grid; gap: 10px; margin-top: 8px; }
+.fault { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.fault .cue { color: var(--accent); font-weight: 700; }
+.fault p { margin: 2px 0 0; font-size: .9rem; }
+@media (min-width: 720px) { .fault-list { grid-template-columns: 1fr 1fr; } }
+/* ---- a set logged by hand ---- */
+.panel.manual .counter { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.panel.manual .counter .btn { min-width: 52px; font-size: 1.4rem; }
+#screen-review.manual > .wrap { display: none; }
+#screen-review.manual #rv-portal { padding-top: 16px; }

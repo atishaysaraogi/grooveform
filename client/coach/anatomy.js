@@ -161,13 +161,13 @@
   }
   function onBone(a, b, shape, flip, width) {
     var dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1e-6;
-    var ux = dx / L, uy = dy / L, f = flip ? -1 : 1, vx = -uy * f, vy = ux * f, w = width * 1.55;
+    var ux = dx / L, uy = dy / L, f = flip ? -1 : 1, vx = -uy * f, vy = ux * f, w = width * 0.95;
     return shape.map(function (s) { return { x: a.x + ux * s[0] * L + vx * s[1] * w, y: a.y + uy * s[0] * L + vy * s[1] * w }; });
   }
 
   function drawFigure(ctx, J, P, heats, view, cfg) {
     var scale = view === 'side' ? len(J.hip, J.sh) : len(J.hipL, J.shL);
-    var LIMB = scale * 0.34, FORELIMB = scale * 0.28, LEG = scale * 0.42, SHIN = scale * 0.34;
+    var LIMB = scale * 0.30, FORELIMB = scale * 0.24, LEG = scale * 0.36, SHIN = scale * 0.28;
     var flip = !!cfg.flip, working = cfg.side || 'both';
 
     function capsule(a, b, w, col) {
@@ -180,6 +180,20 @@
       if (!a || !b || h == null) return;
       blob(ctx, onBone(a, b, shape, f, width));
       ctx.fillStyle = heat(P, h); ctx.fill(); ctx.strokeStyle = P.skinline; ctx.lineWidth = 1; ctx.stroke();
+    }
+    // hands: a circle at the wrist. feet: an oval along ankle→foot (side view) or under the ankle (front view).
+    function hand(p, col, line) {
+      if (!p) return;
+      ctx.beginPath(); ctx.arc(p.x, p.y, FORELIMB * 0.34, 0, 7);
+      ctx.fillStyle = col || P.skin; ctx.fill(); ctx.strokeStyle = line || P.skinline; ctx.lineWidth = 1.1; ctx.stroke();
+    }
+    function foot(an, ft, col, line) {
+      if (!an) return;
+      var cx, cy, rx, ry, rot;
+      if (ft) { cx = (an.x + ft.x) / 2; cy = (an.y + ft.y) / 2; rx = len(an, ft) / 2 + SHIN * 0.16; ry = SHIN * 0.20; rot = ang(an, ft); }
+      else { cx = an.x; cy = an.y + SHIN * 0.14; rx = SHIN * 0.30; ry = SHIN * 0.15; rot = 0; }
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, rot, 0, 7);
+      ctx.fillStyle = col || P.skin; ctx.fill(); ctx.strokeStyle = line || P.skinline; ctx.lineWidth = 1.1; ctx.stroke();
     }
 
     var shMid, hipMid, corners, near, far;
@@ -200,15 +214,15 @@
     // far limbs first, behind everything
     if (far) {
       capsule(far.hip, far.kn, LEG * 0.92, P.far); capsule(far.kn, far.an, SHIN * 0.92, P.far);
-      if (far.ft) capsule(far.an, far.ft, SHIN * 0.6, P.far);
-      capsule(far.sh, far.el, LIMB * 0.92, P.far); capsule(far.el, far.wr, FORELIMB * 0.92, P.far);
+      foot(far.an, far.ft, P.far, P.farline);
+      capsule(far.sh, far.el, LIMB * 0.92, P.far); capsule(far.el, far.wr, FORELIMB * 0.92, P.far); hand(far.wr, P.far, P.farline);
     } else {
-      near.forEach(function (L) { capsule(L.hip, L.kn, LEG); capsule(L.kn, L.an, SHIN); });
+      near.forEach(function (L) { capsule(L.hip, L.kn, LEG); capsule(L.kn, L.an, SHIN); foot(L.an, null); });
     }
-    if (view === 'side') { capsule(near[0].hip, near[0].kn, LEG); capsule(near[0].kn, near[0].an, SHIN); if (near[0].ft) capsule(near[0].an, near[0].ft, SHIN * 0.6); }
+    if (view === 'side') { capsule(near[0].hip, near[0].kn, LEG); capsule(near[0].kn, near[0].an, SHIN); foot(near[0].an, near[0].ft); }
 
     // neck, torso
-    capsule(J.head, shMid, scale * 0.26);
+    capsule(J.head, shMid, scale * 0.20);
     blob(ctx, corners); ctx.fillStyle = P.skin; ctx.fill(); ctx.strokeStyle = P.skinline; ctx.lineWidth = 1.3; ctx.stroke();
 
     // torso muscles, in the hip→shoulder frame
@@ -234,7 +248,7 @@
     // near limbs with muscle
     near.forEach(function (L) {
       var dim = L.dim;
-      capsule(L.sh, L.el, LIMB); capsule(L.el, L.wr, FORELIMB);
+      capsule(L.sh, L.el, LIMB); capsule(L.el, L.wr, FORELIMB); hand(L.wr);
       muscle(L.sh, L.el, SHAPES.shoulder, heats.shoulder * dim, LIMB, L.flip);
       muscle(L.sh, L.el, SHAPES.arm, heats.arm * dim, LIMB, L.flip);
       muscle(L.el, L.wr, SHAPES.forearm, heats.forearm * dim, FORELIMB, L.flip);
@@ -336,5 +350,5 @@
     stopAll();
     Array.prototype.forEach.call((rootEl || document).querySelectorAll('canvas[data-anat]'), mount);
   }
-  root.FyzioAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
+  root.FyzioAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, figure: function (id) { return REGISTERED[id] || null; }, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -9,7 +9,7 @@
     const { SIDE, FULL, ATTEMPT, angle, dist, outward, sideJoints } = k;
 
     return {
-      id: 'heelslide', order: 10, sided: { limb: 'leg', by: 'camera' }, name: 'Heel slide', group: 'Knee range of motion', type: 'reps', view: 'side', icon: '🦵',
+      id: 'heelslide', order: 10, vetted: true, tracking: 'form', camera: { height: 'floor', distance: '2 m', posture: 'lying' }, sided: { limb: 'leg', by: 'camera' }, name: 'Heel slide', group: 'Knee range of motion', type: 'reps', view: 'side', icon: '🦵',
       summary: 'Knee flexion range after surgery or injury — measured in degrees, rep by rep.',
       setup: 'Lie on your back on the floor, side-on to the camera at floor level, about 2 m away. The leg you are working should be the one nearest the camera. Start with that leg straight, other leg bent or straight, hips and shoulders flat.',
       why: 'From the side, hip–knee–ankle form a clean triangle in one plane, so knee angle is read directly, and the heel and hip staying on the floor are both visible as height changes.',

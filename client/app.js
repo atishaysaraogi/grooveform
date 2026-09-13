@@ -19,7 +19,7 @@
   }
   async function refreshMe() { const d = await api('GET', '/api/me'); me = d.user; ent = d.entitlements; notice = d.notice; env = d.env; exercises = null; return d; }
   function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, ms); }
-  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises.concat(studioDrafts()); specialties = d.specialties; } return exercises; }
+  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises.concat(studioDrafts()); specialties = d.specialties; paintLibSwitch(); } return exercises; }
   /* Moves being built in the Studio (client/studio/) can be tried here before they ship: "Try it in the app" stores the
      spec in this browser only, and it is compiled into the library on the fly. Never sent anywhere. */
   function studioDrafts() {
@@ -36,6 +36,26 @@
   }
   const exById = (id) => (exercises || []).find(e => e.id === id);
   const coachEx = (id) => FyzioCoach.exercises.find(e => e.id === id);
+
+  /* ---------- vetted vs full library ----------
+     The ten hand-written moves are vetted; the catalogue behind them is the full physio + gym
+     list, each move stating what the camera can do with it. The switch in the topbar picks
+     which list the app shows; a direct link to any move always works. */
+  const LIB_KEY = 'fyzio.library';
+  let libMode = 'vetted'; try { libMode = localStorage.getItem(LIB_KEY) === 'all' ? 'all' : 'vetted'; } catch { }
+  const libAll = () => libMode === 'all';
+  const visibleEx = () => (exercises || []).filter(e => libAll() || e.vetted || e.draft);
+  function setLibMode(m) { libMode = m === 'all' ? 'all' : 'vetted'; try { localStorage.setItem(LIB_KEY, libMode); } catch { } paintLibSwitch(); route(); }
+  function paintLibSwitch() {
+    const el = $('lib-switch'); if (!el) return;
+    const n = (exercises || []).length, nv = (exercises || []).filter(e => e.vetted).length;
+    el.innerHTML = `<button type="button" data-lib="vetted" aria-pressed="${!libAll()}">Vetted${nv ? ` <b>${nv}</b>` : ''}</button><button type="button" data-lib="all" aria-pressed="${libAll()}">Full library${n ? ` <b>${n}</b>` : ''}</button>`;
+    el.querySelectorAll('[data-lib]').forEach(b => b.onclick = () => { if (b.dataset.lib !== libMode) setLibMode(b.dataset.lib); });
+  }
+  /* What the camera does with a move: coaches form, counts reps, or nothing (logged by hand). */
+  const TRACK = { form: ['form', 'form coached', 'The camera counts and judges form.'], reps: ['reps', 'counts reps', 'The camera counts reps or times the hold; form points are yours to check.'], none: ['none', 'no camera', 'Nothing a single camera can measure — follow the guide and log the set by hand.'] };
+  const trackInfo = (ex) => TRACK[ex.tracking] || TRACK.form;
+  const trackBadge = (ex) => `<span class="track ${trackInfo(ex)[0]}" title="${esc(trackInfo(ex)[2])}">${trackInfo(ex)[1]}</span>`;
 
   /* ---------- first-run intro ---------- */
   const SEEN_INTRO = 'fyzio.seenIntro';
@@ -131,37 +151,54 @@
   async function renderHome() {
     await refreshMe(); await loadExercises(); const pre = (await api('GET', '/api/routines/prebuilt')).routines;
     const free = exercises.filter(e => e.tier === 'free'); const order = (t) => t === 'free' ? 0 : 1;
-    const exs = [...exercises].sort((a, b) => order(a.tier) - order(b.tier)); const rtFree = r => r.items.every(i => i.exercise && i.exercise.tier === 'free'); const rts = [...pre].sort((a, b) => (rtFree(a) ? 0 : 1) - (rtFree(b) ? 0 : 1));
+    const exs = [...visibleEx()].sort((a, b) => order(a.tier) - order(b.tier)); const rtFree = r => r.items.every(i => i.exercise && i.exercise.tier === 'free'); const rts = [...pre].sort((a, b) => (rtFree(a) ? 0 : 1) - (rtFree(b) ? 0 : 1));
     render(`<div class="stack">
       <section class="hero"><div class="hero-brand">${heroMark()}<span class="hero-tag">camera form coach</span></div>
         <h1><span class="l1">Sweat.</span> <span class="l2">Count.</span> <span class="l3">Repeat.</span></h1>
         <p class="hero-copy">Your camera counts the reps and cheers the good ones. Out loud. Like a coach who actually likes you.${solo() ? '' : ' Free moves need no sign-up; the Pass unlocks every move — or a coach sends you a playlist.'}</p>
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
-      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.</p><div class="tiles wide">${exs.map(exTile).join('')}</div></section>
+      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.${libAll() ? '' : ` <a href="#/exercises" data-lib-all>Full library: ${exercises.length} moves →</a>`}</p>${exs.length > 16 ? `<input type="search" id="ex-q" class="search" placeholder="Search ${exs.length} moves…" aria-label="Search moves">` : ''}${tilesHtml(exs)}</section>
       <section class="home-sec"><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
       <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'Grooveform')} is a fitness tool, not a medical service.</p></div>
     </div>`);
     /* The hero carries the wordmark on this page, so the topbar does not repeat it. */
-    $('topbar').classList.add('at-home');
+    $('topbar').classList.add('at-home'); wireSearch(view);
+    const la = view.querySelector('[data-lib-all]'); if (la) la.onclick = (e) => { e.preventDefault(); location.hash = '#/exercises'; setLibMode('all'); };
   }
   function rtRow(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); const tone = ['tangerine', 'lime', 'pink'][Math.abs(hash(r.title)) % 3];
     return `<a class="playlist ${tone}" href="#/routine/${r.id}"><span class="count">${r.items.length}</span><span class="body"><span class="title">${esc(r.title)}</span><span class="desc">${esc(r.description || '')}</span><span class="tracks">${names.map(esc).join(' · ')}</span></span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pass</span>`}</a>`; }
   function hash(str) { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return h; }
   const allFree = () => (exercises || []).every(e => e.tier === 'free');
-  function exTile(ex) { return `<a class="tile" href="#/exercise/${ex.id}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'} · ${ex.view === 'front' ? 'face camera' : 'side-on'}</span>${allFree() ? '' : tierBadge(ex)}</a>`; }
+  function exTile(ex) { return `<a class="tile" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span>${trackBadge(ex)}${allFree() ? '' : tierBadge(ex)}</a>`; }
+  /* Tiles for a list of moves: one grid while the list is short, one grid per body region once
+     the full library is in. */
+  function tilesHtml(list) {
+    if (list.length <= 16) return `<div class="tiles wide">${list.map(exTile).join('')}</div>`;
+    const groups = []; for (const e of list) { const name = e.vetted ? 'Vetted moves' : e.group; let g = groups.find(x => x.name === name); if (!g) groups.push(g = { name, items: [] }); g.items.push(e); }
+    return groups.map(g => `<section class="ex-group" data-group="${esc(g.name)}"><h3 class="group-h">${esc(g.name)} <span class="muted">${g.items.length}</span></h3><div class="tiles wide">${g.items.map(exTile).join('')}</div></section>`).join('');
+  }
+  /* A search box over the tiles: hides tiles (and empty groups) whose name does not match. */
+  function wireSearch(root) {
+    const q = root.querySelector('#ex-q'); if (!q) return;
+    q.oninput = () => { const s = q.value.trim().toLowerCase(); root.querySelectorAll('.tile[data-name]').forEach(t => t.hidden = !!s && !t.dataset.name.includes(s) && !t.dataset.group.toLowerCase().includes(s)); root.querySelectorAll('.ex-group').forEach(g => g.hidden = ![...g.querySelectorAll('.tile')].some(t => !t.hidden)); };
+  }
   function rtTile(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); return `<a class="tile routine" href="#/routine/${r.id}"><span class="glyph"><span class="rt-count">${r.items.length}</span></span><span class="name">${esc(r.title)}</span><span class="meta">${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' …' : ''}</span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pro</span>`}</a>`; }
 
   function exCard(ex) { return `<a class="ex-card" href="#/exercise/${ex.id}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span><span class="name">${esc(ex.name)}</span><br><span class="sum">${esc(ex.summary)}</span></span>${tierBadge(ex)}</a>`; }
   function routineCard(r) { return `<a class="card link" href="#/routine/${r.id}" style="text-decoration:none;color:inherit"><div class="row"><strong>${esc(r.title)}</strong>${r.kind === 'prebuilt' ? lockBadge(r.locked) : r.ownerName ? `<span class="badge accent">from ${esc(r.ownerName)}</span>` : '<span class="badge">mine</span>'}<div class="spacer"></div><span class="meta">${r.items.length} exercises</span></div><p class="meta" style="margin-top:4px">${esc(r.description || '')}</p><p class="meta">${r.items.map(i => i.exercise ? i.exercise.name : i.exerciseId).join(' · ')}</p></a>`; }
-  async function renderExercises() { await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'}</p><div class="tiles wide">${exercises.map(exTile).join('')}</div>${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); }
+  async function renderExercises() { await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const list = visibleEx();
+    render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'}${libAll() ? ' The full library includes moves the camera can only count, or not see at all — each tile says which.' : ` Showing the vetted moves; switch to the full library above for ${exercises.length} more.`}</p>
+      ${list.length > 16 ? `<input type="search" id="ex-q" class="search" placeholder="Search ${list.length} moves…" aria-label="Search moves">` : ''}${tilesHtml(list)}${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
   async function renderExercise(id, sub) {
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const cat = exById(id); if (!cat) return renderHome(); const ex = coachEx(id); const g = cat.guide;
     let itemCtx = null; if (sub && sub.startsWith('item-')) { try { const [rid, iid] = sub.slice(5).split('_'); const r = (await api('GET', '/api/routines/' + rid)).routine; itemCtx = { routine: r, item: r.items.find(i => i.id === iid) }; if (!itemCtx.item) itemCtx = null; } catch { } }
     const opts = itemCtx ? { rest: 60, ...itemCtx.item.options } : { target: cat.defaultTarget, sets: 1, rest: 60, ...Object.fromEntries(cat.options.map(o => [o.key, o.default])) };
+    const manual = cat.tracking === 'none';
     render(`<div class="stack">
       <div class="row"><a class="btn ghost small" href="${itemCtx ? '#/routine/' + itemCtx.routine.id : '#/'}">← ${itemCtx ? esc(itemCtx.routine.title) : 'All moves'}</a></div>
-      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}</span><h1>${esc(cat.name)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
-        ${cat.locked ? '' : `<div class="row ex-actions"><button class="btn primary" id="do-start">▶ Start camera</button><button class="btn ghost" id="do-file">Analyze a video…</button><input type="file" id="do-file-input" accept="video/*" hidden></div>`}</div>
+      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}${cat.level ? ' · ' + esc(cat.level) : ''}</span><h1>${esc(cat.name)} ${trackBadge(cat)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
+        ${cat.locked ? '' : manual ? `<div class="row ex-actions"><button class="btn primary" id="do-log">✓ Log a set by hand</button></div>` : `<div class="row ex-actions"><button class="btn primary" id="do-start">▶ Start camera</button><button class="btn ghost" id="do-file">Analyze a video…</button><input type="file" id="do-file-input" accept="video/*" hidden></div>`}</div>
+      ${cat.tracking !== 'form' ? `<p class="notice track-note">${esc(trackInfo(cat)[2])}</p>` : ''}
       <p class="muted">${esc(cat.summary)}${me || cat.locked || solo() ? '' : ' You can do this without an account — <a href="#/login">sign in</a> to save history.'}</p>
       ${cat.locked ? upgradeCard(`${cat.name} is a Pro exercise`) : ''}
       <div class="ex-grid">
@@ -174,31 +211,63 @@
         </div>
       </div>
       ${g ? `<div class="card guide"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>Set-up and form</h3><span class="guide-key"><span class="tag cam">camera checks</span><span class="tag you">you check</span></span></div><p class="muted" style="font-size:.9rem;margin:6px 0 10px">${esc(g.surface)}</p><div class="guide-cols">${g.regions.map(r => `<div class="guide-region"><div class="guide-name">${esc(r.name)}</div>${r.points.map(pt => `<p class="gp ${pt.tracked ? 'cam' : 'you'}"><span class="tag ${pt.tracked ? 'cam' : 'you'}">${pt.tracked ? 'camera' : 'you'}</span>${esc(pt.t)}</p>`).join('')}</div>`).join('')}</div>${g.cannotSee ? `<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>What the camera cannot see:</strong> ${esc(g.cannotSee)}</p>` : ''}<p class="muted" style="font-size:.88rem;margin-top:10px"><strong>Stop if:</strong> ${esc(g.stop)}</p></div>` : ''}
+      ${physioCard(cat)}
+      ${faultsCard(cat)}
     </div>`);
     wireChips(view, {}, opts);
     if (cat.locked) return;
     const begin = (file) => runCoach(ex, opts, itemCtx, file);
+    if (manual) { $('do-log').onclick = () => begin(null); return; }
     $('do-start').onclick = () => begin(null); $('do-file').onclick = () => $('do-file-input').click(); $('do-file-input').onchange = () => { const f = $('do-file-input').files[0]; $('do-file-input').value = ''; if (f) begin(f); };
   }
+  /* The fields a physio fills in. Every catalogue move carries them; hand-written moves carry what they have. */
+  function physioCard(cat) {
+    const rows = [['Level', cat.level], ['Equipment', (cat.equipment || []).join(', ')], ['Muscles', cat.muscles ? [...(cat.muscles.primary || []), ...(cat.muscles.secondary || []).map(m => m + ' (secondary)')].join(', ') : ''], ['Tempo', cat.tempo], ['Dosage', cat.dosage], ['Progression', cat.progression], ['Regression', cat.regression], ['Do not do this if', cat.contraindications]].filter(r => r[1]);
+    if (!rows.length) return '';
+    const src = (cat.sources || []).filter(s => s && s.name);
+    return `<div class="card physio"><h3>Prescription</h3><dl class="physio-dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${src.length ? `<p class="muted sources">Based on: ${src.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)).join(' · ')}. Wording is ours; check the source for the clinical detail.</p>` : ''}</div>`;
+  }
+  /* Every fault the move lists, with the spoken cue and the written tip, marked by who watches for it. */
+  function faultsCard(cat) {
+    const fs = cat.faults || []; if (!fs.length) return '';
+    return `<div class="card faults"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>What goes wrong</h3><span class="guide-key"><span class="tag cam">camera watches</span><span class="tag you">you watch</span></span></div><div class="fault-list">${fs.map(f => `<div class="fault ${f.tracked ? 'cam' : 'you'}"><span class="tag ${f.tracked ? 'cam' : 'you'}">${f.tracked ? 'camera' : 'you'}</span><div><strong>${esc(f.label)}</strong>${f.cue ? ` <span class="cue">“${esc(f.cue)}”</span>` : ''}<p class="muted">${esc(f.tip)}</p></div></div>`).join('')}</div></div>`;
+  }
 
-  /* ---------- option chips (shared by the exercise page and the routine page) ---------- */
-  function optChips(opts, key, values, fmt) {
-    return `<div class="opts" data-optkey="${key}">${values.map(vv => `<button class="chip" data-opt="${esc(vv)}" aria-pressed="${opts[key] === vv}">${fmt(vv)}</button>`).join('')}</div>`;
+  /* ---------- option bubbles (shared by the exercise page and the routine page) ----------
+     One pill per setting showing its current value; a tap cycles to the next value and wraps.
+     Every value's display text is precomputed onto the element, so a tap needs no lookup. */
+  const SETS = [1, 2, 3, 4, 5], RESTS = [30, 45, 60, 90, 120];
+  function bubbleTexts(cat, key, values, o) {
+    return values.map(vv => {
+      if (key === 'target') return cat.type === 'hold' ? `${vv} s hold` : `${vv} reps`;
+      if (key === 'sets') return `${vv} ${vv === 1 ? 'set' : 'sets'}`;
+      if (key === 'rest') return `${vv} s rest`;
+      const lab = (o.labels && o.labels[vv]) || (vv + (o.unit || ''));
+      const sw = o.swatches ? optLabel(o, vv) + ' ' : '';
+      return key === 'side' ? sw + esc(lab) : `<span class="k">${esc(o.label)}</span> ${sw}${esc(lab)}`;
+    });
+  }
+  function bubble(cat, opts, key, values, o = {}) {
+    const texts = bubbleTexts(cat, key, values, o); let i = values.indexOf(opts[key]); if (i < 0) i = 0;
+    return `<button type="button" class="bubble" data-optkey="${key}" data-i="${i}" data-value="${esc(values[i])}" data-values='${esc(JSON.stringify(values))}' data-texts='${esc(JSON.stringify(texts))}' aria-label="${esc(o.label || key)}, tap to change">${texts[i]}</button>`;
   }
   /* Every knob for one exercise: reps/hold, sets, rest, plus whatever that move defines (band, side, range…). */
   function configBlock(cat, opts) {
-    return `<h3>${cat.type === 'reps' ? 'Reps per set' : 'Hold time'}</h3>${optChips(opts, 'target', cat.targets, t => t + (cat.type === 'hold' ? ' s' : ''))}<h3>Sets</h3>${optChips(opts, 'sets', [1, 2, 3, 4, 5], n => n)}<h3>Rest between sets</h3>${optChips(opts, 'rest', [30, 45, 60, 90, 120], n => n + ' s')}${cat.options.map(o => `<h3>${esc(o.label)}</h3>${optChips(opts, o.key, o.values, vv => optLabel(o, vv))}`).join('')}`;
+    const rows = [bubble(cat, opts, 'target', cat.targets), bubble(cat, opts, 'sets', SETS), bubble(cat, opts, 'rest', RESTS), ...cat.options.map(o => bubble(cat, opts, o.key, o.values, o))];
+    return `<div class="bubbles">${rows.join('')}</div><p class="muted bubbles-hint">Tap a setting to change it.</p>`;
   }
-  /* Chip rows inside a [data-item] host write to bags[thatId]; loose rows write to `loose`. */
+  /* Bubbles inside a [data-item] host write to bags[thatId]; loose bubbles write to `loose`. */
   function wireChips(root, bags, loose, onChange) {
-    root.querySelectorAll('[data-optkey]').forEach(row => {
-      const host = row.closest('[data-item]'); const bag = host ? bags[host.dataset.item] : loose;
+    root.querySelectorAll('.bubble[data-optkey]').forEach(b => {
+      const host = b.closest('[data-item]'); const bag = host ? bags[host.dataset.item] : loose;
       if (!bag) return;
-      row.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-        const vv = b.dataset.opt; bag[row.dataset.optkey] = isNaN(vv) ? vv : Number(vv);
-        row.querySelectorAll('[data-opt]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      b.onclick = () => {
+        const values = JSON.parse(b.dataset.values), texts = JSON.parse(b.dataset.texts);
+        const i = (Number(b.dataset.i) + 1) % values.length; const vv = values[i];
+        bag[b.dataset.optkey] = vv; b.dataset.i = i; b.dataset.value = vv; b.innerHTML = texts[i];
+        b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
         if (onChange) onChange(host, bag);
-      });
+      };
     });
   }
 
@@ -228,7 +297,7 @@
     const close = () => { clearInterval(restTimer); coach.hidden = true; document.body.style.overflow = ''; coach.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); };
     const results = []; let restTimer = null, si = -1, step = null, total = 1, rest = 60, target = null, o = {}, setNo = 0;
     const showLive = () => { coach.querySelector('#screen-live').classList.add('active'); coach.querySelector('#screen-review').classList.remove('active'); portal.innerHTML = ''; };
-    const showReview = () => { coach.querySelector('#screen-live').classList.remove('active'); coach.querySelector('#screen-review').classList.add('active'); };
+    const showReview = (manual) => { coach.querySelector('#screen-live').classList.remove('active'); const rv = coach.querySelector('#screen-review'); rv.classList.add('active'); rv.classList.toggle('manual', !!manual); };
     const beginStep = () => {
       si++; step = steps[si]; setNo = 0;
       total = file ? 1 : Math.max(1, Math.min(10, Number(step.opts.sets) || 1)); rest = Math.max(10, Math.min(600, Number(step.opts.rest) || 60));
@@ -236,14 +305,33 @@
       startSet();
     };
     const startSet = () => {
-      setNo++; showLive();
+      setNo++;
+      if (step.ex.tracking === 'none') return manualSet();
+      showLive();
       const more = setNo < total || si < steps.length - 1;   // keep the camera up for the rest
       FyzioCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, keepCameraAfter: more, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone });
     };
-    const onDone = ({ review, rec, opts: usedOpts, startedAt, cameraHeld }) => {
-      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: file ? 'file' : 'camera', routineItemId: step.itemId });
+    /* A move the camera cannot track: the set-up on screen, a counter or a timer, and a Done
+       button. It lands in the same results list as a camera set, marked as logged by hand. */
+    const manualSet = () => {
+      showReview(true); FyzioCoach.endRest();   /* a held camera from the previous set is not needed here */
+      const ex = step.ex, cat = exById(ex.id) || ex, hold = ex.type === 'hold', startedAt = Date.now(); let n = hold ? 0 : target, timer = null;
+      const sideWord = o.side && o.side !== 'both' ? ` — ${sideLabel(ex, o.side) || o.side}` : '';
+      portal.innerHTML = `<div class="panel stack manual"><span class="eyebrow">Set ${setNo} of ${total} · logged by hand</span><h3>${esc(ex.name)}${esc(sideWord)}</h3><p class="muted">${esc(cat.setup)}</p>
+        ${hold ? `<div class="rest-clock"><span id="man-clock">${target}</span><span class="unit">s to hold</span></div><div class="row"><button class="btn primary" id="man-timer">Start timer</button><button class="btn ghost" id="man-done">Done</button><button class="btn ghost" id="man-exit">Exit</button></div>`
+          : `<div class="counter"><button class="btn ghost" id="man-minus" aria-label="one fewer">−</button><span class="rest-clock"><span id="man-n">${n}</span><span class="unit">of ${target} reps</span></span><button class="btn ghost" id="man-plus" aria-label="one more">+</button></div><div class="row"><button class="btn primary" id="man-done">Done — log ${target} reps</button><button class="btn ghost" id="man-exit">Exit</button></div>`}</div>`;
+      const finish = () => { clearInterval(timer); const durationMs = Date.now() - startedAt;
+        const review = { exercise: ex.id, name: ex.name, type: ex.type, target, score: null, headline: 'Logged by hand', reps: hold ? undefined : n, partials: 0, holdSec: hold ? n : undefined, goodSec: hold ? n : undefined, durationMs, faults: {}, tips: [], manual: true };
+        onDone({ review, rec: null, opts: { ...o, set: setNo }, startedAt, cameraHeld: false, manual: true }); };
+      portal.querySelector('#man-done').onclick = finish; portal.querySelector('#man-exit').onclick = () => { clearInterval(timer); close(); location.hash = back; };
+      if (hold) { portal.querySelector('#man-timer').onclick = (e) => { const b = e.currentTarget; if (timer) return; b.disabled = true; FyzioCoach.voice.say('Hold.', { priority: 2 }); let left = target;
+          timer = setInterval(() => { left--; n = target - left; const el = portal.querySelector('#man-clock'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) { clearInterval(timer); FyzioCoach.voice.beep(880, 0.15); finish(); } }, 1000); }; }
+      else { const paint = () => { portal.querySelector('#man-n').textContent = n; portal.querySelector('#man-done').textContent = `Done — log ${n} reps`; }; portal.querySelector('#man-minus').onclick = () => { n = Math.max(0, n - 1); paint(); }; portal.querySelector('#man-plus').onclick = () => { n = Math.min(999, n + 1); paint(); }; }
+    };
+    const onDone = ({ review, rec, opts: usedOpts, startedAt, cameraHeld, manual }) => {
+      results.push({ review, opts: { ...usedOpts, set: setNo, sets: total }, diagnostics: rec, startedAt, source: manual ? 'manual' : file ? 'file' : 'camera', routineItemId: step.itemId });
       if (setNo >= total && si >= steps.length - 1) { showReview(); savePanel(); return; }
-      if (!cameraHeld) showReview();          // a video-file run has no camera to hold open
+      if (!cameraHeld) showReview(manual);    // a video-file or hand-logged set has no camera to hold open
       if (setNo < total) restScreen(review, cameraHeld); else nextStepPanel(review, cameraHeld);
     };
     /* What to fix next set, from the set just finished. */
@@ -438,7 +526,8 @@
       render(`<div class="stack"><div class="row"><a class="btn ghost small" href="#/build">← My routines</a></div><h1>${r ? 'Edit routine' : 'New routine'}</h1>
         <div class="card form"><div class="cols"><label class="field"><span>Title</span><input type="text" id="rb-title" value="${esc(title)}" maxlength="120" placeholder="e.g. Knee week 3"></label></div><label class="field"><span>Description / instructions</span><textarea id="rb-desc" maxlength="2000">${esc(description)}</textarea></label></div>
         <div class="list" id="rb-items">${items.length ? items.map((it, i) => itemEditorHtml(it, i, items.length)).join('') : '<p class="muted">Add exercises below.</p>'}</div>
-        <div class="card"><h3>Add exercise</h3><div class="row">${exercises.map(ex => `<button class="btn ghost small" data-add="${ex.id}">${esc(ex.name)}</button>`).join('')}</div></div>
+        <div class="card"><h3>Add exercise</h3>${(() => { const list = visibleEx(); const groups = []; for (const e of list) { let g = groups.find(x => x.name === e.group); if (!g) groups.push(g = { name: e.group, items: [] }); g.items.push(e); }
+          return groups.map(g => `${groups.length > 1 ? `<p class="meta" style="margin-top:8px">${esc(g.name)}</p>` : ''}<div class="row">${g.items.map(ex => `<button class="btn ghost small" data-add="${ex.id}" title="${esc(trackInfo(ex)[1])}">${esc(ex.name)}${ex.tracking === 'none' ? ' <span class="muted">✎</span>' : ''}</button>`).join('')}</div>`).join(''); })()}${libAll() ? '' : `<p class="muted" style="margin-top:8px">Only vetted moves are listed; switch to the full library above for the rest.</p>`}</div>
         <div class="row"><button class="btn primary" id="rb-save">${r ? 'Save' : 'Create routine'}</button>${r ? '<button class="btn ghost" id="rb-archive">Delete</button>' : ''}</div><p class="error" id="rb-err"></p></div>`);
       $('rb-title').oninput = (e) => title = e.target.value; $('rb-desc').oninput = (e) => description = e.target.value;   // keep text across redraws
       view.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const ex = exById(b.dataset.add); const o = { target: ex.defaultTarget, sets: 1 }; ex.options.forEach(op => o[op.key] = op.default); items.push({ exerciseId: ex.id, options: o, notes: '' }); draw(); });
@@ -458,7 +547,7 @@
   }
   function itemEditorHtml(it, i, n) {
     const ex = exById(it.exerciseId); const o = it.options;
-    return `<div class="card editor-item" data-i="${i}"><div class="head"><h3>${esc(ex.name)}</h3><span class="badge">${ex.type === 'reps' ? 'reps' : 'hold'} · ${ex.view === 'front' ? 'face camera' : 'side-on'}</span><button class="btn ghost tiny it-up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost tiny it-down" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost tiny it-remove">Remove</button></div>
+    return `<div class="card editor-item" data-i="${i}"><div class="head"><h3>${esc(ex.name)}</h3><span class="badge">${ex.type === 'reps' ? 'reps' : 'hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span>${trackBadge(ex)}<button class="btn ghost tiny it-up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost tiny it-down" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost tiny it-remove">Remove</button></div>
       <div><span class="meta">${ex.type === 'reps' ? 'Reps per set' : 'Hold seconds'}</span><div class="opts">${ex.targets.map(t => `<button class="chip" data-target="${t}" aria-pressed="${o.target === t}">${t}${ex.type === 'hold' ? ' s' : ''}</button>`).join('')}<input class="it-custom" type="number" min="1" max="600" placeholder="custom" style="width:110px;min-height:40px" value="${ex.targets.includes(o.target) ? '' : o.target}"></div></div>
       ${ex.options.map(op => `<div><span class="meta">${esc(op.label)}</span><div class="opts">${op.values.map(vv => `<button class="chip" data-opt="${op.key}:${vv}" aria-pressed="${o[op.key] === vv}">${optLabel(op, vv)}</button>`).join('')}</div></div>`).join('')}
       <div style="display:grid;grid-template-columns:90px 110px 1fr;gap:12px;align-items:start"><label class="field"><span>Sets</span><input class="it-sets" type="number" min="1" max="10" value="${o.sets || 1}"></label><label class="field"><span>Rest</span><select class="it-rest">${[30, 45, 60, 90, 120].map(r => `<option value="${r}" ${(o.rest || 60) === r ? 'selected' : ''}>${r} s</option>`).join('')}</select></label><label class="field"><span>Notes / watch-outs</span><textarea class="it-notes" maxlength="1000" placeholder="e.g. only to 75° this week">${esc(it.notes || '')}</textarea></label></div></div>`;

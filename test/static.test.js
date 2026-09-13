@@ -13,12 +13,12 @@ srv.listen(0, async () => {
   await page.goto(base); await page.waitForSelector('.tile', { timeout: 15000 });
   assert.equal((await page.$$('.tile')).length, 10, 'ten moves from the static catalogue'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
   await page.click('.playlist'); await page.waitForSelector('.rt-item'); assert.ok((await page.$$('.rt-item')).length >= 2, 'playlist detail loaded from api/routines/<id>');
-  assert.ok((await page.$$('.rt-config .chip')).length > 0, 'every move on the playlist is configurable in place');
+  assert.ok((await page.$$('.rt-config .bubble')).length > 0, 'every move on the playlist is configurable in place');
   assert.equal((await page.$$('.rt-start')).length, 1, 'one start button for the whole routine');
   assert.equal((await page.$$('.rt-item .item-row a.btn.primary')).length, 0, 'no per-exercise start buttons');
   // a single move still opens on its own, with its own options
   await page.goto(base); await page.waitForSelector('.tile'); await page.click('.tile'); await page.waitForSelector('#do-start');
-  assert.ok((await page.$$('.card.config .chip')).length > 0, 'move page keeps its own options');
+  assert.ok((await page.$$('.card.config .bubble')).length > 0, 'move page keeps its own options');
   assert.deepEqual(errors, []);
 
   // The Studio ships with the static site, under /studio/, with the same relative asset paths.

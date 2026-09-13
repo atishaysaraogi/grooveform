@@ -9,7 +9,7 @@
     const { FULL, ATTEMPT, BAND, angle, dist, mid } = k;
 
     return {
-      id: 'pullapart', order: 90, upperBody: true, name: 'Band pull-apart', group: 'Shoulder — scapula & back', type: 'reps', view: 'front', icon: '🏹', enterCue: null,
+      id: 'pullapart', order: 90, vetted: true, tracking: 'form', camera: { height: 'chest', distance: '2 m', posture: 'standing' }, upperBody: true, name: 'Band pull-apart', group: 'Shoulder — scapula & back', type: 'reps', view: 'front', icon: '🏹', enterCue: null,
       summary: 'Arms straight at shoulder height, pull the band to your chest — checked for bending elbows, shrugging, the band drifting up or down, and short reps.',
       setup: 'Hold the band in front of you at shoulder height, arms straight, hands a little wider than the shoulders, light tension. Face the camera about 2.5 m away, camera at chest height, head to hips in frame. Pull the hands apart until the band touches your chest, squeeze the shoulder blades together, pause, then return slowly.',
       why: 'Facing the camera the arms open into a T in the camera plane: the distance between the hands, a bending elbow, the shoulders rising, and the hands drifting above or below shoulder height are all read directly.',

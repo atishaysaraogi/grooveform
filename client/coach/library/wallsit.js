@@ -9,7 +9,7 @@
     const { SIDE, angle, dist, fromVertical, lineOffset, mid, segTilt, sideJoints } = k;
 
     return {
-      id: 'wallsit', order: 30, name: 'Wall sit', group: 'Knee & quad', type: 'hold', view: 'side', icon: '🧱',
+      id: 'wallsit', order: 30, vetted: true, tracking: 'form', camera: { height: 'hip', distance: '2–3 m', posture: 'standing' }, name: 'Wall sit', group: 'Knee & quad', type: 'hold', view: 'side', icon: '🧱',
       summary: 'Quad endurance at a safe 90° knee angle.',
       setup: 'Camera side-on, 2–3 m away, roughly hip height. Back flat on the wall, feet about 50 cm out, shoulder-width apart. Whole body in frame.',
       why: 'From the side the camera reads knee angle and whether your shins are vertical (knees not past toes) — both invisible from the front.',

@@ -9,10 +9,16 @@ the full set-up guide. Nothing about a move is spread across other files.
 client/coach/
   exercise-library.js    the registry: define(), validation, lookup
   engine.js              kinematics, smoothing, rep counting, set review
+  spec.js                compiles a declarative spec into a move
+  catalog.js             builds many moves from compact physio data + joint-angle figures
   library/
-    heelslide.js         one move, one file
+    heelslide.js         one hand-written, vetted move per file
     hipabd.js
     …
+  catalog/
+    knee.js              one body region per file, a dozen or so moves each
+    hip.js  ankle.js  shoulder.js  spine.js  core.js  elbow_wrist.js
+    gym_lower.js  gym_upper.js
 ```
 
 `engine.js` publishes a kinematics toolkit into the registry and exposes
@@ -20,19 +26,92 @@ client/coach/
 derives `/api/exercises` from it, so a new move shows up everywhere at once:
 catalogue, exercise page, routine builder, static build.
 
-## Two ways to write a move
+## Three ways to write a move
 
-A move is either **hand-written** (a factory returning the object below — the ten
-shipped moves) or a **spec** written in the Studio (`/studio/`, see
+A move is **hand-written** (a factory returning the object below — the ten
+vetted moves), a **spec** written in the Studio (`/studio/`, see
 `docs/STUDIO.md`): a JSON of named landmarks and thresholds that
-`coach/spec.js` compiles into the same shape at load time. Both register through
-`define()` and pass the same validator. Spec moves are the normal path for a
-move that comes out of a session with a physio; hand-written ones are for
-anything the spec language cannot say (a phase machine, a custom side rule).
+`coach/spec.js` compiles into the same shape at load time, or a **catalogue
+entry**: the physio's record of a move (what, where the phone goes, dosage,
+faults, guide, sources) plus, where one camera can measure it, the same spec
+fields. All three register through `define()` and pass the same validator.
+Spec moves are the normal path for a move that comes out of a session with a
+physio; hand-written ones are for anything the spec language cannot say (a
+phase machine, a custom side rule); the catalogue is the breadth — every
+physio and gym move we could document, whether or not a phone can track it.
+
+## Tracking tiers and the vetted flag
+
+Every move states honestly what the camera does with it, in `tracking`:
+
+| tier   | the camera…                                   | the app…                                              |
+|--------|-----------------------------------------------|-------------------------------------------------------|
+| `form` | counts reps / times the hold **and** judges form | runs the live coach with spoken cues                   |
+| `reps` | counts reps / times the hold only             | runs the live coach; form faults are listed for you    |
+| `none` | cannot measure anything useful                | shows the guide and a counter or timer; you log by hand|
+
+`vetted: true` marks the moves that have been checked rep by rep against
+recordings (today: the ten hand-written ones). The switch in the topbar shows
+either the vetted moves or the full library; a direct link to any move works
+in both. The exercise page, tiles and routine builder carry a badge for the tier.
+
+Validation follows the tier: a `none` move has no `calibrate`/`measure` and its
+faults have no `check`; a `reps` move's faults may be documentation only
+(`tracked: false`); a `form` move must have at least one fault the camera
+actually checks live.
+
+## The catalogue
+
+`client/coach/catalog/<region>.js` calls `FyzioCatalog.defineCatalog(group, entries)`.
+The group carries defaults (region, camera, sources); each entry is the record a
+physio fills in:
+
+```js
+{
+  id: 'slr', name: 'Straight leg raise', type: 'reps', view: 'side', tracking: 'form',
+  level: 'beginner', equipment: ['none'], muscles: { primary: ['quadriceps'], secondary: [] },
+  sided: { limb: 'leg', by: 'camera' },
+  summary, setup, why,                         // the same text fields as any move
+  camera: { height: 'floor', distance: '2 m', posture: 'lying' },
+  tempo: 'Lift 2 s, hold 2 s, lower 3 s.', dosage: '2–3 × 10 each leg.',
+  progression: '…', regression: '…', contraindications: '…',
+  progress: { metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, start: 'calibrated', target: 35, targetIsDelta: true },
+  faults: [
+    // with metric/op/threshold → checked live (the move is then at least `reps`, `form` if any fault is live)
+    { id: 'kneebend', label: 'Knee bending', cue: 'Lock the knee', tip: '…', severity: 3, metric: KNEE, op: '<', threshold: 165 },
+    // without → listed for the person to watch
+    { id: 'arch', label: 'Lower back arching', cue: 'Back flat', tip: '…', severity: 2 },
+  ],
+  guide: { surface, stop, cannotSee, regions: [{ name, points: [{ t, tracked }] }] },
+  pose: { A: { face: 'right', torso: -90, thigh: 90, shin: 90 }, B: { …, thigh: 125, shin: 125 }, work: { thigh: 1 } },
+}
+```
+
+`pose` gives the two keyframes of the figure as **joint angles** (see the header
+of `catalog.js` for the conventions) and `catalog.js` turns them into the
+points the anatomy figure draws, so a hundred figures can be written by hand
+without any of them getting a limb of the wrong length. `work` is the heat map
+(which muscle regions light up). `sources` on the group or the entry are shown
+on the exercise page; the prose is always ours.
+
+A tracked entry (`reps`/`form`) is compiled through `spec.js` exactly like a
+Studio move, so anything the spec language offers (metric kinds, hold
+conditions, `rule: 'shallow'|'fast'`) is available. A counted move with no live
+faults gets the generic "not reaching the target" and "too fast" checks; a
+timed hold with none gets "drifting out of position" from its first hold
+condition.
+
+`test/library.test.js` checks every catalogue entry: the physio fields, at least
+two faults with a cue that differs from the tip and is short enough to speak,
+a `cannotSee` line, a figure, and that the tier is honest (a `none` move has no
+checks and no guide point claiming the camera watches it; a `form` move has a
+live fault).
 
 ## Adding a move
 
-Two steps.
+For a catalogue move: add an entry to the matching `client/coach/catalog/<region>.js`
+(or a new region file, listed in `index.html` after `coach/catalog.js`) and run
+`npm test`. For a hand-written move, two steps.
 
 1. Create `client/coach/library/<id>.js` (filename must equal the move's `id`).
 2. Add one line to `client/index.html`, next to the others:

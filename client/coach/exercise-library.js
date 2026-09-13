@@ -30,6 +30,14 @@
   });
   const TYPES = ['reps', 'hold'];
   const VIEWS = ['front', 'side'];
+  /* What the camera can do with a move:
+       form — counts reps or times the hold AND judges form (every fault has a live check)
+       reps — counts reps or times the hold; faults are listed for the person but not watched
+       none — nothing to measure from one camera; the app shows the guide and logs the set by hand */
+  const TRACKING = ['form', 'reps', 'none'];
+  const LEVELS = ['beginner', 'intermediate', 'advanced'];
+  const CAM_HEIGHTS = ['floor', 'knee', 'hip', 'chest', 'eye'];
+  const POSTURES = ['standing', 'lying', 'sitting', 'kneeling', 'prone', 'sidelying'];
 
   const isFn = (v) => typeof v === 'function';
   const isStr = (v) => typeof v === 'string' && v.trim() !== '';
@@ -53,13 +61,33 @@
       if (!LIMBS.includes(ex.sided.limb)) fail(id, `sided.limb must be one of ${LIMBS.join(' | ')}`);
       if (!SIDE_BY.includes(ex.sided.by)) fail(id, `sided.by must be one of ${SIDE_BY.join(' | ')}`);
     }
+    if (!TRACKING.includes(ex.tracking)) fail(id, `tracking must be one of ${TRACKING.join(' | ')}`);
+    if (typeof ex.vetted !== 'boolean') fail(id, 'vetted must be true or false');
+    /* Physio-facing fields. Optional, but checked for shape when present so an editor cannot save junk. */
+    if (ex.equipment !== undefined && !(Array.isArray(ex.equipment) && ex.equipment.every(isStr))) fail(id, 'equipment must be an array of strings');
+    if (ex.muscles !== undefined) {
+      if (!ex.muscles || typeof ex.muscles !== 'object') fail(id, 'muscles must be { primary, secondary }');
+      for (const k of ['primary', 'secondary']) if (ex.muscles[k] !== undefined && !(Array.isArray(ex.muscles[k]) && ex.muscles[k].every(isStr))) fail(id, `muscles.${k} must be an array of strings`);
+    }
+    if (ex.level !== undefined && !LEVELS.includes(ex.level)) fail(id, `level must be one of ${LEVELS.join(' | ')}`);
+    if (ex.camera !== undefined) {
+      if (!ex.camera || typeof ex.camera !== 'object') fail(id, 'camera must be an object');
+      if (!CAM_HEIGHTS.includes(ex.camera.height)) fail(id, `camera.height must be one of ${CAM_HEIGHTS.join(' | ')}`);
+      if (!isStr(ex.camera.distance)) fail(id, 'camera.distance must be a string like "2 m"');
+      if (ex.camera.posture !== undefined && !POSTURES.includes(ex.camera.posture)) fail(id, `camera.posture must be one of ${POSTURES.join(' | ')}`);
+    }
+    if (ex.sources !== undefined && !(Array.isArray(ex.sources) && ex.sources.every((r) => r && isStr(r.name)))) fail(id, 'sources must be an array of { name, url? }');
+    for (const k of ['tempo', 'dosage', 'progression', 'regression', 'contraindications']) if (ex[k] !== undefined && typeof ex[k] !== 'string') fail(id, `${k} must be a string`);
     if (!Number.isFinite(ex.order)) fail(id, 'order must be a number (it sets where the move appears in lists)');
     if (!Number.isFinite(ex.defaultTarget)) fail(id, 'defaultTarget must be a number');
     if (!isArr(ex.targets) || !ex.targets.every(Number.isFinite)) fail(id, 'targets must be a non-empty array of numbers');
     if (!ex.targets.includes(ex.defaultTarget)) fail(id, 'defaultTarget must be one of targets');
     if (!isArr(ex.required) || !ex.required.every(Number.isInteger)) fail(id, 'required must be a non-empty array of landmark indices');
-    if (!isFn(ex.calibrate)) fail(id, 'calibrate(pts, side, opts) must be a function');
-    if (!isFn(ex.measure)) fail(id, 'measure(pts, side, ref) must be a function');
+    /* A move the camera cannot measure has nothing to calibrate; the other tiers must. */
+    if (ex.tracking !== 'none') {
+      if (!isFn(ex.calibrate)) fail(id, 'calibrate(pts, side, opts) must be a function');
+      if (!isFn(ex.measure)) fail(id, 'measure(pts, side, ref) must be a function');
+    }
     if (ex.options !== undefined && !Array.isArray(ex.options)) fail(id, 'options must be an array when present');
     for (const o of ex.options || []) {
       if (!isStr(o.key) || !isStr(o.label)) fail(id, 'each option needs a key and a label');
@@ -80,7 +108,10 @@
       if (!isStr(f.cue)) fail(id, `fault "${f.id}" needs a spoken cue`);
       if (!isStr(f.tip)) fail(id, `fault "${f.id}" needs a written tip`);
       if (!Number.isFinite(f.weight)) fail(id, `fault "${f.id}" needs a numeric weight`);
-      if (!isFn(f.check)) fail(id, `fault "${f.id}" needs a check function`);
+      /* Only a form-tracked move must watch every fault. Elsewhere a fault may be listed for the
+         person without a check (tracked: false); if a check is given it must be a function. */
+      if (ex.tracking === 'form' && !isFn(f.check)) fail(id, `fault "${f.id}" needs a check function`);
+      if (f.check !== undefined && !isFn(f.check)) fail(id, `fault "${f.id}" check must be a function`);
     }
 
     /* The guide is the good-form detail shown on the set-up page. */
@@ -88,6 +119,7 @@
     if (!g || typeof g !== 'object') fail(id, 'guide is required');
     if (!isStr(g.surface)) fail(id, 'guide.surface must say what to lie or stand on');
     if (!isStr(g.stop)) fail(id, 'guide.stop must say when to stop');
+    if (g.cannotSee !== undefined && typeof g.cannotSee !== 'string') fail(id, 'guide.cannotSee must be a string');
     if (!isArr(g.regions)) fail(id, 'guide.regions must be a non-empty array');
     for (const r of g.regions) {
       if (!isStr(r.name)) fail(id, 'each guide region needs a name');
@@ -114,6 +146,7 @@
       if (!isFn(factory)) throw new Error('ExerciseLibrary.define expects a function');
       if (!library.kinematics) throw new Error('ExerciseLibrary: engine.js must load before any exercise');
       const ex = factory(library.kinematics);
+      if (ex && ex.tracking === undefined) ex.tracking = 'form';   // the hand-written moves
       /* A one-sided move always offers Left / Right / Both. Adding it here keeps the
          choice identical everywhere and out of every move file. */
       if (ex && ex.sided && !(ex.options || []).some((o) => o.key === 'side')) {
@@ -130,7 +163,7 @@
       return ex;
     },
 
-    SIDE_OPTION,
+    SIDE_OPTION, TRACKING, LEVELS, CAM_HEIGHTS, POSTURES,
     all() { return list.slice(); },
     get(id) { return index[id] || null; },
     ids() { return list.map((e) => e.id); },

@@ -9,7 +9,7 @@
     const { SIDE, FULL, ATTEMPT, BAND, angle, dist, sideJoints, trunkLean } = k;
 
     return {
-      id: 'band_row', order: 80, upperBody: true, name: 'Band rows', group: 'Shoulder — scapula & back', type: 'reps', view: 'side', icon: '🚣', enterCue: null,
+      id: 'band_row', order: 80, vetted: true, tracking: 'form', camera: { height: 'chest', distance: '2 m', posture: 'standing' }, upperBody: true, name: 'Band rows', group: 'Shoulder — scapula & back', type: 'reps', view: 'side', icon: '🚣', enterCue: null,
       summary: 'Pull the band to your ribs with the elbows close — checked for shrugging, leaning back, flaring elbows and incomplete pulls.',
       setup: 'Anchor the band at waist height in front of you. Stand side-on to the camera about 2.5 m away, camera at chest height, whole body in frame. Arms straight toward the anchor with light tension. Draw the elbows straight back past your ribs, squeeze the shoulder blades together, pause, and let the arms straighten slowly.',
       why: 'From the side the elbow travelling behind the line of the torso, the shoulder rising, and the trunk leaning back are all plain to see; from the front they are hidden behind the body.',

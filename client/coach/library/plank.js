@@ -9,7 +9,7 @@
     const { SIDE, angle, dist, lineOffset, segTilt, sideJoints } = k;
 
     return {
-      id: 'plank', order: 40, name: 'Plank', group: 'Core', type: 'hold', view: 'side', icon: '📏',
+      id: 'plank', order: 40, vetted: true, tracking: 'form', camera: { height: 'floor', distance: '2–3 m', posture: 'prone' }, name: 'Plank', group: 'Core', type: 'hold', view: 'side', icon: '📏',
       summary: 'Straight-line hold with live sag / pike correction.',
       setup: 'Camera on the floor, side-on, 2–3 m away. Forearm or straight-arm plank. Whole body in frame.',
       why: 'The only view where the hip line, shoulder-over-elbow stacking and head position can all be measured at once.',

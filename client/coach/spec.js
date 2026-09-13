@@ -220,7 +220,7 @@
       summary: spec.summary, setup: spec.setup, why: spec.why,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
-      calibrate, measure, faults,
+      calibrate, measure, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,
       guide: { surface: spec.guide.surface, stop: spec.guide.stop, cannotSee: spec.guide.cannotSee, regions: spec.guide.regions.filter((r) => r.name && (r.points || []).some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) },
       spec,
     };

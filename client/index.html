@@ -15,6 +15,7 @@
 <header class="topbar" id="topbar">
   <a class="brand" href="#/" aria-label="Grooveform home"><svg class="logo" viewBox="0 0 340 92" role="img" aria-label="Grooveform"><text x="4" y="52" font-size="56" fill="currentColor" style="font-family:var(--font-display)">Grooveform</text><rect x="4" y="62" width="300" height="6" fill="#ff2e88"/><rect x="4" y="70.5" width="300" height="6" fill="#ffb830"/><rect x="4" y="79" width="300" height="6" fill="#b8f542"/><circle cx="318" cy="18" r="13" fill="#ff2e88"/><circle cx="318" cy="18" r="5.8" fill="#b8f542"/></svg><span class="eyebrow" id="top-role"></span></a>
   <nav class="topnav" id="topnav"></nav>
+  <div class="lib-switch" id="lib-switch" role="group" aria-label="Which moves to show"></div>
   <div class="spacer"></div>
   <span class="muted" id="top-user"></span>
   <button class="btn primary small" id="btn-login" hidden>Sign in</button>
@@ -159,6 +160,17 @@
 <script src="coach/engine.js"></script>
 <script src="coach/spec.js"></script>
 <!-- One move per file. Adding one: drop it in coach/library/ and list it here. -->
+<!-- Catalogue: data-defined moves, one file per body region. Adding one: drop it in coach/catalog/ and list it here. -->
+<script src="coach/catalog.js"></script>
+<script src="coach/catalog/knee.js"></script>
+<script src="coach/catalog/hip.js"></script>
+<script src="coach/catalog/ankle.js"></script>
+<script src="coach/catalog/shoulder.js"></script>
+<script src="coach/catalog/spine.js"></script>
+<script src="coach/catalog/core.js"></script>
+<script src="coach/catalog/elbow_wrist.js"></script>
+<script src="coach/catalog/gym_lower.js"></script>
+<script src="coach/catalog/gym_upper.js"></script>
 <script src="coach/library/heelslide.js"></script>
 <script src="coach/library/hipabd.js"></script>
 <script src="coach/library/wallsit.js"></script>
