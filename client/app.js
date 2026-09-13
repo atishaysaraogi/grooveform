@@ -19,7 +19,7 @@
   }
   async function refreshMe() { const d = await api('GET', '/api/me'); me = d.user; ent = d.entitlements; notice = d.notice; env = d.env; exercises = null; return d; }
   function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, ms); }
-  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises.concat(studioDrafts()); specialties = d.specialties; paintLibSwitch(); } return exercises; }
+  async function loadExercises() { if (!exercises) { const d = await api('GET', '/api/exercises'); exercises = d.exercises.concat(studioDrafts()); specialties = d.specialties; } return exercises; }
   /* Moves being built in the Studio (client/studio/) can be tried here before they ship: "Try it in the app" stores the
      spec in this browser only, and it is compiled into the library on the fly. Never sent anywhere. */
   function studioDrafts() {
@@ -37,25 +37,13 @@
   const exById = (id) => (exercises || []).find(e => e.id === id);
   const coachEx = (id) => FyzioCoach.exercises.find(e => e.id === id);
 
-  /* ---------- vetted vs full library ----------
-     The ten hand-written moves are vetted; the catalogue behind them is the full physio + gym
-     list, each move stating what the camera can do with it. The switch in the topbar picks
-     which list the app shows; a direct link to any move always works. */
-  const LIB_KEY = 'fyzio.library';
-  let libMode = 'vetted'; try { libMode = localStorage.getItem(LIB_KEY) === 'all' ? 'all' : 'vetted'; } catch { }
-  const libAll = () => libMode === 'all';
-  const visibleEx = () => (exercises || []).filter(e => libAll() || e.vetted || e.draft);
-  function setLibMode(m) { libMode = m === 'all' ? 'all' : 'vetted'; try { localStorage.setItem(LIB_KEY, libMode); } catch { } paintLibSwitch(); route(); }
-  function paintLibSwitch() {
-    const el = $('lib-switch'); if (!el) return;
-    const n = (exercises || []).length, nv = (exercises || []).filter(e => e.vetted).length;
-    el.innerHTML = `<button type="button" data-lib="vetted" aria-pressed="${!libAll()}">Vetted${nv ? ` <b>${nv}</b>` : ''}</button><button type="button" data-lib="all" aria-pressed="${libAll()}">Full library${n ? ` <b>${n}</b>` : ''}</button>`;
-    el.querySelectorAll('[data-lib]').forEach(b => b.onclick = () => { if (b.dataset.lib !== libMode) setLibMode(b.dataset.lib); });
-  }
-  /* What the camera does with a move: coaches form, counts reps, or nothing (logged by hand). */
+  /* Every move is in the library; the vetted ones (hand-checked rep by rep) simply sort first. */
+  const visibleEx = () => (exercises || []);
+  /* What the camera does with a move: coaches form, counts reps, or nothing (logged by hand).
+     It reads as one more fact about the move, so it sits in the meta line with the rest. */
   const TRACK = { form: ['form', 'form coached', 'The camera counts and judges form.'], reps: ['reps', 'counts reps', 'The camera counts reps or times the hold; form points are yours to check.'], none: ['none', 'no camera', 'Nothing a single camera can measure — follow the guide and log the set by hand.'] };
   const trackInfo = (ex) => TRACK[ex.tracking] || TRACK.form;
-  const trackBadge = (ex) => `<span class="track ${trackInfo(ex)[0]}" title="${esc(trackInfo(ex)[2])}">${trackInfo(ex)[1]}</span>`;
+  const trackWord = (ex) => `<span class="track t-${trackInfo(ex)[0]}" title="${esc(trackInfo(ex)[2])}">${trackInfo(ex)[1]}</span>`;
 
   /* ---------- first-run intro ---------- */
   const SEEN_INTRO = 'fyzio.seenIntro';
@@ -142,7 +130,7 @@
 
   /* The brand wordmark at hero scale. Same artwork as the topbar mark, so the homepage
      leads with the logo itself rather than repeating a small copy of it. */
-  const heroMark = () => `<span class="wordmark hero-wordmark" role="img" aria-label="Motus">Motus</span>`;
+  const heroMark = () => `<span class="wordmark hero-wordmark" role="img" aria-label="jodd.io">jodd.io</span>`;
 
   /* ================= PUBLIC ================= */
   async function renderHome() {
@@ -151,21 +139,19 @@
     const exs = [...visibleEx()].sort((a, b) => order(a.tier) - order(b.tier)); const rtFree = r => r.items.every(i => i.exercise && i.exercise.tier === 'free'); const rts = [...pre].sort((a, b) => (rtFree(a) ? 0 : 1) - (rtFree(b) ? 0 : 1));
     render(`<div class="stack">
       <section class="hero"><div class="hero-brand">${heroMark()}<span class="hero-tag">camera form coach</span></div>
-        <p class="hero-copy">Your camera counts the reps and cheers the good ones. Out loud. Like a coach who actually likes you.${solo() ? '' : ' Free moves need no sign-up; the Pass unlocks every move — or a coach sends you a playlist.'}</p>
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
-      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.${libAll() ? '' : ` <a href="#/exercises" data-lib-all>Full library: ${exercises.length} moves →</a>`}</p>${listHtml(exs)}<p class="muted search-none" hidden>No move matches that search.</p></section>
+      <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.</p>${listHtml(exs)}<p class="muted search-none" hidden>No move matches that search.</p></section>
       <section class="home-sec"><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
       <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'Grooveform')} is a fitness tool, not a medical service.</p></div>
     </div>`);
     /* The hero carries the wordmark on this page, so the topbar does not repeat it. */
     $('topbar').classList.add('at-home'); wireSearch(view);
-    const la = view.querySelector('[data-lib-all]'); if (la) la.onclick = (e) => { e.preventDefault(); location.hash = '#/exercises'; setLibMode('all'); };
   }
   function rtRow(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); const tone = ['tangerine', 'lime', 'pink'][Math.abs(hash(r.title)) % 3];
     return `<a class="playlist ${tone}" href="#/routine/${r.id}"><span class="count">${r.items.length}</span><span class="body"><span class="title">${esc(r.title)}</span><span class="desc">${esc(r.description || '')}</span><span class="tracks">${names.map(esc).join(' · ')}</span></span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pass</span>`}</a>`; }
   function hash(str) { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return h; }
   const allFree = () => (exercises || []).every(e => e.tier === 'free');
-  function exRow(ex) { return `<a class="ex-row" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="body"><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span></span>${trackBadge(ex)}${allFree() ? '' : tierBadge(ex)}</a>`; }
+  function exRow(ex) { return `<a class="ex-row" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="body"><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'}${ex.tracking === 'none' ? '' : ` · ${ex.view === 'front' ? 'front-on' : 'side-on'}`}<span class="nb"> · ${trackWord(ex)}</span></span></span>${allFree() ? '' : tierBadge(ex)}</a>`; }
   /* The moves as a list: one list while it is short, one per body region once the full library is in. */
   function listHtml(list) {
     if (list.length <= 16) return `<div class="ex-list">${list.map(exRow).join('')}</div>`;
@@ -184,12 +170,13 @@
   function wireSearch(root) { applySearch(root); }
   $('nav-q').oninput = (e) => { navQuery = e.target.value; const h = location.hash; if (!h || h === '#/' || h.startsWith('#/exercises')) applySearch(view); else if (navQuery.trim()) location.hash = '#/exercises'; };
   window.addEventListener('scroll', () => $('topbar').classList.toggle('scrolled', window.scrollY > 24), { passive: true });
+  $('btn-how').onclick = () => showIntro(true);
   function rtTile(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); return `<a class="tile routine" href="#/routine/${r.id}"><span class="glyph"><span class="rt-count">${r.items.length}</span></span><span class="name">${esc(r.title)}</span><span class="meta">${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' …' : ''}</span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pro</span>`}</a>`; }
 
   function exCard(ex) { return `<a class="ex-card" href="#/exercise/${ex.id}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span><span class="name">${esc(ex.name)}</span><br><span class="sum">${esc(ex.summary)}</span></span>${tierBadge(ex)}</a>`; }
   function routineCard(r) { return `<a class="card link" href="#/routine/${r.id}" style="text-decoration:none;color:inherit"><div class="row"><strong>${esc(r.title)}</strong>${r.kind === 'prebuilt' ? lockBadge(r.locked) : r.ownerName ? `<span class="badge accent">from ${esc(r.ownerName)}</span>` : '<span class="badge">mine</span>'}<div class="spacer"></div><span class="meta">${r.items.length} exercises</span></div><p class="meta" style="margin-top:4px">${esc(r.description || '')}</p><p class="meta">${r.items.map(i => i.exercise ? i.exercise.name : i.exerciseId).join(' · ')}</p></a>`; }
   async function renderExercises() { await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const list = visibleEx();
-    render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'}${libAll() ? ' The full library includes moves the camera can only count, or not see at all — each tile says which.' : ` Showing the vetted moves; switch to the full library above for ${exercises.length} more.`}</p>
+    render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'} Some moves the camera can only count, and some it cannot see at all — each row says which.</p>
       ${listHtml(list)}<p class="muted search-none" hidden>No move matches that search.</p>${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
   async function renderExercise(id, sub) {
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const cat = exById(id); if (!cat) return renderHome(); const ex = coachEx(id); const g = cat.guide;
@@ -198,7 +185,7 @@
     const manual = cat.tracking === 'none';
     render(`<div class="stack">
       <div class="row"><a class="btn ghost small" href="${itemCtx ? '#/routine/' + itemCtx.routine.id : '#/'}">← ${itemCtx ? esc(itemCtx.routine.title) : 'All moves'}</a></div>
-      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}${cat.level ? ' · ' + esc(cat.level) : ''}</span><h1>${esc(cat.name)} <button type="button" class="info-btn" id="do-details" aria-haspopup="dialog" aria-controls="ex-details" aria-label="Details: how it is measured, set-up and form, what goes wrong, dosage" title="Details">i</button> ${trackBadge(cat)} ${allFree() ? '' : tierBadge(cat)}</h1></div>
+      <div class="ex-head"><div><span class="eyebrow">${esc(cat.group)} · ${cat.type === 'reps' ? 'reps' : 'timed hold'}${cat.level ? ' · ' + esc(cat.level) : ''}<span class="nb"> · ${trackWord(cat)}</span></span><h1>${esc(cat.name)} <button type="button" class="info-btn" id="do-details" aria-haspopup="dialog" aria-controls="ex-details" aria-label="Details: how it is measured, set-up and form, what goes wrong, dosage" title="Details">i</button> ${allFree() ? '' : tierBadge(cat)}</h1></div>
         ${cat.locked ? '' : manual ? `<div class="row ex-actions"><button class="btn primary" id="do-log">✓ Log a set by hand</button></div>` : `<div class="row ex-actions"><button class="btn primary" id="do-start">▶ Start camera</button><button class="btn ghost" id="do-file">Analyze a video…</button><input type="file" id="do-file-input" accept="video/*" hidden></div>`}</div>
       ${cat.tracking !== 'form' ? `<p class="notice track-note">${esc(trackInfo(cat)[2])}</p>` : ''}
       <p class="muted">${esc(cat.summary)}${me || cat.locked || solo() ? '' : ' You can do this without an account — <a href="#/login">sign in</a> to save history.'}</p>
@@ -543,7 +530,7 @@
         <div class="card form"><div class="cols"><label class="field"><span>Title</span><input type="text" id="rb-title" value="${esc(title)}" maxlength="120" placeholder="e.g. Knee week 3"></label></div><label class="field"><span>Description / instructions</span><textarea id="rb-desc" maxlength="2000">${esc(description)}</textarea></label></div>
         <div class="list" id="rb-items">${items.length ? items.map((it, i) => itemEditorHtml(it, i, items.length)).join('') : '<p class="muted">Add exercises below.</p>'}</div>
         <div class="card"><h3>Add exercise</h3>${(() => { const list = visibleEx(); const groups = []; for (const e of list) { let g = groups.find(x => x.name === e.group); if (!g) groups.push(g = { name: e.group, items: [] }); g.items.push(e); }
-          return groups.map(g => `${groups.length > 1 ? `<p class="meta" style="margin-top:8px">${esc(g.name)}</p>` : ''}<div class="row">${g.items.map(ex => `<button class="btn ghost small" data-add="${ex.id}" title="${esc(trackInfo(ex)[1])}">${esc(ex.name)}${ex.tracking === 'none' ? ' <span class="muted">✎</span>' : ''}</button>`).join('')}</div>`).join(''); })()}${libAll() ? '' : `<p class="muted" style="margin-top:8px">Only vetted moves are listed; switch to the full library above for the rest.</p>`}</div>
+          return groups.map(g => `${groups.length > 1 ? `<p class="meta" style="margin-top:8px">${esc(g.name)}</p>` : ''}<div class="row">${g.items.map(ex => `<button class="btn ghost small" data-add="${ex.id}" title="${esc(trackInfo(ex)[1])}">${esc(ex.name)}${ex.tracking === 'none' ? ' <span class="muted">✎</span>' : ''}</button>`).join('')}</div>`).join(''); })()}</div>
         <div class="row"><button class="btn primary" id="rb-save">${r ? 'Save' : 'Create routine'}</button>${r ? '<button class="btn ghost" id="rb-archive">Delete</button>' : ''}</div><p class="error" id="rb-err"></p></div>`);
       $('rb-title').oninput = (e) => title = e.target.value; $('rb-desc').oninput = (e) => description = e.target.value;   // keep text across redraws
       view.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { const ex = exById(b.dataset.add); const o = { target: ex.defaultTarget, sets: 1 }; ex.options.forEach(op => o[op.key] = op.default); items.push({ exerciseId: ex.id, options: o, notes: '' }); draw(); });
@@ -563,7 +550,7 @@
   }
   function itemEditorHtml(it, i, n) {
     const ex = exById(it.exerciseId); const o = it.options;
-    return `<div class="card editor-item" data-i="${i}"><div class="head"><h3>${esc(ex.name)}</h3><span class="badge">${ex.type === 'reps' ? 'reps' : 'hold'} · ${ex.tracking === 'none' ? 'no camera' : ex.view === 'front' ? 'face camera' : 'side-on'}</span>${trackBadge(ex)}<button class="btn ghost tiny it-up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost tiny it-down" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost tiny it-remove">Remove</button></div>
+    return `<div class="card editor-item" data-i="${i}"><div class="head"><h3>${esc(ex.name)}</h3><span class="badge">${ex.type === 'reps' ? 'reps' : 'hold'}${ex.tracking === 'none' ? '' : ` · ${ex.view === 'front' ? 'front-on' : 'side-on'}`}</span>${trackWord(ex)}<button class="btn ghost tiny it-up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost tiny it-down" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost tiny it-remove">Remove</button></div>
       <div><span class="meta">${ex.type === 'reps' ? 'Reps per set' : 'Hold seconds'}</span><div class="opts">${ex.targets.map(t => `<button class="chip" data-target="${t}" aria-pressed="${o.target === t}">${t}${ex.type === 'hold' ? ' s' : ''}</button>`).join('')}<input class="it-custom" type="number" min="1" max="600" placeholder="custom" style="width:110px;min-height:40px" value="${ex.targets.includes(o.target) ? '' : o.target}"></div></div>
       ${ex.options.map(op => `<div><span class="meta">${esc(op.label)}</span><div class="opts">${op.values.map(vv => `<button class="chip" data-opt="${op.key}:${vv}" aria-pressed="${o[op.key] === vv}">${optLabel(op, vv)}</button>`).join('')}</div></div>`).join('')}
       <div style="display:grid;grid-template-columns:90px 110px 1fr;gap:12px;align-items:start"><label class="field"><span>Sets</span><input class="it-sets" type="number" min="1" max="10" value="${o.sets || 1}"></label><label class="field"><span>Rest</span><select class="it-rest">${[30, 45, 60, 90, 120].map(r => `<option value="${r}" ${(o.rest || 60) === r ? 'selected' : ''}>${r} s</option>`).join('')}</select></label><label class="field"><span>Notes / watch-outs</span><textarea class="it-notes" maxlength="1000" placeholder="e.g. only to 75° this week">${esc(it.notes || '')}</textarea></label></div></div>`;

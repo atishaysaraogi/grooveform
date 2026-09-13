@@ -23,7 +23,7 @@ const config = {
   publicUrl: env('PUBLIC_URL', `http://localhost:${env('PORT', 8080)}`),
   // Platform admin: this identifier is promoted to admin on first sign-in (and at boot if it already exists).
   adminIdentifier: env('ADMIN_IDENTIFIER', ''),
-  appName: env('APP_NAME', 'Motus'),
+  appName: env('APP_NAME', 'jodd.io'),
   // Solo mode (default on for now): no accounts, plans, curators or prices are shown; everything runs anonymously on-device.
   soloMode: env('SOLO_MODE', 'true') === 'true',
   // Exercise tiers: these exercise ids are free for everyone (no account needed); the rest need Pro or a curator-sent routine.

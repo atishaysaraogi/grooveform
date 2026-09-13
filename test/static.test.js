@@ -11,7 +11,7 @@ srv.listen(0, async () => {
   const openPage = async (opts) => { const pg = await browser.newPage(opts); await pg.addInitScript("try { localStorage.setItem('fyzio.seenIntro', '1'); } catch (e) {}"); return pg; };
   const page = await openPage({ viewport: { width: 400, height: 860 } }); page.on('pageerror', e => errors.push(String(e)));
   await page.goto(base); await page.waitForSelector('.ex-row', { timeout: 15000 });
-  assert.equal((await page.$$('.ex-row')).length, 10, 'ten moves from the static catalogue'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
+  assert.ok((await page.$$('.ex-row')).length >= 135, 'the whole library is on the static home page'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
   await page.click('.playlist'); await page.waitForSelector('.rt-item'); assert.ok((await page.$$('.rt-item')).length >= 2, 'playlist detail loaded from api/routines/<id>');
   assert.ok((await page.$$('.rt-config .bubble')).length > 0, 'every move on the playlist is configurable in place');
   assert.equal((await page.$$('.rt-start')).length, 1, 'one start button for the whole routine');
@@ -41,7 +41,7 @@ srv.listen(0, async () => {
     document.getElementById('ov-title').textContent = 'Get into position';
     document.getElementById('ov-text').textContent = 'Step into view.';
     const card = getComputedStyle(document.querySelector('#overlay-msg .card')).backgroundColor;
-    const out = { tag: at('.hero-tag'), copy: at('.hero-copy'), settings: at('#btn-settings'),
+    const out = { tag: at('.hero-tag'), how: at('#btn-how'), settings: at('#btn-settings'),
                   ovTitle: at('#ov-title', card), ovText: at('#ov-text', card) };
     document.getElementById('coach').hidden = true;
     return out;

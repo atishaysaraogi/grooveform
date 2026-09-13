@@ -156,16 +156,17 @@
     const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };
     const lying = ['lying', 'prone', 'sidelying'].includes(c.posture), front = ex.view === 'front';
     const cap = `${escT(c.height)} · ${escT(c.distance)}`;
+    const way = lying ? 'lying' : front ? 'front-on' : 'side-on';
     const label = lying ? 'lying down, from the side' : front ? 'from the front' : 'from the side';
-    if (lying) return `<svg class="phone-inset" viewBox="0 0 100 74" role="img" aria-label="Phone on the floor, seeing you ${label}, ${escT(c.distance)} away">
+    if (lying) return `<svg class="phone-inset wide" viewBox="0 0 100 86" role="img" aria-label="Phone on the floor, seeing you ${label}, ${escT(c.distance)} away">
       <rect class="ph" x="2" y="2" width="96" height="52" rx="9"/><rect class="scr" x="8" y="7" width="84" height="42" rx="4"/>
       <g class="ink"><circle cx="24" cy="34" r="4.5"/><path d="M28.5 34h30M58.5 34l9-11M67.5 23l6 11"/></g><line class="floor" x1="12" y1="41" x2="88" y2="41"/>
-      <text class="lbl" x="50" y="68" text-anchor="middle">${cap}</text></svg>`;
+      <text class="lbl way" x="50" y="68" text-anchor="middle">${way}</text><text class="lbl" x="50" y="81" text-anchor="middle">${cap}</text></svg>`;
     const body = front ? `<circle cx="30" cy="22" r="5"/><path d="M30 27v22M20 34l10-4 10 4M30 49l-7 24M30 49l7 24"/>` : `<circle cx="30" cy="22" r="5"/><path d="M30 27v22M30 35l6 10M30 49l-3 24M30 49l5 24"/>`;
-    return `<svg class="phone-inset" viewBox="0 0 90 118" role="img" aria-label="Phone at ${escT(c.height)} height, seeing you ${label}, ${escT(c.distance)} away">
+    return `<svg class="phone-inset" viewBox="0 0 90 130" role="img" aria-label="Phone at ${escT(c.height)} height, seeing you ${label}, ${escT(c.distance)} away">
       <g transform="translate(15 0)"><rect class="ph" x="2" y="2" width="56" height="96" rx="9"/><rect class="scr" x="7" y="8" width="46" height="84" rx="4"/>
       <g class="ink">${body}</g><line class="floor" x1="12" y1="78" x2="48" y2="78"/></g>
-      <text class="lbl" x="45" y="112" text-anchor="middle">${cap}</text></svg>`;
+      <text class="lbl way" x="45" y="112" text-anchor="middle">${way}</text><text class="lbl" x="45" y="125" text-anchor="middle">${cap}</text></svg>`;
   }
   function cameraDiagramPicture(ex) {
     const c = ex.camera || { height: ex.view === 'front' ? 'chest' : 'hip', distance: '2 m', posture: 'standing' };

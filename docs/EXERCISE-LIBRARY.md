@@ -51,9 +51,9 @@ Every move states honestly what the camera does with it, in `tracking`:
 | `none` | cannot measure anything useful                | shows the guide and a counter or timer; you log by hand|
 
 `vetted: true` marks the moves that have been checked rep by rep against
-recordings (today: the ten hand-written ones). The switch in the topbar shows
-either the vetted moves or the full library; a direct link to any move works
-in both. The exercise page, tiles and routine builder carry a badge for the tier.
+recordings (today: the ten hand-written ones). Every move is listed; the
+vetted ones simply sort into the first group. The exercise page, the move
+list and the routine builder all name the tier in the move's meta line.
 
 Validation follows the tier: a `none` move has no `calibrate`/`measure` and its
 faults have no `check`; a `reps` move's faults may be documentation only
