@@ -152,7 +152,6 @@
       "icon": "📏",
       "enterCue": "Get into your plank — body in one straight line",
       "order": 40,
-      "options": [],
       "vetted": true,
       "tracking": "form",
       "level": "beginner",
@@ -377,7 +376,6 @@
           "metric": "sag_kneeling",
           "op": ">",
           "threshold": 10,
-          "phase": "hold",
           "persist": 600,
           "cooldown": 6000
         },
@@ -390,7 +388,6 @@
           "metric": "sag_kneeling",
           "op": "<",
           "threshold": -8,
-          "phase": "hold",
           "persist": 600,
           "cooldown": 6000
         },
@@ -473,7 +470,6 @@
           "metric": "sag",
           "op": ">",
           "threshold": 8,
-          "phase": "hold",
           "persist": 600,
           "cooldown": 6000
         },

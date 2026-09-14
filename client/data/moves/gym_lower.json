@@ -958,7 +958,6 @@
           "metric": "knee",
           "op": ">",
           "threshold": 110,
-          "phase": "hold",
           "persist": 800,
           "cooldown": 6000
         },

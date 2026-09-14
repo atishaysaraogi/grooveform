@@ -98,6 +98,7 @@
     s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? 0, persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
     s.guide = { surface: '', cannotSee: '', stop: '', ...JSON.parse(JSON.stringify(r.guide || {})) };
     if (!Array.isArray(s.guide.regions) || !s.guide.regions.length) s.guide.regions = [{ name: 'Trunk & pelvis', points: [] }];
+    if (!s.guide.cannotSee) s.guide.cannotSee = (ex.guide && ex.guide.cannotSee) || '';   /* the file's default line, so an entry that leaves it out reads the same here */
     if (raw._studio) { const m = raw._studio; s.screen = m.screen || {}; s.ptType = m.ptType || s.ptType; s.notes = m.notes || ''; if (m.tuned) s._tuned = m.tuned; }
     return s;
   }
@@ -126,7 +127,7 @@
     if (!(inh.level && s.level === 'beginner')) put('level', s.level);
     if (!inh.equipment || linesFrom(s.equipmentText).length) put('equipment', linesFrom(s.equipmentText).length ? linesFrom(s.equipmentText) : ['none']);
     put('muscles', { primary: (s.muscleNames || {}).primary || [], secondary: (s.muscleNames || {}).secondary || [] });
-    if (s.sided) put('sided', { limb: s.sided.limb, by: s.sided.by });
+    if (s.sided) put('sided', { limb: s.sided.limb, by: s.sided.by, ...(s.sided.auto ? { auto: true } : {}) });
     if (s.upperBody) put('upperBody', true);
     put('summary', s.summary); put('setup', s.setup); put('why', s.why); put('calibrationPose', s.calibrationPose);
     if (!(inh.camera && s._fileCamera && same(s.camera, s._fileCamera))) put('camera', s.camera);
