@@ -73,7 +73,7 @@ async function runCoachedSet(page, side = 'right') {
     await fresh.goto(base + '/#/');
     await fresh.waitForSelector('#intro:not([hidden])', { timeout: 15000 });
     const t = await fresh.innerText('#intro');
-    for (const want of ['Position the camera', 'Follow the voice', 'Review the set']) assert.ok(t.includes(want), want);
+    for (const want of ['All of you in frame', 'Sound up', 'See the set']) assert.ok(t.includes(want), want);
     assert.equal((await fresh.$$('.intro-steps li')).length, 3);
     await fresh.screenshot({ path: path.join(SHOTS, 'intro.png') });
     await fresh.click('#intro-go');

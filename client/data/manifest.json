@@ -11,7 +11,8 @@
     "moves/core.json",
     "moves/elbow_wrist.json",
     "moves/gym_lower.json",
-    "moves/gym_upper.json"
+    "moves/gym_upper.json",
+    "moves/dance.json"
   ],
   "code": []
 }
