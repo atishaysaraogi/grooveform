@@ -485,14 +485,14 @@
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file">Analyze a video file…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
-        <div class="card"><div class="fields">
+        <div class="card"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><div class="takes" id="takes">${takesList()}</div></div>
+        <div class="card"><h3>Coverage</h3>${coverage()}</div>
+      </div>
+      <div class="stack"><div class="card"><div class="fields">
           ${field('This take is', `<div class="opts" id="take-label">${labels.map(([v, t]) => `<button type="button" class="chip small" data-v="${esc(v)}" aria-pressed="${rec.label === v}">${esc(t)}</button>`).join('')}</div>`, 'Label the take before you record it. A fault take should exaggerate that one fault and nothing else.')}
           ${sided ? field('Side being worked', `<div class="opts" id="take-side"><button type="button" class="chip small" data-v="L" aria-pressed="${rec.side === 'L'}">Left</button><button type="button" class="chip small" data-v="R" aria-pressed="${rec.side === 'R'}">Right</button></div>`, 'Left and right of the person, not of the picture.') : ''}
           <div class="row"><button class="btn secondary" id="btn-rec" disabled>Record (space)</button><span id="rec-timer" class="mono muted"></span></div>
-        </div></div>
-      </div>
-      <div class="stack"><div class="card"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><div class="takes" id="takes">${takesList()}</div></div>
-        <div class="card"><h3>Coverage</h3>${coverage()}</div></div></div>
+        </div></div></div></div>
       <div class="row">${s ? '<button class="btn ghost" id="back">← Describe</button>' : ''}<span class="spacer"></span>${s ? '<button class="btn primary" id="next">Measure it →</button>' : '<button class="btn primary" id="next">See the rules fire →</button>'}</div></div>`;
   }
   function takesList() {
