@@ -107,3 +107,50 @@ test('a hold spec counts seconds in position', () => {
   const r = run(ex, frames, {});
   assert.ok(r.review.holdSec >= 2.5 && r.review.holdSec <= 3.5, 'held ' + r.review.holdSec);
 });
+
+/* ---- The second-generation measurements: each one, on a frame built to read a known value ---- */
+test('the new measurement kinds read what they say: rise, height, ratio, gap, rotation, near, headTilt', () => {
+  const k = K;
+  const base = frame({ 7: [0.47, 0.15], 8: [0.53, 0.15], 11: [0.59, 0.30], 12: [0.41, 0.30], 13: [0.61, 0.42], 14: [0.39, 0.42], 15: [0.62, 0.53], 16: [0.38, 0.53], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95], 29: [0.55, 0.97], 30: [0.45, 0.97], 31: [0.58, 0.97], 32: [0.42, 0.97], 0: [0.50, 0.14] });
+  const metrics = [
+    { kind: 'rise', pts: ['HEEL'], per: ['KNEE', 'ANK'] }, { kind: 'height', pts: ['WR', 'SH'] }, { kind: 'ratio', pts: ['KNEE', 'ANK'] },
+    { kind: 'gap', pts: ['EL', 'SH'], per: ['SH', 'EL'] }, { kind: 'rotation', pts: ['WR', 'EL'], per: ['SH', 'EL'] }, { kind: 'near', pts: ['WR', 'HIP', 'KNEE'] },
+    { kind: 'headTilt', pts: [] }, { kind: 'gap', pts: ['KNEE', 'ANK'], sign: 'forward', per: ['KNEE', 'ANK'] },
+  ];
+  const ref = SPEC.calibrateRef(metrics, base, k, {});
+  const at = (m, pts, S = 'L') => SPEC.evalMetric(m, pts, S, k, ref, {});
+  const moved = frame({ 7: [0.47, 0.15], 8: [0.53, 0.18], 11: [0.59, 0.30], 12: [0.41, 0.30], 13: [0.67, 0.42], 14: [0.39, 0.42], 15: [0.66, 0.20], 16: [0.38, 0.53], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.85], 28: [0.44, 0.95], 29: [0.55, 0.93], 30: [0.45, 0.97], 31: [0.58, 0.97], 32: [0.42, 0.97], 0: [0.50, 0.14] });
+  assert.equal(Math.round(at(metrics[0], base)), 0, 'rise reads 0 at calibration');
+  assert.equal(Math.round(at(metrics[0], moved)), 20, 'heel up 0.04 on a 0.20 shin = 20 %');
+  assert.equal(Math.round(at(metrics[1], moved)), 40, 'wrist 0.10 above the shoulder, torso 0.25 = 40 %');
+  assert.equal(Math.round(at(metrics[2], base)), 100, 'ratio reads 100 at calibration');
+  assert.equal(Math.round(at(metrics[2], moved)), 50, 'a shin that looks half as long reads 50');
+  assert.equal(Math.round(at(metrics[3], base)), 16, 'elbow 0.02 outside the shoulder on a 0.122 upper arm');
+  assert.ok(at(metrics[3], moved) > at(metrics[3], base) + 40, 'elbow drifting out reads higher');
+  assert.ok(Math.abs(at(metrics[4], base)) < 20 && at(metrics[4], moved) < at(metrics[4], base), 'rotation is signed and changes as the forearm swings');
+  assert.ok(at(metrics[5], base) > 0, 'near: the wrist is off the thigh');
+  assert.equal(Math.round(at(metrics[6], base)), 0, 'head level at calibration');
+  assert.ok(at(metrics[6], moved) > 20, 'right ear dropping = positive tilt for the left side');
+  assert.ok(Math.abs(at(metrics[6], moved, 'R') + at(metrics[6], moved, 'L')) < 1e-9, 'headTilt flips sign with the working side');
+  assert.equal(Math.round(at(metrics[7], base)), 0, 'knee over the ankle reads 0');
+  assert.equal(SPEC.metricLandmarks(metrics[7], 'L', k).includes(31), true, 'a forward-signed gap needs the foot to know which way is forward');
+});
+
+test('gates, scaled thresholds and the return rule compile and fire as written', () => {
+  const spec = {
+    ...sideLegRaise, id: 'gated_raise', sided: { limb: 'leg', by: 'pick', auto: true },
+    options: [...sideLegRaise.options, { key: 'variant', label: 'Variant', values: ['a', 'b'], default: 'a' }],
+    faults: [
+      { id: 'hike', label: 'Hip hiking', cue: 'Hip down', tip: 'Level.', severity: 3, metric: { kind: 'pelvis', pts: [] }, rel: 'change', op: '>', threshold: 5, minP: 0.3, persist: 300, scale: { metric: 'progress', times: 0.5 } },
+      { id: 'onlyb', label: 'Only in variant b', cue: 'B only', tip: 'B.', severity: 1, metric: { kind: 'pelvis', pts: [] }, rel: 'change', op: '>', threshold: -999, persist: 100, when: [{ option: 'variant', is: 'b' }] },
+      { id: 'return', rule: 'return', label: 'Not returning', cue: 'All the way down', tip: 'Back to the start.', severity: 1, threshold: 0.2 },
+    ],
+  };
+  const ex = SPEC.compile(spec, K); library.validate(ex);
+  assert.equal(typeof ex.faults.find((f) => f.id === 'return').check, 'function');
+  /* variant a: the option-gated fault never fires however far the pelvis tilts; scaled hike needs tilt > 2 + 0.5 × raise */
+  const seq = (hike, opts) => { const frames = []; for (let i = 0; i < 30; i++) frames.push(pose(0)); for (let r = 0; r < 3; r++) for (let i = 0; i < 60; i++) { const k2 = Math.sin(Math.PI * i / 60); frames.push(pose(30 * k2, hike * k2)); } for (let i = 0; i < 30; i++) frames.push(pose(0)); return run(ex, frames, { rom: 30, ...opts }); };
+  const a = seq(6, { variant: 'a' }); assert.ok(!a.review.faults.onlyb, 'option gate holds'); assert.ok(!a.review.faults.hike, 'a small hike at a 30° raise is under 5 + 15');
+  const b = seq(25, { variant: 'b' }); assert.ok(b.review.faults.onlyb, 'option gate opens'); assert.ok(b.review.faults.hike, 'a big hike is over 5 + 15');
+  assert.equal(b.review.reps, 3, 'side followed automatically: ' + JSON.stringify(b.review.faults));
+});

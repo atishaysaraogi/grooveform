@@ -70,6 +70,392 @@
   ],
   "moves": [
     {
+      "id": "wallsit",
+      "name": "Wall sit",
+      "summary": "Quad endurance at a safe 90° knee angle.",
+      "setup": "Camera side-on, 2–3 m away, roughly hip height. Back flat on the wall, feet about 50 cm out, shoulder-width apart. Whole body in frame.",
+      "why": "From the side the camera reads knee angle and whether your shins are vertical (knees not past toes) — both invisible from the front.",
+      "targets": [20, 30, 45, 60],
+      "defaultTarget": 30,
+      "guide": {
+        "surface": "A flat wall with nothing on it and a non-slip floor. Barefoot or grippy shoes.",
+        "regions": [
+          {
+            "name": "Feet",
+            "points": [
+              {
+                "t": "Feet hip- to shoulder-width apart, toes pointing straight ahead, both feet flat with weight spread across the whole foot — heels stay down.",
+                "tracked": false
+              },
+              {
+                "t": "Feet far enough from the wall that when you slide down the shins are vertical and the knees sit directly above the ankles — usually about 50 cm.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Knees",
+            "points": [
+              { "t": "Knees bent to 90°: thighs parallel to the floor, shins vertical.", "tracked": true },
+              {
+                "t": "Knees track in line with the second toe — not falling inward toward each other, not pushed out. (Facing the camera side-on, the coach cannot see this; check it yourself in a mirror once.)",
+                "tracked": false
+              },
+              { "t": "Knees do not travel forward past the toes.", "tracked": true }
+            ]
+          },
+          {
+            "name": "Hips & pelvis",
+            "points": [
+              {
+                "t": "Hips at the same height as the knees, pressed back into the wall. Pelvis neutral — a small gap at the lower back is normal.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Back",
+            "points": [
+              {
+                "t": "Whole back — sacrum, mid-back and shoulder blades — in contact with the wall. Do not let the upper body lean forward off it.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Shoulders, arms & hands",
+            "points": [
+              {
+                "t": "Shoulders relaxed and back against the wall. Arms hanging at your sides, crossed over the chest, or held straight out in front — never resting on the thighs, which unloads the quads.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Head",
+            "points": [
+              { "t": "Back of the head touching the wall, chin level, eyes forward.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Breathing",
+            "points": [
+              {
+                "t": "Breathe steadily throughout; do not hold your breath as it burns. The hold ends when the knee angle or the back on the wall gives way, not when you decide to push through.",
+                "tracked": true
+              }
+            ]
+          }
+        ],
+        "stop": "Pain builds behind or around the kneecap (a burn in the front of the thigh is expected; kneecap pain is not)."
+      },
+      "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+      "icon": "🧱",
+      "enterCue": "Slide down the wall until your knees are at ninety",
+      "order": 30,
+      "options": [],
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["wall"],
+      "muscles": { "primary": ["quadriceps"], "secondary": ["gluteus maximus"] },
+      "tempo": "Slide down over 2 s, hold, stand up over 2 s.",
+      "dosage": "3 holds of 20–60 s.",
+      "progression": "Longer holds; a weight on the thighs.",
+      "regression": "Shallower knee bend, shorter holds.",
+      "contraindications": "Kneecap pain, or pain that lingers after the hold.",
+      "view": "side",
+      "type": "hold",
+      "hold": { "conditions": [{ "metric": "knee", "min": 55, "max": 118 }] },
+      "display": { "condition": 0, "label": "knee", "aim": "90°" },
+      "faults": [
+        {
+          "id": "high",
+          "label": "Sitting too high",
+          "cue": "Slide down a little",
+          "tip": "Aim for a 90° knee — thighs parallel to the floor.",
+          "severity": 2,
+          "metric": "knee",
+          "op": ">",
+          "threshold": 108,
+          "phase": "any",
+          "when": [{ "metric": "knee", "op": "<", "threshold": 168 }],
+          "persist": 700,
+          "cooldown": 3500
+        },
+        {
+          "id": "low",
+          "label": "Below 90°",
+          "cue": "Come up a touch — knees at ninety",
+          "tip": "Deeper than 90° increases kneecap load; stay at parallel.",
+          "severity": 2,
+          "metric": "knee",
+          "op": "<",
+          "threshold": 78,
+          "phase": "any",
+          "when": [{ "metric": "knee", "op": "<", "threshold": 168 }],
+          "persist": 700,
+          "cooldown": 3500
+        },
+        {
+          "id": "lean",
+          "label": "Back off the wall",
+          "cue": "Press your back into the wall",
+          "tip": "Shoulder blades, mid-back and hips all stay on the wall; leaning forward shifts load to the knees.",
+          "severity": 2,
+          "metric": { "kind": "vertical", "pts": ["SH", "HIP"] },
+          "op": ">",
+          "threshold": 15,
+          "persist": 1500
+        },
+        {
+          "id": "hands",
+          "label": "Hands resting on thighs",
+          "cue": "Hands off your thighs",
+          "tip": "Arms at your sides, crossed, or out in front — resting on the thighs takes load off the quads.",
+          "severity": 1,
+          "metric": { "kind": "near", "pts": ["WR", "HIP", "KNEE"], "per": ["HIP", "KNEE"] },
+          "op": "<",
+          "threshold": 12,
+          "persist": 1200,
+          "cooldown": 8000
+        },
+        {
+          "id": "shin",
+          "label": "Knees past toes",
+          "cue": "Walk your feet out — shins vertical",
+          "tip": "Keep the shin vertical so the load stays in the quads, not the kneecap.",
+          "severity": 2,
+          "metric": { "kind": "gap", "pts": ["KNEE", "ANK"], "sign": "forward", "per": ["KNEE", "ANK"] },
+          "op": ">",
+          "threshold": 35,
+          "persist": 800
+        }
+      ],
+      "pose": {
+        "A": { "preset": "seated", "uarm": 8, "farm": 8 },
+        "B": { "preset": "seated", "uarm": 8, "farm": 8 },
+        "work": { "thigh": 1, "glute": 0.4 },
+        "wall": "behind"
+      }
+    },
+    {
+      "id": "heelslide",
+      "name": "Heel slide",
+      "summary": "Knee flexion range after surgery or injury — measured in degrees, rep by rep.",
+      "setup": "Lie on your back on the floor, side-on to the camera at floor level, about 2 m away. The leg you are working should be the one nearest the camera. Start with that leg straight, other leg bent or straight, hips and shoulders flat.",
+      "why": "From the side, hip–knee–ankle form a clean triangle in one plane, so knee angle is read directly, and the heel and hip staying on the floor are both visible as height changes.",
+      "targets": [6, 8, 10, 12, 15],
+      "defaultTarget": 10,
+      "guide": {
+        "surface": "Firm floor or exercise mat. Not a bed or sofa: a soft surface swallows the heel and the camera loses it.",
+        "regions": [
+          {
+            "name": "Body position",
+            "points": [
+              {
+                "t": "Lie flat on your back, legs out straight, the working leg nearest the camera.",
+                "tracked": true
+              },
+              {
+                "t": "Hips square and level, both buttocks on the floor. The pelvis should not tip toward the working side.",
+                "tracked": true
+              },
+              {
+                "t": "Lower back relaxed against the floor with its natural small arch — do not force it flat, do not let it arch up.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Working leg & foot",
+            "points": [
+              {
+                "t": "Heel stays in contact with the floor the whole way; it slides, never lifts. A sock on a smooth floor or a plastic bag under the heel helps it glide.",
+                "tracked": true
+              },
+              {
+                "t": "Knee and toes point straight at the ceiling throughout. If the knee falls outward the movement rolls into the hip instead of bending the knee.",
+                "tracked": true
+              },
+              {
+                "t": "Ankle relaxed or gently pulled up toward the shin (dorsiflexed) — do not point the toes.",
+                "tracked": false
+              },
+              {
+                "t": "Slide until you feel a firm stretch at the front of the knee, hold, then push the heel away until the knee is fully straight and the back of the knee touches the floor.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Other leg",
+            "points": [
+              {
+                "t": "Straight and relaxed, or bent with the foot flat if that is more comfortable for your back. Keep it still — it should not help.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Arms & hands",
+            "points": [
+              {
+                "t": "Arms resting on the floor at your sides, palms down. A towel or strap looped around the foot is fine for an assisted slide: pull gently with both hands, elbows on the floor.",
+                "tracked": false
+              },
+              { "t": "Do not push on the thigh with your hands.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Head & shoulders",
+            "points": [
+              {
+                "t": "Head resting on the floor or a thin pillow, looking at the ceiling. Do not lift the head to watch the knee — the camera does that for you.",
+                "tracked": true
+              },
+              { "t": "Shoulders down and relaxed, not shrugged toward the ears.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Breathing & tempo",
+            "points": [
+              {
+                "t": "Breathe out as the heel slides in, breathe normally during the hold, breathe in as the leg straightens.",
+                "tracked": false
+              },
+              {
+                "t": "2–3 s in, hold 2–5 s at end range, 2–3 s out. Slower is better after surgery.",
+                "tracked": true
+              }
+            ]
+          }
+        ],
+        "stop": "Sharp pain, a sudden increase in swelling, or if the knee feels like it locks or gives way."
+      },
+      "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+      "sided": { "limb": "leg", "by": "camera" },
+      "icon": "🦵",
+      "order": 10,
+      "options": [
+        {
+          "key": "rom",
+          "label": "Flexion target",
+          "values": [60, 75, 90, 105, 120],
+          "unit": "°",
+          "default": 90
+        }
+      ],
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["none", "towel or strap (optional)"],
+      "muscles": { "primary": ["hamstrings"], "secondary": ["quadriceps"] },
+      "tempo": "2–3 s in, hold 2–5 s, 2–3 s out.",
+      "dosage": "2–3 × 10, 2–3 times a day after surgery.",
+      "progression": "Slide further as range returns; add a strap pull at the end.",
+      "regression": "Smaller slides; a plastic bag under the heel.",
+      "contraindications": "Sharp pain, a sudden increase in swelling, or a knee that locks or gives way.",
+      "view": "side",
+      "type": "reps",
+      "progress": {
+        "metric": "knee",
+        "start": "calibrated",
+        "startMin": 160,
+        "target": "opt:rom",
+        "targetIsDelta": true,
+        "delta": -1
+      },
+      "display": { "label": "bend", "unit": "°", "from": "start" },
+      "faults": [
+        {
+          "id": "heel",
+          "label": "Heel lifting off the floor",
+          "cue": "Keep your heel on the floor",
+          "tip": "The heel should slide, not lift. Lifting it turns the movement into a leg raise and loses the knee-bend.",
+          "severity": 3,
+          "metric": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] },
+          "op": ">",
+          "threshold": 12,
+          "minP": 0.15,
+          "cooldown": 4000,
+          "phase": "moving"
+        },
+        {
+          "id": "legout",
+          "label": "Knee falling out to the side",
+          "cue": "Knee pointing at the ceiling",
+          "tip": "Keep the knee and toes pointing straight up as you slide, so the bend happens in the knee rather than the leg rolling outward at the hip.",
+          "severity": 3,
+          "metric": { "kind": "ratio", "pts": ["KNEE", "ANK"] },
+          "op": "<",
+          "threshold": 74,
+          "when": [
+            { "metric": "knee", "rel": "change", "op": "<", "threshold": -35 }
+          ],
+          "persist": 450,
+          "cooldown": 4000,
+          "phase": "moving"
+        },
+        {
+          "id": "hip",
+          "label": "Hip lifting",
+          "cue": "Keep your hips down",
+          "tip": "Lifting the hip cheats the last few degrees. Keep the pelvis flat and accept the smaller bend for now.",
+          "severity": 2,
+          "metric": { "kind": "rise", "pts": ["HIP"], "per": ["HIP", "KNEE"] },
+          "op": ">",
+          "threshold": 15,
+          "minP": 0.4,
+          "phase": "moving"
+        },
+        {
+          "id": "shallow",
+          "label": "Short of the flexion target",
+          "cue": "Slide a little further",
+          "tip": "Ease into the last few degrees on each rep — that is where range is gained. Pain up to mild is expected; sharp pain is not.",
+          "severity": 1,
+          "rule": "shallow"
+        },
+        {
+          "id": "fast",
+          "label": "Too fast",
+          "cue": "Slow — hold the bend for a moment",
+          "tip": "Take 2–3 seconds to slide in, hold the bend 2–5 seconds, then 2–3 seconds out.",
+          "severity": 1,
+          "rule": "fast",
+          "minMs": 2500
+        },
+        {
+          "id": "head",
+          "label": "Lifting the head to watch",
+          "cue": "Rest your head down",
+          "tip": "Craning to watch the knee strains the neck and tips the pelvis. The coach is watching the knee for you.",
+          "severity": 1,
+          "metric": { "kind": "rise", "pts": ["EAR"], "per": ["HIP", "KNEE"] },
+          "op": ">",
+          "threshold": 35,
+          "persist": 900,
+          "cooldown": 8000
+        },
+        {
+          "id": "return",
+          "label": "Not straightening fully",
+          "cue": "Straighten all the way",
+          "tip": "Full extension at the end of each rep matters as much as flexion.",
+          "severity": 1,
+          "rule": "return",
+          "threshold": 0.2
+        }
+      ],
+      "pose": {
+        "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 85 },
+        "B": { "preset": "supine", "thigh": 125, "shin": 40, "foot": 60 },
+        "work": { "ham": 1, "thigh": 0.4 },
+        "anchor": ["hip"]
+      }
+    },
+    {
       "id": "quad_set",
       "name": "Quad set",
       "type": "hold",

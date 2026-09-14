@@ -4,7 +4,7 @@ Three layers, all with no dependencies except Playwright for the browser layer.
 
 ## 1. Engine unit tests — `test/engine.test.js`
 
-Rep counting hysteresis, hold timing, fault persistence/cooldown, smoothing, and each exercise's fault rules driven by synthetic keypoint frames. Run: `npm test` (runs with the API tests).
+Rep counting hysteresis, hold timing, fault persistence/cooldown, smoothing, and the ten vetted moves' fault rules driven by synthetic keypoint frames with known reps and known faults. These are the oracle that proved the data versions of those moves count and cue exactly as the hand-written code did. `test/spec.test.js` covers the measurement language itself: every kind on a frame built to read a known value, gates, scaled thresholds, the return rule, automatic side following. Run: `npm test` (runs with the API tests).
 
 ## 2. API tests — `test/api.test.js`
 

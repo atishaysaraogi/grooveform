@@ -74,6 +74,784 @@
   ],
   "moves": [
     {
+      "id": "pullapart",
+      "name": "Band pull-apart",
+      "summary": "Arms straight at shoulder height, pull the band to your chest — checked for bending elbows, shrugging, the band drifting up or down, and short reps.",
+      "setup": "Hold the band in front of you at shoulder height, arms straight, hands a little wider than the shoulders, light tension. Face the camera about 2.5 m away, camera at chest height, head to hips in frame. Pull the hands apart until the band touches your chest, squeeze the shoulder blades together, pause, then return slowly.",
+      "why": "Facing the camera the arms open into a T in the camera plane: the distance between the hands, a bending elbow, the shoulders rising, and the hands drifting above or below shoulder height are all read directly.",
+      "targets": [6, 8, 10, 12, 15, 20],
+      "defaultTarget": 12,
+      "guide": {
+        "surface": "Standing or sitting tall, facing the camera. Hold a light band in front of you at shoulder height, hands a little wider than the shoulders, palms down or thumbs up.",
+        "regions": [
+          {
+            "name": "Feet & legs",
+            "points": [
+              {
+                "t": "Feet hip-width, knees soft (or sit tall on a chair without leaning on the backrest).",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Trunk & pelvis",
+            "points": [
+              {
+                "t": "Ribs down, gentle brace, back neutral — do not lean back or flare the ribs to finish the rep; that is a sign the band is too strong.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Arms & hands",
+            "points": [
+              {
+                "t": "Arms straight with a tiny soft bend, held fixed. Bending the elbows turns it into a row and takes the rear shoulder out of it — the coach flags elbows bending as the band opens.",
+                "tracked": true
+              },
+              {
+                "t": "Keep the hands level with the shoulders the whole way. As you tire the band drifts down toward the stomach; the coach flags hands more than a hand-width above or below shoulder height.",
+                "tracked": true
+              },
+              {
+                "t": "Pull until the band touches the chest with the arms out in a T, pause, then return under control.",
+                "tracked": true
+              },
+              {
+                "t": "Wrists straight; thumbs up (palms facing each other) is the gentlest variation for irritable shoulders.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Shoulders & neck",
+            "points": [
+              {
+                "t": "Start the rep by sliding the shoulder blades back, then let the hands follow. Squeeze the blades together at the end without shrugging.",
+                "tracked": false
+              },
+              {
+                "t": "Shoulders down and away from the ears; long neck, wide collarbones. A rising shoulder is flagged.",
+                "tracked": true
+              },
+              { "t": "Chin level, eyes on the camera; do not crane the neck forward.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Breathing & tempo",
+            "points": [
+              { "t": "Breathe out as the band opens, in as it closes.", "tracked": false },
+              { "t": "1–2 s apart, 1 s squeeze, 3 s back together.", "tracked": true }
+            ]
+          }
+        ],
+        "stop": "Pinching at the front of the shoulder, neck pain, or numbness in the hands — switch to a lighter band or a wider grip before stopping altogether."
+      },
+      "camera": { "height": "chest", "distance": "2.5 m", "posture": "standing" },
+      "upperBody": true,
+      "icon": "🏹",
+      "order": 90,
+      "options": [],
+      "band": "yellow",
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["band"],
+      "muscles": { "primary": ["posterior deltoid", "rhomboids", "middle trapezius"], "secondary": ["rotator cuff"] },
+      "tempo": "1–2 s apart, 1 s squeeze, 3 s back.",
+      "dosage": "2–3 × 12–20.",
+      "progression": "Next band colour; hands closer together.",
+      "regression": "Lighter band; hands wider.",
+      "contraindications": "Pain at the front of the shoulder as the band opens.",
+      "view": "front",
+      "type": "reps",
+      "progress": { "metric": { "kind": "dist", "pts": ["WR", "oWR"] }, "start": "calibrated", "target": 280 },
+      "display": { "label": "apart", "unit": "%", "from": "abs" },
+      "faults": [
+        {
+          "id": "bend",
+          "label": "Elbows bending",
+          "cue": "Arms long — pull with the shoulder blades",
+          "tip": "Bending the elbows turns the pull-apart into a row and takes the rear shoulder out of it. Keep a tiny soft bend and hold it fixed.",
+          "severity": 3,
+          "metric": "elbow",
+          "op": "<",
+          "threshold": 150,
+          "minP": 0.45,
+          "cooldown": 4500,
+          "phase": "moving"
+        },
+        {
+          "id": "shrug",
+          "label": "Shrugging",
+          "cue": "Long neck — shoulders down",
+          "tip": "Pull the shoulders gently down before each rep: wide collarbones, then squeeze the blades back. If they climb toward the ears the upper trapezius takes over.",
+          "severity": 2,
+          "metric": "shrug",
+          "rel": "change",
+          "op": "<",
+          "threshold": -9,
+          "persist": 450
+        },
+        {
+          "id": "low",
+          "label": "Hands dropping below shoulder height",
+          "cue": "Keep the band at shoulder height",
+          "tip": "As you tire the band drifts down toward the stomach and the movement becomes a shoulder extension. Keep the hands level with the shoulders the whole way.",
+          "severity": 2,
+          "metric": { "kind": "height", "pts": ["SH", "WR"] },
+          "op": ">",
+          "threshold": 28,
+          "minP": 0.4,
+          "persist": 500,
+          "phase": "moving"
+        },
+        {
+          "id": "high",
+          "label": "Hands rising above shoulder height",
+          "cue": "Bring the band down to shoulder height",
+          "tip": "Pulling above the shoulders loads the neck. Hands level with the shoulders.",
+          "severity": 1,
+          "metric": { "kind": "height", "pts": ["SH", "WR"] },
+          "op": "<",
+          "threshold": -28,
+          "minP": 0.4,
+          "persist": 500,
+          "phase": "moving"
+        },
+        {
+          "id": "shallow",
+          "label": "Not pulling all the way apart",
+          "cue": "All the way — band to the chest",
+          "tip": "Finish with the band touching the chest and a one-second squeeze. If that is not possible, use a lighter band.",
+          "severity": 1,
+          "rule": "shallow"
+        },
+        {
+          "id": "fast",
+          "label": "Too fast",
+          "cue": "Slower — pause at your chest",
+          "tip": "One to two seconds apart, a one-second squeeze, three seconds back. Do not let the band snap the arms together.",
+          "severity": 1,
+          "rule": "fast",
+          "minMs": 2200
+        }
+      ],
+      "pose": {
+        "A": { "armL": 80, "armR": 80, "foreL": 70, "foreR": 70 },
+        "B": { "armL": 92, "armR": 92 },
+        "work": { "back": 1, "shoulder": 0.5 }
+      }
+    },
+    {
+      "id": "band_row",
+      "name": "Band rows",
+      "summary": "Pull the band to your ribs with the elbows close — checked for shrugging, leaning back, flaring elbows and incomplete pulls.",
+      "setup": "Anchor the band at waist height in front of you. Stand side-on to the camera about 2.5 m away, camera at chest height, whole body in frame. Arms straight toward the anchor with light tension. Draw the elbows straight back past your ribs, squeeze the shoulder blades together, pause, and let the arms straighten slowly.",
+      "why": "From the side the elbow travelling behind the line of the torso, the shoulder rising, and the trunk leaning back are all plain to see; from the front they are hidden behind the body.",
+      "targets": [6, 8, 10, 12, 15],
+      "defaultTarget": 10,
+      "guide": {
+        "surface": "Standing side-on to the camera, band anchored at waist height in front of you (door anchor at handle height, railing, pole). Step back until there is light tension with the arms straight.",
+        "regions": [
+          {
+            "name": "Feet & legs",
+            "points": [
+              {
+                "t": "Feet hip-width, one foot slightly ahead if that feels steadier, knees soft. Slight hinge at the hips is fine; the trunk then stays at that angle for every rep.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Trunk & pelvis",
+            "points": [
+              {
+                "t": "Brace like a standing plank: ribs down, abdomen firm, back neutral. The body does not rock back to help the pull — the coach compares your trunk angle to the start position.",
+                "tracked": true
+              },
+              {
+                "t": "If you feel yourself leaning back or the lower back arching, the band is too strong.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Arms & hands",
+            "points": [
+              {
+                "t": "Start with the arms long and the shoulder blades allowed to glide forward. Then draw the elbows straight back past the ribs, keeping them close to the body — not flared out to shoulder height.",
+                "tracked": true
+              },
+              {
+                "t": "Elbows lead; the hands follow. Finish with the hands beside the lower ribs and the elbows behind the line of the torso.",
+                "tracked": true
+              },
+              {
+                "t": "Wrists straight, grip relaxed — do not curl the band in with the biceps.",
+                "tracked": false
+              },
+              {
+                "t": "Let the arms straighten fully on the way out so every rep goes through the whole range.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Shoulders & neck",
+            "points": [
+              {
+                "t": "Squeeze the shoulder blades together and DOWN at the back of each rep. If the shoulders rise toward the ears the upper trapezius is doing the row — the coach flags it.",
+                "tracked": true
+              },
+              { "t": "Chin level, neck long; do not poke the head forward as you pull.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Breathing & tempo",
+            "points": [
+              { "t": "Breathe out as you pull, in as the arms lengthen.", "tracked": false },
+              {
+                "t": "2 s back, 1–2 s squeeze, 3 s forward under control. Never let the band snap the arms out.",
+                "tracked": true
+              }
+            ]
+          }
+        ],
+        "stop": "Sharp pain at the front of the shoulder, neck pain that builds through the set, or pins and needles in the hands."
+      },
+      "camera": { "height": "chest", "distance": "2.5 m", "posture": "standing" },
+      "upperBody": true,
+      "icon": "🚣",
+      "order": 80,
+      "options": [],
+      "band": "red",
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["band", "door anchor"],
+      "muscles": {
+        "primary": ["rhomboids", "middle trapezius", "latissimus dorsi"],
+        "secondary": ["biceps", "posterior deltoid"]
+      },
+      "tempo": "2 s back, 1 s squeeze, 3 s forward.",
+      "dosage": "2–3 × 10–15.",
+      "progression": "Next band colour; single-arm rows.",
+      "regression": "Lighter band; seated.",
+      "contraindications": "Neck or shoulder pain during the pull.",
+      "view": "side",
+      "type": "reps",
+      "progress": {
+        "metric": { "kind": "gap", "pts": ["EL", "SH"], "sign": "forward", "per": ["SH", "EL"] },
+        "start": "calibrated",
+        "target": -45
+      },
+      "display": { "label": "pull", "unit": "%", "from": "start" },
+      "faults": [
+        {
+          "id": "shrug",
+          "label": "Shrugging",
+          "cue": "Shoulders down as you pull",
+          "tip": "Pull the shoulder blades down and back, not up. If the shoulder rises toward the ear the upper trapezius is doing the row.",
+          "severity": 3,
+          "metric": "shrug",
+          "rel": "change",
+          "op": "<",
+          "threshold": -9,
+          "minP": 0.3,
+          "cooldown": 4500,
+          "phase": "moving"
+        },
+        {
+          "id": "lean",
+          "label": "Leaning back",
+          "cue": "Stand tall — pull with the arms",
+          "tip": "Rocking the torso back uses body weight instead of the back muscles. Brace the abdomen and keep the trunk still; if you must lean, the band is too strong.",
+          "severity": 2,
+          "metric": { "kind": "lean", "pts": [], "sign": "forward" },
+          "rel": "change",
+          "op": "<",
+          "threshold": -8,
+          "minP": 0.3,
+          "persist": 450,
+          "phase": "moving"
+        },
+        {
+          "id": "flare",
+          "label": "Elbows flaring up",
+          "cue": "Elbows down, close to your ribs",
+          "tip": "Elbows at shoulder height turn this into a high row that loads the neck. Keep the elbows low and brushing your sides.",
+          "severity": 2,
+          "metric": { "kind": "height", "pts": ["EL", "SH"], "per": ["SH", "EL"] },
+          "op": ">",
+          "threshold": -15,
+          "minP": 0.4,
+          "phase": "moving"
+        },
+        {
+          "id": "shallow",
+          "label": "Not pulling all the way back",
+          "cue": "Elbows further back — squeeze the blades",
+          "tip": "The squeeze at the end is the point of the exercise: the elbow should pass behind your ribs before you pause.",
+          "severity": 1,
+          "rule": "shallow"
+        },
+        {
+          "id": "fast",
+          "label": "Too fast",
+          "cue": "Slower — pause at the back",
+          "tip": "Two seconds back, hold the squeeze for a count, three seconds forward. Do not let the band snap the arms out.",
+          "severity": 1,
+          "rule": "fast",
+          "minMs": 2200
+        },
+        {
+          "id": "return",
+          "label": "Not letting the arms straighten",
+          "cue": "Let the arms reach forward fully",
+          "tip": "Each rep starts with the arms long so the shoulder blades can glide forward and then be pulled back through the full range.",
+          "severity": 1,
+          "rule": "return",
+          "threshold": 0.3
+        }
+      ],
+      "pose": {
+        "A": { "preset": "standing", "uarm": 80, "farm": 80 },
+        "B": { "preset": "standing", "uarm": -30, "farm": 60 },
+        "work": { "back": 1, "biceps": 0.4 },
+        "wall": "ahead",
+        "props": [{ "kind": "band", "at": "wr" }]
+      }
+    },
+    {
+      "id": "shoulder_abd",
+      "name": "Shoulder abduction (band)",
+      "summary": "Straight-arm raise out to the side against a band, to shoulder height — checked for shrugging, leaning, bending the elbow and swinging too high.",
+      "setup": "Stand on the band, hold the other end at your side. Face the camera about 2.5 m away, camera at chest height, whole body in frame. Raise the arm straight out to the side, thumb slightly up, no higher than shoulder level, then lower slowly.",
+      "why": "From the front the arm swings across the camera plane, so the raise angle, a bending elbow, a rising shoulder and a trunk leaning the other way are all measured directly — the same geometry that makes standing hip abduction easy to track.",
+      "targets": [6, 8, 10, 12, 15],
+      "defaultTarget": 10,
+      "guide": {
+        "surface": "Standing on the middle of the band with the foot on the working side (or both feet), holding the other end at your thigh. Firm floor, shoes on so the band cannot slip.",
+        "regions": [
+          {
+            "name": "Feet & legs",
+            "points": [
+              {
+                "t": "Feet hip-width, knees soft, weight even. The band runs from under the foot straight up to the hand.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Trunk & pelvis",
+            "points": [
+              {
+                "t": "Stand tall with the trunk still. Leaning the body away from the arm makes the arm look higher without the shoulder working — the coach measures trunk lean against your start position.",
+                "tracked": true
+              },
+              {
+                "t": "Ribs down, no arching. If you have to lean or swing, the band is too strong.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Working arm",
+            "points": [
+              {
+                "t": "Arm straight with a soft elbow — set the tiny bend before the first rep and keep it fixed. A bending elbow is flagged.",
+                "tracked": true
+              },
+              {
+                "t": "Raise straight out to the side, slightly in front of the body line (about 30° forward — the \"scapular plane\"), thumb pointing slightly up. Palm down with the thumb dropped is harder on the joint.",
+                "tracked": false
+              },
+              {
+                "t": "Stop at shoulder height (hand level with the shoulder, 90°). Higher than that the shoulder blade has to rotate and the joint is more easily pinched; the coach flags raises past ~100°.",
+                "tracked": true
+              },
+              {
+                "t": "Lead with the elbow, not the hand; think of pushing the hand toward the far wall rather than lifting it.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Shoulders & neck",
+            "points": [
+              {
+                "t": "Shoulder blade set down and back before each rep; the shoulder must not rise toward the ear as the arm goes up. This is the fault the coach watches most closely.",
+                "tracked": true
+              },
+              { "t": "Neck long, chin level, eyes forward.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Other arm",
+            "points": [
+              {
+                "t": "Hanging relaxed or hand on hip. Do not hold a chair on that side — it invites leaning.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Breathing & tempo",
+            "points": [
+              { "t": "Breathe out on the way up, in on the way down.", "tracked": false },
+              {
+                "t": "2 s up, 1 s pause at the top, 3 s down. No swinging — every rep starts from a dead stop.",
+                "tracked": true
+              }
+            ]
+          }
+        ],
+        "stop": "A sharp catch or \"painful arc\" partway up, pain on top of the shoulder that lingers after the set, or any pins and needles in the hand."
+      },
+      "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+      "sided": { "limb": "arm", "by": "pick", "auto": true },
+      "upperBody": true,
+      "icon": "🙋",
+      "order": 70,
+      "options": [
+        { "key": "rom", "label": "Raise target", "values": [45, 60, 75, 90], "unit": "°", "default": 90 }
+      ],
+      "band": "yellow",
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["band"],
+      "muscles": { "primary": ["supraspinatus", "middle deltoid"], "secondary": ["upper trapezius"] },
+      "tempo": "2 s up, 1 s pause, 3 s down.",
+      "dosage": "2–3 × 10–12 each arm.",
+      "progression": "Next band colour; thumb-up raise to 90°.",
+      "regression": "No band; raise to 60°.",
+      "contraindications": "Pain in the arc between 60° and 120°, or a recent shoulder dislocation.",
+      "view": "front",
+      "type": "reps",
+      "progress": {
+        "metric": { "kind": "vertical", "pts": ["SH", "EL"] },
+        "start": "calibrated",
+        "target": "opt:rom",
+        "targetIsDelta": true
+      },
+      "display": { "label": "raise", "unit": "°", "from": "start" },
+      "faults": [
+        {
+          "id": "shrug",
+          "label": "Shrugging",
+          "cue": "Shoulder down — reach, don’t lift",
+          "tip": "If the shoulder rises toward the ear the upper trapezius does the lift. Set the shoulder blade down first; think of reaching the hand toward the wall rather than lifting it.",
+          "severity": 3,
+          "metric": "shrug",
+          "rel": "change",
+          "op": "<",
+          "threshold": -9,
+          "minP": 0.3,
+          "cooldown": 4500,
+          "phase": "moving"
+        },
+        {
+          "id": "lean",
+          "label": "Leaning away",
+          "cue": "Stay tall — no leaning",
+          "tip": "Tipping the trunk the other way makes the arm look higher without the shoulder working. Keep the torso upright and accept a smaller raise.",
+          "severity": 2,
+          "metric": "lean",
+          "rel": "change",
+          "op": "<",
+          "threshold": -10,
+          "minP": 0.3,
+          "persist": 450,
+          "phase": "moving"
+        },
+        {
+          "id": "bend",
+          "label": "Elbow bending",
+          "cue": "Keep the arm straight — soft elbow",
+          "tip": "A bending elbow shortens the lever and shifts work to the biceps. Keep a small soft bend and hold it fixed for the whole rep.",
+          "severity": 2,
+          "metric": "elbow",
+          "op": "<",
+          "threshold": 150,
+          "minP": 0.3,
+          "phase": "moving"
+        },
+        {
+          "id": "high",
+          "label": "Raising above shoulder height",
+          "cue": "Stop at shoulder height",
+          "tip": "Above about 90° the shoulder blade has to rotate and the space under the acromion narrows; for rehab, stop with the hand level with the shoulder.",
+          "severity": 2,
+          "metric": { "kind": "vertical", "pts": ["SH", "EL"] },
+          "rel": "change",
+          "op": ">",
+          "threshold": 100,
+          "persist": 300,
+          "phase": "moving"
+        },
+        {
+          "id": "shallow",
+          "label": "Not reaching the target",
+          "cue": "A little higher",
+          "tip": "Aim for the raise target without shrugging or leaning; if it hurts before then, lower the target.",
+          "severity": 1,
+          "rule": "shallow"
+        },
+        {
+          "id": "fast",
+          "label": "Too fast",
+          "cue": "Slower — two up, pause, three down",
+          "tip": "Swinging the arm lets momentum lift it. Two seconds up, a one-second pause at the top, three seconds down.",
+          "severity": 1,
+          "rule": "fast",
+          "minMs": 2200
+        }
+      ],
+      "pose": {
+        "A": { "armR": 8, "armL": 8 },
+        "B": { "armR": 90, "armL": 8 },
+        "work": { "shoulder": 1 },
+        "side": "R"
+      }
+    },
+    {
+      "id": "shoulder_er",
+      "name": "Standing shoulder rotation (band)",
+      "summary": "External or internal rotation with the elbow pinned to your side — the classic rotator-cuff exercise, checked for elbow drift, shrugging and trunk twist.",
+      "setup": "Anchor the band at elbow height beside you (door handle, railing). Stand facing the camera about 2 m away, camera at chest height, head to hips in frame. Elbow bent to 90° and touching your ribs, forearm across your stomach for external rotation (or out to the side for internal rotation). Rotate the forearm against the band, elbow glued to your side, then return slowly.",
+      "why": "Facing the camera, the forearm swings across the picture like a clock hand, so rotation angle is read directly, and the elbow leaving the ribs, the shoulder rising toward the ear and the torso twisting are all visible as changes the camera can measure.",
+      "targets": [6, 8, 10, 12, 15],
+      "defaultTarget": 10,
+      "guide": {
+        "surface": "Standing, on a firm floor. Band anchored at elbow height — a door anchor, a railing or a heavy table leg — beside you on the side away from the working arm (external rotation) or on the same side (internal rotation). Light band to start.",
+        "regions": [
+          {
+            "name": "Feet & legs",
+            "points": [
+              {
+                "t": "Feet hip-width apart, weight even, knees soft. Stand tall; do not brace against the band by leaning.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Trunk & pelvis",
+            "points": [
+              {
+                "t": "Chest square to the camera for the whole set. The most common cheat is turning the torso to add range: the shoulders narrow in the picture and the coach flags it.",
+                "tracked": true
+              },
+              { "t": "Ribs down, gentle abdominal brace. No arching the lower back.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Working arm",
+            "points": [
+              {
+                "t": "Elbow bent to 90° and touching your ribs for the whole rep. A folded towel between elbow and ribs is the classic cue — if it drops, the elbow has drifted.",
+                "tracked": true
+              },
+              {
+                "t": "External rotation: start with the hand in front of the stomach and rotate the forearm outward like a gate opening; internal rotation: start out to the side and bring the hand to the stomach.",
+                "tracked": true
+              },
+              {
+                "t": "Wrist straight and firm, in line with the forearm; the band pulls on the hand, not the wrist.",
+                "tracked": false
+              },
+              {
+                "t": "Rotate to the target angle (45–90°) without the elbow moving; stop where it is comfortable, never into a pinch.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Shoulders & neck",
+            "points": [
+              {
+                "t": "Both shoulders down and level, away from the ears. The shoulder blade sits back and down before the first rep.",
+                "tracked": true
+              },
+              { "t": "Neck long, jaw relaxed, eyes on the camera.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Other arm",
+            "points": [
+              {
+                "t": "Relaxed at your side or resting on your hip. It should not steady the band.",
+                "tracked": false
+              }
+            ]
+          },
+          {
+            "name": "Breathing & tempo",
+            "points": [
+              { "t": "Breathe out as you rotate against the band, in as you return.", "tracked": false },
+              {
+                "t": "2 s out, brief pause, 3 s back. The slow return is where the rotator cuff works hardest.",
+                "tracked": true
+              }
+            ]
+          }
+        ],
+        "stop": "Sharp or pinching pain in the front or top of the shoulder, numbness or tingling down the arm, or pain that does not settle within a few minutes of stopping."
+      },
+      "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+      "sided": { "limb": "arm", "by": "pick", "auto": true },
+      "upperBody": true,
+      "icon": "💪",
+      "order": 60,
+      "options": [
+        {
+          "key": "variant",
+          "label": "Direction",
+          "values": ["er", "ir"],
+          "default": "er",
+          "labels": { "er": "External (out, away from stomach)", "ir": "Internal (in, toward stomach)" }
+        },
+        { "key": "rom", "label": "Rotation target", "values": [45, 60, 75, 90], "unit": "°", "default": 60 }
+      ],
+      "band": "yellow",
+      "vetted": true,
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["band", "door anchor", "towel (optional)"],
+      "muscles": { "primary": ["infraspinatus", "teres minor"], "secondary": ["posterior deltoid"] },
+      "tempo": "2 s out, brief pause, 3 s back.",
+      "dosage": "2–3 × 10–15 each arm.",
+      "progression": "Next band colour; a pause at the end of range.",
+      "regression": "Lighter band or no band; smaller range.",
+      "contraindications": "Sharp shoulder pain, or pain that lingers after the set.",
+      "view": "front",
+      "type": "reps",
+      "progress": {
+        "metric": {
+          "kind": "rotation",
+          "pts": ["WR", "EL"],
+          "per": ["SH", "EL"],
+          "flip": { "option": "variant", "when": "ir" }
+        },
+        "start": "calibrated",
+        "target": "opt:rom",
+        "targetIsDelta": true
+      },
+      "display": { "label": "rotation", "unit": "°", "from": "start" },
+      "faults": [
+        {
+          "id": "drift",
+          "label": "Elbow leaving your side",
+          "cue": "Elbow glued to your ribs",
+          "tip": "Once the elbow lifts away from the body the movement becomes a shoulder swing and the rotator cuff stops doing the work. Tuck a folded towel between elbow and ribs and keep it pinned.",
+          "severity": 3,
+          "metric": { "kind": "gap", "pts": ["EL", "SH"], "per": ["SH", "EL"] },
+          "rel": "change",
+          "op": ">",
+          "threshold": 22,
+          "minP": 0.25,
+          "cooldown": 4500,
+          "phase": "moving"
+        },
+        {
+          "id": "straight",
+          "label": "Elbow opening past 90°",
+          "cue": "Keep the elbow bent at ninety",
+          "tip": "If the elbow straightens the hand swings down and the movement stops being rotation. Forearm level with the floor, elbow at a right angle, for the whole rep.",
+          "severity": 2,
+          "metric": { "kind": "height", "pts": ["EL", "WR"], "per": ["SH", "EL"] },
+          "op": ">",
+          "threshold": 45,
+          "minP": 0.15,
+          "persist": 500
+        },
+        {
+          "id": "overbent",
+          "label": "Elbow bent past 90°",
+          "cue": "Forearm level — open the elbow to ninety",
+          "tip": "Pulling the hand up toward the chest shortens the lever and shifts the work to the biceps. Keep the forearm parallel to the floor.",
+          "severity": 1,
+          "metric": { "kind": "height", "pts": ["EL", "WR"], "per": ["SH", "EL"] },
+          "op": "<",
+          "threshold": -40,
+          "minP": 0.15,
+          "persist": 600,
+          "cooldown": 6000
+        },
+        {
+          "id": "twist",
+          "label": "Twisting the torso",
+          "cue": "Chest to the camera — arm only",
+          "tip": "Turning the trunk fakes extra range. Keep both shoulders square to the camera and accept less rotation.",
+          "severity": 2,
+          "metric": { "kind": "ratio", "pts": ["SH", "oSH"] },
+          "op": "<",
+          "threshold": 86,
+          "minP": 0.25,
+          "persist": 450,
+          "phase": "moving"
+        },
+        {
+          "id": "shrug",
+          "label": "Shrugging",
+          "cue": "Shoulder down, away from your ear",
+          "tip": "When the shoulder creeps up the upper trapezius takes over. Set the shoulder blade down and back before each rep and keep the neck long.",
+          "severity": 2,
+          "metric": "shrug",
+          "rel": "change",
+          "op": "<",
+          "threshold": -10,
+          "persist": 500
+        },
+        {
+          "id": "lean",
+          "label": "Leaning",
+          "cue": "Stand tall",
+          "tip": "Leaning sideways or back recruits the trunk. Feet hip-width, ribs down, stay upright.",
+          "severity": 1,
+          "metric": { "kind": "lean", "pts": [], "abs": true },
+          "rel": "change",
+          "op": ">",
+          "threshold": 12,
+          "persist": 600,
+          "cooldown": 6000
+        },
+        {
+          "id": "shallow",
+          "label": "Not reaching the rotation target",
+          "cue": "Rotate a little further",
+          "tip": "Take the forearm through the full comfortable range each rep; if it is not reachable, lower the target rather than cheat with the elbow.",
+          "severity": 1,
+          "rule": "shallow"
+        },
+        {
+          "id": "fast",
+          "label": "Too fast",
+          "cue": "Slower — two seconds out, three back",
+          "tip": "The return against the band is where the cuff works hardest. Two seconds out, brief pause, three seconds back.",
+          "severity": 1,
+          "rule": "fast",
+          "minMs": 2200
+        },
+        {
+          "id": "return",
+          "label": "Not returning fully",
+          "cue": "All the way back to the start",
+          "tip": "Finish each rep back at the start position so the muscle works through its whole range.",
+          "severity": 1,
+          "rule": "return",
+          "threshold": 0.25
+        }
+      ],
+      "pose": {
+        "A": { "armR": 5, "foreR": -70, "armL": 8 },
+        "B": { "armR": 5, "foreR": 20, "armL": 8 },
+        "work": { "shoulder": 1 },
+        "side": "R"
+      }
+    },
+    {
       "id": "pendulum",
       "name": "Pendulum",
       "type": "reps",

@@ -147,6 +147,29 @@ At the end of the day: **Save session file** (top right). One JSON with every
 move and take. Keep it with the commit: when a threshold is questioned later,
 the takes are re-checked in minutes without another recording session.
 
+## The tuning method
+
+Every move — new or existing, vetted or not — is tuned the same way, and the
+Studio's step 7 scores it against the rule before it will call it vetted:
+
+1. **Record** at least two clean takes, one take per live fault (exaggerating
+   that fault only), and a borderline take.
+2. **Measure** — *Suggest* reads start and target off the clean takes; the rep
+   chart must count every clean rep.
+3. **Faults** — for each live fault, *Suggest* puts the threshold between the
+   clean takes' edge and the fault take's middle. The strip under the fault
+   must read **quiet on every clean take, fires on every take of that fault**.
+   If it cannot, the measurement is wrong, not the number: pick a different
+   kind, a different reference length, or add a gate.
+4. **Check & save** — the *Tuning* card lists each live fault with its
+   clean / fault / borderline counts and a verdict. When every live fault
+   passes and the takes are there, the move can be marked **vetted**; the
+   entry records when, by whom and on how many takes under `_studio.tuned`.
+   Until then the move ships unvetted and lists after the vetted ones.
+
+The same numbers are what the coach runs, so a move that passes here passes on
+the person's phone.
+
 ## Editing an existing move
 
 The dropdown lists every move in the library. Choosing a catalogue move shows
@@ -155,18 +178,15 @@ records against it, watches the current thresholds fire on the takes, moves the
 numbers, rewrites the words, and saves. The draft remembers which file and which
 move it came from, so saving replaces the original.
 
-The ten hand-written moves cannot be edited here — their rules are code. They
-can still be recorded against, and step 5 shows how their current faults fire.
-That is how the field complaint "it keeps telling me to stop shrugging" gets a
-recording, a look at the shrug metric on that recording, and a number to change
-in `client/coach/library/band_row.js`.
+There are no code moves left: the ten that were hand-written are entries like
+the rest, so "it keeps telling me to stop shrugging" is a recording against
+band rows, a look at the shrug measurement on it, and a saved threshold.
 
 ## Installing a move
 
 A catalogue move installs itself: it is in the JSON file. `npm test` checks the
-file and `node scripts/catalog.js check` does the same without a server. For a
-hand-written move, copy `<id>.js` into `client/coach/library/` and list it in
-`client/data/manifest.json` under `code`.
+file and `node scripts/catalog.js check` does the same without a server. (`manifest.json` still has a `code` list for a hand-written move, should one
+ever be needed; it is empty.)
 
 ## Where things are
 

@@ -296,7 +296,7 @@
       /* a measurement without a number to compare against is a fault that can never fire — a mistake, not a choice */
       if (!['<', '>'].includes(out.op)) fail(where, `a fault with a metric needs "op": "<" or ">" (got ${JSON.stringify(out.op)})`);
       if (!Number.isFinite(out.threshold)) fail(where, `"threshold" must be a number (got ${JSON.stringify(out.threshold)})`);
-    } else if (out.op !== undefined || out.threshold !== undefined) fail(where, 'op / threshold without a metric — add "metric" or remove them');
+    } else if (!out.rule && (out.op !== undefined || out.threshold !== undefined)) fail(where, 'op / threshold without a metric — add "metric" or remove them');
     return out;
   }
   function resolveKeyframe(kf, shared, view, where) {

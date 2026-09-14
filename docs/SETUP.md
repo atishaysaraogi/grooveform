@@ -105,4 +105,4 @@ Prices: env vars, redeploy. Plan structure (period lengths, what each grants): `
 
 ## 9. Adding an exercise
 
-Each exercise is one file in `client/coach/library/` holding everything about it — metadata, camera set-up, measurement, faults with their cues and tips, and the position guide. Add a move by dropping a file there and adding one `<script>` tag in `client/index.html`; the server derives the catalogue from the same library, so it appears everywhere at once (catalogue, builder, routines). Mark it free or not with `FREE_EXERCISES`. Full reference: [EXERCISE-LIBRARY.md](EXERCISE-LIBRARY.md).
+Each exercise is one entry in `client/data/moves/<region>.json` holding everything about it — metadata, camera set-up, measurement, faults with their cues and tips, and the position guide. Add a move in the Studio, in a text editor (the file opens with a guide to every field) or with `node scripts/catalog.js new`; the server derives the catalogue from the same files, so it appears everywhere at once (catalogue, builder, routines). Mark it free or not with `FREE_EXERCISES`. Full reference: [EXERCISE-LIBRARY.md](EXERCISE-LIBRARY.md).

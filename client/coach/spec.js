@@ -278,7 +278,7 @@
     for (const o of spec.options || []) options.push({ key: o.key, label: o.label, values: o.values.slice(), unit: o.unit, default: o.default, labels: o.labels ? { ...o.labels } : undefined });
     if (spec.band) options.push(BAND(spec.band === true ? 'none' : spec.band));
 
-    const focusNames = Array.isArray(spec.focus) ? spec.focus : spec.focus ? [spec.focus] : (prog ? [prog.metric.pts[prog.metric.pts.length - 1]] : holdConds.length ? [holdConds[0].metric.pts[0]] : []);
+    const focusNames = (Array.isArray(spec.focus) ? spec.focus : spec.focus ? [spec.focus] : (prog ? [prog.metric.pts[prog.metric.pts.length - 1]] : holdConds.length ? [holdConds[0].metric.pts[0]] : [])).filter(Boolean);
     const autoSide = !!(spec.sided && spec.sided.auto);
 
     /* a gate is met when the option has that value, the hold position is (not) held, or a measurement passes its comparison */

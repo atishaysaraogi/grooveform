@@ -11,12 +11,11 @@ const LIB_DIR = path.join(ROOT, 'client', 'coach', 'library');
 const library = require(path.join(ROOT, 'client', 'coach', 'exercise-library.js'));
 const engine = require(path.join(ROOT, 'client', 'coach', 'engine.js'));   // loads every move
 
-const files = fs.readdirSync(LIB_DIR).filter((f) => f.endsWith('.js')).sort();
+const files = fs.existsSync(LIB_DIR) ? fs.readdirSync(LIB_DIR).filter((f) => f.endsWith('.js')).sort() : [];   // hand-written code moves: none today, every move is data
 const handWritten = engine.EXERCISES.filter((e) => !e.catalog);
 const catalogue = engine.EXERCISES.filter((e) => e.catalog);
 
 test('every file in the library folder registers exactly one hand-written move', () => {
-  assert.ok(files.length >= 1, 'the library folder is empty');
   assert.equal(handWritten.length, files.length);
   assert.deepEqual(handWritten.map((e) => e.id).sort(), files.map((f) => f.replace(/\.js$/, '')).sort(),
     'a hand-written move id must match its filename');
@@ -63,19 +62,22 @@ test('every shipped file checks clean, and a mistake is reported with the file, 
   const others = (skip) => data.files.filter((f) => f.name !== skip).flatMap((f) => f.json.moves.map((m) => m.id));
   for (const f of data.files) assert.deepEqual(catalog.checkFile(f.json, f.name, data, others(f.name)), [], f.name);
   const knee = data.files.find((f) => f.name.endsWith('knee.json'));
-  const mutate = (fn) => { const j = JSON.parse(JSON.stringify(knee.json)); fn(j); return catalog.checkFile(j, knee.name, data, others(knee.name)); };
+  /* moves by id, so the checks do not depend on where in the file each one sits */
+  const mutate = (fn) => { const j = JSON.parse(JSON.stringify(knee.json)); const by = (id) => j.moves.find((m) => m.id === id); fn(j, by); return catalog.checkFile(j, knee.name, data, others(knee.name)); };
   const one = (fn) => { const p = mutate(fn); assert.equal(p.length, 1, JSON.stringify(p)); return p[0]; };
-  assert.match(one((j) => { j.moves[0].sumary = j.moves[0].summary; }), /knee.json › quad_set: unknown field "sumary" — did you mean "summary"/);
-  assert.match(one((j) => { j.moves[1].progress.metric = 'kne'; }), /knee.json › slr › progress: unknown measurement "kne"/);
-  assert.match(one((j) => { j.moves[7].faults[0].threshold = 'sixty'; }), /seated_knee_ext/);
-  assert.match(one((j) => { j.moves[7].faults.push({ template: 'lean' }); }), /template "lean" has no threshold/);
-  assert.match(one((j) => { j.moves[7].pose.A.thigh_angle = 10; }), /pose.A: unknown field "thigh_angle"/);
-  assert.match(one((j) => { j.moves[7].id = 'quad_set'; }), /id "quad_set" is used twice/);
-  assert.match(one((j) => { j.moves[7].id = 'heelslide'; }), /heelslide.*used twice/);
-  assert.match(one((j) => { j.moves[0].tracking = 'form'; }), /quad_set/);
-  assert.match(one((j) => { delete j.moves[0].summary; }), /quad_set.*summary/);
-  assert.match(one((j) => { j.moves[0]._note = 'a note is fine'; j.moves[0].faults[0]._todo = 'so is this'; j.moves[0].summary = ''; }), /summary/);
-  assert.deepEqual(mutate((j) => { j.moves[0]._note = 'notes are ignored'; j._todo = 'anywhere'; }), []);
+  assert.match(one((j, by) => { by('quad_set').sumary = by('quad_set').summary; }), /knee.json › quad_set: unknown field "sumary" — did you mean "summary"/);
+  assert.match(one((j, by) => { by('slr').progress.metric = 'kne'; }), /knee.json › slr › progress: unknown measurement "kne"/);
+  assert.match(one((j, by) => { by('seated_knee_ext').faults[0].threshold = 'sixty'; }), /seated_knee_ext/);
+  assert.match(one((j, by) => { by('seated_knee_ext').faults.push({ template: 'lean' }); }), /template "lean" has no threshold/);
+  assert.match(one((j, by) => { by('seated_knee_ext').pose.A.thigh_angle = 10; }), /pose.A: unknown field "thigh_angle"/);
+  assert.match(one((j, by) => { by('seated_knee_ext').id = 'quad_set'; }), /id "quad_set" is used twice/);
+  assert.match(one((j, by) => { by('seated_knee_ext').id = 'slr'; }), /slr.*used twice/);
+  assert.match(one((j, by) => { by('heelslide').faults[0].metric.per = ['KNEE']; }), /heelslide.*per must be/);
+  assert.match(one((j, by) => { by('heelslide').faults[1].when[0].op = '='; }), /heelslide.*when needs op/);
+  assert.match(one((j, by) => { by('quad_set').tracking = 'form'; }), /quad_set/);
+  assert.match(one((j, by) => { delete by('quad_set').summary; }), /quad_set.*summary/);
+  assert.match(one((j, by) => { by('quad_set')._note = 'a note is fine'; by('quad_set').faults[0]._todo = 'so is this'; by('quad_set').summary = ''; }), /summary/);
+  assert.deepEqual(mutate((j, by) => { by('quad_set')._note = 'notes are ignored'; j._todo = 'anywhere'; }), []);
   assert.throws(() => catalog.readDataSync(path.join(__dirname, 'no-such-dir')), /ENOENT/);
 });
 
@@ -107,7 +109,10 @@ test('every declared contact holds still between the keyframes', () => {
 /* The catalogue is where a physio edits. Every entry must carry the full record, say honestly
    what the camera can do with it, and draw a figure. */
 test('every catalogue move is complete, honest about tracking, and has a figure', () => {
-  assert.ok(catalogue.length >= 60, `expected a comprehensive catalogue, found ${catalogue.length}`);
+  assert.ok(catalogue.length >= 135, `expected the whole library as data, found ${catalogue.length}`);
+  const vetted = catalogue.filter((e) => e.vetted);
+  assert.ok(vetted.length >= 10, 'the ten vetted moves are data too');
+  for (const e of vetted) assert.equal(e.tracking, 'form', e.id + ': a vetted move is coached on form');
   const figures = new Set((globalThis.__pendingFigures || []).map((f) => f[0]));
   for (const ex of catalogue) {
     const w = (m) => `${ex.id}: ${m}`;

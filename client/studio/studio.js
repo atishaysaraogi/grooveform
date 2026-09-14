@@ -93,11 +93,12 @@
       _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
     if (r.progress) s.progress = { targetIsDelta: false, ...r.progress };
+    if (r.display) s.display = { ...r.display }; if (r.enterCue) s.enterCue = r.enterCue;
     if (r.hold) s.hold = { conditions: r.hold.conditions.map((c) => ({ rel: 'abs', min: null, max: null, ...c })) };
     s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? 0, persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
     s.guide = { surface: '', cannotSee: '', stop: '', ...JSON.parse(JSON.stringify(r.guide || {})) };
     if (!Array.isArray(s.guide.regions) || !s.guide.regions.length) s.guide.regions = [{ name: 'Trunk & pelvis', points: [] }];
-    if (raw._studio) { const m = raw._studio; s.screen = m.screen || {}; s.ptType = m.ptType || s.ptType; s.notes = m.notes || ''; }
+    if (raw._studio) { const m = raw._studio; s.screen = m.screen || {}; s.ptType = m.ptType || s.ptType; s.notes = m.notes || ''; if (m.tuned) s._tuned = m.tuned; }
     return s;
   }
   /* fold a value back to its name in shared.json, so the file stays as tidy as a hand-written one */
@@ -135,24 +136,29 @@
     if (s.band !== false && s.band !== undefined) put('band', s.band);
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
-    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start, target: s.progress.target }; if (s.progress.targetIsDelta) p.targetIsDelta = true; put('progress', p); }
-    if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; return o; }); if (cs.length) { let named = null; for (const [n, v] of Object.entries(SHARED().holds)) if (same(v, cs)) named = n; put('hold', { conditions: named || cs }); } }
+    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1; put('progress', p); }
+    if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; if (c.when && c.when.length) o.when = c.when; return o; }); if (cs.length) { let named = null; for (const [n, v] of Object.entries(SHARED().holds)) if (same(v, cs)) named = n; put('hold', { conditions: named || cs }); } }
     put('faults', (s.faults || []).map((f) => {
       const base = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, severity: +f.severity || 2 };
-      if (f.rule) return { ...base, rule: f.rule, ...(f.rule === 'fast' ? { minMs: f.minMs } : {}) };
+      if (f.rule) return { ...base, rule: f.rule, ...(f.rule === 'fast' ? { minMs: f.minMs } : f.rule === 'return' && Number.isFinite(f.threshold) ? { threshold: f.threshold } : {}) };
       if (!tracked || !isLive(f)) return base;
       const o = { ...base, metric: f.metric }; if (f.rel === 'change') o.rel = 'change'; o.op = f.op; o.threshold = f.threshold;
-      if (f.minP != null && f.minP !== 0) o.minP = f.minP; if (f.persist && f.persist !== st.fault.persist) o.persist = f.persist; if (f.cooldown) o.cooldown = f.cooldown; if (f.phase) o.phase = f.phase; if (f.invalidates) o.invalidates = true;
+      if (f.scale && f.scale.times) o.scale = f.scale;
+      if (f.minP != null && f.minP !== 0) o.minP = f.minP; if (f.persist && f.persist !== st.fault.persist) o.persist = f.persist; if (f.cooldown && f.cooldown !== st.fault.cooldown) o.cooldown = f.cooldown; if (f.phase && (s.type !== 'hold' || f.phase === 'any')) o.phase = f.phase;
+      const when = (f.when || []).filter((w) => typeof w === 'string' || w.option !== undefined || (w.metric && w.metric.pts.length >= ((SPEC.KINDS[w.metric.kind] || {}).n || 0) && Number.isFinite(w.threshold))).map((w) => typeof w === 'string' || w.option !== undefined ? w : { metric: foldMetric(w.metric), ...(w.rel === 'change' ? { rel: 'change' } : {}), op: w.op, threshold: w.threshold });
+      if (when.length) o.when = when; if (f.invalidates) o.invalidates = true;
       return foldFault(o);
     }));
     put('guide', { surface: s.guide.surface, stop: s.guide.stop, cannotSee: inh.cannotSee && s.guide.cannotSee === st.cannotSee ? undefined : s.guide.cannotSee, regions: (s.guide.regions || []).filter((r) => r.name && r.points.some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) });
+    if (s.display && Object.keys(s.display).length) put('display', s.display); put('enterCue', s.enterCue);
     if (s.pose) { const pose = JSON.parse(JSON.stringify(s.pose)); if (Object.keys(s.muscles || {}).length) pose.work = { ...s.muscles }; put('pose', pose); }
     else if (s.figure) put('figure', { ...s.figure, w: { ...(s.muscles || {}) } });
+    if (s.vetted) e.vetted = true;
     put('tempo', s.tempo); put('dosage', s.dosage); put('progression', s.progression); put('regression', s.regression); put('contraindications', s.contraindications);
     const sources = listFrom(s.sourcesText.replace(/\n/g, ',')).map((line) => { const [name, url] = line.split('|').map((x) => x.trim()); return url ? { name, url } : { name }; });
     put('sources', sources);
     if (s.order && s.order !== 500) put('order', s.order);
-    e._studio = { screen: s.screen || {}, ptType: s.ptType, notes: s.notes || '', edited: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined };
+    e._studio = { screen: s.screen || {}, ptType: s.ptType, notes: s.notes || '', edited: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, ...(s._tuned ? { tuned: s._tuned } : {}) };
     return e;
   }
   /* the file this draft belongs in, with the draft in it (replacing the move it was opened from) */
@@ -222,13 +228,17 @@
     return out;
   }
   /* Raw metric trace (no engine) — used to suggest thresholds and to plot a metric before it is wired into a rule. */
-  function trace(metric, take, S) {
-    const smoother = new E.PoseSmoother(); const aspect = take.aspect || 16 / 9; const out = [];
+  /* The option values a draft would run with (its defaults), for measurements that flip on an option. */
+  function draftOpts(s) { const o = {}; for (const opt of (s && s.options) || []) o[opt.key] = opt.default; return o; }
+  function trace(metric, take, S, opts) {
+    const smoother = new E.PoseSmoother(); const aspect = take.aspect || 16 / 9; const out = []; const side = S || take.side || 'L';
+    const calT = take.calT ?? 1200; let ref = null; opts = opts || draftOpts(cur());
     for (const fr of take.frames) {
       if (!fr[1]) continue;
       const pts = smoother.update(fr[1].map((l) => ({ x: l[0], y: l[1], z: l[2], visibility: l[3] })), fr[0], aspect);
       if (!pts) continue;
-      try { out.push([fr[0], SPEC.evalMetric(metric, pts, S || take.side || 'L', K)]); } catch { }
+      if (!ref && fr[0] >= calT) { try { ref = SPEC.calibrateRef([metric], pts, K, opts); } catch { } }   /* the still frame: reference lengths, baselines */
+      try { out.push([fr[0], SPEC.evalMetric(metric, pts, side, K, ref, opts)]); } catch { }
     }
     return out;
   }
@@ -417,6 +427,7 @@
         <div class="fields two">${field('Counts', chips('type', ['reps', 'hold'], s.type, { reps: 'Reps', hold: 'Seconds held' }))}${field('Camera view', chips('view', ['front', 'side'], s.view, { front: 'Facing the camera', side: 'Side-on' }))}</div>
         ${field('One-sided?', chips('sidedKind', ['none', 'leg', 'arm', 'side'], s.sided ? s.sided.limb : 'none', { none: 'No — both at once', leg: 'One leg', arm: 'One arm', side: 'One side' }), 'A one-sided move offers Left / Right / Both on the page.')}
         ${s.sided ? field('Which limb is working is decided by', chips('sided.by', ['pick', 'camera'], s.sided.by, { pick: 'The person’s choice (front-on)', camera: 'The limb nearest the camera (side-on)' })) : ''}
+        ${s.sided && s.sided.by === 'pick' ? field('If no side was chosen', chips('sided.auto', [false, true], !!s.sided.auto, { false: 'Assume the left', true: 'Follow whichever limb moves' })) : ''}
         ${field('Upper body only', chips('upperBody', [false, true], s.upperBody, { false: 'Legs must be in frame', true: 'Works from the hips up' }), 'Upper-body moves can be done seated at a desk with only the torso in frame.')}
         ${field('What the camera does', chips('tracking', ['form', 'reps', 'none'], s.tracking || 'form', { form: 'Counts and judges', reps: 'Counts only', none: 'Nothing — guide only' }), '“Counts and judges” needs at least one fault with a measurement and a threshold; “counts only” needs the progress measurement; “nothing” lists the guide and the person logs the set by hand.')}
         ${field('Level', chips('level', ['beginner', 'intermediate', 'advanced'], s.level || 'beginner'))}
@@ -440,6 +451,7 @@
       if (k === 'targetsText') { const t = s.targetsText.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0); if (t.length) { s.targets = t; if (!t.includes(s.defaultTarget)) s.defaultTarget = t[Math.floor(t.length / 2)]; } }
       if (k === 'sidedKind') { const v = document.querySelector('[data-chips="sidedKind"] .chip[aria-pressed="true"]').dataset.v; s.sided = v === 'none' ? null : { limb: v, by: s.sided?.by || (s.view === 'side' ? 'camera' : 'pick') }; delete s.sidedKind; }
       if (k === 'ptType') { if (s.ptType === 'A' || s.ptType === 'D') s.type = 'reps'; if (s.ptType === 'B' || s.ptType === 'C') s.type = 'hold'; }
+      if (k === 'sided.auto' && s.sided && !s.sided.auto) delete s.sided.auto;
       if (['sidedKind', 'ptType', 'targetsText', 'type', 'view', 'band', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
       else saveState();
     });
@@ -623,12 +635,32 @@
       <div class="row"><select data-mkind style="width:auto">${Object.entries(SPEC.KINDS).map(([k, v]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
       <div class="lms">${Array.from({ length: n }, (_, i) => `<button type="button" class="slot ${m.pts[i] ? 'filled' : ''}" data-slot="${i}" aria-pressed="${i === (m.pts.length < n ? m.pts.length : -1)}">${m.pts[i] ? esc(lmWord(m.pts[i])) : (m.kind === 'offset' && i === 2 ? 'point' : m.kind === 'angle' && i === 1 ? 'joint' : 'pick…')}</button>`).join('')}</div></div>
       <div class="help">${esc(kind.help)}</div>
+      ${metricExtras(m)}
       ${n ? `<div class="lm-pick">${LM_GROUPS.map(([h, names]) => `<div><div class="col-h">${h}</div>${names.map((nm) => `<button type="button" data-lm="${nm}">${esc(lmWord(nm))}</button>`).join('')}</div>`).join('')}</div>` : ''}
     </div>`;
+  }
+  const SEGMENTS = [['torso', 'torso'], ['SH-EL', 'upper arm'], ['EL-WR', 'forearm'], ['HIP-KNEE', 'thigh'], ['KNEE-ANK', 'shin'], ['SH-oSH', 'shoulder width'], ['HIP-oHIP', 'hip width'], ['EAR-oEAR', 'ear to ear'], ['SH-HIP', 'trunk']];
+  const PCT = ['dist', 'rise', 'height', 'ratio', 'gap', 'rotation', 'near'];
+  /* the measurement's extras: what a % is of, which way is +, ignore the sign, negate for an option value */
+  function metricExtras(m) {
+    const spec = cur(); const opts = (spec && spec.options || []).filter((o) => Array.isArray(o.values) && o.values.length);
+    const per = Array.isArray(m.per) ? m.per.join('-') : 'torso';
+    const parts = [];
+    if (PCT.includes(m.kind)) parts.push(`<label class="mini">% of <select data-mk="per">${SEGMENTS.map(([v, l]) => `<option value="${v}" ${v === per ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`);
+    if (['gap', 'rotation', 'lean'].includes(m.kind)) parts.push(`<label class="mini">+ is <select data-mk="sign"><option value="outward" ${m.sign !== 'forward' ? 'selected' : ''}>away from the midline (front view)</option><option value="forward" ${m.sign === 'forward' ? 'selected' : ''}>the way the toes point (side view)</option></select></label>`);
+    if (!['angle', 'ratio', 'dist', 'near', 'rise'].includes(m.kind)) parts.push(`<label class="mini"><input type="checkbox" data-mk="abs" ${m.abs ? 'checked' : ''}> ignore the sign</label>`);
+    if (opts.length) parts.push(`<label class="mini">negate when <select data-mk="flip"><option value="">never</option>${opts.flatMap((o) => o.values.map((v) => `<option value="${esc(o.key + '=' + v)}" ${m.flip && m.flip.option === o.key && String(m.flip.when) === String(v) ? 'selected' : ''}>${esc(o.label)} = ${esc((o.labels || {})[v] || v)}</option>`)).join('')}</select></label>`);
+    return parts.length ? `<div class="row extras">${parts.join('')}</div>` : '';
   }
   function wireMetricEditors(root, s, after) {
     root.querySelectorAll('[data-mpath]').forEach((box) => {
       const get = () => box.dataset.mpath.split('.').reduce((o, k) => o[k], s);
+      box.querySelectorAll('[data-mk]').forEach((el) => { el.onchange = () => { const m = get(); const k = el.dataset.mk;
+        if (k === 'per') { if (el.value === 'torso') delete m.per; else m.per = el.value.split('-'); }
+        if (k === 'sign') { if (el.value === 'outward') delete m.sign; else m.sign = el.value; }
+        if (k === 'abs') { if (el.checked) m.abs = true; else delete m.abs; }
+        if (k === 'flip') { if (!el.value) delete m.flip; else { const [option, when] = el.value.split('='); const o = (s.options || []).find((x) => x.key === option); const v = o && o.values.find((x) => String(x) === when); m.flip = { option, when: v === undefined ? when : v }; } }
+        saveState(); after(); }; });
       let slot = [...box.querySelectorAll('.slot')].findIndex((b) => b.getAttribute('aria-pressed') === 'true'); if (slot < 0) slot = 0;
       box.querySelector('[data-mkind]').onchange = (e) => { const m = get(); m.kind = e.target.value; m.pts = m.pts.slice(0, SPEC.KINDS[m.kind].n); saveState(); after(); };
       box.querySelectorAll('.slot').forEach((b) => { b.onclick = () => { slot = +b.dataset.slot; box.querySelectorAll('.slot').forEach((c) => c.setAttribute('aria-pressed', c === b)); }; });
@@ -656,6 +688,9 @@
             ${field('Start value', `<div class="row">${chips('progress.startMode', ['calibrated', 'fixed'], pr.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed number' })}${pr.start === 'calibrated' ? '' : `<input type="number" step="1" data-k="progress.start" value="${esc(pr.start)}" style="width:110px">`}</div>`, 'Calibrated = whatever the metric reads while the person holds the start pose. Use it unless the start pose varies between people in a way that matters.')}
             ${field('Target value', `<div class="row"><input type="number" step="1" data-k="progress.targetNum" value="${esc(typeof pr.target === 'number' ? pr.target : (romOpt ? romOpt.default : ''))}" style="width:110px" ${romOpt ? 'disabled' : ''}><span class="muted">${esc((SPEC.KINDS[pr.metric.kind] || {}).unit || '')}</span></div>`, pr.start === 'calibrated' ? (pr.targetIsDelta ? 'Interpreted as a change from the calibrated start.' : 'Absolute value the metric must reach.') : '')}
             ${pr.start === 'calibrated' ? field('Target is', chips('progress.targetIsDelta', [false, true], !!pr.targetIsDelta, { false: 'An absolute value', true: 'A change from the start' })) : ''}
+            ${pr.start === 'calibrated' && pr.targetIsDelta ? field('During the rep the reading', chips('progress.delta', [1, -1], pr.delta === -1 ? -1 : 1, { 1: 'rises', '-1': 'falls (a knee angle closing)' })) : ''}
+            ${pr.start === 'calibrated' ? field('Treat the start as at least / at most', `<div class="row"><input type="number" step="1" data-k="progress.startMin" value="${pr.startMin ?? ''}" placeholder="min" style="width:90px"><input type="number" step="1" data-k="progress.startMax" value="${pr.startMax ?? ''}" placeholder="max" style="width:90px"></div>`, 'A knee that calibrates at 150° can be treated as 160°. Leave empty for no clamp.') : ''}
+            ${field('Live readout', `<div class="row"><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="bend" style="width:120px"><input type="text" data-k="display.unit" value="${esc((s.display || {}).unit || '')}" placeholder="°" style="width:60px">${chips('display.from', ['start', 'abs'], (s.display || {}).from === 'abs' ? 'abs' : 'start', { start: 'change from the start', abs: 'raw reading' })}</div>`, 'What the person sees during the set: “62° / 90° bend”.')}
             ${field('Let the user choose the target?', `<div class="row">${chips('romMode', [false, true], !!romOpt, { false: 'No, one target', true: 'Yes — a “range” option' })}${romOpt ? `<input type="text" data-k="romValues" value="${esc(romOpt.values.join(', '))}" placeholder="45, 60, 75, 90" style="width:160px">` : ''}</div>`, romOpt ? 'The last value is the default. Rehab moves usually want this — early weeks aim lower.' : '')}
             <button class="btn ghost small" id="suggest" ${noTakes ? 'disabled' : ''}>Suggest start and target from clean takes</button>
           </div></div>
@@ -669,10 +704,13 @@
       <div class="st-grid wide-left"><div class="stack">${conds.map((c, i) => `<div class="card"><div class="row"><h3>Condition ${i + 1}</h3><span class="spacer"></span>${conds.length > 1 ? `<button class="btn ghost small" data-delc="${i}">Remove</button>` : ''}</div>${metricEditor(`hold.conditions.${i}.metric`, c.metric)}
         <div class="fields two" style="margin-top:10px">${field('At least', `<input type="number" step="1" data-k="hold.conditions.${i}.min" value="${c.min ?? ''}">`)}${field('At most', `<input type="number" step="1" data-k="hold.conditions.${i}.max" value="${c.max ?? ''}">`)}</div>
         ${field('Measured as', chips(`hold.conditions.${i}.rel`, ['abs', 'change'], c.rel || 'abs', { abs: 'Absolute value', change: 'Change from the calibrated start' }))}
+        ${(s.options || []).some((o) => Array.isArray(o.values) && o.values.length) ? field('Only for', `<select data-cw="${i}"><option value="">every option value</option>${(s.options || []).filter((o) => Array.isArray(o.values) && o.values.length).flatMap((o) => o.values.map((v) => `<option value="${esc(o.key + '=' + v)}" ${c.when && c.when[0] && c.when[0].option === o.key && String(c.when[0].is) === String(v) ? 'selected' : ''}>${esc(o.label)} = ${esc((o.labels || {})[v] || v)}</option>`)).join('')}</select>`, 'A condition that applies only for one option value — a straight knee for the calf stretch, a bent one for the soleus.') : ''}
         ${state.takes.length ? `<canvas class="chart" id="chart-c${i}" style="margin-top:10px"></canvas>` : ''}</div>`).join('')}
         <button class="btn ghost" id="addc">Add a condition</button></div>
         <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
-        <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'Last point of the first condition' })}</div></div></div>
+        <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'First point of the first condition' })}</div>
+        <div class="card"><div class="fields">${field('Live readout', `<div class="row"><select data-k="display.condition">${conds.map((c, i) => `<option value="${i}" ${((s.display || {}).condition || 0) === i ? 'selected' : ''}>condition ${i + 1}</option>`).join('')}</select><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="knee" style="width:110px"><input type="text" data-k="display.aim" value="${esc((s.display || {}).aim || '')}" placeholder="90°" style="width:80px"></div>`, 'What the person sees: “97° knee · aim 90°”.')}
+          ${field('When out of position, the coach says', text('enterCue', s.enterCue || '', 'Slide down the wall until your knees are at ninety'), 'Spoken after a few seconds out of position, instead of silence.')}</div></div></div></div>
       <div class="row"><button class="btn ghost" id="back">← Record</button><span class="spacer"></span><button class="btn primary" id="next">Faults →</button></div></div>`;
   }
   function wireMeasure(s) {
@@ -682,6 +720,10 @@
       if (k === 'progress.targetNum') { const v = s.progress.targetNum; delete s.progress.targetNum; if (Number.isFinite(v)) { s.progress.target = v; resim(); drawMeasureCharts(s); } return; }
       if (k === 'romMode') { const on = document.querySelector('[data-chips="romMode"] .chip[aria-pressed="true"]').dataset.v === 'true'; delete s.romMode; s.options = (s.options || []).filter((o) => o.key !== 'rom'); if (on) { const vals = [45, 60, 75, 90]; s.options.push({ key: 'rom', label: 'Range target', values: vals, unit: (SPEC.KINDS[s.progress.metric.kind] || {}).unit || '', default: vals[vals.length - 1] }); s.progress.target = 'opt:rom'; } else if (typeof s.progress.target === 'string') s.progress.target = 90; rerender(); return; }
       if (k === 'romValues') { const o = s.options.find((x) => x.key === 'rom'); const vals = s.romValues.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n)); delete s.romValues; if (o && vals.length) { o.values = vals; o.default = vals[vals.length - 1]; resim(); drawMeasureCharts(s); } return; }
+      if (k === 'progress.delta') { s.progress.delta = document.querySelector('[data-chips="progress.delta"] .chip[aria-pressed="true"]').dataset.v === '-1' ? -1 : 1; if (s.progress.delta === 1) delete s.progress.delta; resim(); drawMeasureCharts(s); return; }
+      if (k === 'progress.startMin' || k === 'progress.startMax') { if (!Number.isFinite(s.progress[k.slice(9)])) delete s.progress[k.slice(9)]; resim(); drawMeasureCharts(s); return; }
+      if (k === 'enterCue') { if (!s.enterCue) delete s.enterCue; saveState(); return; }
+      if (k.startsWith('display.')) { s.display = s.display || {}; if (k === 'display.condition') s.display.condition = +s.display.condition; if (k === 'display.from') s.display.from = document.querySelector('[data-chips="display.from"] .chip[aria-pressed="true"]').dataset.v; for (const kk of Object.keys(s.display)) if (s.display[kk] === '' || s.display[kk] === 'start') delete s.display[kk]; if (!Object.keys(s.display).length) delete s.display; saveState(); return; }
       if (k === 'progress.targetIsDelta' || k === 'focus' || k.startsWith('hold.conditions')) { if (k.endsWith('.rel') || k === 'progress.targetIsDelta' || k === 'focus') rerender(); else { resim(); drawMeasureCharts(s); } return; }
     });
     wireMetricEditors(root, s, rerender);
@@ -698,6 +740,7 @@
       toast(`Start ≈ ${startV.toFixed(0)}, clean takes reach ≈ ${target.toFixed(0)}`); saveState(); rerender();
     };
     root.querySelectorAll('[data-delc]').forEach((b) => { b.onclick = () => { s.hold.conditions.splice(+b.dataset.delc, 1); saveState(); rerender(); }; });
+    root.querySelectorAll('[data-cw]').forEach((el) => { el.onchange = () => { const c = s.hold.conditions[+el.dataset.cw]; if (!el.value) delete c.when; else { const [option, when] = el.value.split('='); const o = (s.options || []).find((x) => x.key === option); const v = o && o.values.find((x) => String(x) === when); c.when = [{ option, is: v === undefined ? when : v }]; } saveState(); rerender(); }; });
     if ($('addc')) $('addc').onclick = () => { s.hold.conditions.push({ metric: { kind: 'angle', pts: [] }, min: null, max: null, rel: 'abs' }); saveState(); render(); };
     $('back').onclick = () => go('record'); $('next').onclick = () => go('faults');
     drawMeasureCharts(s);
@@ -723,8 +766,25 @@
     const order = ['clean', 'this fault', 'borderline', 'fault', 'setup', 'other'];
     return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}</div>`;
   }
+  /* "Only when": option values, another measurement's comparison, in / out of the held position; and a
+     threshold that grows with another reading. */
+  function gatesEditor(s, f, i) {
+    const opts = (s.options || []).filter((o) => Array.isArray(o.values) && o.values.length);
+    const gates = f.when || [];
+    const row = (w, j) => {
+      const del = `<button type="button" class="btn ghost small" data-delw="${i}.${j}">✕</button>`;
+      if (typeof w === 'string') return `<div class="row gate"><span>${w === 'inPosition' ? 'while in the held position' : 'while out of the held position'}</span>${del}</div>`;
+      if (w.option !== undefined) { const o = opts.find((x) => x.key === w.option) || { values: [], labels: {} }; return `<div class="row gate"><span>${esc(w.option)} is</span><select data-wv="${i}.${j}">${o.values.map((v) => `<option value="${esc(v)}" ${String(v) === String(w.is) ? 'selected' : ''}>${esc((o.labels || {})[v] || v)}</option>`).join('')}</select>${del}</div>`; }
+      return `<div class="gate">${metricEditor(`faults.${i}.when.${j}.metric`, w.metric)}<div class="row">${chips(`faults.${i}.when.${j}.rel`, ['abs', 'change'], w.rel || 'abs', { abs: 'Absolute', change: 'Change from start' })}${chips(`faults.${i}.when.${j}.op`, ['>', '<'], w.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.when.${j}.threshold" value="${w.threshold ?? ''}" style="width:100px">${del}</div></div>`;
+    };
+    const sc = f.scale;
+    return `<div class="gates"><div class="row" style="align-items:center;gap:8px"><b style="font-size:.85rem">Only when</b>${gates.length ? '' : '<span class="muted" style="font-size:.85rem">always</span>'}<span class="spacer"></span>
+        ${opts.length ? `<button type="button" class="btn ghost small" data-addw="${i}.option">+ option value</button>` : ''}<button type="button" class="btn ghost small" data-addw="${i}.metric">+ measurement</button>${s.type === 'hold' ? `<button type="button" class="btn ghost small" data-addw="${i}.inPosition">+ in position</button><button type="button" class="btn ghost small" data-addw="${i}.notInPosition">+ out of position</button>` : ''}</div>
+      ${gates.map(row).join('')}
+      ${s.type === 'reps' ? `<div class="row" style="gap:10px;margin-top:6px"><span style="font-size:.85rem"><b>Threshold grows</b> with the progress reading ×</span><input type="number" step="0.05" data-k="faults.${i}.scaleTimes" value="${sc ? sc.times : ''}" placeholder="0" style="width:90px"><span class="muted" style="font-size:.8rem">e.g. 0.35: a hip hike of 12 + 0.35 × the raise</span></div>` : ''}</div>`;
+  }
   function faultCard(s, f, i) {
-    const isRule = f.rule === 'shallow' || f.rule === 'fast';
+    const isRule = ['shallow', 'fast', 'return'].includes(f.rule);
     return `<div class="fault-card" data-fi="${i}">
       <div class="head"><input type="text" data-k="faults.${i}.label" value="${esc(f.label)}" placeholder="Fault name, e.g. Hip hiking"><span class="muted" style="font-size:.8rem">id ${esc(f.id)}</span><span class="spacer"></span>${chips(`faults.${i}.severity`, [1, 2, 3], f.severity || 2, { 1: 'Sev 1', 2: 'Sev 2', 3: 'Sev 3' })}<button class="btn ghost small" data-delf="${i}">✕</button></div>
       <div class="fields two">
@@ -732,10 +792,11 @@
         ${field('Written tip (read after the set)', area(`faults.${i}.tip`, f.tip, 'If the pelvis lifts on the working side the leg is being hitched, not lifted. Keep both hip bones level and accept a smaller raise.', 2))}
       </div>
       ${isRule ? '' : field('Watched by', chips(`faults.${i}.listed`, [false, true], !!f.listed, { false: 'The camera — measured below', true: 'The person — listed on the page only' }))}
-      ${isRule ? `<p class="notice">${f.rule === 'shallow' ? 'Built-in rule: the rep did not reach the target (peak between 32% and 85%). No measurement needed.' : `Built-in rule: the rep took less than <input type="number" data-k="faults.${i}.minMs" value="${f.minMs || 2000}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> ms.`}</p>`
+      ${isRule ? `<p class="notice">${f.rule === 'shallow' ? 'Built-in rule: the rep did not reach the target (peak between the attempt and full thresholds). No measurement needed.' : f.rule === 'return' ? `Built-in rule: the rep ended above <input type="number" step="0.05" data-k="faults.${i}.threshold" value="${f.threshold ?? 0.25}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> of the way to the target — it did not come all the way back.` : `Built-in rule: the rep took less than <input type="number" data-k="faults.${i}.minMs" value="${f.minMs || 2000}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> ms.`}</p>`
         : f.listed ? '<p class="notice">Listed under “what goes wrong” for the person to watch; the camera does not check it.</p>' : `${metricEditor(`faults.${i}.metric`, f.metric)}
         <div class="row" style="gap:14px">${field('Measured as', chips(`faults.${i}.rel`, ['abs', 'change'], f.rel || 'abs', { abs: 'Absolute', change: 'Change from start' }))}${field('Fault when', `<div class="row">${chips(`faults.${i}.op`, ['>', '<'], f.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.threshold" value="${f.threshold ?? ''}" style="width:100px"><span class="muted">${esc((SPEC.KINDS[f.metric.kind] || {}).unit || '')}</span><button class="btn ghost small" data-suggest="${i}">Suggest</button></div>`)}</div>
-        <div class="row" style="gap:14px">${s.type === 'reps' ? field('Only once the rep is', chips(`faults.${i}.minP`, [0, 0.2, 0.3, 0.5], f.minP ?? 0.3, { 0: 'any time', 0.2: '20% under way', 0.3: '30% under way', 0.5: 'half way' })) : ''}${field('Must persist', chips(`faults.${i}.persist`, [250, 400, 600, 900], f.persist || 400, { 250: '¼ s', 400: '0.4 s', 600: '0.6 s', 900: '0.9 s' }))}${field('Invalidates the rep', chips(`faults.${i}.invalidates`, [false, true], !!f.invalidates, { false: 'No', true: 'Yes' }))}</div>
+        <div class="row" style="gap:14px">${s.type === 'reps' ? field('Only once the rep is', chips(`faults.${i}.minP`, [0, 0.2, 0.3, 0.5], f.minP ?? 0.3, { 0: 'any time', 0.2: '20% under way', 0.3: '30% under way', 0.5: 'half way' })) : field('Watch it', chips(`faults.${i}.phase`, ['hold', 'any'], f.phase === 'any' ? 'any' : 'hold', { hold: 'while in position', any: 'any time — even out of position' }))}${field('Must persist', chips(`faults.${i}.persist`, [250, 400, 600, 900], f.persist || 400, { 250: '¼ s', 400: '0.4 s', 600: '0.6 s', 900: '0.9 s' }))}${field('Invalidates the rep', chips(`faults.${i}.invalidates`, [false, true], !!f.invalidates, { false: 'No', true: 'Yes' }))}</div>
+        ${gatesEditor(s, f, i)}
         ${state.takes.length ? `<canvas class="chart" id="chart-f${i}"></canvas>` : ''}`}
       ${fireReport(f)}
     </div>`;
@@ -743,7 +804,7 @@
   function faultsPanel(s) {
     return `<div class="stack"><h2>5 · Faults, as numbers</h2><p class="lead">Each fault needs: what the camera measures, how much is too much, and the words. Then look at the strip below each one — it must fire on the exaggerated take and stay quiet on the clean ones. If a threshold from a textbook fires on every clean rep, the recordings are right and the textbook is not.</p>
       <div class="stack" id="faults">${s.faults.map((f, i) => faultCard(s, f, i)).join('') || '<p class="muted">No faults yet. Most moves need three to five.</p>'}</div>
-      <div class="row"><button class="btn secondary" id="addf">Add a measured fault</button>${s.type === 'reps' ? `<button class="btn ghost" id="add-shallow" ${s.faults.some((f) => f.rule === 'shallow') ? 'disabled' : ''}>Add “not reaching the target”</button><button class="btn ghost" id="add-fast" ${s.faults.some((f) => f.rule === 'fast') ? 'disabled' : ''}>Add “too fast”</button>` : ''}</div>
+      <div class="row"><button class="btn secondary" id="addf">Add a measured fault</button>${s.type === 'reps' ? `<button class="btn ghost" id="add-shallow" ${s.faults.some((f) => f.rule === 'shallow') ? 'disabled' : ''}>Add “not reaching the target”</button><button class="btn ghost" id="add-fast" ${s.faults.some((f) => f.rule === 'fast') ? 'disabled' : ''}>Add “too fast”</button><button class="btn ghost" id="add-return" ${s.faults.some((f) => f.rule === 'return') ? 'disabled' : ''}>Add “not returning fully”</button>` : ''}</div>
       <div class="row"><button class="btn ghost" id="back">← Measure</button><span class="spacer"></span><button class="btn primary" id="next">Guide →</button></div></div>`;
   }
   function wireFaults(s) {
@@ -751,15 +812,25 @@
     ['faults.*.severity', 'faults.*.minP', 'faults.*.persist', 'faults.*.threshold', 'faults.*.minMs'].forEach(() => { });
     root.querySelectorAll('[data-chips]').forEach((g) => { if (/severity|minP|persist$/.test(g.dataset.chips)) g.dataset.num = ''; });
     bind(root, s, (k) => {
-      const m = k.match(/^faults\.(\d+)\.(\w+)$/); if (!m) return; const i = +m[1], f = s.faults[i], key = m[2];
+      const m = k.match(/^faults\.(\d+)\.(\w+)$/) || k.match(/^faults\.(\d+)\.(when\.\d+\.\w+)$/); if (!m) return; const i = +m[1], f = s.faults[i], key = m[2];
       if (key === 'label' && !f.idTouched) { f.id = f.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'fault' + i; root.querySelector(`[data-fi="${i}"] .muted`).textContent = 'id ' + f.id; }
       if (key === 'cue') { const el = $('wc-' + i); el.textContent = wc(f.cue) + '/6 words'; el.classList.toggle('over', wc(f.cue) > 6); }
-      if (key === 'listed') return rerender();
+      if (key === 'listed' || key === 'phase') return rerender();
+      if (key === 'scaleTimes') { const v = f.scaleTimes; delete f.scaleTimes; if (Number.isFinite(v) && v) f.scale = { metric: 'progress', times: v }; else delete f.scale; resim(); drawFaultCharts(s); return; }
+      if (/^when\./.test(key) || m[0].includes('.when.')) { resim(); drawFaultCharts(s); return; }
       if (['threshold', 'minMs', 'op', 'rel', 'minP', 'persist', 'invalidates', 'severity'].includes(key)) { resim(); if (key === 'rel') return rerender(); drawFaultCharts(s); const card = root.querySelector(`[data-fi="${i}"]`); card.querySelector('.fires').outerHTML = fireReport(f); }
     });
     wireMetricEditors(root, s, rerender);
     root.querySelectorAll('[data-delf]').forEach((b) => { b.onclick = () => { if (!confirm('Remove this fault?')) return; s.faults.splice(+b.dataset.delf, 1); saveState(); rerender(); }; });
+    root.querySelectorAll('[data-addw]').forEach((b) => { b.onclick = () => { const [i, kind] = b.dataset.addw.split('.'); const f = s.faults[+i]; f.when = f.when || [];
+      if (kind === 'option') { const o = (s.options || []).find((x) => Array.isArray(x.values) && x.values.length); f.when.push({ option: o.key, is: o.values[0] }); }
+      else if (kind === 'metric') f.when.push({ metric: { kind: 'angle', pts: [] }, rel: 'abs', op: '>', threshold: null });
+      else f.when.push(kind);
+      saveState(); rerender(); }; });
+    root.querySelectorAll('[data-delw]').forEach((b) => { b.onclick = () => { const [i, j] = b.dataset.delw.split('.').map(Number); s.faults[i].when.splice(j, 1); if (!s.faults[i].when.length) delete s.faults[i].when; saveState(); rerender(); }; });
+    root.querySelectorAll('[data-wv]').forEach((el) => { el.onchange = () => { const [i, j] = el.dataset.wv.split('.').map(Number); const w = s.faults[i].when[j]; const o = (s.options || []).find((x) => x.key === w.option); const v = o && o.values.find((x) => String(x) === el.value); w.is = v === undefined ? el.value : v; saveState(); resim(); drawFaultCharts(s); }; });
     root.querySelectorAll('[data-suggest]').forEach((b) => { b.onclick = () => suggestThreshold(s, s.faults[+b.dataset.suggest]); });
+    if ($('add-return')) $('add-return').onclick = () => { s.faults.push({ id: 'return', rule: 'return', label: 'Not returning fully', cue: 'All the way back', tip: 'Finish each rep back at the start so the muscle works through its whole range.', severity: 1, threshold: 0.25 }); saveState(); render(); };
     $('addf').onclick = () => { s.faults.push({ id: 'fault' + (s.faults.length + 1), label: '', cue: '', tip: '', severity: 2, metric: { kind: 'angle', pts: [] }, rel: 'change', op: '>', threshold: null, minP: s.type === 'reps' ? 0.3 : 0, persist: 400, invalidates: false }); saveState(); render(); };
     if ($('add-shallow')) $('add-shallow').onclick = () => { s.faults.push({ id: 'shallow', rule: 'shallow', label: 'Not reaching the target', cue: 'A little further', tip: 'Aim for the full target without compensating; if it hurts before then, lower the target.', severity: 1 }); saveState(); render(); };
     if ($('add-fast')) $('add-fast').onclick = () => { s.faults.push({ id: 'fast', rule: 'fast', label: 'Too fast', cue: 'Slower — two up, three down', tip: 'Swinging lets momentum do the work. Two seconds out, a pause, three seconds back.', severity: 1, minMs: 2000 }); saveState(); render(); };
@@ -878,7 +949,7 @@
 
   /* ===================== 7 · check & export ===================== */
   function moveFileSource(s) {
-    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
+    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', '_tuned', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
     const credit = state.pt.name ? ` Authored with ${state.pt.name}.` : '';
     return `/* ${s.name} — written in Grooveform Studio.${credit}
    A declarative move: no code, only measurements and thresholds. It is compiled by
@@ -905,6 +976,7 @@
     if (!state.takes.some((t) => t.label === 'borderline')) warn.push('No borderline take — the most valuable kind.');
     if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
+    const tune = tuningReport(s);
     let preview = ''; try { preview = C.format(fileWith(s, name).entry); } catch (e) { preview = e.message; }
     const ready = !problems.length;
     return `<div class="stack"><h2>7 · Check &amp; save</h2>
@@ -915,13 +987,37 @@
         <div class="row" style="margin-top:10px"><button class="btn primary" id="save-project" ${ready ? '' : 'disabled'} hidden>Save into the project</button><button class="btn primary" id="dl-file" ${ready ? '' : 'disabled'}>Download ${esc(name)}.json</button><span class="muted" id="save-note" style="font-size:.85rem"></span></div>
         <div class="row" style="margin-top:10px"><button class="btn secondary" id="try">Try it in the app</button><span class="muted" style="font-size:.85rem">Opens the app with this move added, in this browser only.</span></div>
         <div class="row" style="margin-top:10px"><button class="btn ghost small" id="copy-entry">Copy the entry</button><button class="btn ghost small" id="dl-js">Download as code (.js)</button><button class="btn ghost small" id="dl-json">Download session spec</button></div></div></div>
+      <div class="card"><div class="row" style="align-items:baseline"><h3>Tuning</h3><span class="spacer"></span><span class="${tune.pass ? 'ok' : 'muted'}" style="font-weight:800">${tune.pass ? 'passes — every live fault behaves on the takes' : tune.reason}</span></div>
+        <p class="muted" style="font-size:.85rem">The rule for every move: two clean takes, a take per live fault, and each fault quiet on the clean takes and firing on its own. Same numbers as the coach runs.</p>
+        <table class="tune"><thead><tr><th>fault</th><th>clean</th><th>its own takes</th><th>borderline</th><th></th></tr></thead><tbody>${tune.rows.map((r) => `<tr class="${r.ok ? 'ok' : 'bad'}"><td>${esc(r.label)}</td><td>${r.clean}</td><td>${r.own}</td><td>${r.border}</td><td>${r.ok ? '✓' : esc(r.why)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">no live faults</td></tr>'}</tbody></table>
+        <div class="row" style="margin-top:10px;align-items:center;gap:10px">${field('Vetted', chips('vetted', [false, true], !!s.vetted, { false: 'Not yet', true: 'Yes — checked against these takes' }))}${s._tuned ? `<span class="muted" style="font-size:.85rem">tuned ${esc(s._tuned.date)}${s._tuned.by ? ' by ' + esc(s._tuned.by) : ''} on ${s._tuned.takes} takes</span>` : ''}</div>
+        ${!tune.pass ? '<p class="muted" style="font-size:.85rem">Vetted can only be set once the rule passes.</p>' : ''}</div>
       <div class="card"><h3>The entry, as it will be written</h3><pre class="code">${esc(preview)}</pre></div>
       <div class="row"><button class="btn ghost" id="back">← Guide</button></div></div>`;
   }
   function download(name, content, type = 'application/octet-stream') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+  /* Every live fault against the takes: quiet on clean, firing on its own — the same rule for every move. */
+  function tuningReport(s) {
+    const clean = state.takes.filter((t) => t.label === 'clean'), rows = [];
+    const live = (s.faults || []).filter((f) => !f.rule && !f.listed && f.metric && f.metric.pts.length);
+    const count = (f, takes) => { let n = 0; for (const t of takes) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); if (fired) n++; } return n; };
+    for (const f of live) {
+      const own = state.takes.filter((t) => t.label === 'fault:' + f.id), border = state.takes.filter((t) => t.label === 'borderline');
+      const c = count(f, clean), o = count(f, own), b = count(f, border);
+      const ok = clean.length >= 2 && own.length >= 1 && c === 0 && o === own.length;
+      rows.push({ id: f.id, label: f.label, clean: `${c}/${clean.length}`, own: `${o}/${own.length}`, border: `${b}/${border.length}`, ok, why: clean.length < 2 ? 'needs 2 clean takes' : !own.length ? 'no take of this fault' : c ? 'fires on a clean take' : 'misses its own take' });
+    }
+    const pass = rows.length > 0 && rows.every((r) => r.ok) && clean.length >= 2;
+    return { rows, pass, reason: !rows.length ? 'no live fault to tune' : clean.length < 2 ? 'record two clean takes' : 'not yet — see the rows in red' };
+  }
   function wireExport(s) {
     const name = s._target || targetFileName(s);
-    bind($('main'), s, (k) => { if (k === '_target') render(); });
+    bind($('main'), s, (k) => {
+      if (k === '_target') render();
+      if (k === 'vetted') { const on = document.querySelector('[data-chips="vetted"] .chip[aria-pressed="true"]').dataset.v === 'true'; const t = tuningReport(s);
+        if (on && !t.pass) { s.vetted = false; toast('Vetted only once every live fault behaves on the takes', 5000); render(); return; }
+        s.vetted = on; if (on) s._tuned = { date: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, takes: state.takes.length, faults: t.rows.map((r) => r.id) }; else delete s._tuned; saveState(); render(); }
+    });
     probeDevSave().then((d) => { if (d && $('save-project')) { $('save-project').hidden = false; $('save-note').textContent = 'Local server running — saving writes client/data/moves/' + name + '.json'; } });
     $('save-project').onclick = async () => {
       const { rel, json } = fileWith(s, name);

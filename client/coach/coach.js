@@ -30,33 +30,8 @@
   const current = { ex: null, target: null, opts: {} };
   let onDone = null, onExit = null;
 
-  /* ---------- camera-placement diagrams: each figure performs the exercise ---------- */
-  // Poses are joint coordinates in a 400×175 box (floor y=160, camera on the left). A→B→A animates.
-  const FIG = {
-    // profile figures: h head, sh shoulder, hip, kn knee, an ankle, ft foot, el elbow, wr wrist (+ far: far leg [knee, ankle])
-    wallsit:     { cam: 'hip', wall: 338, A: { h: [336, 54], sh: [336, 72], hip: [336, 114], kn: [290, 114], an: [290, 160], ft: [276, 160], el: [336, 94], wr: [336, 112] } },
-    plank:       { cam: 'floor', A: { h: [258, 96], sh: [272, 106], hip: [312, 122], kn: [336, 134], an: [356, 148], ft: [362, 160], el: [272, 160], wr: [248, 160] } },
-    heelslide:   { cam: 'floor', far: [[318, 130], [332, 158]], A: { h: [238, 150], sh: [254, 152], hip: [300, 152], kn: [330, 153], an: [360, 154], ft: [362, 144], el: [278, 156], wr: [300, 158] },
-                   B: { h: [238, 150], sh: [254, 152], hip: [300, 152], kn: [318, 118], an: [336, 152], ft: [346, 148], el: [278, 156], wr: [300, 158] } },
-    band_row:    { cam: 'chest', wall: 386, A: { h: [300, 46], sh: [300, 66], hip: [300, 110], kn: [300, 136], an: [300, 160], ft: [312, 160], el: [330, 70], wr: [358, 74] },
-                   B: { h: [300, 46], sh: [300, 66], hip: [300, 110], kn: [300, 136], an: [300, 160], ft: [312, 160], el: [288, 92], wr: [318, 96] } },
-    calfstretch: { cam: 'hip', wall: 362, A: { h: [318, 52], sh: [322, 70], hip: [306, 112], kn: [290, 138], an: [274, 160], ft: [288, 160], el: [346, 78], wr: [362, 84] }, front: [[326, 136], [330, 160]] },
-  };
-  const FRONT = { // standing hip abduction, facing the camera: right leg lifts out to the side
-    A: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [262, 96], elR: [326, 92] },
-    B: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [326, 130], anL: [285, 160], anR: [341, 152], elL: [262, 96], elR: [326, 92] },
-  };
-  // front-facing upper-body figures (shoulder & neck): both arms drawn shoulder→elbow→wrist
-  const FRONTS = {
-    shoulder_er:  { A: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [276, 92], elR: [322, 92], wrL: [270, 112], wrR: [300, 96] },
-                    B: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [276, 92], elR: [322, 92], wrL: [270, 112], wrR: [348, 92] } },
-    shoulder_abd: { A: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [276, 92], elR: [322, 92], wrL: [272, 114], wrR: [326, 114] },
-                    B: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [276, 92], elR: [346, 66], wrL: [272, 114], wrR: [372, 66] } },
-    pullapart:    { A: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [276, 70], elR: [324, 70], wrL: [272, 74], wrR: [328, 74] },
-                    B: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [254, 66], elR: [346, 66], wrL: [228, 66], wrR: [372, 66] } },
-    trapstretch:  { A: { h: [300, 46], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [274, 92], elR: [326, 92], wrL: [290, 112], wrR: [324, 114] },
-                    B: { h: [288, 50], shL: [282, 66], shR: [318, 66], hipL: [289, 108], hipR: [311, 108], knL: [287, 136], knR: [313, 136], anL: [285, 160], anR: [315, 160], elL: [274, 92], elR: [332, 62], wrL: [290, 112], wrR: [300, 42] } },
-  };
+  /* ---------- demo figures: every move registers its two keyframes (built by coach/catalog.js from the
+     joint angles in its data entry); nothing is drawn from per-move code here ---------- */
   const P = (...pts) => 'M' + pts.map(p => p.join(' ')).join(' L ');
   const escT = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   function profilePath(j) { return P(j.sh, j.hip, j.kn, j.an, j.ft) + ' ' + P(j.sh, j.el, j.wr); }
@@ -93,33 +68,21 @@
   }
   // What the figure does (animated), shown big — no camera in it.
   function figureFor(ex) {
-    const f = FIG[ex.id], ff = FRONTS[ex.id]; let figure = '';
-    const r = !f && !ff && ex.id !== 'hipabd' ? REGISTERED[ex.id] : null;
-    if (r) {
-      if (r.wall) figure += `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>`;
-      figure += (r.props || []).map(propSvg).join('');
-      if (r.view === 'front') figure += animPath(frontPath2(r.A), r.B && frontPath2(r.B)) + animHead(r.A.h, r.B && r.B.h);
-      else {
-        if (r.A.knF || r.A.elF) figure += animPath(farPath(r.A), r.B && farPath(r.B), 'ink far');
-        figure += animPath(profilePath(r.A), r.B && profilePath(r.B)) + animHead(r.A.h, r.B && r.B.h);
-      }
-      return figure;
-    }
-    if (ff) figure = (ex.id === 'shoulder_er' ? `<line class="floor" x1="366" y1="60" x2="366" y2="160" stroke-width="3"/><line class="floor" x1="348" y1="92" x2="366" y2="92" stroke-dasharray="3 3"/>` : '') + animPath(frontPath2(ff.A), frontPath2(ff.B)) + animHead(ff.A.h, ff.B.h);
-    else if (ex.id === 'hipabd') figure = `<line class="floor" x1="258" y1="100" x2="258" y2="160" stroke-width="3"/>` + animPath(frontPath(FRONT.A), frontPath(FRONT.B)) + animHead(FRONT.A.h, FRONT.B.h);
-    else if (f) {
-      if (f.wall) figure += `<line class="floor" x1="${f.wall}" y1="30" x2="${f.wall}" y2="160" stroke-width="4"/>`;
-      if (f.far) figure += `<path class="ink far" d="${P(f.A.hip, f.far[0], f.far[1])}"/>`;
-      if (f.front) figure += `<path class="ink far" d="${P(f.A.hip, f.front[0], f.front[1])}"/>`;
-      figure += animPath(profilePath(f.A), f.B && profilePath(f.B)) + animHead(f.A.h, f.B && f.B.h);
+    const r = REGISTERED[ex.id]; let figure = '';
+    if (!r) return figure;
+    if (r.wall) figure += `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>`;
+    figure += (r.props || []).map(propSvg).join('');
+    if (r.view === 'front') figure += animPath(frontPath2(r.A), r.B && frontPath2(r.B)) + animHead(r.A.h, r.B && r.B.h);
+    else {
+      if (r.A.knF || r.A.elF) figure += animPath(farPath(r.A), r.B && farPath(r.B), 'ink far');
+      figure += animPath(profilePath(r.A), r.B && profilePath(r.B)) + animHead(r.A.h, r.B && r.B.h);
     }
     return figure;
   }
   function demo(ex) {
     if (typeof ex === 'string') ex = E.EXERCISES.find((x) => x.id === ex) || { id: ex, name: ex, type: (REGISTERED[ex] && REGISTERED[ex].hold) ? 'hold' : 'reps' };
-    const lying = ex.id === 'heelslide' || ex.id === 'plank';
-    const r = !FIG[ex.id] && !FRONTS[ex.id] && ex.id !== 'hipabd' ? REGISTERED[ex.id] : null;
-    const b = r ? figureBox(r) : lying ? { x0: 210, y0: 78, w: 190, h: 92 } : { x0: 210, y0: 22, w: 190, h: 145 };
+    const r = REGISTERED[ex.id];
+    const b = r ? figureBox(r) : { x0: 210, y0: 22, w: 190, h: 145 };
     return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${escT(ex.name)}: ${ex.type === 'hold' ? 'timed hold' : 'repetitions'}">
       <line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>${figureFor(ex)}
       <text x="${b.x0 + 10}" y="${b.y0 + 12}" text-anchor="start" class="lbl">${ex.type === 'hold' ? 'hold still' : 'repeat slowly'}</text></svg>`;
@@ -195,22 +158,19 @@
   // Small static figure for tiles (start pose only, no animation, no camera).
   function thumb(ex) {
     if (!ex) return '';
-    const f = FIG[ex.id], ff = FRONTS[ex.id]; let fig = '', box = '215 24 180 142';
-    if (ff) fig = `<path class="ink" d="${frontPath2(ff.B || ff.A)}"/><circle class="ink" cx="${(ff.B || ff.A).h[0]}" cy="${(ff.B || ff.A).h[1]}" r="10"/>`;
-    else if (ex.id === 'hipabd') fig = `<path class="ink" d="${frontPath(FRONT.B)}"/><circle class="ink" cx="${FRONT.B.h[0]}" cy="${FRONT.B.h[1]}" r="10"/>`;
-    else if (f) { const j = f.B || f.A; fig = (f.wall ? `<line class="floor" x1="${f.wall}" y1="30" x2="${f.wall}" y2="160" stroke-width="4"/>` : '') + `<path class="ink" d="${profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`; }
-    else {
-      /* Catalogue and Studio moves register their keyframes with the anatomy figure; draw the end pose from those. */
-      const r = REGISTERED[ex.id];
-      if (r) { const j = r.B || r.A; const props = (r.props || []).map((p) => p.kind === 'box' ? `<rect class="prop" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>` : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>` : '').join('');
-        fig = (r.wall ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>` : '') + props + `<path class="ink" d="${r.view === 'front' ? frontPath2(j) : profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`;
-        const pts = Object.values(j); const ys = pts.map((p) => p[1]), xs = pts.map((p) => p[0]);
-        const top = Math.min(24, Math.min(...ys) - 14), left = Math.min(215, Math.min(...xs) - 12), right = Math.max(395, Math.max(...xs) + 12);
-        box = `${left} ${top} ${right - left} ${166 - top}`; }
-    }
+    let fig = '', box = '215 24 180 142';
+    /* every move registers its keyframes with the figure renderer; draw the end pose from those */
+    const r = REGISTERED[ex.id];
+    if (r) { const j = r.B || r.A; const props = (r.props || []).map((p) => p.kind === 'box' ? `<rect class="prop" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>` : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>` : '').join('');
+      fig = (r.wall ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="160" stroke-width="4"/>` : '') + props + `<path class="ink" d="${r.view === 'front' ? frontPath2(j) : profilePath(j)}"/><circle class="ink" cx="${j.h[0]}" cy="${j.h[1]}" r="10"/>`;
+      const pts = Object.values(j); const ys = pts.map((p) => p[1]), xs = pts.map((p) => p[0]);
+      const top = Math.min(24, Math.min(...ys) - 14), left = Math.min(215, Math.min(...xs) - 12), right = Math.max(395, Math.max(...xs) + 12);
+      box = `${left} ${top} ${right - left} ${166 - top}`; }
     return `<svg class="thumb-fig" viewBox="${box}" aria-hidden="true"><line class="floor" x1="215" y1="162" x2="395" y2="162"/>${fig}</svg>`;
   }
+
   const diagram = cameraDiagram;
+
   /* ---------- voice & sound ---------- */
   /* Pick the most natural-sounding English voice the device offers. Neural/"Natural"/"Enhanced"/"Premium" voices first (Edge, iOS, macOS),
      then Google's cloud voices (Chrome), preferring Indian English, then UK/US. The user can pin one in Settings → Voice. */
@@ -335,7 +295,7 @@
     current.ex = ex; current.target = target; mockT = 0;   /* mock clock restarts per set */
     voice.unlock();
     show('screen-live');
-    $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant && ex.id === 'calfstretch' ? ' · ' + current.opts.variant + ' knee' : current.opts.variant ? ' · ' + current.opts.variant.toUpperCase() : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
+    $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant ? ' · ' + ((((ex.options || []).find((o) => o.key === 'variant') || {}).labels || {})[current.opts.variant] || current.opts.variant.toUpperCase()).split(' (')[0] : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
     $('phase').textContent = ''; $('cue').className = 'cue'; $('btn-mute').textContent = voice.muted ? '🔇' : '🔊';
     $('hud-side').style.display = ex.type === 'reps' ? '' : 'none'; $('btn-flip').style.display = file ? 'none' : '';
     setStatus('warn', 'Starting'); setFrame(''); applyVoiceButton();
@@ -427,7 +387,7 @@
     const vis = E.visOf(pts, ex.required); const visOk = vis > 0.55; out.push({ label: visOk ? (ex.upperBody ? 'Head to hips visible' : 'Body visible') : (ex.upperBody ? 'Head to hips hidden' : 'Body partly hidden'), ok: visOk });
     const edges = E.framing(pts, ex.required, aspect); const frameOk = edges.length === 0; out.push({ label: frameOk ? 'In frame' : 'Cut off: ' + edges.join(', '), ok: frameOk });
     const o = E.orientation(pts);
-    const accept = ex.id === 'sidelying' ? ['front', 'unclear'] : [ex.view];
+    const accept = ex.camera && ex.camera.posture === 'sidelying' ? [ex.view, 'unclear'] : [ex.view];
     const orientOk = accept.includes(o.view); out.push({ label: orientOk ? (ex.view === 'front' ? 'Facing camera' : 'Side-on') : (ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on'), ok: orientOk });
     const size = ex.upperBody ? E.dist(pts[0], E.mid(pts[23], pts[24])) : E.bodyHeight(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22); out.push({ label: sizeOk ? 'Good distance' : 'Come closer', ok: sizeOk });
     /* On a camera-side move the working limb is whichever one the lens can see, so the person
@@ -465,7 +425,6 @@
       if (held > (live.file ? 400 : 1200)) {
         /* The side was chosen before the set, so there is nothing to identify — start counting in. */
         live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0;
-        live.legBase = { L: E.fromVertical(pts[23], pts[27]), R: E.fromVertical(pts[24], pts[28]) };
       }
     } else {
       live.steadySince = 0;
@@ -483,7 +442,6 @@
       /* A 'pick' move works the limb the person chose; otherwise the side the lens can see. */
       const want = live.ex.sided && live.ex.sided.by === 'pick' ? wantedSide() : null;
       const side = want || E.nearSide(pts);
-      if (live.legBase) live.session.opts.legBase = live.legBase;
       /* On a camera-side move the visible limb IS the working one, so record it for the review. */
       if (live.ex.sided && live.ex.sided.by === 'camera') live.session.opts.work = side;
       live.session.calibrate(pts, side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref });
@@ -504,7 +462,7 @@
       const p = E.clamp(r.m.p, 0, 1.2); live.lastP = p;
       $('rom-fill').style.height = Math.round(p / 1.2 * 100) + '%';
       $('rom-fill').style.background = p >= E.FULL ? '#b8f542' : p > E.ATTEMPT ? '#ffb830' : 'rgba(255,243,226,.5)';
-      $('phase').textContent = s.counter.state === 'rest' ? 'ready' : s.counter.state === 'out' ? (ex.id === 'heelslide' ? 'bend' : 'lift') : 'return';
+      $('phase').textContent = s.counter.state === 'rest' ? 'ready' : s.counter.state === 'out' ? ((ex.display && ex.display.label) || 'lift') : 'return';
       if (r.repEvent) {
         const rep = r.repEvent.rep; recEvent('rep', { full: r.repEvent.full, n: rep.n, peak: +rep.peak.toFixed(3), duration: Math.round(rep.duration), faults: rep.faults });
         if (r.repEvent.full) {
@@ -539,17 +497,30 @@
     if (r.done) finishSet(true);
   }
 
-  function updateReadout(ex, m, s) {
-    const ro = $('readout'), v = $('ro-val'), t = $('ro-tgt'); let val = '', tgt = '', state = '';
-    const ref = s.ref, act = s.faults.active;
-    switch (ex.id) {
-      case 'heelslide': val = Math.round(Math.max(0, m.flexion)) + '°'; tgt = '/ ' + ref.rom + '° bend'; state = m.p >= E.FULL ? 'good' : ''; break;
-      case 'hipabd': val = Math.round(Math.max(0, m.raise)) + '°'; tgt = '/ ' + ref.rom + '° raise' + (act.has('lean') ? ' · leaning ' + Math.round(m.leanAway) + '°' : act.has('hike') ? ' · hip up ' + Math.round(m.hike) + '°' : ''); state = m.p >= E.FULL ? 'good' : ''; break;
-      case 'wallsit': val = Math.round(m.knee) + '°'; tgt = 'knee · aim 90°'; state = m.inPosition && !act.size ? 'good' : ''; break;
-      case 'plank': val = Math.round(m.lineAng) + '°'; tgt = 'body line · aim 180°'; state = m.inPosition && !act.size ? 'good' : ''; break;
-      case 'calfstretch': val = Math.round(Math.max(0, m.shinLean)) + '°'; tgt = 'lean · aim 10–20° · knee ' + Math.round(m.knee) + '°'; state = m.inPosition && !act.size ? 'good' : ''; break;
+  /* ---------- what the live panel shows: read from the move's own measurements ----------
+     reps: the progress reading (as a change from the start, or raw) against its target;
+     holds: the hold condition the move's display names, with its aim. No move has its own code here. */
+  const kindUnit = (metric) => ((window.MoveSpec && MoveSpec.KINDS[metric.kind]) || {}).unit || '';
+  function readoutFor(ex, m, s) {
+    const d = ex.display || {}, ref = s.ref, act = s.faults.active; let val = '', tgt = '', state = '';
+    if (ex.type === 'reps' && ex.iProg >= 0 && ref) {
+      const metric = ex.metrics[ex.iProg], unit = d.unit ?? kindUnit(metric); const raw = d.from === 'abs';
+      const v = raw ? m.value : Math.abs(m.value - ref.start), t = raw ? ref.target : Math.abs(ref.target - ref.start);
+      val = Math.round(Math.max(raw ? -Infinity : 0, v)) + unit; tgt = '/ ' + Math.round(t) + unit + (d.label ? ' ' + d.label : ''); state = m.p >= E.FULL ? 'good' : '';
+      const extra = [...act].map((id) => ex.faults.find((f) => f.id === id)).filter((f) => f && !f.onRep).map((f) => f.label.toLowerCase())[0];
+      if (extra) tgt += ' · ' + extra;
+    } else if (ex.type === 'hold' && ex.holdConds && ex.holdConds.length && m.h) {
+      const ci = Math.min(d.condition ?? 0, ex.holdConds.length - 1), c = ex.holdConds[ci], unit = d.unit ?? kindUnit(c.metric);
+      val = Math.round(m.h[ci]) + unit;
+      const aim = d.aim || (Number.isFinite(c.min) && Number.isFinite(c.max) ? `${c.min}–${c.max}${unit}` : Number.isFinite(c.min) ? `≥ ${c.min}${unit}` : Number.isFinite(c.max) ? `≤ ${c.max}${unit}` : '');
+      tgt = (d.label || '') + (aim ? ' · aim ' + aim : ''); state = m.inPosition && !act.size ? 'good' : '';
     }
-    v.textContent = val; t.textContent = tgt; ro.className = 'readout ' + (act.size ? 'bad' : state);
+    return { val, tgt, state };
+  }
+  function updateReadout(ex, m, s) {
+    const ro = $('readout'), v = $('ro-val'), t = $('ro-tgt');
+    const r = readoutFor(ex, m, s);
+    v.textContent = r.val; t.textContent = r.tgt; ro.className = 'readout ' + (s.faults.active.size ? 'bad' : r.state);
   }
   function finishSet(auto = false) {
     if (!live || live.state !== 'active') { if (live && live.state !== 'active') exitLive(); return; }
@@ -601,7 +572,7 @@
     // angle readouts at focus joints (drawn un-mirrored)
     const m = live?.session?.m;
     if (m && live.state === 'active') {
-      const label = angleLabel(live.ex.id, m); if (label) {
+      const label = angleLabel(live.ex, m); if (label) {
         const j = pts[[...focus][0]]; if (j && j.v > 0.3) {
           const mirrored = stage.classList.contains('mirror'); ctx.save(); if (mirrored) { ctx.translate(W, 0); ctx.scale(-1, 1); }
           const x = mirrored ? W - X(j) : X(j), y = Y(j);
@@ -627,61 +598,45 @@
     const e = points[points.length - 1]; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(e), Y(e), Math.max(9, W / 70), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  function drawGhost(pts, X, Y, W, H) {
-    const ex = live.ex, m = live.session.m, ref = live.session.ref, act = live.session.faults.active, S = live.session.side;
-    const j = E.SIDE[S]; const P = i => pts[i];
-    const state = act.size ? 'bad' : (ex.type === 'reps' ? (m.p >= E.FULL ? 'good' : 'target') : (m.inPosition ? 'good' : 'target'));
-    switch (ex.id) {
-      case 'hipabd': {
-        const hip = m.useL ? P(23) : P(24), stanceHip = m.useL ? P(24) : P(23), stanceAnk = m.useL ? P(28) : P(27);
-        const legLen = E.dist(stanceHip, stanceAnk); const dir = -m.away;      // the working leg goes away from the stance leg
-        const a = (ref.rom + (m.useL ? ref.legL : ref.legR)) * Math.PI / 180;
-        ghostPath([hip, { x: hip.x + dir * Math.sin(a) * legLen, y: hip.y + Math.cos(a) * legLen }], X, Y, state);
-        break;
-      }
-      case 'heelslide': {
-        const hip = P(j.HIP), ank = P(j.ANK); const a = ref.thigh, b = ref.shin, K = (ref.kneeRest - ref.rom) * Math.PI / 180;
-        const c = Math.sqrt(Math.max(1e-6, a * a + b * b - 2 * a * b * Math.cos(K)));            // hip→ankle distance at the target bend
-        const alpha = Math.acos(Math.max(-1, Math.min(1, (a * a + c * c - b * b) / (2 * a * c))));   // angle at the hip
-        const dir = Math.sign(ank.x - hip.x) || 1; const floorY = ref.ank0;
-        const knee = { x: hip.x + dir * Math.cos(alpha) * a, y: floorY - Math.sin(alpha) * a };
-        ghostPath([hip, knee, { x: hip.x + dir * c, y: floorY }], X, Y, state);
-        break;
-      }
-      case 'wallsit': {
-        const hip = P(j.HIP), knee = P(j.KNEE), ank = P(j.ANK); const dir = Math.sign(knee.x - hip.x) || 1;
-        const t = E.dist(hip, knee), sh = E.dist(knee, ank);
-        ghostPath([hip, { x: hip.x + dir * t, y: hip.y }, { x: hip.x + dir * t, y: hip.y + sh }], X, Y, state);
-        break;
-      }
-      case 'plank': {
-        ghostPath([P(j.SH), P(j.ANK)], X, Y, state); break;
-      }
-      case 'shoulder_er': {
-        const s = m.side, jj = E.SIDE[s]; const el = P(jj.EL); const out = E.outward(pts, s);
-        const phi0 = Math.asin(Math.max(-1, Math.min(1, ref['lat' + s] / ref['fore' + s]))); const phiT = phi0 + (ref.variant === 'ir' ? -1 : 1) * ref.rom * Math.PI / 180;
-        ghostPath([el, { x: el.x + out * Math.sin(phiT) * ref['fore' + s], y: el.y + 0.02 }], X, Y, state); break;
-      }
-      case 'shoulder_abd': {
-        const s = m.side, jj = E.SIDE[s]; const sh = P(jj.SH); const out = E.outward(pts, s); const L = E.dist(sh, P(jj.EL)) + E.dist(P(jj.EL), P(jj.WR));
-        const a = (ref['arm' + s] + ref.rom) * Math.PI / 180;
-        ghostPath([sh, { x: sh.x + out * Math.sin(a) * L, y: sh.y + Math.cos(a) * L }], X, Y, state); break;
-      }
-      case 'band_row': {
-        const sh = P(j.SH); ghostPath([sh, { x: sh.x - ref.dir * ref.full * ref.upper, y: sh.y + 0.55 * ref.upper }], X, Y, state); break;
-      }
-      case 'pullapart': {
-        const shL = P(11), shR = P(12); const reach = ref.arm * 0.92;
-        ghostPath([{ x: shL.x + Math.sign(shL.x - shR.x) * reach, y: shL.y }, shL, shR, { x: shR.x + Math.sign(shR.x - shL.x) * reach, y: shR.y }], X, Y, state); break;
-      }
-      case 'calfstretch': {
-        const ank = P(j.ANK), knee = P(j.KNEE), hip = P(j.HIP), wr = P(j.WR); const dir = Math.sign(wr.x - ank.x) || 1;
-        const sh = E.dist(knee, ank), th = E.dist(hip, knee); const lean = 15 * Math.PI / 180, bend = m.bent ? 30 * Math.PI / 180 : 0;
-        const k = { x: ank.x + dir * Math.sin(lean) * sh, y: ank.y - Math.cos(lean) * sh };
-        const h = { x: k.x + dir * Math.sin(lean + bend) * th, y: k.y - Math.cos(lean + bend) * th };
-        ghostPath([ank, k, h], X, Y, state); break;
-      }
+  /* the landmarks a measurement reads, resolved on this frame for the working side */
+  function metricPoints(metric, pts, S) { try { return (metric.pts || []).map((n) => MoveSpec.resolve(n, pts, S, E)); } catch { return null; } }
+  /* A target pose for the measurement that defines the move: the limb drawn where it should be at
+     the target (reps) or the aim (holds). Works from the measurement's geometry, so any move gets it. */
+  function ghostFor(ex, m, ref, pts) {
+    const S = m.side || ref.side || 'L';
+    let metric, target;
+    if (ex.type === 'reps' && ex.iProg >= 0) { metric = ex.metrics[ex.iProg]; target = ref.target; }
+    else if (ex.holdConds && ex.holdConds.length) {
+      const d = ex.display || {}; const c = ex.holdConds[Math.min(d.condition ?? 0, ex.holdConds.length - 1)]; metric = c.metric;
+      const both = Number.isFinite(c.min) && Number.isFinite(c.max);
+      target = both ? (c.min + c.max) / 2 : Number.isFinite(c.min) ? (metric.kind === 'angle' ? 180 : c.min) : (metric.kind === 'tilt' ? 0 : c.max);
+      if (c.rel === 'change') target += (m.base && m.base[c.i]) || 0;
     }
+    if (!metric || !Number.isFinite(target)) return null;
+    const P = metricPoints(metric, pts, S); if (!P || P.some((p) => !p || p.v < 0.3)) return null;
+    const rad = (a) => a * Math.PI / 180;
+    if (metric.kind === 'angle') {                       /* rotate the far point about the joint to the target angle */
+      const [A, B, C] = P; const L = E.dist(B, C); const aBA = Math.atan2(A.y - B.y, A.x - B.x);
+      const cross = (A.x - B.x) * (C.y - B.y) - (A.y - B.y) * (C.x - B.x); const sense = cross >= 0 ? 1 : -1;
+      const a = aBA + sense * rad(target);
+      return [A, B, { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L }];
+    }
+    if (metric.kind === 'vertical' || metric.kind === 'tilt') {   /* the segment at the target angle, on the side it already points to */
+      const [A, B] = P; const L = E.dist(A, B); const dir = Math.sign(B.x - A.x) || 1;
+      const a = metric.kind === 'vertical' ? rad(target) : rad(90 - target);
+      return [A, { x: A.x + Math.sin(a) * dir * L, y: A.y + Math.cos(a) * L }];
+    }
+    if (metric.kind === 'rotation') {                    /* forearm swung out to the target, drawn flat */
+      const [Pt, Q] = P; const L = E.dist(Pt, Q); const outward = metric.sign === 'forward' ? (ref.fwd ? ref.fwd[S] : 1) : E.outward(pts, S);
+      const t = target + (metric.flip && ref.opts && [].concat(metric.flip.when).includes(ref.opts[metric.flip.option]) ? 0 : 0);
+      return [Q, { x: Q.x + Math.sin(rad(t)) * outward * Math.max(L, 0.05), y: Q.y + 0.02 }];
+    }
+    return null;
+  }
+  function drawGhost(pts, X, Y, W, H) {
+    const ex = live.ex, m = live.session.m, ref = live.session.ref, act = live.session.faults.active;
+    const state = act.size ? 'bad' : (ex.type === 'reps' ? (m.p >= E.FULL ? 'good' : 'target') : (m.inPosition ? 'good' : 'target'));
+    const g = ghostFor(ex, m, ref, pts); if (g) ghostPath(g, X, Y, state);
   }
   /* ---------- on-video guides (ideal lines, targets, arrows) ---------- */
   const GUIDE = { ok: 'rgba(78,225,193,0.55)', warn: '#FFB454', bad: '#FF5C6C' };
@@ -696,78 +651,54 @@
     const mirrored = stage.classList.contains('mirror'); ctx.save(); if (mirrored) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); x = canvas.width - x; }
     ctx.font = `600 ${Math.max(14, canvas.width / 40)}px "Nunito", sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = mirrored ? 'right' : 'left'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(11,16,20,0.8)'; ctx.strokeText(text, x, y); ctx.fillStyle = 'rgba(232,238,242,0.95)'; ctx.fillText(text, x, y); ctx.restore();
   }
+  /* Guides come from the faults' own measurements: a "rise" fault draws the height its point started
+     at, an "offset" or "near" fault draws its reference line, and every active fault gets an arrow at
+     its first landmark pointing the way to fix it — derived from the kind and the comparison. */
+  function arrowDir(kind, op, P, pts, S) {
+    const over = op === '>';
+    const toward = (a, b) => ({ dx: b.x - a.x, dy: b.y - a.y });
+    const away = (a, b) => ({ dx: a.x - b.x, dy: a.y - b.y });
+    switch (kind) {
+      case 'rise': case 'height': return over ? { dx: 0, dy: 1 } : { dx: 0, dy: -1 };
+      case 'gap': case 'dist': case 'near': return over ? toward(P[0], P[1]) : away(P[0], P[1]);
+      case 'angle': { const mid = { x: (P[0].x + P[2].x) / 2, y: (P[0].y + P[2].y) / 2 }; return over ? toward(P[1], mid) : away(P[1], mid); }
+      case 'vertical': case 'tilt': return over ? toward(P[1], P[0]) : away(P[1], P[0]);
+      case 'offset': return over ? { dx: 0, dy: -1 } : { dx: 0, dy: 1 };
+      case 'lean': case 'headTilt': return { dx: (over ? -1 : 1) * E.outward(pts, S), dy: 0 };
+      case 'pelvis': return over ? { dx: 0, dy: 1 } : { dx: 0, dy: -1 };
+      default: return null;
+    }
+  }
   function drawGuides(pts, X, Y, W, H) {
-    const ex = live.ex, m = live.session.m, ref = live.session.ref, act = live.session.faults.active, S = live.session.side;
-    const j = E.SIDE[S]; const P = i => pts[i];
-    const c = id => act.has(id) ? GUIDE.bad : GUIDE.ok;
+    const ex = live.ex, m = live.session.m, ref = live.session.ref, act = live.session.faults.active, S = m.side || live.session.side;
     const L = Math.max(30, W / 16);
     ctx.save(); ctx.globalAlpha = 0.95;
-    switch (ex.id) {
-      case 'heelslide': {
-        const heel = P(j.HEEL), hip = P(j.HIP), knee = P(j.KNEE), ank = P(j.ANK);
-        // floor reference for the heel, and a target-angle marker at the knee
-        dashed(X(heel) - L, ref.heel0 * H, X(heel) + L * 1.5, ref.heel0 * H, c('heel')); label(X(heel) + L * 1.5 + 6, ref.heel0 * H, 'heel line');
-        if (act.has('heel')) arrow(X(heel), Y(heel) - 6, 0, 1, GUIDE.bad, L * 0.7);
-        if (act.has('hip')) arrow(X(hip), Y(hip) - 6, 0, 1, GUIDE.bad, L * 0.7);
-        // target: shin rotated to the target flexion from the straight line hip→knee
-        const targetKnee = ref.kneeRest - ref.rom; const ang = Math.atan2(hip.y - knee.y, hip.x - knee.x) + (ank.x > hip.x ? -1 : 1) * targetKnee * Math.PI / 180;
-        const tx = knee.x + Math.cos(ang) * ref.shin, ty = knee.y + Math.sin(ang) * ref.shin;
-        dashed(X(knee), Y(knee), X({ x: tx }), Y({ y: ty }), m.p >= E.FULL ? GUIDE.ok : GUIDE.warn); label(X({ x: tx }) + 6, Y({ y: ty }), ref.rom + '° target');
-        break;
+    const spec = ex.spec || {}; const liveFaults = (spec.faults || []).filter((f) => f.metric && !f.rule);
+    for (const f of liveFaults) {
+      const metric = f.metric; const P = metricPoints(metric, pts, S); if (!P || P.some((p) => !p || p.v < 0.3)) continue;
+      const on = act.has(f.id); const color = on ? GUIDE.bad : GUIDE.ok;
+      if (metric.kind === 'rise' && ref && ref.pts0) {           /* the height the point started at */
+        const p0 = MoveSpec.resolve(metric.pts[0], ref.pts0, S, E); dashed(X(P[0]) - L, Y(p0), X(P[0]) + L * 1.5, Y(p0), color);
+        if (on) label(X(P[0]) + L * 1.5 + 6, Y(p0), f.label.toLowerCase());
       }
-      case 'hipabd': {
-        const hipI = m.useL ? 23 : 24, ankI = m.useL ? 27 : 28, kneeI = m.useL ? 25 : 26;
-        const hip = P(hipI), ank = P(ankI), legLen = E.dist(hip, ank);
-        // plumb line from the working hip and the target raise line
-        dashed(X(hip), Y(hip), X(hip), Y(hip) + legLen * H * 0.95, GUIDE.ok);
-        const dir = (ank.x >= hip.x) ? 1 : -1; const a = (ref.rom + (m.useL ? ref.legL : ref.legR)) * Math.PI / 180;
-        const tx = hip.x + dir * Math.sin(a) * legLen, ty = hip.y + Math.cos(a) * legLen;
-        dashed(X(hip), Y(hip), X({ x: tx }), Y({ y: ty }), m.p >= E.FULL ? GUIDE.ok : GUIDE.warn); label(X({ x: tx }) + 8 * dir, Y({ y: ty }), ref.rom + '°');
-        // level-hips reference
-        dashed(X(P(23)) - L, (P(23).y + P(24).y) / 2 * H, X(P(24)) + L, (P(23).y + P(24).y) / 2 * H, c('hike'));
-        if (act.has('lean')) { const sh = E.mid(P(11), P(12)); arrow(X(sh), Y(sh), dir, 0, GUIDE.bad, L); }
-        if (act.has('hike')) arrow(X(hip), Y(hip) - 4, 0, 1, GUIDE.bad, L * 0.7);
-        if (act.has('bend')) { const kn = P(kneeI); arrow(X(kn), Y(kn), -(kn.x - (hip.x + ank.x) / 2), -(kn.y - (hip.y + ank.y) / 2), GUIDE.bad, L * 0.8); }
-        break;
-      }
-      case 'wallsit': {
-        const ank = P(j.ANK), knee = P(j.KNEE), hip = P(j.HIP);
-        dashed(X(ank), Y(ank), X(ank), Y(knee) - L, c('shin')); if (act.has('shin')) arrow(X(knee), Y(knee), -(knee.x - ank.x), 0, GUIDE.bad, L);
-        if (act.has('high')) arrow(X(hip), Y(hip), 0, 1, GUIDE.bad, L); if (act.has('low')) arrow(X(hip), Y(hip), 0, -1, GUIDE.bad, L);
-        break;
-      }
-      case 'plank': {
-        const sh = P(j.SH), ank = P(j.ANK), hip = P(j.HIP);
-        const bad = act.has('sag') || act.has('pike');
-        dashed(X(sh), Y(sh), X(ank), Y(ank), bad ? GUIDE.bad : GUIDE.ok); label((X(sh) + X(ank)) / 2, Math.min(Y(sh), Y(ank)) - 18, 'straight line');
-        if (act.has('sag')) arrow(X(hip), Y(hip), 0, -1, GUIDE.bad, L); if (act.has('pike')) arrow(X(hip), Y(hip), 0, 1, GUIDE.bad, L);
-        if (act.has('stack')) { const el = P(j.EL); dashed(X(el), Y(el), X(el), Y(sh) - L / 2, GUIDE.bad); arrow(X(sh), Y(sh), -(sh.x - el.x), 0, GUIDE.bad, L * 0.8); }
-        if (act.has('neck')) { const ear = P(j.EAR); arrow(X(ear), Y(ear), 0, -1, GUIDE.warn, L * 0.7); }
-        break;
-      }
-      case 'calfstretch': {
-        const ank = P(j.ANK), knee = P(j.KNEE), heel = P(j.HEEL), hip = P(j.HIP), sh = P(j.SH);
-        // plumb line at the ankle: shin should lean off it toward the wall; heel line on the floor
-        dashed(X(ank), Y(ank), X(ank), Y(knee) - L / 2, act.has('lean') ? GUIDE.warn : GUIDE.ok);
-        dashed(X(heel) - L, ref.heel0 * H, X(heel) + L, ref.heel0 * H, c('heel'));
-        if (act.has('heel')) arrow(X(heel), Y(heel) - 6, 0, 1, GUIDE.bad, L * 0.7);
-        if (act.has('lean')) arrow(X(hip), Y(hip), (P(j.WR).x - hip.x), 0, GUIDE.warn, L);
-        if (act.has('kneebend') || act.has('kneestraight')) { arrow(X(knee), Y(knee), act.has('kneebend') ? -(knee.x - (hip.x + ank.x) / 2) : (knee.x - (hip.x + ank.x) / 2), 0, GUIDE.bad, L * 0.7); }
-        if (act.has('hinge')) { dashed(X(sh), Y(sh), X(knee), Y(knee), GUIDE.bad); arrow(X(hip), Y(hip), (P(j.WR).x - hip.x), 0, GUIDE.bad, L * 0.8); }
-        break;
-      }
+      if (metric.kind === 'offset' || metric.kind === 'near') dashed(X(P[1]), Y(P[1]), X(P[2]), Y(P[2]), color);
+      if (metric.kind === 'pelvis') dashed(X(pts[23]) - L, (pts[23].y + pts[24].y) / 2 * H, X(pts[24]) + L, (pts[23].y + pts[24].y) / 2 * H, color);
+      if (!on) continue;
+      const d = arrowDir(metric.kind, f.op, P, pts, S); if (!d) continue;
+      let at = P[0]; if (metric.kind === 'angle') at = P[1]; if (metric.kind === 'vertical' || metric.kind === 'tilt') at = P[1];
+      if (metric.kind === 'lean') at = E.mid(pts[11], pts[12]); if (metric.kind === 'headTilt') at = pts[0]; if (metric.kind === 'pelvis') at = MoveSpec.resolve('HIP', pts, S, E);
+      arrow(X(at), Y(at), d.dx * (stage.classList.contains('mirror') ? 1 : 1), d.dy, GUIDE.bad, L * 0.8);
     }
+    /* the target itself, for a reps move: a dashed line to where the moving point should reach */
+    const g = ghostFor(ex, m, ref, pts);
+    if (g && ex.type === 'reps' && ex.iProg >= 0) { const a = g[g.length - 2], b = g[g.length - 1]; dashed(X(a), Y(a), X(b), Y(b), m.p >= E.FULL ? GUIDE.ok : GUIDE.warn); const r = readoutFor(ex, m, live.session); label(X(b) + 6, Y(b), r.tgt.replace(/^\/ /, '').split(' · ')[0]); }
     ctx.restore();
   }
-  function angleLabel(id, m) {
-    switch (id) {
-      case 'heelslide': return Math.round(Math.max(0, m.flexion)) + '° bend';
-      case 'hipabd': return Math.round(Math.max(0, m.raise)) + '° raise';
-      case 'wallsit': return Math.round(m.knee) + '° knee';
-      case 'plank': return (m.hipOff > 0.055 ? 'sag ' : m.hipOff < -0.075 ? 'pike ' : 'line ') + Math.round(m.lineAng) + '°';
-      case 'calfstretch': return Math.round(m.shinLean) + '° lean · ' + Math.round(m.knee) + '° knee';
-    }
-    return '';
+  function angleLabel(ex, m) {
+    if (!live || !live.session.ref) return '';
+    const r = readoutFor(ex, m, live.session); if (!r.val) return '';
+    const d = ex.display || {};
+    return r.val + (d.label ? ' ' + d.label : '');
   }
 
   /* ---------- review ---------- */

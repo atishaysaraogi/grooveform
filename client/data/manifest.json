@@ -1,5 +1,5 @@
 {
-  "_about": "Which files make up the library. Add a new body-region file to \"moves\" and it loads; remove the line and it disappears. \"code\" lists the hand-written moves (JavaScript, not data) — they load before the moves files.",
+  "_about": "Which files make up the library. Add a new body-region file to \"moves\" and it loads; remove the line and it disappears. \"code\" lists hand-written moves (JavaScript under client/coach/library/), for anything the data format cannot say — empty today: every move is data.",
   "settings": "settings.json",
   "shared": "shared.json",
   "moves": [
@@ -13,16 +13,5 @@
     "moves/gym_lower.json",
     "moves/gym_upper.json"
   ],
-  "code": [
-    "coach/library/band_row.js",
-    "coach/library/calfstretch.js",
-    "coach/library/heelslide.js",
-    "coach/library/hipabd.js",
-    "coach/library/plank.js",
-    "coach/library/pullapart.js",
-    "coach/library/shoulder_abd.js",
-    "coach/library/shoulder_er.js",
-    "coach/library/trapstretch.js",
-    "coach/library/wallsit.js"
-  ]
+  "code": []
 }

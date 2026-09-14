@@ -102,3 +102,16 @@ pre.code { background: var(--surface-2); border-radius: 12px; padding: 12px; fon
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--grape); color: var(--cream); padding: 10px 16px; border-radius: 999px; z-index: 30; font-weight: 800; }
 kbd { font: inherit; font-size: .8rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; }
+
+/* measurement extras, fault gates, the tuning table */
+.metric .extras { gap: 10px; flex-wrap: wrap; font-size: .82rem; margin: 6px 0 2px; }
+.metric .extras .mini { display: inline-flex; align-items: center; gap: 6px; }
+.metric .extras select { width: auto; min-height: 30px; padding: 2px 8px; font-size: .82rem; }
+.gates { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 8px; }
+.gates .gate { margin-top: 6px; gap: 8px; align-items: center; font-size: .85rem; }
+.gates .gate select { width: auto; min-height: 30px; }
+table.tune { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 6px; }
+table.tune th { text-align: left; font-weight: 800; padding: 4px 6px; border-bottom: 2px solid var(--line); }
+table.tune td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
+table.tune tr.ok td:last-child { color: var(--good); font-weight: 800; }
+table.tune tr.bad td:last-child { color: var(--bad); }

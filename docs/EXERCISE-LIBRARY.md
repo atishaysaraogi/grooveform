@@ -1,10 +1,11 @@
 # The exercise library
 
-The library is **data**. Every move except ten lives in a JSON file under
-`client/data/moves/`, one file per body region, and each file opens with a guide
-to every field it may contain — what it means, what good and bad input look
-like. Edit the file, reload the page, and the move is different. Nothing about
-a move is spread across other files.
+The library is **data**. Every one of the 135 moves — the ten vetted ones
+included — lives in a JSON file under `client/data/moves/`, one file per body
+region, and each file opens with a guide to every field it may contain — what
+it means, what good and bad input look like. Edit the file, reload the page, and
+the move is different. Nothing about a move is spread across other files, and
+nothing about a move is code.
 
 ```
 client/data/
@@ -23,9 +24,6 @@ client/coach/
   spec.js                compiles a declarative move into a rep counter and fault checks
   catalog.js             reads the data files, checks every field name, builds the moves and
                          the joint-angle figures
-  library/
-    heelslide.js         the ten hand-written moves: code, for what the data format cannot say
-    hipabd.js …
 scripts/catalog.js       the offline tool: check · list · new · remove · format · sync-docs
 ```
 
@@ -76,16 +74,62 @@ Things that are **not** per move live in `settings.json`: when a rep counts
 rep and hold choices, the band colours, the score. Its `_about` explains each.
 A change there moves all 135 moves at once; restart the server to pick it up.
 
-## Three kinds of move
+## The measurement language
 
-A move is a **catalogue entry** (JSON, above — 125 of them), a **spec** written
-in the Studio (the same fields, as the Studio saves them), or **hand-written**
-(a factory returning the object below — the ten vetted moves under
-`client/coach/library/`, listed in `manifest.json` under `code`). All three
-register through `define()` and pass the same validator. Hand-written is for
-anything the data format cannot say — a phase machine, a custom side rule, a
-measurement normalised by a limb length. That is real duplication and it is
-deliberate: those ten are also the only moves the Studio cannot edit.
+Everything a move judges is written with the same small vocabulary, and the
+Studio, the coach and the tests all read it through one compiler
+(`coach/spec.js`). A measurement is `{ "kind", "pts" }` plus, when needed,
+`"per"` (what a percentage is of: `"torso"` or a segment `["KNEE", "ANK"]`,
+measured at calibration so it scales to the person), `"sign"` (`"outward"`
+from the body's midline, or `"forward"` the way the toes point), `"abs"` and
+`"flip"` (negate for an option value — external vs internal rotation).
+
+| kind | points | reads |
+|---|---|---|
+| `angle` | 3 | the angle at the middle joint, 0–180° |
+| `vertical` | 2 | the segment's angle from hanging straight down |
+| `tilt` | 2 | the segment's angle from horizontal |
+| `dist` | 2 | distance, % of the reference length |
+| `offset` | 3 | how far the third point sits off the line through the first two |
+| `rise` | 1 | how far the point has risen since calibration, % |
+| `height` | 2 | how far the first point is above the second, % |
+| `ratio` | 2 | the segment's length vs calibration — a limb leaving the camera plane reads short |
+| `gap` | 2 | sideways offset of the first point from the second, % |
+| `rotation` | 2 | how far a segment has swung toward the camera, degrees |
+| `near` | 3 | distance from a point to a segment, % |
+| `lean` | 0 | trunk lean, signed |
+| `headTilt` | 0 | head roll against the pelvis, signed |
+| `pelvis` | 0 | pelvis tilt seen from the front |
+
+A fault is a measurement, `"op"` and `"threshold"`, with `"rel": "change"` to
+compare against the calibrated start, `"minP"` to wait until the rep is under
+way, `"persist"` before it is spoken, and — where a plain threshold is not
+enough — `"when"` (gates: an option value, another measurement's comparison,
+`"inPosition"` / `"notInPosition"`), `"phase"` (`"moving"`, `"rest"`, or
+`"any"` for a hold fault that must fire while the person is *out* of position)
+and `"scale"` (a threshold that grows with another reading). Rules that need no
+measurement: `"shallow"`, `"fast"`, `"return"`. Progress has `"startMin"` /
+`"startMax"` clamps and `"delta": -1` for a reading that falls during the rep;
+`"sided": { "auto": true }` follows whichever limb moves when no side was chosen;
+`"display"` names what the live readout shows. The `_about` guide in every
+moves file spells each of these out with examples.
+
+That vocabulary is what let the ten hand-written moves become data: each one
+was rewritten as an entry, and `test/engine.test.js` — synthetic recordings
+with known reps and known faults — proves the data version counts and cues
+exactly as the code did. The folder `client/coach/library/` is gone;
+`manifest.json` keeps a `code` list for the day something genuinely cannot be
+said in data, and it is empty.
+
+## The live screen is data too
+
+What the coach draws during a set comes from the same fields: the readout is
+the progress measurement against its target (or the hold condition `display`
+names), the ghost limb is that measurement's own segment drawn at the target
+angle, and every fault draws its reference line (a `rise` fault draws the
+height its point started at, an `offset` fault its line) and, when it fires, an
+arrow at its first landmark pointing the way to fix it — worked out from the
+kind and the comparison. `coach/coach.js` has no per-move code left.
 
 ## Tracking tiers and the vetted flag
 
@@ -98,7 +142,7 @@ Every move states honestly what the camera does with it, in `tracking`:
 | `none` | cannot measure anything useful                | shows the guide and a counter or timer; you log by hand|
 
 `vetted: true` marks the moves that have been checked rep by rep against
-recordings (today: the ten hand-written ones). Every move is listed; the
+recordings in the Studio — see *The tuning method* in `docs/STUDIO.md`. Every move is listed; the
 vetted ones simply sort into the first group. The exercise page, the move
 list and the routine builder all name the tier in the move's meta line.
 
@@ -211,13 +255,10 @@ Studio, text editor or `node scripts/catalog.js new <file> <id>`. A new body
 region is a new file under `client/data/moves/` plus one line in
 `manifest.json`.
 
-A hand-written move is code and takes two steps:
-
-1. Create `client/coach/library/<id>.js` (filename must equal the move's `id`).
-2. List it in `client/data/manifest.json` under `code`.
-
-`engine.js` and the browser both read the manifest, so nothing else changes.
-`test/library.test.js` fails if the folder and the manifest disagree.
+Should a move ever need code the data language cannot express, create
+`client/coach/library/<id>.js` (a factory returning the object below) and list
+it in `client/data/manifest.json` under `code`; `engine.js` and the browser
+both read the manifest. No such move exists today.
 
 To make it free without a subscription, add its id to `FREE_EXERCISES` (or leave
 `FREE_EXERCISES=all`).
