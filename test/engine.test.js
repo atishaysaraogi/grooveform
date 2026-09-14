@@ -11,7 +11,7 @@ function run(ex, frames, opts = {}, fps = 30) {
   const sess = new E.SetSession(ex, { target: 100, ...opts }); const sm = new E.PoseSmoother();
   let t = 0; const cues = []; const events = [];
   const first = sm.update(frames[0], t, 1); sess.calibrate(first, E.nearSide(first));
-  for (const f of frames) { t += 1000 / fps; const pts = sm.update(f, t, 1); const r = sess.step(pts, t); for (const c of r.cues) sess.ackCue(c.id, t); cues.push(...r.cues.map(c => c.id), ...r.repCues.map(c => c.id)); if (r.repEvent) events.push(r.repEvent); }
+  for (const f of frames) { t += 1000 / fps; const pts = sm.update(f, t, 1); const r = sess.step(pts, t); for (const c of r.cues) sess.ackCue(c.id, t); /* the coach speaks one rep cue per rep and acks it, which is what starts its cooldown */ if (r.repCues[0]) sess.ackCue(r.repCues[0].id, t); cues.push(...r.cues.map(c => c.id), ...r.repCues.map(c => c.id)); if (r.repEvent) events.push(r.repEvent); }
   return { sess, cues, events, review: sess.review() };
 }
 const ex = id => E.EXERCISES.find(e => e.id === id);
@@ -32,6 +32,21 @@ function heelslide(f, heelLift = 0, hipLift = 0) {
   const { review, cues, events } = run(hs, frames, { rom: 90 });
   console.log('heel slide:', { reps: review.reps, partials: review.partials, peaks: events.map(e => e.rep.peak.toFixed(2)), faults: faultsOf(review), cues, score: review.score });
   assert.strictEqual(review.reps, 3); assert.strictEqual(review.partials, 1); assert(review.faults.heel); assert(review.faults.shallow);
+}
+/* ---- Rep rules are throttled: "slow it down" lands once a set, however many reps are rushed,
+       but the review still counts every rushed rep. ---- */
+{
+  const hs = ex('heelslide'); const frames = [];
+  for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+  for (let r = 0; r < 6; r++) for (let i = 0; i < 30; i++) frames.push(heelslide(95 * Math.sin(Math.PI * i / 30)));   // 1 s a rep, well under minMs
+  for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+  const { review, cues } = run(hs, frames, { rom: 90 });
+  const fast = ex('heelslide').faults.find(f => f.id === 'fast');
+  console.log('rushed set:', { reps: review.reps, spokenFast: cues.filter(c => c === 'fast').length, countedFast: review.faults.fast.n, maxCues: fast.maxCues });
+  assert.strictEqual(fast.maxCues, 1, 'settings.json caps the fast rule at one cue a set');
+  assert(review.reps >= 5, 'every rushed rep still counts: ' + review.reps);
+  assert(review.faults.fast.n >= 5, 'the review sees every rushed rep: ' + review.faults.fast.n);
+  assert.strictEqual(cues.filter(c => c === 'fast').length, 1, 'but it is only ever offered once: ' + cues.filter(c => c === 'fast').length);
 }
 /* ---- Standing hip abduction: front view, right leg raises ---- */
 function hipabd(raise, lean = 0, hike = 0) {

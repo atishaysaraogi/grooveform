@@ -285,8 +285,8 @@
     const out = [];
     for (const st of steps) {
       if (st.ex && st.ex.sided && (st.opts.side || 'both') === 'both') {
-        out.push({ ...st, opts: { ...st.opts, side: 'left' }, half: 1 });
-        out.push({ ...st, opts: { ...st.opts, side: 'right' }, half: 2 });
+        out.push({ ...st, opts: { ...st.opts, side: 'left', half: 1 }, half: 1 });
+        out.push({ ...st, opts: { ...st.opts, side: 'right', half: 2 }, half: 2 });
       } else out.push(st);
     }
     return out;

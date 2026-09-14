@@ -296,6 +296,9 @@
     voice.unlock();
     show('screen-live');
     $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant ? ' · ' + ((((ex.options || []).find((o) => o.key === 'variant') || {}).labels || {})[current.opts.variant] || current.opts.variant.toUpperCase()).split(' (')[0] : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
+    /* The side was picked before the set, so name it on screen from the start — not only once
+       calibration has run. */
+    if (ex.sided && SIDE_CODE[current.opts.side]) $('live-name').textContent += ` · ${sideName(SIDE_CODE[current.opts.side])} ${limbWord(ex)}`;
     $('phase').textContent = ''; $('cue').className = 'cue'; $('btn-mute').textContent = voice.muted ? '🔇' : '🔊';
     $('hud-side').style.display = ex.type === 'reps' ? '' : 'none'; $('btn-flip').style.display = file ? 'none' : '';
     setStatus('warn', 'Starting'); setFrame(''); applyVoiceButton();
@@ -319,6 +322,10 @@
       return;
     }
     live.state = 'position';
+    /* Spoken now rather than at "Go": it plays while they are getting into position, and the
+       three-second count-in stays clear. */
+    const opening = openingLine(ex, target, current.opts);
+    if (opening) { voice.say(opening, { priority: 2 }); recEvent('opening', { text: opening }); }
     lastVideoTime = -1;
     cancelAnimationFrame(rafId); rafId = requestAnimationFrame(loop);
   }
@@ -380,6 +387,25 @@
     return SIDE_CODE[live.session.opts.side] || null;
   }
   function limbWord(ex) { return ex.sided ? (ex.sided.limb === 'side' ? 'side' : ex.sided.limb) : ''; }
+
+  /* ---------- the spoken opening ----------
+     Said once as the set comes up, while the person is still getting into position:
+     which side (a "both" run is two halves, so it matters which one is first), what the
+     move is, and the goal. The words come from the move's own "brief" in its data file —
+     no move has a script here. Later sets of the same step only get the short version. */
+  function sideLine(ex, opts, first) {
+    const side = sideName(SIDE_CODE[opts.side]); if (!ex.sided || !side) return '';
+    const limb = limbWord(ex), what = limb && limb !== 'side' ? `${side} ${limb}` : `${side} side`;
+    const Cap = what[0].toUpperCase() + what.slice(1);
+    /* "first" / "now the other" only make sense on the opening set of each half of a both-sides run. */
+    if (!first || !opts.half) return Cap + '.';
+    return opts.half === 1 ? `${Cap} first.` : `Now the ${what}.`;
+  }
+  function goalLine(ex, target) { return ex.type === 'reps' ? `${target} reps.` : `${target} seconds.`; }
+  function openingLine(ex, target, opts) {
+    const first = !(opts.set > 1);
+    return [sideLine(ex, opts, first), first ? ex.brief : '', first ? goalLine(ex, target) : `Set ${opts.set} of ${opts.sets}.`].filter(Boolean).join(' ');
+  }
 
   function checksFor(pts, aspect) {
     const ex = live.ex; const out = []; let ok = true;

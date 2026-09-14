@@ -215,8 +215,12 @@ async function runCoachedSet(page, side = 'right') {
       window.__mockPose = t => { if (t < 10500) return abd(0); const tt = t - 10500, rep = Math.floor(tt / 2800), ph = (tt % 2800) / 2800; if (rep >= 8) return abd(0); return abd(92 * Math.sin(Math.PI * ph)); };
     });
     await setBubble(pro, 'target', 8); await runCoachedSet(pro, 'left');   // this fixture raises the LEFT arm
-    const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted: ' + JSON.stringify(rec));
+    const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted: ' + JSON.stringify(rec));
     assert.equal(rec.work, 'L', 'the chosen left arm is the working limb: ' + JSON.stringify(rec));
+    /* the set opens by naming the side and describing the movement, before the count-in */
+    assert.match(rec.opening || '', /^Left arm\./, 'the opening names the side: ' + JSON.stringify(rec.opening));
+    assert.match(rec.opening || '', /Raise the arm straight out to the side/, 'and says what to do: ' + JSON.stringify(rec.opening));
+    assert.match(rec.opening || '', /8 reps\.$/, 'and the target: ' + JSON.stringify(rec.opening));
     await pro.screenshot({ path: path.join(SHOTS, 'review-shoulder-abd.png') }); await pro.click('#rv-submit'); await pro.waitForFunction(() => location.hash === '#/exercise/shoulder_abd' && !document.querySelector('#coach:not([hidden])'));
     await pro.goto(base + '/?mock=1#/history'); await pro.waitForFunction(() => document.body.innerText.includes('Shoulder abduction'));
   });

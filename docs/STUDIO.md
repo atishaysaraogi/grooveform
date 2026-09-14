@@ -50,7 +50,7 @@ recording the survivors.
 
 | minutes | step | who does what |
 |---|---|---|
-| 5 | 2 · Describe | physio talks, builder types: name, type, view, side, camera height and distance, band or not, targets, calibration pose, the three page lines, **and the faults by name** — each becomes a take label |
+| 5 | 2 · Describe | physio talks, builder types: name, type, view, side, camera height and distance, band or not, targets, calibration pose, the three page lines, the **spoken brief** (what the coach says as the set starts — position, then movement, no camera talk), **and the faults by name** — each becomes a take label |
 | 8 | 3 · Record | physio (or model) performs; builder labels each take before recording it |
 | 8 | 4 · Measure, 5 · Faults | builder drives; physio decides — see below |
 | 4 | 6 · Guide | physio dictates the form points, marks which the camera checks; builds the figure |

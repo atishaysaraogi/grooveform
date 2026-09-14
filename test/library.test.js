@@ -176,3 +176,30 @@ test('a move missing any detail is rejected rather than half-registered', () => 
 test('define rejects a duplicate id', () => {
   assert.throws(() => library.define(() => engine.EXERCISES[0]), /already registered/);
 });
+
+/* The spoken brief is what a person hears as the set comes up. It is only useful if it says
+   the position and the movement, in a couple of sentences, and leaves out the camera talk
+   they have already dealt with — so every camera-coached move must carry one. */
+test('every coached move has a spoken brief: short, no camera talk, complete sentences', () => {
+  const coached = engine.EXERCISES.filter((e) => e.tracking !== 'none');
+  const missing = coached.filter((e) => !e.brief || !e.brief.trim()).map((e) => e.id);
+  assert.deepEqual(missing, [], 'these moves would start a set in silence');
+  for (const e of coached) {
+    const b = e.brief, n = b.split(/\s+/).length;
+    assert.ok(n >= 8 && n <= 45, `${e.id}: brief is ${n} words — aim for one or two sentences`);
+    assert.ok(/[.!]$/.test(b.trim()), `${e.id}: brief should end as a sentence — "${b.slice(-30)}"`);
+    assert.ok(!/\b(camera|phone|lens|in frame|in shot|m away)\b/i.test(b), `${e.id}: brief mentions the camera set-up, which is already done by then`);
+    assert.ok(!/\bnearest\b(?!\s+(?:the\s+)?\w)/i.test(b), `${e.id}: brief has a dangling "nearest"`);
+  }
+});
+
+/* A move that says nothing about a rule is capped by settings.json; a move may narrow it itself. */
+test('the fast rule is capped at one cue a set, and the cap reaches the compiled fault', () => {
+  const st = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'settings.json'), 'utf8'));
+  assert.equal(st.fault.maxCues.fast, 1);
+  /* An untracked move may list "too fast" as a watch-out with no rule behind it; only a rule
+     compiles to a rep-level fault, and only that one carries a cap. */
+  const rushed = engine.EXERCISES.filter((e) => e.faults.some((f) => f.id === 'fast' && f.onRep));
+  assert.ok(rushed.length > 10, 'most rep moves carry the fast rule, got ' + rushed.length);
+  for (const e of rushed) assert.equal(e.faults.find((f) => f.id === 'fast').maxCues, 1, e.id);
+});

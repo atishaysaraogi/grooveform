@@ -255,7 +255,7 @@
 
   /* ---------------- Fault tracker: persistence + cooldown ---------------- */
   class FaultTracker {
-    constructor(faults) { this.faults = faults.filter(f => !f.onRep); this.since = {}; this.lastCue = {}; this.active = new Set(); this.counts = {}; this.timeIn = {}; this.lastT = null; }
+    constructor(faults) { this.faults = faults.filter(f => !f.onRep); this.since = {}; this.lastCue = {}; this.cued = {}; this.active = new Set(); this.counts = {}; this.timeIn = {}; this.lastT = null; }
     // returns list of fault objects that should be cued now (already debounced)
     update(m, phase, t) {
       const cues = []; const dt = this.lastT ? Math.min(t - this.lastT, 200) : 0; this.lastT = t;
@@ -267,19 +267,22 @@
           if (held >= f.persist) {
             if (!this.active.has(f.id)) { this.active.add(f.id); this.counts[f.id] = (this.counts[f.id] || 0) + 1; }
             this.timeIn[f.id] = (this.timeIn[f.id] || 0) + dt;
-            if (!this.lastCue[f.id] || t - this.lastCue[f.id] > f.cooldown) cues.push(f);
+            if (this.due(f, t)) cues.push(f);
           }
         } else { this.since[f.id] = 0; this.active.delete(f.id); }
       }
       cues.sort((a, b) => b.weight - a.weight);
       return cues;
     }
-    /* A cue is due when it has not been spoken inside its own cooldown. Live cues are filtered
-       by update(); rep-level cues are checked here, from step(), because they are raised at the
-       rep event rather than frame by frame. */
-    due(f, t) { return !this.lastCue[f.id] || t - this.lastCue[f.id] > (f.cooldown || 0); }
+    /* A cue is due when it has not been spoken inside its own cooldown and has not already been
+       said as often as this set allows. Live cues go through update(); rep-level cues are checked
+       from step(), because they are raised at the rep event rather than frame by frame. */
+    due(f, t) {
+      if (Number.isFinite(f.maxCues) && (this.cued[f.id] || 0) >= f.maxCues) return false;
+      return !this.lastCue[f.id] || t - this.lastCue[f.id] > (f.cooldown || 0);
+    }
     // call once a cue has actually been spoken/shown; until then it keeps being offered
-    ack(id, t) { this.lastCue[id] = t; }
+    ack(id, t) { this.lastCue[id] = t; this.cued[id] = (this.cued[id] || 0) + 1; }
   }
 
   /* ---------------- Set session: ties it together ---------------- */

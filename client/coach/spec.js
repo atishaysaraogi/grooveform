@@ -343,7 +343,11 @@
     /* Rep rules carry a cooldown as well, so the engine can hold one back when it has just been
        said; without it a rule true on every rep would be repeated on every rep. */
     const faults = spec.faults.map((f) => {
-      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates };
+      /* maxCues caps how often one cue may be spoken in a single set. Told once, "slow it down"
+         is advice; told every rep it is nagging that buries the cues that matter. A move may set
+         its own; otherwise settings.json caps by rule name. */
+      const cap = Number.isFinite(f.maxCues) ? f.maxCues : (f.rule && (fs.maxCues || {})[f.rule]);
+      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates, ...(Number.isFinite(cap) ? { maxCues: cap } : {}) };
       if (f.rule === 'shallow') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
       if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
       if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
@@ -359,7 +363,7 @@
 
     const ex = {
       id: spec.id, order: spec.order || 500, name: spec.name, group: spec.group, type: spec.type, view: spec.view, icon: spec.icon || 'move',
-      summary: spec.summary, setup: spec.setup, why: spec.why,
+      summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
       calibrate, measure, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,

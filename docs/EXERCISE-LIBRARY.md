@@ -169,7 +169,7 @@ of every file documents each field; this is the shape:
       "id": "slr", "name": "Straight leg raise", "type": "reps", "view": "side", "tracking": "form",
       "level": "beginner", "equipment": ["none"], "muscles": { "primary": ["quadriceps"], "secondary": [] },
       "sided": { "limb": "leg", "by": "camera" },
-      "summary": "…", "setup": "…", "why": "…",
+      "summary": "…", "setup": "…", "brief": "…", "why": "…",
       "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
       "tempo": "Lift 2 s, hold 2 s, lower 3 s.", "dosage": "2–3 × 10 each leg.",
       "progression": "…", "regression": "…", "contraindications": "…",
@@ -281,6 +281,7 @@ To make it free without a subscription, add its id to `FREE_EXERCISES` (or leave
       group: 'Hip strength', type: 'reps', view: 'front', icon: '🦿',
       summary: 'One line for the catalogue tile.',
       setup: 'Where to stand or lie, how far from the camera, at what height.',
+      brief: 'What the coach says out loud as the set starts: position, then movement.',
       why: 'Why this camera angle can actually measure this movement.',
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
       options: [{ key: 'rom', label: 'Raise target', values: [20, 25, 30], unit: '°', default: 30 }],
@@ -352,9 +353,27 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `weight` | how much it costs the set score, and how it ranks in the summary tips |
 | `persist` | milliseconds it must hold true before it counts — stops flicker |
 | `cooldown` | milliseconds before the same cue is spoken again — rep rules obey it too, so "Slow it down" is not said on every rep |
+| `maxCues` | how many times it may be spoken in one set at all. `settings.json` caps the `fast` rule at 1; the review still counts every occurrence |
 | `phase` | limit it to `'moving'` / `'hold'` |
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
+
+### The spoken opening
+
+A set does not start in silence. As the camera comes up — while the person is
+still getting into position — the coach says which side is being worked, the
+move's `"brief"`, and the target:
+
+> *"Left leg first. Lie on your back, working leg straight, hips and shoulders
+> flat. Slide the heel toward your bottom as far as it will go, then slide it
+> back out. Ten reps."*
+
+`"brief"` is the move's own words, one or two sentences, position then movement,
+with no camera talk in it — by then the phone is already placed. A both-sides run
+is two halves, so the first half is announced as *"first"* and the second as
+*"now the other"*; later sets of the same half get only the side and the set
+number. A move with no `"brief"` is announced by side and target alone, and
+`test/library.test.js` fails any camera-coached move that leaves it out.
 
 Only one cue is spoken per rep. When a live fault and a rep rule are both due at
 the same moment, the heavier one wins on a full rep and the rep rule wins on a half

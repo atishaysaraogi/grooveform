@@ -6,6 +6,7 @@
       "rep": "How far through a rep (0 = start position, 1 = target) the counter treats as resting, attempting and complete. rest: back below this and the rep is over. attempt: above this and a rep has started. full: reach this and the rep counts as a full one; between attempt and full it is a partial. Good: 0.15 / 0.32 / 0.85. Bad: full at 1.0 (nobody hits the target exactly, no rep would ever count) or rest above attempt.",
       "fault.persist": "Milliseconds a fault has to be true, continuously, before it is spoken. Filters out one-frame wobbles. Good: 300–600. Bad: 0 (every jitter cues) or 3000 (the rep is over before the cue).",
       "fault.cooldown": "Milliseconds before the same cue may be repeated. Good: 4000–6000. Bad: 500 (the coach nags).",
+      "fault.maxCues": "How many times one cue may be spoken in a single set, keyed by rule name. \"Slow it down\" only lands the first time you hear it, so fast is capped at 1; leave a rule out for no cap. A single move can override it with \"maxCues\" on the fault itself. Good: 1–2. Bad: 0 (the cue never fires — remove the fault instead).",
       "fault.severityWeight": "How much each severity (1, 2, 3) costs in the score and how it ranks against other cues when two fire at once.",
       "targets": "The rep counts and hold seconds a move offers when it does not name its own: choices (what the bubble cycles through) and default. Good: 4–6 sensible steps. Bad: 30 choices.",
       "landmarks": "Body points (MediaPipe indices) that must be in frame before a set can start. always = shoulders and hips (11, 12, 23, 24). legs = knees and ankles, added unless the move says upperBody: true.",
@@ -17,7 +18,7 @@
     }
   },
   "rep": { "rest": 0.15, "attempt": 0.32, "full": 0.85 },
-  "fault": { "persist": 400, "cooldown": 5000, "severityWeight": { "1": 1, "2": 2, "3": 3 } },
+  "fault": { "persist": 400, "cooldown": 5000, "maxCues": { "fast": 1 }, "severityWeight": { "1": 1, "2": 2, "3": 3 } },
   "targets": {
     "reps": { "choices": [6, 8, 10, 12, 15], "default": 10 },
     "hold": { "choices": [10, 15, 20, 30, 45, 60], "default": 20 }

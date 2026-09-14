@@ -53,7 +53,7 @@
     return {
       id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '',
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
-      summary: '', setup: '', why: '', band: false, options: [],
+      summary: '', setup: '', brief: '', why: '', band: false, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
       calibrationPose: '',
       progress: { metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false },
@@ -82,7 +82,7 @@
     Object.assign(s, {
       _fileCamera: grpCam ? { ...grpCam } : null,
       id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
-      camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, why: ex.why, calibrationPose: r.calibrationPose || '',
+      camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, brief: ex.brief || '', why: ex.why, calibrationPose: r.calibrationPose || '',
       band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
       tracking: ex.tracking, level: r.level || 'beginner', equipmentText: (ex.equipment || []).join('\n'), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
       tempo: r.tempo || '', dosage: r.dosage || '', progression: r.progression || '', regression: r.regression || '', contraindications: r.contraindications || '',
@@ -129,7 +129,7 @@
     put('muscles', { primary: (s.muscleNames || {}).primary || [], secondary: (s.muscleNames || {}).secondary || [] });
     if (s.sided) put('sided', { limb: s.sided.limb, by: s.sided.by, ...(s.sided.auto ? { auto: true } : {}) });
     if (s.upperBody) put('upperBody', true);
-    put('summary', s.summary); put('setup', s.setup); put('why', s.why); put('calibrationPose', s.calibrationPose);
+    put('summary', s.summary); put('setup', s.setup); if (s.brief) put('brief', s.brief); put('why', s.why); put('calibrationPose', s.calibrationPose);
     if (!(inh.camera && s._fileCamera && same(s.camera, s._fileCamera))) put('camera', s.camera);
     const dt = st.targets[s.type] || {}; if (!(inh.targets && same(s.targets, dt.choices) && s.defaultTarget === dt.default)) { put('targets', s.targets); put('defaultTarget', s.defaultTarget); }
     put('icon', s.icon);
@@ -441,6 +441,7 @@
         ${field('Calibration pose (the first two seconds of every set)', area('calibrationPose', s.calibrationPose, 'Standing tall, arm hanging at the side, band slack.', 2), 'The coach reads its baselines from this still pose. Every take you record must start in it.')}
         ${field('Summary — one line on the tile', area('summary', s.summary, 'Straight-leg raise out to the side, checked for leaning and hip hiking.', 2))}
         ${field('Set-up — where the camera goes, in the user’s words', area('setup', s.setup, 'Stand facing the camera about 2.5 m away, camera at hip height, whole body in frame.', 3))}
+        ${field('Spoken brief — what the coach says as the set starts: position, then movement. No camera talk, under ~35 words.', area('brief', s.brief, 'Stand tall, one hand on a chair. Lift the working leg straight out to the side, then lower it with control.', 3))}
         ${field('Why this camera angle works', area('why', s.why, 'From the front the leg swings across the camera plane, so the raise angle, pelvis tilt and trunk lean are all measured directly.', 3))}
       </div></div></div>
       <div class="card"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>What goes wrong</h3><span class="muted" style="font-size:.85rem">Name each fault now — every one becomes a take label in step 3, and the numbers come in step 5. Most moves have three to five.</span></div>

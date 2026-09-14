@@ -226,10 +226,10 @@
     manifest: ['settings', 'shared', 'moves', 'code'],
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
-      'summary', 'setup', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
+      'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
       'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
-    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
+    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
     progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
@@ -371,7 +371,7 @@
     if (tracking === 'none') {
       ex = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
-        summary: e.summary, setup: e.setup, why: e.why, defaultTarget, targets, options: e.options || [],
+        summary: e.summary, setup: e.setup, brief: e.brief, why: e.why, defaultTarget, targets, options: e.options || [],
         required: st.landmarks.always.slice(), faults: docFaults(false), guide,
       };
       if (e.sided) ex.sided = e.sided;
@@ -395,7 +395,7 @@
       }
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
-        summary: e.summary, setup: e.setup, why: e.why, targets, defaultTarget, options: e.options || [],
+        summary: e.summary, setup: e.setup, brief: e.brief, why: e.why, targets, defaultTarget, options: e.options || [],
         progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
       };
       ex = SPEC.compile(spec, lib.kinematics);
