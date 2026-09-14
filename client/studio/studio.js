@@ -74,23 +74,27 @@
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const listText = (a) => (a || []).join(', ');
   const listFrom = (t) => String(t || '').split(/[,\n]+/).map((x) => x.trim()).filter(Boolean);
+  const linesFrom = (t) => String(t || '').split(/[;\n]+/).map((x) => x.trim()).filter(Boolean);
   function entryToSpec(ex) {
     const raw = ex.entry; const r = C.resolveEntry(raw, SHARED(), ex.id); const st = SETTINGS();
     const s = blankSpec();
+    const grpCam = (C.data.files.find((f) => f.name === 'moves/' + ex.file) || { json: {} }).json.camera;
     Object.assign(s, {
+      _fileCamera: grpCam ? { ...grpCam } : null,
       id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
       camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, why: ex.why, calibrationPose: r.calibrationPose || '',
       band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
-      tracking: ex.tracking, level: r.level || 'beginner', equipmentText: listText(ex.equipment), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
+      tracking: ex.tracking, level: r.level || 'beginner', equipmentText: (ex.equipment || []).join('\n'), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
       tempo: r.tempo || '', dosage: r.dosage || '', progression: r.progression || '', regression: r.regression || '', contraindications: r.contraindications || '',
       sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
       muscles: { ...((raw.pose && raw.pose.work) || {}) }, pose: raw.pose ? JSON.parse(JSON.stringify(raw.pose)) : null, figure: raw.figure || null,
       minMs: r.minMs, focus: r.focus, order: raw.order, vetted: !!r.vetted,
       _file: ex.file, _replaces: ex.id, _key: ex.id, created: Date.now(),
+      _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
     if (r.progress) s.progress = { targetIsDelta: false, ...r.progress };
     if (r.hold) s.hold = { conditions: r.hold.conditions.map((c) => ({ rel: 'abs', min: null, max: null, ...c })) };
-    s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? (ex.type === 'reps' ? 0.3 : 0), persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
+    s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? 0, persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
     s.guide = { surface: '', cannotSee: '', stop: '', ...JSON.parse(JSON.stringify(r.guide || {})) };
     if (!Array.isArray(s.guide.regions) || !s.guide.regions.length) s.guide.regions = [{ name: 'Trunk & pelvis', points: [] }];
     if (raw._studio) { const m = raw._studio; s.screen = m.screen || {}; s.ptType = m.ptType || s.ptType; s.notes = m.notes || ''; }
@@ -114,30 +118,34 @@
   const isLive = (f) => !f.listed && f.metric && f.metric.pts.length >= ((SPEC.KINDS[f.metric.kind] || {}).n || 0) && Number.isFinite(f.threshold);
   function specToEntry(s) {
     const e = {};
-    const put = (k, v) => { if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return; e[k] = v; };
+    const put = (k, v) => { if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return; if (v && typeof v === 'object' && !Array.isArray(v)) for (const kk of Object.keys(v)) if (v[kk] === undefined) delete v[kk]; e[k] = v; };
     put('id', s.id); put('name', s.name); put('clinicalName', s.clinicalName); put('type', s.type); put('view', s.view); put('tracking', s.tracking || 'form');
     if (s.vetted) put('vetted', true);
-    put('level', s.level); put('equipment', listFrom(s.equipmentText).length ? listFrom(s.equipmentText) : ['none']);
+    const inh = s._inherited || {}; const st = SETTINGS();
+    if (!(inh.level && s.level === 'beginner')) put('level', s.level);
+    if (!inh.equipment || linesFrom(s.equipmentText).length) put('equipment', linesFrom(s.equipmentText).length ? linesFrom(s.equipmentText) : ['none']);
     put('muscles', { primary: (s.muscleNames || {}).primary || [], secondary: (s.muscleNames || {}).secondary || [] });
     if (s.sided) put('sided', { limb: s.sided.limb, by: s.sided.by });
     if (s.upperBody) put('upperBody', true);
     put('summary', s.summary); put('setup', s.setup); put('why', s.why); put('calibrationPose', s.calibrationPose);
-    put('camera', s.camera); put('targets', s.targets); put('defaultTarget', s.defaultTarget);
+    if (!(inh.camera && s._fileCamera && same(s.camera, s._fileCamera))) put('camera', s.camera);
+    const dt = st.targets[s.type] || {}; if (!(inh.targets && same(s.targets, dt.choices) && s.defaultTarget === dt.default)) { put('targets', s.targets); put('defaultTarget', s.defaultTarget); }
+    put('icon', s.icon);
     if (s.options && s.options.length) put('options', s.options);
     if (s.band !== false && s.band !== undefined) put('band', s.band);
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
     if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start, target: s.progress.target }; if (s.progress.targetIsDelta) p.targetIsDelta = true; put('progress', p); }
-    if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; return o; }); if (cs.length) put('hold', { conditions: cs }); }
+    if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; return o; }); if (cs.length) { let named = null; for (const [n, v] of Object.entries(SHARED().holds)) if (same(v, cs)) named = n; put('hold', { conditions: named || cs }); } }
     put('faults', (s.faults || []).map((f) => {
       const base = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, severity: +f.severity || 2 };
       if (f.rule) return { ...base, rule: f.rule, ...(f.rule === 'fast' ? { minMs: f.minMs } : {}) };
       if (!tracked || !isLive(f)) return base;
       const o = { ...base, metric: f.metric }; if (f.rel === 'change') o.rel = 'change'; o.op = f.op; o.threshold = f.threshold;
-      if (f.minP != null && f.minP !== 0) o.minP = f.minP; if (f.persist) o.persist = f.persist; if (f.cooldown) o.cooldown = f.cooldown; if (f.phase) o.phase = f.phase; if (f.invalidates) o.invalidates = true;
+      if (f.minP != null && f.minP !== 0) o.minP = f.minP; if (f.persist && f.persist !== st.fault.persist) o.persist = f.persist; if (f.cooldown) o.cooldown = f.cooldown; if (f.phase) o.phase = f.phase; if (f.invalidates) o.invalidates = true;
       return foldFault(o);
     }));
-    put('guide', { surface: s.guide.surface, stop: s.guide.stop, cannotSee: s.guide.cannotSee, regions: (s.guide.regions || []).filter((r) => r.name && r.points.some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) });
+    put('guide', { surface: s.guide.surface, stop: s.guide.stop, cannotSee: inh.cannotSee && s.guide.cannotSee === st.cannotSee ? undefined : s.guide.cannotSee, regions: (s.guide.regions || []).filter((r) => r.name && r.points.some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) });
     if (s.pose) { const pose = JSON.parse(JSON.stringify(s.pose)); if (Object.keys(s.muscles || {}).length) pose.work = { ...s.muscles }; put('pose', pose); }
     else if (s.figure) put('figure', { ...s.figure, w: { ...(s.muscles || {}) } });
     put('tempo', s.tempo); put('dosage', s.dosage); put('progression', s.progression); put('regression', s.regression); put('contraindications', s.contraindications);
@@ -155,6 +163,7 @@
     const existing = C.data.files.find((f) => f.name === rel);
     const json = existing ? JSON.parse(JSON.stringify(existing.json)) : { _about: (C.data.files[0] || { json: {} }).json._about, region: name, group: s.group || name, order: 2000 + fileNames().length * 100, camera: s.camera, sources: [], moves: [] };
     const entry = specToEntry(s);
+    if (s.group && s.group !== json.group) entry.group = s.group;
     const i = json.moves.findIndex((m) => m.id === (s._replaces || s.id) || m.id === s.id);
     if (i >= 0) json.moves[i] = entry; else json.moves.push(entry);
     return { rel, json, entry, isNew: !existing };
@@ -803,7 +812,7 @@
           ${field('Make it harder', text('progression', s.progression, 'Next band colour; add a 2-second pause at the top'))}
           ${field('Make it easier', text('regression', s.regression, 'No band; smaller range; hold the chair'))}
           ${field('Do not do this if', text('contraindications', s.contraindications, 'Sharp pain in the joint; swelling that grows during the session'))}
-          ${field('Equipment', text('equipmentText', s.equipmentText, 'none — or: chair, band, door anchor'), 'Comma-separated. “(optional)” after an item says so.')}
+          ${field('Equipment', area('equipmentText', s.equipmentText, 'none\nor one item per line: chair, band', 2), 'One item per line (an item may contain a comma). “(optional)” after an item says so.')}
           ${field('Muscles — main', text('muscleNames.primaryText', listText((s.muscleNames || {}).primary), 'quadriceps, gluteus maximus'), 'Plain names, comma-separated. Shown in the details panel.')}
           ${field('Muscles — also', text('muscleNames.secondaryText', listText((s.muscleNames || {}).secondary), 'hamstrings'))}
           ${field('Sources', area('sourcesText', s.sourcesText, 'E3 Rehab — knee pain | https://…', 2), 'One per line: name | url. Added to the file’s own sources.')}
@@ -869,7 +878,7 @@
 
   /* ===================== 7 · check & export ===================== */
   function moveFileSource(s) {
-    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
+    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
     const credit = state.pt.name ? ` Authored with ${state.pt.name}.` : '';
     return `/* ${s.name} — written in Grooveform Studio.${credit}
    A declarative move: no code, only measurements and thresholds. It is compiled by
