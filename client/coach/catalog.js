@@ -99,7 +99,10 @@
   const shift = (pose, dx, dy) => { const o = {}; ptKeys(pose).forEach((k) => { o[k] = { x: pose[k].x + dx, y: pose[k].y + dy }; }); return o; };
   const maxY = (pose) => Math.max(...ptKeys(pose).map((k) => pose[k].y));
   /* The joint to hold still: the first (near foot first, then the far one, then hands, knees)
-     that touches the floor in both keyframes. None → the keyframes are simply placed together. */
+     that touches the floor in both keyframes. None → the keyframes are simply placed together.
+     A seated move is the exception: the chair holds the hips, and the foot that hangs lowest in
+     the start pose is in the air at the end of it — anchoring on that drags the body through
+     the seat, so `posture: 'sitting'` pins the hip instead. */
   const ANCHOR_ORDER = ['ft', 'an', 'anL', 'anR', 'ftF', 'anF', 'kn', 'knF', 'wr', 'wrF', 'wrL', 'wrR', 'h'];
   function plantedKey(A, B) {
     const fa = maxY(A), fb = maxY(B);
@@ -111,8 +114,8 @@
      touches the floor in A, i.e. the planted foot — sits where A's does; then the pair is floored
      (y 161) and centred (x 306) together. pose.anchor names another joint or null for none;
      pose.lift raises B (a jump, landing on a box); pose.raise lifts both off the floor (a hang). */
-  function placePair(A, B, pose) {
-    const anchor = pose.anchor === undefined ? plantedKey(A, B) : pose.anchor;
+  function placePair(A, B, pose, posture) {
+    const anchor = pose.anchor === undefined ? (posture === 'sitting' ? 'hip' : plantedKey(A, B)) : pose.anchor;
     let Bs = B;
     if (anchor && isPt(A[anchor]) && isPt(B[anchor])) Bs = shift(B, A[anchor].x - B[anchor].x, A[anchor].y - B[anchor].y);
     if (pose.lift) Bs = shift(Bs, 0, -pose.lift);
@@ -142,7 +145,7 @@
   function poseToFigure(view, pose, opts) {
     const build = view === 'front' ? frontPose : sidePose;
     const rawA = build(pose.A || {}), rawB = build(pose.B || pose.A || {});
-    const { A, B } = placePair(rawA, rawB, pose);
+    const { A, B } = placePair(rawA, rawB, pose, opts.posture);
     let wall = null;
     if (pose.wall && view === 'side') {
       const xs = [...Object.values(A), ...Object.values(B)].map((p) => p[0]);
@@ -220,7 +223,7 @@
       ex.spec = spec;
     }
     Object.assign(ex, physio, { tracking, vetted: !!e.vetted, catalog: true });
-    if (e.pose) registerFigure(e.id, poseToFigure(ex.view, e.pose, { hold: type === 'hold', side: e.pose.side || (e.sided && ex.view === 'front' ? 'R' : 'both') }));
+    if (e.pose) registerFigure(e.id, poseToFigure(ex.view, e.pose, { hold: type === 'hold', posture: (physio.camera || {}).posture, side: e.pose.side || (e.sided && ex.view === 'front' ? 'R' : 'both') }));
     return ex;
   }
 

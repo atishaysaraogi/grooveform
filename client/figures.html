@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>jodd.io — figure review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@500;700;800;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* One card per move: the animation exactly as the app draws it, with the id you quote back. */
+  .fg-top { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 10px; display: grid; gap: 10px; }
+  .fg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .fg { border: 2px solid var(--grape); border-radius: 18px; background: var(--surface); padding: 8px 10px 10px; display: grid; gap: 4px; }
+  .fg.flagged { border-color: var(--pink); background: var(--surface-2); }
+  .fg .demo-fig { max-width: 100%; }
+  .fg .id { font-family: var(--font-mono); font-size: .78rem; color: var(--ink); font-weight: 700; word-break: break-all; }
+  .fg .nm { font-weight: 900; font-size: .9rem; line-height: 1.2; }
+  .fg .mt { font-size: .72rem; color: var(--muted); }
+  .fg label { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 800; cursor: pointer; }
+  .fg-out { width: 100%; box-sizing: border-box; min-height: 64px; font-family: var(--font-mono); font-size: .8rem; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); }
+  .fg-h { margin: 18px 0 6px; font-size: 1rem; font-weight: 900; }
+</style>
+</head>
+<body>
+<main class="wrap stack" id="main">
+  <div>
+    <span class="wordmark" style="font-size:1.5rem">jodd.io</span>
+    <h1 style="margin:2px 0 0">Figure review</h1>
+    <p class="muted">Every move's animation, drawn exactly as the app draws it. Tick the ones that are wrong, say in a
+      sentence what the body should be doing instead, and paste the list back — each id maps to one
+      <code>pose</code> block in <code>client/coach/catalog/&lt;region&gt;.js</code>.</p>
+  </div>
+  <div class="fg-top">
+    <input type="search" id="q" class="search" placeholder="Search moves…" aria-label="Search moves">
+    <div class="row" style="align-items:center;gap:10px"><strong id="count"></strong><span class="spacer"></span><button class="btn ghost small" id="copy">Copy flagged</button><button class="btn ghost small" id="clear">Clear</button></div>
+    <textarea class="fg-out" id="out" readonly aria-label="Flagged move ids" placeholder="Tick a move and its id lands here."></textarea>
+  </div>
+  <div id="list"></div>
+</main>
+
+<script>
+/* The script list lives in index.html and the library test keeps it honest, so read it from there
+   rather than repeating it here where it would quietly drift. */
+(async () => {
+  const html = await (await fetch('index.html')).text();
+  const srcs = [...html.matchAll(/<script src="(coach\/[^"]+)"><\/script>/g)].map((m) => m[1]);
+  for (const src of srcs) await new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src));
+    document.head.appendChild(s);
+  });
+  render();
+})().catch((e) => { document.getElementById('list').innerHTML = '<p class="error">Could not load the move library: ' + e.message + '</p>'; });
+
+const FLAG = 'jodd.figureFlags';
+const flags = new Set((() => { try { return JSON.parse(localStorage.getItem(FLAG) || '[]'); } catch { return []; } })());
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function render() {
+  const list = FormEngine.EXERCISES;
+  const groups = [];
+  for (const e of list) { let g = groups.find((x) => x.name === e.group); if (!g) groups.push(g = { name: e.group, items: [] }); g.items.push(e); }
+  document.getElementById('list').innerHTML = groups.map((g) => `<h2 class="fg-h">${esc(g.name)} <span class="muted">${g.items.length}</span></h2>
+    <div class="fg-grid">${g.items.map(card).join('')}</div>`).join('');
+  document.getElementById('count').textContent = `${list.length} moves`;
+  document.querySelectorAll('.fg input[type=checkbox]').forEach((c) => c.onchange = () => {
+    c.checked ? flags.add(c.value) : flags.delete(c.value);
+    c.closest('.fg').classList.toggle('flagged', c.checked);
+    save();
+  });
+  save();
+}
+function card(e) {
+  const track = e.tracking === 'none' ? 'no camera' : e.tracking === 'reps' ? 'counts reps' : 'form coached';
+  const on = flags.has(e.id);
+  return `<div class="fg${on ? ' flagged' : ''}" data-name="${esc((e.id + ' ' + e.name + ' ' + e.group).toLowerCase())}">
+    ${FyzioCoach.demo(e)}
+    <span class="nm">${esc(e.name)}</span>
+    <span class="id">${esc(e.id)}</span>
+    <span class="mt">${e.view === 'front' ? 'front-on' : 'side-on'} · ${e.type === 'reps' ? 'reps' : 'timed hold'} · ${track}</span>
+    <label><input type="checkbox" value="${esc(e.id)}"${on ? ' checked' : ''}> looks wrong</label>
+  </div>`;
+}
+function save() {
+  const ids = [...flags].sort();
+  document.getElementById('out').value = ids.join('\n');
+  try { localStorage.setItem(FLAG, JSON.stringify(ids)); } catch { }
+}
+document.getElementById('q').oninput = (ev) => {
+  const s = ev.target.value.trim().toLowerCase();
+  document.querySelectorAll('.fg').forEach((c) => c.hidden = !!s && !c.dataset.name.includes(s));
+  document.querySelectorAll('.fg-grid').forEach((g) => {
+    const empty = ![...g.querySelectorAll('.fg')].some((c) => !c.hidden);
+    g.hidden = empty; if (g.previousElementSibling) g.previousElementSibling.hidden = empty;
+  });
+};
+document.getElementById('copy').onclick = async () => {
+  const t = document.getElementById('out'); t.select();
+  try { await navigator.clipboard.writeText(t.value); } catch { document.execCommand('copy'); }
+};
+document.getElementById('clear').onclick = () => {
+  flags.clear();
+  document.querySelectorAll('.fg input[type=checkbox]').forEach((c) => { c.checked = false; c.closest('.fg').classList.remove('flagged'); });
+  save();
+};
+</script>
+</body>
+</html>

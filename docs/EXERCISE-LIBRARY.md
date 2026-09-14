@@ -87,6 +87,13 @@ physio fills in:
 }
 ```
 
+**Reviewing the figures:** `/figures.html` on the site (or `client/figures.html`
+locally) draws every move's animation on one page with its id, a search box and
+a "looks wrong" tick that collects the ids you flag. It builds its script list
+from `index.html`, so it can never list a different set of moves than the app.
+Quote the ids back with a sentence each on what the body should be doing, and
+each one maps to exactly one `pose` block below.
+
 `pose` gives the two keyframes of the figure as **joint angles** (see the header
 of `catalog.js` for the conventions) and `catalog.js` turns them into the
 points the stick figure draws (the fuller anatomical figure is parked in `coach/archive/`), so a hundred figures can be written by hand

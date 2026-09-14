@@ -136,7 +136,7 @@
       faults: [ { id: 'leanback', label: 'Leaning back to help', cue: 'Sit tall', tip: 'Leaning back lets the hip flexors join in. Keep the trunk upright and the thigh on the seat.', severity: 2, metric: TRUNK, op: '<', threshold: 68, minP: 0.3, persist: 300 }, { id: 'drop', label: 'Letting the leg drop', cue: 'Lower slowly', tip: 'The lowering builds the muscle. Three seconds down, every rep.', severity: 1 } ],
       guide: { surface: 'A chair high enough that the feet hang or just touch.', stop: 'Kneecap pain, or the knee locking with a clunk.', cannotSee: 'The thigh lifting off the seat.',
         regions: [{ name: 'Working leg', points: [{ t: 'Straightens fully with the thigh tight; toes pulled up.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Upright, hands resting on the seat edge, not gripping.', tracked: true }] }] },
-      pose: { A: { face: 'right', torso: 0, thigh: 90, shin: 0, uarm: 20, farm: 40 }, B: { face: 'right', torso: 0, thigh: 90, shin: 90, foot: 90, uarm: 20, farm: 40 }, work: { thigh: 1 }, props: [{ kind: 'box', at: 'hip', w: 34, dy: 2 }] },
+      pose: { A: { face: 'right', torso: 0, thigh: 90, shin: 0, foot: 0, uarm: 20, farm: 40 }, B: { face: 'right', torso: 0, thigh: 90, shin: 90, foot: 90, shinF: 0, footF: 0, uarm: 20, farm: 40 }, work: { thigh: 1 }, props: [{ kind: 'box', at: 'hip', w: 34, dy: 2 }] },
     },
     {
       id: 'split_squat', name: 'Split squat', type: 'reps', view: 'side', tracking: 'reps', level: 'intermediate', equipment: ['none', 'dumbbells (optional)'],

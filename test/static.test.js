@@ -21,6 +21,12 @@ srv.listen(0, async () => {
   assert.ok((await page.$$('.card.config .bubble')).length > 0, 'move page keeps its own options');
   assert.deepEqual(errors, []);
 
+  // The figure review sheet builds its script list from index.html, so it cannot drift from the library.
+  const figs = await openPage({ viewport: { width: 1100, height: 900 } }); figs.on('pageerror', e => errors.push('figures: ' + e));
+  await figs.goto(base + 'figures.html'); await figs.waitForSelector('.fg', { timeout: 15000 });
+  assert.ok((await figs.$$('.fg svg.demo-fig')).length >= 135, 'every move has a figure on the review sheet');
+  await figs.close();
+
   // The Studio ships with the static site, under /studio/, with the same relative asset paths.
   const studio = await openPage({ viewport: { width: 1100, height: 800 } }); studio.on('pageerror', e => errors.push('studio: ' + e));
   await studio.goto(base + 'studio/'); await studio.waitForSelector('#btn-new2', { timeout: 15000 });
