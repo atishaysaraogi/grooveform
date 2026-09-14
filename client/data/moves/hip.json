@@ -1,0 +1,925 @@
+{
+  "_about": {
+    "what": "Hip & glutes — one move per object in \"moves\". The app reads this file directly: save it, reload the page. Every field name is checked, so a typo is reported with the file and move it is in.",
+    "add": "Copy a move that looks like the new one, paste it into \"moves\", give it a new id and change every field. Or: node scripts/catalog.js new <file> <id>  — writes a template with placeholder text to replace.",
+    "remove": "Delete the move's object (and the comma before or after it). Routines built in the app that used it will show it as missing.",
+    "check": "node scripts/catalog.js check  — or reload the app: a bad file shows the error on screen instead of the exercise list.",
+    "names": "Anything written as a word instead of an object — \"metric\": \"knee\", \"template\": \"lean\", \"preset\": \"standing\", \"conditions\": \"balance\" — is looked up in shared.json. Add reusable pieces there, not here.",
+    "notes": "Any field starting with \"_\" is a note for people and is ignored: \"_note\": \"physio wants this re-checked\".",
+    "fields": {
+      "id": "Unique name, used in links and saved sessions — never change it once the move has been used. Lower-case letters, digits, underscores. Good: \"seated_knee_ext\". Bad: \"Seated Knee Ext\", \"knee-ext\", \"1_knee\".",
+      "name": "What the user sees in the list. Good: \"Seated knee extension\". Bad: a clinical term nobody outside physio uses (\"Open-chain terminal extension\").",
+      "clinicalName": "Optional. The term a physio would use, shown in the details panel under the name.",
+      "type": "\"reps\" (counted) or \"hold\" (seconds in position). A stretch held for 30 s is a hold; ten slow raises are reps.",
+      "view": "\"side\" or \"front\" — where the phone stands. Side-on for anything that bends forward/back (knees, hips, spine); front-on for anything that goes out to the side (leg raise to the side, arm raise to the side, knees caving in).",
+      "tracking": "What the camera can honestly do: \"form\" (counts AND judges — needs at least one fault with a measurement and a threshold), \"reps\" (counts only; faults are listed for the person to watch), \"none\" (nothing to measure — the guide is shown and the set is logged by hand). Bad: \"form\" on a move whose faults are all words; the file will not load.",
+      "vetted": "Optional, true/false. true = a physio has recorded and checked this move in the Studio; vetted moves list first.",
+      "level": "\"beginner\", \"intermediate\" or \"advanced\".",
+      "equipment": "List of words: [\"none\"], [\"chair\"], [\"band\", \"door anchor\"]. Optional extras say so: \"ankle weight (optional)\".",
+      "muscles": "{ \"primary\": [...], \"secondary\": [...] } — plain names (\"quadriceps\", \"gluteus medius\"). primary must have at least one.",
+      "sided": "Only for one-sided moves: { \"limb\": \"leg\" | \"arm\" | \"side\", \"by\": \"camera\" | \"pick\", \"auto\": true }. \"camera\" = the limb nearest the phone is the working one (side-on moves); \"pick\" = the person chooses (front-on moves); \"auto\": true = when no side was chosen, watch both and follow the one that moves. Leave the field out for two-sided moves.",
+      "upperBody": "true when the legs need not be in frame (seated desk moves, shoulder work). Default false.",
+      "summary": "One line for the list. Good: \"Sitting, straighten one knee until the leg is level, hold, and lower.\" Bad: a paragraph.",
+      "setup": "Where the phone goes and how to start, in the user's words. Good: \"Sit tall on a chair, side-on to the phone, working leg nearest…\" Bad: \"Standard set-up.\"",
+      "why": "Why this camera angle can measure this move. Shown to the user; keeps the author honest. Good: \"Side-on the knee angle runs from 90° to straight.\" Bad: left empty.",
+      "calibrationPose": "Optional. The still position held for the first two seconds of every set, which the coach measures against. Good: \"Sitting tall, knee bent to 90°, foot hanging.\"",
+      "camera": "{ \"height\": \"floor\" | \"knee\" | \"hip\" | \"chest\" | \"eye\", \"distance\": \"2 m\", \"posture\": \"standing\" | \"sitting\" | \"lying\" | \"prone\" | \"sidelying\" | \"kneeling\" }. Leave it out to use the file's default at the top. posture also decides how the stick figure is pinned in place.",
+      "targets": "Optional list of rep counts / hold seconds the bubble cycles through, e.g. [6, 8, 10, 12]. Leave it out for the standard choices in settings.json.",
+      "defaultTarget": "The one of targets selected to begin with. Must be in the list. Leave it out with targets.",
+      "progress": "How far through a rep the person is. { \"metric\": <measurement>, \"start\": \"calibrated\" | number, \"target\": number | \"opt:rom\" }. \"calibrated\" = whatever the measurement reads in the start position; \"startMin\"/\"startMax\" clamp it (a knee that calibrates at 150° is treated as 160°). target = the reading at a full rep, or with \"targetIsDelta\": true a change from the start — \"delta\": -1 when the reading goes DOWN during the rep (a knee angle closing). Only for type \"reps\" with tracking \"form\" or \"reps\". Good: knee angle from calibrated to 172. Bad: start and target the same number.",
+      "hold": "For type \"hold\" with tracking on: { \"conditions\": [ { \"metric\": <measurement>, \"rel\": \"abs\" | \"change\", \"min\": n, \"max\": n } ] } — the hold counts while every condition is met. \"change\" = relative to the calibrated start. A condition may carry \"when\": [{ \"option\": \"variant\", \"is\": \"bent\" }] so it only applies for that option. A named set (\"balance\") comes from shared.json.",
+      "display": "Optional. What the live readout shows: { \"label\": \"bend\", \"unit\": \"°\", \"from\": \"start\" } shows the progress measurement as a change from the start (\"abs\" = the raw reading); for a hold, { \"condition\": 0, \"label\": \"knee\", \"aim\": \"90°\" } shows that hold condition. Without it the app shows the raw progress reading.",
+      "enterCue": "Optional, holds only: what the coach says when the person has been out of position for a few seconds. Good: \"Slide down the wall until your knees are at ninety\".",
+      "faults": "What goes wrong, in the order they matter. Each: { \"id\", \"label\", \"cue\" (spoken, ≤ 8 words, what TO do), \"tip\" (written, why it matters), \"severity\" 1–3 }. Add \"metric\", \"op\" (\"<\" or \">\"), \"threshold\" and the camera watches for it; leave those out and it is listed for the person to watch. \"minP\" (0–1) = ignore until this far into the rep; \"persist\" ms before it is spoken; \"rel\": \"change\" compares to the calibrated start. \"when\": a list of gates that must all hold for the fault to count — { \"option\": \"variant\", \"is\": \"bent\" }, { \"metric\": <measurement>, \"op\": \"<\", \"threshold\": 168 }, \"inPosition\" or \"notInPosition\". \"phase\": \"moving\" / \"rest\" (reps) or \"any\" (a hold fault that must fire while the person is OUT of position; otherwise hold faults only watch the held position). \"scale\": { \"metric\": \"progress\", \"times\": 0.35 } makes the threshold grow with another reading. Rules instead of a measurement: \"rule\": \"shallow\" (rep did not reach the target), \"fast\" with \"minMs\", \"return\" with \"threshold\" (rep ended above this progress — did not come all the way back). Or \"template\": \"lean\" with a \"threshold\" to reuse one from shared.json. Good cue: \"Sit tall\". Bad cue: \"You are leaning back again\" (tells them what is wrong, not what to do).",
+      "guide": "{ \"surface\": what to stand/lie on, \"stop\": when to stop, \"cannotSee\": what the person must check themselves, \"regions\": [ { \"name\": \"Trunk\", \"points\": [ { \"t\": \"one form point\", \"tracked\": true|false } ] } ] }. tracked: true only when a fault with a measurement actually checks that point — it is shown to the user as \"camera watches\".",
+      "pose": "The two-frame stick figure. { \"A\": start keyframe, \"B\": end keyframe, \"work\": { \"thigh\": 1, \"glute\": 0.5 } muscles to light up 0–1, \"props\": [ { \"kind\": \"box\" | \"bar\" | \"disc\" | \"band\", \"at\": \"hip\" } ], \"wall\": \"behind\" | \"ahead\", \"anchor\": joint(s) that stay put }. Side-view keyframe angles in degrees: torso (from vertical, + = leaning forward), thigh & shin (from hanging straight down, + = forward), foot (+ = toes up), uarm & farm (arms, + = forward), plus the far limb: thighF, shinF, footF, uarmF, farmF; face: \"right\" | \"left\". Front-view: legL, legR, shinL, shinR, armL, armR, foreL, foreR (+ = out to the side), lean, headTilt, squat 0–1. \"preset\": \"standing\" | \"seated\" | \"supine\" | \"prone\" | \"quadruped\" fills the usual values first. Check it on /figures.html.",
+      "tempo": "Free text. Good: \"Up 2 s, hold 2 s, down 3 s.\"",
+      "dosage": "Free text. Good: \"3 × 10–15 each leg.\"",
+      "progression": "How to make it harder.",
+      "regression": "How to make it easier.",
+      "contraindications": "When not to do it. Shown as \"Do not do this if\".",
+      "sources": "Optional list of { \"name\", \"url\" } added to the file's own sources.",
+      "band": "Optional. \"none\", \"yellow\", \"red\"… = offers the band-colour bubble with that default; true = offers it defaulting to none.",
+      "minMs": "Optional, reps only: the quickest a rep may take before \"Too fast\" fires (when the move lists no live fault of its own). Default in settings.json.",
+      "options": "Advanced: extra bubbles, e.g. a range target { \"key\": \"rom\", \"label\": \"Range target\", \"values\": [45, 60, 75, 90], \"unit\": \"°\", \"default\": 90 } referenced from progress.target as \"opt:rom\".",
+      "figure": "Advanced: point keyframes captured by the Studio instead of pose angles. Prefer pose.",
+      "focus": "Advanced: the landmark the live view highlights, e.g. \"KNEE\". Default: the last point of the progress measurement.",
+      "group": "Optional. The heading the move is listed under; default = the file's group at the top.",
+      "region": "Optional. The body region for filtering; default = the file's region.",
+      "icon": "Optional short label used where an icon is expected. Default \"move\".",
+      "order": "Optional. Position in the list; default = the file's order + position in this file."
+    }
+  },
+  "region": "hip",
+  "group": "Hip & glutes",
+  "order": 1200,
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "sources": [
+    {
+      "name": "Hinge Health — the clamshell",
+      "url": "https://www.hingehealth.com/resources/articles/clamshell/"
+    },
+    {
+      "name": "HighBar Health — gluteus medius exercises for hip stability",
+      "url": "https://www.highbarhealth.com/gluteus-medius-exercises-hip-stability/"
+    },
+    {
+      "name": "Elevate PT — glute exercises for hip pain",
+      "url": "https://elevateptfit.com/best-glute-exercises-help-hip-pain/"
+    }
+  ],
+  "moves": [
+    {
+      "id": "glute_bridge",
+      "name": "Glute bridge",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["none"],
+      "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "abdominals"] },
+      "summary": "On your back with knees bent, squeeze the buttocks and lift the hips until the body is a straight line from knees to shoulders.",
+      "setup": "Lie on your back, side-on to the phone at floor level, knees bent, feet flat and hip-width. Push through the heels and squeeze the buttocks to lift the hips, pause at the top, lower slowly.",
+      "why": "From the side the shoulder–hip–knee angle opens from bent to straight as the hips rise, which counts each bridge. Ribs flaring and the back arching are hard to see side-on, so they are listed, not judged.",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+      "progress": { "metric": "hip_open", "start": "calibrated", "target": 172 },
+      "tempo": "Up 2 s, squeeze 2 s, down 3 s.",
+      "dosage": "3 × 12.",
+      "progression": "Single-leg bridge; feet on a step; band above the knees.",
+      "regression": "Smaller lift; hands on the floor for balance.",
+      "contraindications": "Lower back pain at the top of the lift, or hamstring cramp.",
+      "faults": [
+        {
+          "id": "arch",
+          "label": "Arching the lower back at the top",
+          "cue": "Squeeze, do not arch",
+          "tip": "Height should come from the buttocks, not from pushing the ribs up. Stop where the body is straight.",
+          "severity": 2
+        },
+        {
+          "id": "feet",
+          "label": "Feet too far away",
+          "cue": "Heels closer",
+          "tip": "If the hamstrings cramp, walk the heels in until the shins are near vertical at the top.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor or mat.",
+        "stop": "Lower back pain, or cramp in the hamstrings.",
+        "cannotSee": "Whether the ribs flare or the back arches at the top.",
+        "regions": [
+          {
+            "name": "Hips",
+            "points": [
+              { "t": "Rise until knees, hips and shoulders make one line.", "tracked": true },
+              { "t": "Squeeze the buttocks at the top before lowering.", "tracked": false }
+            ]
+          },
+          { "name": "Feet", "points": [{ "t": "Flat, hip-width, heels pressing down.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "preset": "supine", "thigh": 135, "shin": -20, "foot": 0 },
+        "B": { "face": "right", "torso": -112, "uarm": 90, "farm": 90, "thigh": 120, "shin": -25 },
+        "work": { "glute": 1, "ham": 0.5, "abs": 0.3 }
+      }
+    },
+    {
+      "id": "clamshell",
+      "name": "Clamshell",
+      "type": "reps",
+      "view": "side",
+      "tracking": "none",
+      "level": "beginner",
+      "equipment": ["none", "loop band (optional)"],
+      "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus minimus", "deep hip rotators"] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "Lying on your side with knees bent, open the top knee like a clam without rolling the pelvis back.",
+      "setup": "Lie on your side, hips and knees bent to about 90°, feet together, head on your arm. Keeping the feet touching and the pelvis still, lift the top knee, pause, lower.",
+      "why": "The knee opens toward or away from the phone, which a single camera cannot measure, and the pelvis rolling back — the fault that matters — is invisible from any one angle. Follow the guide; log the set by hand.",
+      "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+      "tempo": "Open 2 s, hold 1 s, close 2 s.",
+      "dosage": "3 × 15 each side.",
+      "progression": "Loop band above the knees; lift the feet off the floor too.",
+      "regression": "Smaller opening; hand on the top hip to feel it stay still.",
+      "contraindications": "Pinching at the front of the hip.",
+      "faults": [
+        {
+          "id": "roll",
+          "label": "Rolling the pelvis back",
+          "cue": "Hip stacked",
+          "tip": "Keep the top hip bone directly above the bottom one. If it tips backward, the knee is opening with the back, not the hip.",
+          "severity": 3
+        },
+        {
+          "id": "feet",
+          "label": "Feet coming apart",
+          "cue": "Heels together",
+          "tip": "The feet stay touching so the movement is rotation at the hip.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor or mat; a pillow under the head.",
+        "stop": "Pinching at the front or side of the hip.",
+        "cannotSee": "The knee opening (toward the camera) and the pelvis rolling — nothing here is measurable from one phone.",
+        "regions": [
+          {
+            "name": "Pelvis",
+            "points": [
+              { "t": "Top hip stacked over the bottom hip, still through the whole rep.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Knees",
+            "points": [
+              {
+                "t": "Feet together; top knee opens as far as the pelvis allows without rolling.",
+                "tracked": false
+              }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": -90,
+          "uarm": -60,
+          "farm": 0,
+          "thigh": 135,
+          "shin": -30,
+          "thighF": 135,
+          "shinF": -30
+        },
+        "B": {
+          "face": "right",
+          "torso": -90,
+          "uarm": -60,
+          "farm": 0,
+          "thigh": 128,
+          "shin": -36,
+          "thighF": 135,
+          "shinF": -30
+        },
+        "work": { "glute": 1 }
+      }
+    },
+    {
+      "id": "sidelying_abd",
+      "name": "Side-lying hip abduction",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["none", "ankle weight (optional)"],
+      "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus minimus", "TFL"] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "Lying on your side, lift the straight top leg toward the ceiling with the toes pointing forward.",
+      "setup": "Lie on your side facing the phone, which sits on the floor about 2 m away. Bottom knee bent for balance, top leg straight and in line with the body. Lift the top leg 30–40° with the toes pointing ahead, pause, lower slowly.",
+      "why": "The top leg swings up in the camera plane, so its angle from the body counts the reps. The leg drifting forward and the pelvis rolling back are along the phone axis and are not judged.",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "sidelying" },
+      "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 30, "targetIsDelta": true },
+      "tempo": "Up 2 s, hold 1 s, down 3 s.",
+      "dosage": "3 × 12 each side.",
+      "progression": "Ankle weight; toes turned slightly down.",
+      "regression": "Smaller lift; bend the bottom knee more.",
+      "contraindications": "Pain on the outside of the hip that lingers after the set.",
+      "faults": [
+        {
+          "id": "forward",
+          "label": "Leg drifting forward",
+          "cue": "Leg slightly back",
+          "tip": "Lift in line with the body or a touch behind it. Forward lifting hands the work to the hip flexors.",
+          "severity": 2
+        },
+        {
+          "id": "roll",
+          "label": "Rolling the trunk back",
+          "cue": "Stay on your side",
+          "tip": "Keep the shoulders and hips stacked; a hand on the floor in front stops the roll.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor or mat.",
+        "stop": "Outer hip pain that lingers, or pinching.",
+        "cannotSee": "The leg drifting forward, the toes turning up, the trunk rolling.",
+        "regions": [
+          {
+            "name": "Top leg",
+            "points": [
+              { "t": "Straight, lifted 30–40°, toes pointing forward.", "tracked": true }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Shoulders and hips stacked; do not roll back.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": -90,
+          "uarm": -60,
+          "farm": 0,
+          "thigh": 90,
+          "shin": 90,
+          "foot": 90,
+          "thighF": 120,
+          "shinF": -30
+        },
+        "B": {
+          "face": "right",
+          "torso": -90,
+          "uarm": -60,
+          "farm": 0,
+          "thigh": 122,
+          "shin": 122,
+          "foot": 122,
+          "thighF": 120,
+          "shinF": -30
+        },
+        "work": { "glute": 1, "oblique": 0.3 }
+      }
+    },
+    {
+      "id": "hip_hinge",
+      "name": "Hip hinge",
+      "type": "reps",
+      "view": "side",
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["none", "dowel along the spine (optional)"],
+      "muscles": { "primary": ["gluteus maximus", "hamstrings"], "secondary": ["spinal erectors"] },
+      "summary": "Push the hips back and fold forward with a flat back and soft knees — the pattern behind every deadlift.",
+      "setup": "Stand side-on to the phone, feet hip-width, knees soft. Push the hips straight back so the trunk tips forward, back flat, until you feel the hamstrings, then drive the hips forward to stand tall.",
+      "why": "The shoulder–hip line tilting from upright is the hinge itself, so it counts reps, and the knee angle shows the classic error of turning it into a squat.",
+      "progress": { "metric": "trunk", "start": "calibrated", "target": 45 },
+      "tempo": "Fold 2 s, drive up 1 s.",
+      "dosage": "3 × 10.",
+      "progression": "Hold a weight; single-leg hinge.",
+      "regression": "Shorter fold; hands sliding down the thighs.",
+      "contraindications": "Lower back pain during the fold.",
+      "faults": [
+        {
+          "id": "squat",
+          "label": "Bending the knees too much",
+          "cue": "Hips back, soft knees",
+          "tip": "The knees unlock but barely bend. If they travel forward it has become a squat.",
+          "severity": 3,
+          "metric": "knee",
+          "op": "<",
+          "threshold": 150,
+          "minP": 0.3,
+          "persist": 300
+        },
+        {
+          "id": "round",
+          "label": "Rounding the back",
+          "cue": "Flat back",
+          "tip": "Keep the chest open and the spine long; a dowel down the back should stay in contact with the head, upper back and tailbone.",
+          "severity": 3
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor.",
+        "stop": "Back pain, or sharp hamstring pain.",
+        "cannotSee": "The back rounding — that is a subtle curve the phone cannot judge.",
+        "regions": [
+          {
+            "name": "Hips",
+            "points": [
+              { "t": "Travel straight back; the trunk tips as a result.", "tracked": true }
+            ]
+          },
+          { "name": "Knees", "points": [{ "t": "Soft and still, not bending forward.", "tracked": true }] },
+          { "name": "Back", "points": [{ "t": "Flat from head to tailbone.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "preset": "standing", "uarm": 5, "farm": 5 },
+        "B": { "face": "right", "torso": 48, "thigh": -8, "shin": 6, "uarm": 60, "farm": 60 },
+        "work": { "glute": 1, "ham": 1, "back": 0.5 }
+      }
+    },
+    {
+      "id": "standing_hip_ext",
+      "name": "Standing hip extension",
+      "type": "reps",
+      "view": "side",
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["wall or chair", "band (optional)"],
+      "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings"] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "band": true,
+      "summary": "Holding a wall, take one straight leg back behind you from the hip without leaning forward.",
+      "setup": "Stand side-on to the phone, hands on a wall in front, working leg nearest the phone. Keeping the knee straight and the trunk upright, take the leg back 15–25°, squeeze the buttock, return.",
+      "why": "The leg swings back in the camera plane, so its angle counts the reps, and the trunk tipping forward to fake the range shows as the shoulder–hip line tilting.",
+      "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 20, "targetIsDelta": true },
+      "tempo": "Back 2 s, squeeze 1 s, return 2 s.",
+      "dosage": "3 × 12 each leg.",
+      "progression": "Band around the ankle anchored in front.",
+      "regression": "Smaller movement; lighter squeeze.",
+      "contraindications": "Lower back pain on the swing.",
+      "faults": [
+        {
+          "id": "lean",
+          "label": "Leaning forward to go further",
+          "cue": "Stand tall",
+          "tip": "The range is small on purpose. Leaning forward moves the work to the lower back.",
+          "severity": 3,
+          "metric": "trunk",
+          "op": "<",
+          "threshold": 74,
+          "minP": 0.3,
+          "persist": 300
+        },
+        {
+          "id": "arch",
+          "label": "Arching the lower back",
+          "cue": "Ribs down",
+          "tip": "Brace lightly so the movement comes from the hip, not from the spine extending.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor and a wall.",
+        "stop": "Back pain, or pinching at the back of the hip.",
+        "cannotSee": "The lower back arching.",
+        "regions": [
+          {
+            "name": "Working leg",
+            "points": [
+              { "t": "Straight knee; travels back 15–25° only.", "tracked": true }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Upright and still; the hip moves, the spine does not.", "tracked": true }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": { "preset": "standing", "uarm": 60, "farm": 60 },
+        "B": { "face": "right", "torso": 0, "thigh": -24, "shin": -24, "foot": -10, "uarm": 60, "farm": 60 },
+        "work": { "glute": 1, "ham": 0.5 },
+        "wall": "ahead"
+      }
+    },
+    {
+      "id": "monster_walk",
+      "name": "Monster walk",
+      "type": "reps",
+      "view": "front",
+      "tracking": "none",
+      "level": "intermediate",
+      "equipment": ["loop band"],
+      "muscles": { "primary": ["gluteus medius", "gluteus maximus"], "secondary": ["quadriceps"] },
+      "summary": "A band around the legs, walk forward and back in a shallow squat, feet wide, knees pressed out.",
+      "setup": "Loop band above the knees or around the ankles. Feet wide enough that the band is taut, sit into a shallow squat and take small steps forward, then backward, keeping the knees pushed out.",
+      "why": "Walking takes you toward and away from the phone; the step count and the knee position both change with distance, so nothing here is reliable to measure. Follow the guide and log the set.",
+      "targets": [8, 10, 12, 16, 20],
+      "defaultTarget": 10,
+      "tempo": "Slow, deliberate steps.",
+      "dosage": "3 × 10 steps each way.",
+      "progression": "Band at the ankles; deeper squat.",
+      "regression": "Lighter band, shorter steps.",
+      "contraindications": "Kneecap pain in the squat.",
+      "faults": [
+        {
+          "id": "valgus",
+          "label": "Knees falling inward",
+          "cue": "Knees out",
+          "tip": "The band wants to pull the knees together; the whole point is to resist it on every step.",
+          "severity": 3
+        },
+        {
+          "id": "upright",
+          "label": "Standing up out of the squat",
+          "cue": "Stay low",
+          "tip": "Keep the hips back and the knees bent through every step; standing tall switches the glutes off.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Clear floor with grip; room to walk 3–4 m.",
+        "stop": "Kneecap pain or the band rolling painfully.",
+        "cannotSee": "Any of it reliably — the distance to the phone changes every step.",
+        "regions": [
+          {
+            "name": "Knees",
+            "points": [
+              { "t": "Pushed out against the band, over the toes.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Hips",
+            "points": [
+              { "t": "Sat back in a shallow squat the whole time.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": { "legL": 10, "legR": 10, "squat": 0.25, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+        "B": { "legL": 22, "legR": 22, "squat": 0.3, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+        "work": { "glute": 1, "thigh": 0.6 }
+      }
+    },
+    {
+      "id": "kneeling_hf_stretch",
+      "name": "Hip flexor stretch (half-kneeling)",
+      "type": "hold",
+      "view": "side",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["cushion for the knee"],
+      "muscles": { "primary": ["hip flexors", "rectus femoris"], "secondary": [] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "Half-kneeling, tuck the pelvis and shift forward until the front of the kneeling hip stretches.",
+      "setup": "Kneel on one knee with the other foot forward, side-on to the phone with the kneeling leg nearest. Tuck the tailbone under, squeeze the buttock of the kneeling side, and glide forward a little until the front of that hip pulls. Stay tall. Hold.",
+      "why": "The stretch depends on staying upright: the timer runs while the shoulder–hip line stays near vertical, which is exactly when the pelvis is tucked rather than the back arching.",
+      "targets": [20, 30, 45, 60],
+      "defaultTarget": 30,
+      "hold": { "conditions": [{ "metric": "trunk", "min": 72 }] },
+      "tempo": "Ease in over 5 s, hold, ease out.",
+      "dosage": "3 × 30 s each side.",
+      "progression": "Raise the same-side arm overhead; rear foot on a step.",
+      "regression": "Less forward glide.",
+      "contraindications": "Kneecap pain on the kneeling side, or lower back pain.",
+      "faults": [
+        {
+          "id": "arch",
+          "label": "Arching instead of tucking",
+          "cue": "Tuck the tailbone",
+          "tip": "The stretch is felt when the pelvis tucks under. Arching the back only feels like more.",
+          "severity": 3
+        },
+        {
+          "id": "lean",
+          "label": "Leaning the trunk forward",
+          "cue": "Stay tall",
+          "tip": "Glide the hips forward; keep the chest over the hips.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "A cushion or folded mat under the knee.",
+        "stop": "Kneecap pain or lower back pain.",
+        "cannotSee": "The pelvis tucking — it reads the trunk angle as a proxy.",
+        "regions": [
+          {
+            "name": "Pelvis",
+            "points": [
+              { "t": "Tailbone tucked, buttock squeezed on the kneeling side.", "tracked": false }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Tall and upright throughout the hold.", "tracked": true }] }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": 0,
+          "thigh": -8,
+          "shin": -100,
+          "thighF": 90,
+          "shinF": 0,
+          "uarm": 10,
+          "farm": 10
+        },
+        "B": {
+          "face": "right",
+          "torso": 0,
+          "thigh": -22,
+          "shin": -105,
+          "thighF": 100,
+          "shinF": 0,
+          "uarm": 10,
+          "farm": 10
+        },
+        "work": { "thigh": 0.8, "glute": 0.4 }
+      }
+    },
+    {
+      "id": "single_leg_bridge",
+      "name": "Single-leg bridge",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "intermediate",
+      "equipment": ["none"],
+      "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "gluteus medius"] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "A bridge on one leg, the other held straight out, hips staying level.",
+      "setup": "Lie on your back, side-on to the phone at floor level, working foot flat and nearest the phone, other leg held straight. Drive through the heel to lift the hips, pause, lower slowly.",
+      "why": "The shoulder–hip–knee angle of the working side counts each bridge from the side. The hips tipping toward the free side is a front-view detail, so it is listed, not judged.",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+      "progress": { "metric": "hip_open", "start": "calibrated", "target": 170 },
+      "tempo": "Up 2 s, hold 2 s, down 3 s.",
+      "dosage": "3 × 8–10 each leg.",
+      "progression": "Foot on a step; slow the lowering.",
+      "regression": "Two-leg bridge.",
+      "contraindications": "Hamstring cramp, or lower back pain at the top.",
+      "faults": [
+        {
+          "id": "tilt",
+          "label": "Hips tipping to the free side",
+          "cue": "Hips level",
+          "tip": "Push the free hip up as you lift; the two hip bones stay level.",
+          "severity": 3
+        },
+        {
+          "id": "arch",
+          "label": "Arching the back",
+          "cue": "Squeeze, do not arch",
+          "tip": "Stop where the body is straight; the buttock does the lifting.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor or mat.",
+        "stop": "Back pain or hamstring cramp.",
+        "cannotSee": "The pelvis tilting side to side.",
+        "regions": [
+          {
+            "name": "Working leg",
+            "points": [
+              {
+                "t": "Foot flat, heel driving down; knee, hip, shoulder in one line at the top.",
+                "tracked": true
+              }
+            ]
+          },
+          {
+            "name": "Pelvis",
+            "points": [
+              { "t": "Level — the free-side hip does not sag.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": { "preset": "supine", "thigh": 135, "shin": -20, "thighF": 95, "shinF": 95, "footF": 95 },
+        "B": {
+          "face": "right",
+          "torso": -112,
+          "uarm": 90,
+          "farm": 90,
+          "thigh": 120,
+          "shin": -25,
+          "thighF": 100,
+          "shinF": 100,
+          "footF": 100
+        },
+        "work": { "glute": 1, "ham": 0.6, "oblique": 0.3 }
+      }
+    },
+    {
+      "id": "hip_thrust",
+      "name": "Hip thrust",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "intermediate",
+      "equipment": ["bench or sofa edge", "dumbbell or barbell (optional)"],
+      "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "quadriceps"] },
+      "summary": "Upper back on a bench, drive the hips up until the thighs are level, chin tucked.",
+      "setup": "Sit on the floor with the shoulder blades against a bench edge, side-on to the phone, feet flat and hip-width. Drive through the heels to lift the hips until the thighs are parallel to the floor, squeeze, lower under control.",
+      "why": "The shoulder–hip–knee angle opening counts every rep from the side. Whether the ribs flare at the top is not visible side-on, so it is listed for you to check.",
+      "progress": { "metric": "hip_open", "start": "calibrated", "target": 170 },
+      "tempo": "Up 1–2 s, squeeze 1 s, down 2 s.",
+      "dosage": "3 × 10–12.",
+      "progression": "Add load across the hips; pause at the top.",
+      "regression": "Bodyweight; shorter range.",
+      "contraindications": "Lower back pain at the top; pain at the bench contact.",
+      "faults": [
+        {
+          "id": "ribs",
+          "label": "Ribs flaring at the top",
+          "cue": "Chin tucked, ribs down",
+          "tip": "Finish with a posterior tilt — buttocks tight, ribs pulled down — not an arched back.",
+          "severity": 3
+        },
+        {
+          "id": "height",
+          "label": "Stopping short of level thighs",
+          "cue": "All the way up",
+          "tip": "Thighs parallel to the floor at the top; if that is too hard, reduce the load.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "A bench that will not slide; floor with grip.",
+        "stop": "Lower back pain or a bench that shifts.",
+        "cannotSee": "The ribs flaring and the chin position.",
+        "regions": [
+          {
+            "name": "Hips",
+            "points": [
+              { "t": "Rise until the thighs are level; squeeze at the top.", "tracked": true }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Chin tucked, ribs down, upper back resting on the bench.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": -50,
+          "neck": 20,
+          "thigh": 100,
+          "shin": -10,
+          "foot": 0,
+          "uarm": 100,
+          "farm": 130
+        },
+        "B": {
+          "face": "right",
+          "torso": -90,
+          "neck": 25,
+          "thigh": 90,
+          "shin": 0,
+          "foot": 0,
+          "uarm": 100,
+          "farm": 130
+        },
+        "work": { "glute": 1, "ham": 0.5, "thigh": 0.3 },
+        "props": [{ "kind": "box", "at": "sh", "w": 30, "dy": 4 }]
+      }
+    },
+    {
+      "id": "fire_hydrant",
+      "name": "Fire hydrant",
+      "type": "reps",
+      "view": "side",
+      "tracking": "none",
+      "level": "beginner",
+      "equipment": ["none", "loop band (optional)"],
+      "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus maximus", "deep hip rotators"] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "On hands and knees, lift one bent knee out to the side without twisting the trunk.",
+      "setup": "Hands under shoulders, knees under hips. Keeping the knee bent at 90° and the trunk square to the floor, lift one knee out to the side as far as the hip allows, then lower.",
+      "why": "The knee moves toward the phone from any practical angle, and the trunk rotating — the fault that matters — cannot be seen from one camera. Follow the guide; log the set by hand.",
+      "camera": { "height": "knee", "distance": "2 m", "posture": "kneeling" },
+      "tempo": "Out 2 s, hold 1 s, in 2 s.",
+      "dosage": "3 × 12 each side.",
+      "progression": "Loop band above the knees.",
+      "regression": "Smaller lift.",
+      "contraindications": "Wrist pain bearing weight, or pinching in the hip.",
+      "faults": [
+        {
+          "id": "twist",
+          "label": "Twisting the trunk to lift higher",
+          "cue": "Hips square",
+          "tip": "Both hip bones stay pointing at the floor. The lift stops where the pelvis would start to turn.",
+          "severity": 3
+        },
+        {
+          "id": "arms",
+          "label": "Elbows locked and shoulders sagging",
+          "cue": "Push the floor away",
+          "tip": "Soft elbows, shoulder blades spread, back flat.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "Mat under the knees and hands.",
+        "stop": "Wrist pain or hip pinching.",
+        "cannotSee": "The knee lifting sideways and the trunk twisting — both are along the phone axis.",
+        "regions": [
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Square to the floor, back flat, no rotation.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Working leg",
+            "points": [
+              { "t": "Knee stays bent at 90° as it lifts out to the side.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": 88,
+          "neck": 25,
+          "thigh": 0,
+          "shin": 90,
+          "uarm": 0,
+          "farm": 0,
+          "foot": 180
+        },
+        "B": {
+          "face": "right",
+          "torso": 88,
+          "neck": 25,
+          "thigh": 8,
+          "shin": 100,
+          "thighF": 0,
+          "shinF": 90,
+          "uarm": 0,
+          "farm": 0,
+          "foot": 180,
+          "footF": 180
+        },
+        "work": { "glute": 1 }
+      }
+    },
+    {
+      "id": "lateral_band_walk",
+      "name": "Lateral band walk",
+      "type": "reps",
+      "view": "front",
+      "tracking": "none",
+      "level": "intermediate",
+      "equipment": ["loop band"],
+      "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus maximus", "TFL"] },
+      "summary": "Band around the legs, step sideways in a shallow squat, leading with the heel and keeping tension on.",
+      "setup": "Loop band above the knees or at the ankles, shallow squat, feet under the hips. Step sideways with one foot, then bring the other foot partway — never all the way — so the band stays taut. Go one way, then back.",
+      "why": "Stepping across the frame changes the framing every rep and the knees are judged against a moving base, so the count is unreliable. Follow the guide; log the set.",
+      "targets": [8, 10, 12, 16, 20],
+      "defaultTarget": 10,
+      "tempo": "Controlled steps, no bouncing.",
+      "dosage": "3 × 10 steps each way.",
+      "progression": "Band at the ankles; deeper squat.",
+      "regression": "Lighter band.",
+      "contraindications": "Kneecap pain in the squat.",
+      "faults": [
+        {
+          "id": "together",
+          "label": "Feet coming together",
+          "cue": "Keep the band taut",
+          "tip": "The trailing foot follows halfway. If the band goes slack the glutes rest.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Leaning into the step",
+          "cue": "Trunk still",
+          "tip": "Move the feet, not the shoulders; the trunk stays centred.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Clear floor, room for 4–5 steps each way.",
+        "stop": "Kneecap pain.",
+        "cannotSee": "The step count reliably, or the band tension.",
+        "regions": [
+          {
+            "name": "Knees",
+            "points": [
+              { "t": "Pushed out over the toes against the band.", "tracked": false }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Still and upright; hips stay low.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "legL": 8, "legR": 8, "squat": 0.25, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+        "B": { "legL": 8, "legR": 28, "squat": 0.28, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+        "work": { "glute": 1, "thigh": 0.5 }
+      }
+    },
+    {
+      "id": "hip_airplane",
+      "name": "Hip airplane",
+      "type": "reps",
+      "view": "side",
+      "tracking": "none",
+      "level": "advanced",
+      "equipment": ["wall or chair for a fingertip"],
+      "muscles": {
+        "primary": ["gluteus medius", "gluteus maximus"],
+        "secondary": ["deep hip rotators", "foot stabilisers"]
+      },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "Balanced on one leg, hinged forward, rotate the pelvis open and closed over the standing hip.",
+      "setup": "Stand on one leg, hinge forward so the trunk and free leg make a line, fingertip on a wall. Slowly rotate the pelvis to open toward the free side, then close it back past neutral, all on the standing hip.",
+      "why": "The movement is a rotation of the pelvis about the standing leg — it happens toward and away from the phone and needs balance on top. Nothing here is honest to count from one camera.",
+      "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+      "targets": [5, 6, 8, 10],
+      "defaultTarget": 6,
+      "tempo": "Slow: 3 s open, 3 s closed.",
+      "dosage": "2–3 × 6 each side.",
+      "progression": "No wall.",
+      "regression": "Smaller rotation; both hands on a chair back.",
+      "contraindications": "Pinching at the front of the standing hip, or poor balance without support.",
+      "faults": [
+        {
+          "id": "spine",
+          "label": "Rotating the spine instead of the hip",
+          "cue": "Turn from the hip",
+          "tip": "The trunk and free leg stay in one line and turn together; the movement is at the standing hip.",
+          "severity": 3
+        },
+        {
+          "id": "knee",
+          "label": "Standing knee caving",
+          "cue": "Knee over toes",
+          "tip": "Screw the foot into the floor so the knee stays over the middle toes.",
+          "severity": 3
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor and a wall.",
+        "stop": "Hip pinching or losing balance.",
+        "cannotSee": "The pelvic rotation, which is along the phone axis.",
+        "regions": [
+          {
+            "name": "Standing leg",
+            "points": [
+              { "t": "Soft knee, over the toes, foot gripping the floor.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Trunk and free leg",
+            "points": [
+              { "t": "One line from head to heel, turning together at the hip.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": 60,
+          "thigh": 8,
+          "shin": 0,
+          "thighF": -80,
+          "shinF": -80,
+          "uarm": 90,
+          "farm": 90
+        },
+        "B": {
+          "face": "right",
+          "torso": 60,
+          "thigh": 8,
+          "shin": 0,
+          "thighF": -88,
+          "shinF": -88,
+          "uarm": 80,
+          "farm": 80
+        },
+        "work": { "glute": 1, "ham": 0.5, "abs": 0.3 },
+        "wall": "ahead"
+      }
+    }
+  ]
+}

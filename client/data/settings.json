@@ -1,0 +1,92 @@
+{
+  "_about": {
+    "what": "Numbers and words every move shares. Edit here once and all 135 moves follow. Restart the server (or reload the page) to pick up a change.",
+    "care": "These affect every move at once. Change one value at a time and re-run: node scripts/catalog.js check",
+    "fields": {
+      "rep": "How far through a rep (0 = start position, 1 = target) the counter treats as resting, attempting and complete. rest: back below this and the rep is over. attempt: above this and a rep has started. full: reach this and the rep counts as a full one; between attempt and full it is a partial. Good: 0.15 / 0.32 / 0.85. Bad: full at 1.0 (nobody hits the target exactly, no rep would ever count) or rest above attempt.",
+      "fault.persist": "Milliseconds a fault has to be true, continuously, before it is spoken. Filters out one-frame wobbles. Good: 300–600. Bad: 0 (every jitter cues) or 3000 (the rep is over before the cue).",
+      "fault.cooldown": "Milliseconds before the same cue may be repeated. Good: 4000–6000. Bad: 500 (the coach nags).",
+      "fault.severityWeight": "How much each severity (1, 2, 3) costs in the score and how it ranks against other cues when two fire at once.",
+      "targets": "The rep counts and hold seconds a move offers when it does not name its own: choices (what the bubble cycles through) and default. Good: 4–6 sensible steps. Bad: 30 choices.",
+      "landmarks": "Body points (MediaPipe indices) that must be in frame before a set can start. always = shoulders and hips (11, 12, 23, 24). legs = knees and ankles, added unless the move says upperBody: true.",
+      "cannotSee": "The sentence shown under 'what the camera cannot see' when a move does not write its own.",
+      "standardFaults": "The three faults added automatically to a tracked move that lists no live fault of its own: shallow (did not reach the target) and fast (rep quicker than minMs) for rep moves, drift (left the held position) for holds. Words only — the numbers come from the move.",
+      "side": "The Left / Right / Both choice every one-sided move offers: its label, the default, and the wording of each choice.",
+      "band": "The resistance-band colour scale: the order the bubble cycles through, the name shown for each colour, and the swatch colour drawn. 'none' means bodyweight.",
+      "score": "How the end-of-set score is built out of 100. faultCost × severity weight per occurrence, capped at faultCap × weight per fault; partialCost per half rep; noRepCap is the most a set with zero reps can score. Holds start at holdFloor and climb with the share of time spent in position; shortHoldPenalty is lost if the hold ends early. tips = how many things-to-fix the review lists. headlines are read top down: the first row whose atLeast the score reaches is shown."
+    }
+  },
+  "rep": { "rest": 0.15, "attempt": 0.32, "full": 0.85 },
+  "fault": { "persist": 400, "cooldown": 5000, "severityWeight": { "1": 1, "2": 2, "3": 3 } },
+  "targets": {
+    "reps": { "choices": [6, 8, 10, 12, 15], "default": 10 },
+    "hold": { "choices": [10, 15, 20, 30, 45, 60], "default": 20 }
+  },
+  "landmarks": { "always": [11, 12, 23, 24], "legs": [25, 26, 27, 28] },
+  "cannotSee": "Anything that only moves toward or away from the phone.",
+  "standardFaults": {
+    "shallow": {
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    "fast": {
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    "drift": {
+      "label": "Drifting out of position",
+      "cue": "Back into position",
+      "tip": "The hold only counts while you are in the position — ease back in and keep breathing.",
+      "severity": 1,
+      "persist": 600,
+      "cooldown": 6000
+    }
+  },
+  "side": {
+    "label": "Which side",
+    "default": "both",
+    "labels": { "left": "Left", "right": "Right", "both": "Both (one then the other)" }
+  },
+  "band": {
+    "label": "Resistance band",
+    "values": ["none", "tan", "yellow", "red", "green", "blue", "black"],
+    "labels": {
+      "none": "No band",
+      "tan": "Tan · extra light",
+      "yellow": "Yellow · light",
+      "red": "Red · medium",
+      "green": "Green · heavy",
+      "blue": "Blue · extra heavy",
+      "black": "Black · special heavy"
+    },
+    "swatches": {
+      "none": "transparent",
+      "tan": "#d9b98a",
+      "yellow": "#f2d23c",
+      "red": "#d8433b",
+      "green": "#2e9e5b",
+      "blue": "#2f6fd6",
+      "black": "#222222"
+    }
+  },
+  "score": {
+    "faultCost": 3,
+    "faultCap": 12,
+    "partialCost": 3,
+    "noRepCap": 40,
+    "holdFloor": 40,
+    "shortHoldPenalty": 20,
+    "tips": 3,
+    "headlines": [
+      { "atLeast": 90, "text": "Excellent form" },
+      { "atLeast": 75, "text": "Good set — one thing to tidy up" },
+      { "atLeast": 55, "text": "Decent — a couple of things to work on" },
+      { "atLeast": 0, "text": "Let's rebuild the basics" }
+    ]
+  }
+}

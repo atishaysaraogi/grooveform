@@ -1,0 +1,984 @@
+{
+  "_about": {
+    "what": "Shoulder & rotator cuff — one move per object in \"moves\". The app reads this file directly: save it, reload the page. Every field name is checked, so a typo is reported with the file and move it is in.",
+    "add": "Copy a move that looks like the new one, paste it into \"moves\", give it a new id and change every field. Or: node scripts/catalog.js new <file> <id>  — writes a template with placeholder text to replace.",
+    "remove": "Delete the move's object (and the comma before or after it). Routines built in the app that used it will show it as missing.",
+    "check": "node scripts/catalog.js check  — or reload the app: a bad file shows the error on screen instead of the exercise list.",
+    "names": "Anything written as a word instead of an object — \"metric\": \"knee\", \"template\": \"lean\", \"preset\": \"standing\", \"conditions\": \"balance\" — is looked up in shared.json. Add reusable pieces there, not here.",
+    "notes": "Any field starting with \"_\" is a note for people and is ignored: \"_note\": \"physio wants this re-checked\".",
+    "fields": {
+      "id": "Unique name, used in links and saved sessions — never change it once the move has been used. Lower-case letters, digits, underscores. Good: \"seated_knee_ext\". Bad: \"Seated Knee Ext\", \"knee-ext\", \"1_knee\".",
+      "name": "What the user sees in the list. Good: \"Seated knee extension\". Bad: a clinical term nobody outside physio uses (\"Open-chain terminal extension\").",
+      "clinicalName": "Optional. The term a physio would use, shown in the details panel under the name.",
+      "type": "\"reps\" (counted) or \"hold\" (seconds in position). A stretch held for 30 s is a hold; ten slow raises are reps.",
+      "view": "\"side\" or \"front\" — where the phone stands. Side-on for anything that bends forward/back (knees, hips, spine); front-on for anything that goes out to the side (leg raise to the side, arm raise to the side, knees caving in).",
+      "tracking": "What the camera can honestly do: \"form\" (counts AND judges — needs at least one fault with a measurement and a threshold), \"reps\" (counts only; faults are listed for the person to watch), \"none\" (nothing to measure — the guide is shown and the set is logged by hand). Bad: \"form\" on a move whose faults are all words; the file will not load.",
+      "vetted": "Optional, true/false. true = a physio has recorded and checked this move in the Studio; vetted moves list first.",
+      "level": "\"beginner\", \"intermediate\" or \"advanced\".",
+      "equipment": "List of words: [\"none\"], [\"chair\"], [\"band\", \"door anchor\"]. Optional extras say so: \"ankle weight (optional)\".",
+      "muscles": "{ \"primary\": [...], \"secondary\": [...] } — plain names (\"quadriceps\", \"gluteus medius\"). primary must have at least one.",
+      "sided": "Only for one-sided moves: { \"limb\": \"leg\" | \"arm\" | \"side\", \"by\": \"camera\" | \"pick\", \"auto\": true }. \"camera\" = the limb nearest the phone is the working one (side-on moves); \"pick\" = the person chooses (front-on moves); \"auto\": true = when no side was chosen, watch both and follow the one that moves. Leave the field out for two-sided moves.",
+      "upperBody": "true when the legs need not be in frame (seated desk moves, shoulder work). Default false.",
+      "summary": "One line for the list. Good: \"Sitting, straighten one knee until the leg is level, hold, and lower.\" Bad: a paragraph.",
+      "setup": "Where the phone goes and how to start, in the user's words. Good: \"Sit tall on a chair, side-on to the phone, working leg nearest…\" Bad: \"Standard set-up.\"",
+      "why": "Why this camera angle can measure this move. Shown to the user; keeps the author honest. Good: \"Side-on the knee angle runs from 90° to straight.\" Bad: left empty.",
+      "calibrationPose": "Optional. The still position held for the first two seconds of every set, which the coach measures against. Good: \"Sitting tall, knee bent to 90°, foot hanging.\"",
+      "camera": "{ \"height\": \"floor\" | \"knee\" | \"hip\" | \"chest\" | \"eye\", \"distance\": \"2 m\", \"posture\": \"standing\" | \"sitting\" | \"lying\" | \"prone\" | \"sidelying\" | \"kneeling\" }. Leave it out to use the file's default at the top. posture also decides how the stick figure is pinned in place.",
+      "targets": "Optional list of rep counts / hold seconds the bubble cycles through, e.g. [6, 8, 10, 12]. Leave it out for the standard choices in settings.json.",
+      "defaultTarget": "The one of targets selected to begin with. Must be in the list. Leave it out with targets.",
+      "progress": "How far through a rep the person is. { \"metric\": <measurement>, \"start\": \"calibrated\" | number, \"target\": number | \"opt:rom\" }. \"calibrated\" = whatever the measurement reads in the start position; \"startMin\"/\"startMax\" clamp it (a knee that calibrates at 150° is treated as 160°). target = the reading at a full rep, or with \"targetIsDelta\": true a change from the start — \"delta\": -1 when the reading goes DOWN during the rep (a knee angle closing). Only for type \"reps\" with tracking \"form\" or \"reps\". Good: knee angle from calibrated to 172. Bad: start and target the same number.",
+      "hold": "For type \"hold\" with tracking on: { \"conditions\": [ { \"metric\": <measurement>, \"rel\": \"abs\" | \"change\", \"min\": n, \"max\": n } ] } — the hold counts while every condition is met. \"change\" = relative to the calibrated start. A condition may carry \"when\": [{ \"option\": \"variant\", \"is\": \"bent\" }] so it only applies for that option. A named set (\"balance\") comes from shared.json.",
+      "display": "Optional. What the live readout shows: { \"label\": \"bend\", \"unit\": \"°\", \"from\": \"start\" } shows the progress measurement as a change from the start (\"abs\" = the raw reading); for a hold, { \"condition\": 0, \"label\": \"knee\", \"aim\": \"90°\" } shows that hold condition. Without it the app shows the raw progress reading.",
+      "enterCue": "Optional, holds only: what the coach says when the person has been out of position for a few seconds. Good: \"Slide down the wall until your knees are at ninety\".",
+      "faults": "What goes wrong, in the order they matter. Each: { \"id\", \"label\", \"cue\" (spoken, ≤ 8 words, what TO do), \"tip\" (written, why it matters), \"severity\" 1–3 }. Add \"metric\", \"op\" (\"<\" or \">\"), \"threshold\" and the camera watches for it; leave those out and it is listed for the person to watch. \"minP\" (0–1) = ignore until this far into the rep; \"persist\" ms before it is spoken; \"rel\": \"change\" compares to the calibrated start. \"when\": a list of gates that must all hold for the fault to count — { \"option\": \"variant\", \"is\": \"bent\" }, { \"metric\": <measurement>, \"op\": \"<\", \"threshold\": 168 }, \"inPosition\" or \"notInPosition\". \"phase\": \"moving\" / \"rest\" (reps) or \"any\" (a hold fault that must fire while the person is OUT of position; otherwise hold faults only watch the held position). \"scale\": { \"metric\": \"progress\", \"times\": 0.35 } makes the threshold grow with another reading. Rules instead of a measurement: \"rule\": \"shallow\" (rep did not reach the target), \"fast\" with \"minMs\", \"return\" with \"threshold\" (rep ended above this progress — did not come all the way back). Or \"template\": \"lean\" with a \"threshold\" to reuse one from shared.json. Good cue: \"Sit tall\". Bad cue: \"You are leaning back again\" (tells them what is wrong, not what to do).",
+      "guide": "{ \"surface\": what to stand/lie on, \"stop\": when to stop, \"cannotSee\": what the person must check themselves, \"regions\": [ { \"name\": \"Trunk\", \"points\": [ { \"t\": \"one form point\", \"tracked\": true|false } ] } ] }. tracked: true only when a fault with a measurement actually checks that point — it is shown to the user as \"camera watches\".",
+      "pose": "The two-frame stick figure. { \"A\": start keyframe, \"B\": end keyframe, \"work\": { \"thigh\": 1, \"glute\": 0.5 } muscles to light up 0–1, \"props\": [ { \"kind\": \"box\" | \"bar\" | \"disc\" | \"band\", \"at\": \"hip\" } ], \"wall\": \"behind\" | \"ahead\", \"anchor\": joint(s) that stay put }. Side-view keyframe angles in degrees: torso (from vertical, + = leaning forward), thigh & shin (from hanging straight down, + = forward), foot (+ = toes up), uarm & farm (arms, + = forward), plus the far limb: thighF, shinF, footF, uarmF, farmF; face: \"right\" | \"left\". Front-view: legL, legR, shinL, shinR, armL, armR, foreL, foreR (+ = out to the side), lean, headTilt, squat 0–1. \"preset\": \"standing\" | \"seated\" | \"supine\" | \"prone\" | \"quadruped\" fills the usual values first. Check it on /figures.html.",
+      "tempo": "Free text. Good: \"Up 2 s, hold 2 s, down 3 s.\"",
+      "dosage": "Free text. Good: \"3 × 10–15 each leg.\"",
+      "progression": "How to make it harder.",
+      "regression": "How to make it easier.",
+      "contraindications": "When not to do it. Shown as \"Do not do this if\".",
+      "sources": "Optional list of { \"name\", \"url\" } added to the file's own sources.",
+      "band": "Optional. \"none\", \"yellow\", \"red\"… = offers the band-colour bubble with that default; true = offers it defaulting to none.",
+      "minMs": "Optional, reps only: the quickest a rep may take before \"Too fast\" fires (when the move lists no live fault of its own). Default in settings.json.",
+      "options": "Advanced: extra bubbles, e.g. a range target { \"key\": \"rom\", \"label\": \"Range target\", \"values\": [45, 60, 75, 90], \"unit\": \"°\", \"default\": 90 } referenced from progress.target as \"opt:rom\".",
+      "figure": "Advanced: point keyframes captured by the Studio instead of pose angles. Prefer pose.",
+      "focus": "Advanced: the landmark the live view highlights, e.g. \"KNEE\". Default: the last point of the progress measurement.",
+      "group": "Optional. The heading the move is listed under; default = the file's group at the top.",
+      "region": "Optional. The body region for filtering; default = the file's region.",
+      "icon": "Optional short label used where an icon is expected. Default \"move\".",
+      "order": "Optional. Position in the list; default = the file's order + position in this file."
+    }
+  },
+  "region": "shoulder",
+  "group": "Shoulder & rotator cuff",
+  "order": 1400,
+  "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+  "sources": [
+    {
+      "name": "Kingston & Richmond NHS — shoulder exercises for rotator cuff tear",
+      "url": "https://www.kingstonandrichmond.nhs.uk/patients-and-families/patient-leaflets/shoulder-exercises-rotator-cuff-tear"
+    },
+    {
+      "name": "Kaiser Permanente — rotator cuff exercises",
+      "url": "https://healthy.kaiserpermanente.org/health-wellness/health-encyclopedia/he.rotator-cuff-exercises.ad1509"
+    },
+    {
+      "name": "Physiopedia — push-up plus",
+      "url": "https://www.physio-pedia.com/Push_Up_Plus_Exercise"
+    },
+    {
+      "name": "ACE — five essential rotator cuff exercises",
+      "url": "https://www.acefitness.org/resources/pros/expert-articles/6314/5-essential-rotator-cuff-exercises/"
+    }
+  ],
+  "moves": [
+    {
+      "id": "pendulum",
+      "name": "Pendulum",
+      "type": "reps",
+      "view": "side",
+      "tracking": "none",
+      "level": "beginner",
+      "equipment": ["table or chair to lean on"],
+      "upperBody": true,
+      "muscles": { "primary": ["shoulder capsule (mobility)"], "secondary": [] },
+      "sided": { "limb": "arm", "by": "camera" },
+      "summary": "Bent over with the arm hanging, let it swing in small circles using the body, not the shoulder muscles.",
+      "setup": "Lean forward with the good hand on a table, let the affected arm hang straight down. Rock the body so the arm swings forward and back, then in small circles, growing the circle only as pain allows.",
+      "why": "The arm swings in circles toward and away from the phone, with no rep to count. This is a mobility drill for the early days: follow the guide and log the time.",
+      "targets": [1, 2, 3],
+      "defaultTarget": 1,
+      "tempo": "Slow, relaxed swings.",
+      "dosage": "1–2 minutes, a few times a day.",
+      "progression": "Larger circles; a light weight in the hand for traction.",
+      "regression": "Smaller swings; forward-back only.",
+      "contraindications": "Increasing pain during the swings.",
+      "faults": [
+        {
+          "id": "muscle",
+          "label": "Swinging with the shoulder muscles",
+          "cue": "Let it hang",
+          "tip": "The body rocks and the arm follows like a rope; if the shoulder is working, it is not a pendulum.",
+          "severity": 3
+        },
+        {
+          "id": "big",
+          "label": "Circles too big too soon",
+          "cue": "Small circles",
+          "tip": "Dinner-plate size to start; grow it over days, not minutes.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "A stable table to lean on.",
+        "stop": "Pain that grows during the swings.",
+        "cannotSee": "Whether the shoulder is relaxed or working.",
+        "regions": [
+          {
+            "name": "Arm",
+            "points": [
+              { "t": "Hangs loose; movement comes from the trunk rocking.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Bent forward, other hand supporting on the table.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": 55,
+          "thigh": 0,
+          "shin": 0,
+          "uarm": 40,
+          "farm": 40,
+          "uarmF": 100,
+          "farmF": 100
+        },
+        "B": {
+          "face": "right",
+          "torso": 55,
+          "thigh": 0,
+          "shin": 0,
+          "uarm": 62,
+          "farm": 62,
+          "uarmF": 100,
+          "farmF": 100
+        },
+        "work": { "shoulder": 0.3 },
+        "props": [{ "kind": "box", "at": "wrF", "w": 30, "dy": 2 }]
+      }
+    },
+    {
+      "id": "wall_slide",
+      "name": "Wall slide",
+      "type": "reps",
+      "view": "front",
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["wall"],
+      "upperBody": true,
+      "muscles": { "primary": ["lower trapezius", "serratus anterior"], "secondary": ["rotator cuff", "deltoid"] },
+      "summary": "Back and arms against a wall in a goalpost shape, slide the arms up overhead and back down.",
+      "setup": "Stand with your back on a wall, feet a little forward, ribs down. Bend the elbows to 90° with the backs of the wrists and elbows touching the wall. Slide the arms up as far as they go without the wrists leaving the wall, then down.",
+      "why": "Facing the phone, the arms rise in the camera plane, so their angle counts the reps, and the shoulder hiking toward the ear shows as the ear–shoulder distance shrinking.",
+      "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+      "progress": { "metric": "arm_up", "start": "calibrated", "target": 168 },
+      "tempo": "Up 3 s, down 3 s.",
+      "dosage": "2–3 × 10.",
+      "progression": "Slide higher; add a light band around the wrists.",
+      "regression": "Stop where the wrists start to leave the wall.",
+      "contraindications": "Pinching at the top of the shoulder.",
+      "faults": [
+        { "template": "shrug" },
+        {
+          "id": "wrists",
+          "label": "Wrists leaving the wall",
+          "cue": "Wrists on the wall",
+          "tip": "Go only as high as the wrists can stay in contact; the range grows over weeks.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "A flat wall, no skirting to catch the heels.",
+        "stop": "Pinching or sharp pain at the top of the shoulder.",
+        "cannotSee": "The wrists and elbows losing contact with the wall.",
+        "regions": [
+          { "name": "Shoulders", "points": [{ "t": "Stay down as the arms rise.", "tracked": true }] },
+          {
+            "name": "Arms",
+            "points": [
+              { "t": "Backs of the wrists and elbows on the wall throughout.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Ribs down, lower back close to the wall.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": { "armL": 95, "armR": 95, "foreL": 170, "foreR": 170 },
+        "B": { "armL": 160, "armR": 160, "foreL": 178, "foreR": 178 },
+        "work": { "back": 0.8, "shoulder": 0.6 }
+      }
+    },
+    {
+      "id": "scaption",
+      "name": "Scaption",
+      "type": "reps",
+      "view": "front",
+      "tracking": "form",
+      "level": "beginner",
+      "equipment": ["light dumbbell or band"],
+      "upperBody": true,
+      "muscles": { "primary": ["supraspinatus", "deltoid"], "secondary": ["lower trapezius", "serratus anterior"] },
+      "sided": { "limb": "arm", "by": "pick" },
+      "band": true,
+      "summary": "Raise a straight arm to shoulder height about 30° in front of the side, thumb up.",
+      "setup": "Face the phone with a light weight, thumb pointing up. Raise the arm in the plane of the shoulder blade — a little in front of straight out to the side — to shoulder height, then lower slowly.",
+      "why": "The upper arm rises in the camera plane, so its angle counts the reps; the shoulder hiking is the fault to watch and shows as the ear–shoulder gap closing.",
+      "progress": { "metric": { "kind": "vertical", "pts": ["SH", "EL"] }, "start": "calibrated", "target": 85 },
+      "tempo": "Up 2 s, down 3 s.",
+      "dosage": "3 × 10–12 each arm.",
+      "progression": "Heavier weight; both arms at once.",
+      "regression": "No weight; smaller range.",
+      "contraindications": "Pain in the painful arc (60–120°) that does not settle.",
+      "faults": [
+        { "template": "shrug" },
+        {
+          "id": "high",
+          "label": "Going above shoulder height",
+          "cue": "Stop at shoulder height",
+          "tip": "The cuff works best up to horizontal; higher just adds strain.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "Standing anywhere; a mirror helps.",
+        "stop": "Sharp pain mid-range.",
+        "cannotSee": "Whether the arm is truly in the shoulder-blade plane.",
+        "regions": [
+          {
+            "name": "Working arm",
+            "points": [
+              { "t": "Straight, thumb up, 30° forward of the side, to shoulder height.", "tracked": true }
+            ]
+          },
+          { "name": "Shoulder", "points": [{ "t": "Stays down and back; no hiking.", "tracked": true }] }
+        ]
+      },
+      "pose": {
+        "A": { "armR": 8, "armL": 8 },
+        "B": { "armR": 85, "foreR": 85, "armL": 8 },
+        "work": { "shoulder": 1, "back": 0.4 }
+      }
+    },
+    {
+      "id": "ytw",
+      "name": "Y-T-W raises",
+      "type": "reps",
+      "view": "side",
+      "tracking": "none",
+      "level": "intermediate",
+      "equipment": ["none", "light dumbbells (optional)"],
+      "muscles": {
+        "primary": ["lower trapezius", "middle trapezius", "rhomboids"],
+        "secondary": ["rotator cuff", "posterior deltoid"]
+      },
+      "summary": "Face down, lift the arms into a Y, then a T, then a W, squeezing the shoulder blades each time.",
+      "setup": "Lie on your front or hinge forward, arms hanging. Lift the arms to make a Y (thumbs up, overhead), lower; a T (straight out), lower; a W (elbows bent, squeezed down and back), lower. That is one round.",
+      "why": "Three different arm positions in one set, mostly moving toward or away from the phone when face down. Nothing here counts cleanly; follow the guide and log the rounds.",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "prone" },
+      "targets": [5, 6, 8, 10],
+      "defaultTarget": 6,
+      "tempo": "Lift 2 s, hold 2 s, lower 2 s, each letter.",
+      "dosage": "2–3 rounds of 6–8 each letter.",
+      "progression": "Light dumbbells; on an incline bench.",
+      "regression": "One letter at a time.",
+      "contraindications": "Neck pain lying face down.",
+      "faults": [
+        {
+          "id": "neck",
+          "label": "Lifting the head and neck",
+          "cue": "Nose down",
+          "tip": "Keep the forehead on the floor or a towel; the arms lift, not the head.",
+          "severity": 2
+        },
+        {
+          "id": "shrug",
+          "label": "Shrugging into the ears",
+          "cue": "Blades down and back",
+          "tip": "Each letter starts by pulling the shoulder blades down; the arms follow.",
+          "severity": 3
+        }
+      ],
+      "guide": {
+        "surface": "Mat or bench, face down.",
+        "stop": "Neck pain.",
+        "cannotSee": "The shoulder blades — the movement is under the body from the phone’s angle.",
+        "regions": [
+          {
+            "name": "Shoulder blades",
+            "points": [
+              { "t": "Squeeze down and back before each lift.", "tracked": false }
+            ]
+          },
+          { "name": "Head", "points": [{ "t": "Nose down, neck long.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": 90,
+          "neck": -10,
+          "thigh": -90,
+          "shin": -90,
+          "uarm": -120,
+          "farm": -120,
+          "foot": 180
+        },
+        "B": {
+          "face": "right",
+          "torso": 90,
+          "neck": -10,
+          "thigh": -90,
+          "shin": -90,
+          "uarm": -150,
+          "farm": -150,
+          "foot": 180
+        },
+        "work": { "back": 1, "shoulder": 0.6 }
+      }
+    },
+    {
+      "id": "pushup_plus",
+      "name": "Push-up plus",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "intermediate",
+      "equipment": ["none"],
+      "muscles": { "primary": ["serratus anterior"], "secondary": ["chest", "triceps"] },
+      "summary": "At the top of a push-up (or on the knees), push the floor away further so the shoulder blades spread apart.",
+      "setup": "Hands under the shoulders, on the knees or toes, side-on to the phone. With the elbows locked, push the floor away so the upper back rounds slightly and the shoulder blades slide apart; then let them come together. That is the plus.",
+      "why": "From the side the shoulder rises a few centimetres away from the hand at the top of each plus, which the phone can count. It is a small movement, so only the count is trusted.",
+      "camera": { "height": "knee", "distance": "2 m", "posture": "kneeling" },
+      "progress": {
+        "metric": { "kind": "dist", "pts": ["SH", "WR"] },
+        "start": "calibrated",
+        "target": 8,
+        "targetIsDelta": true
+      },
+      "minMs": 1200,
+      "tempo": "Push out 2 s, release 2 s.",
+      "dosage": "3 × 12.",
+      "progression": "From the toes; feet on a step.",
+      "regression": "Hands on a wall (wall push-up plus).",
+      "contraindications": "Wrist pain bearing weight.",
+      "faults": [
+        {
+          "id": "elbows",
+          "label": "Bending the elbows",
+          "cue": "Elbows locked",
+          "tip": "The plus is at the shoulder blades, not the elbows; keep the arms straight.",
+          "severity": 2
+        },
+        {
+          "id": "sag",
+          "label": "Hips sagging",
+          "cue": "Body straight",
+          "tip": "Brace the stomach so the body stays one line from head to knees.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Mat under the knees or hands.",
+        "stop": "Wrist or shoulder pain.",
+        "cannotSee": "The shoulder blades spreading — it reads the shoulder lifting as a proxy.",
+        "regions": [
+          {
+            "name": "Shoulders",
+            "points": [
+              { "t": "Push the floor away until the blades spread; elbows locked.", "tracked": true }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Straight from head to knees.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "left",
+          "torso": 72,
+          "neck": -15,
+          "thigh": -70,
+          "shin": -70,
+          "foot": -80,
+          "uarm": -6,
+          "farm": 10
+        },
+        "B": {
+          "face": "left",
+          "torso": 66,
+          "neck": -18,
+          "thigh": -70,
+          "shin": -70,
+          "foot": -80,
+          "uarm": -6,
+          "farm": 10
+        },
+        "work": { "shoulder": 0.6, "chest": 0.8 },
+        "anchor": ["ft", "wr", "wrF"]
+      }
+    },
+    {
+      "id": "sleeper_stretch",
+      "name": "Sleeper stretch",
+      "type": "hold",
+      "view": "side",
+      "tracking": "none",
+      "level": "intermediate",
+      "equipment": ["none"],
+      "muscles": { "primary": ["posterior shoulder capsule", "infraspinatus"], "secondary": [] },
+      "sided": { "limb": "arm", "by": "camera" },
+      "summary": "Lying on the affected side, elbow at 90°, gently press the forearm down toward the floor.",
+      "setup": "Lie on the affected side with the shoulder and elbow at 90°, forearm pointing up. With the other hand, press the forearm gently toward the floor until a stretch is felt behind the shoulder. Hold. Stop short of pinching.",
+      "why": "The rotation happens toward the phone whichever way it is placed, and the pressure is applied by hand. Follow the guide and log the hold.",
+      "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+      "targets": [20, 30, 45],
+      "defaultTarget": 30,
+      "tempo": "Ease in over 5 s, hold, release.",
+      "dosage": "3 × 30 s.",
+      "progression": "Roll slightly forward (the modified version) if the front pinches.",
+      "regression": "Lighter pressure; shorter hold.",
+      "contraindications": "Pinching at the front of the shoulder — this stretch is not for everyone; a mild stretch behind the shoulder is the only target.",
+      "faults": [
+        {
+          "id": "force",
+          "label": "Forcing the forearm down",
+          "cue": "Gentle",
+          "tip": "A mild stretch behind the shoulder; pressing hard makes the joint guard.",
+          "severity": 3
+        },
+        {
+          "id": "roll",
+          "label": "Rolling onto the back",
+          "cue": "Stay on your side",
+          "tip": "Keep the shoulder blade pinned so the stretch stays in the capsule.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor with a pillow under the head.",
+        "stop": "Pinching at the front, or pain that lingers afterwards.",
+        "cannotSee": "The rotation and the hand pressure.",
+        "regions": [
+          {
+            "name": "Shoulder",
+            "points": [
+              {
+                "t": "Directly under you, elbow bent 90°, forearm pressed gently toward the floor.",
+                "tracked": false
+              }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": -90,
+          "thigh": 120,
+          "shin": -40,
+          "uarm": 90,
+          "farm": 0,
+          "uarmF": 100,
+          "farmF": 30
+        },
+        "B": {
+          "face": "right",
+          "torso": -90,
+          "thigh": 120,
+          "shin": -40,
+          "uarm": 90,
+          "farm": 20,
+          "uarmF": 100,
+          "farmF": 30
+        },
+        "work": { "shoulder": 0.8 }
+      }
+    },
+    {
+      "id": "wall_angel",
+      "name": "Wall angel",
+      "type": "reps",
+      "view": "front",
+      "tracking": "form",
+      "level": "intermediate",
+      "equipment": ["wall"],
+      "upperBody": true,
+      "muscles": { "primary": ["lower trapezius", "rhomboids"], "secondary": ["rotator cuff", "thoracic extensors"] },
+      "summary": "Back flat on a wall, arms in a W, sweep them up to a Y and back keeping every part in contact.",
+      "setup": "Stand with the head, upper back and tailbone on a wall, feet a step out. Arms in a W with the backs of the hands and elbows on the wall. Slide up toward a Y and back down without anything leaving the wall.",
+      "why": "The arms sweep in the camera plane, so their angle counts the reps, and the shoulders hiking toward the ears is visible as the ear–shoulder gap shrinking.",
+      "progress": { "metric": "arm_up", "start": "calibrated", "target": 170 },
+      "tempo": "Up 3 s, down 3 s.",
+      "dosage": "2–3 × 8–10.",
+      "progression": "Slide the feet closer to the wall.",
+      "regression": "Halve the range and keep every contact point.",
+      "contraindications": "Lower back pain from arching to keep contact.",
+      "faults": [
+        { "template": "shrug" },
+        {
+          "id": "contact",
+          "label": "Arms peeling off the wall",
+          "cue": "Keep contact",
+          "tip": "Cut the range in half and keep hands, wrists and elbows on the wall the whole way.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "A flat wall.",
+        "stop": "Shoulder pinching or lower back pain.",
+        "cannotSee": "The hands and elbows losing contact.",
+        "regions": [
+          {
+            "name": "Contact points",
+            "points": [
+              { "t": "Head, upper back, tailbone, elbows and backs of hands all on the wall.", "tracked": false }
+            ]
+          },
+          { "name": "Shoulders", "points": [{ "t": "Down, not shrugged.", "tracked": true }] }
+        ]
+      },
+      "pose": {
+        "A": { "armL": 70, "armR": 70, "foreL": 165, "foreR": 165 },
+        "B": { "armL": 150, "armR": 150, "foreL": 176, "foreR": 176 },
+        "work": { "back": 1, "shoulder": 0.5 }
+      }
+    },
+    {
+      "id": "doorway_pec_stretch",
+      "name": "Doorway pec stretch",
+      "type": "hold",
+      "view": "front",
+      "tracking": "none",
+      "level": "beginner",
+      "equipment": ["doorway"],
+      "muscles": { "primary": ["pectoralis major", "pectoralis minor"], "secondary": ["anterior deltoid"] },
+      "summary": "Forearms on either side of a doorway, step through until the chest stretches.",
+      "setup": "Stand in a doorway with each forearm on the frame, elbows a little below shoulder height. Step one foot through and lean gently until the chest stretches. Hold, breathing.",
+      "why": "A doorway hides half the body and the lean is toward the phone; nothing measurable from one angle. Follow the guide and log the hold.",
+      "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+      "targets": [20, 30, 45, 60],
+      "defaultTarget": 30,
+      "tempo": "Ease in over 5 s, hold, ease out.",
+      "dosage": "3 × 30 s.",
+      "progression": "Elbows higher for the lower chest fibres.",
+      "regression": "Less lean; one arm at a time.",
+      "contraindications": "Pain at the front of the shoulder.",
+      "faults": [
+        {
+          "id": "shrug",
+          "label": "Shoulders rising",
+          "cue": "Shoulders down",
+          "tip": "Keep the shoulder blades down and back; the stretch is in the chest, not the neck.",
+          "severity": 2
+        },
+        {
+          "id": "arch",
+          "label": "Arching the lower back",
+          "cue": "Ribs down",
+          "tip": "Brace lightly and lean from the ankles, not the lower back.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "A doorway you can lean into safely.",
+        "stop": "Front-of-shoulder pain or tingling in the hands.",
+        "cannotSee": "Any of it — the frame hides the arms.",
+        "regions": [
+          {
+            "name": "Arms",
+            "points": [
+              { "t": "Forearms on the frame, elbows just below shoulder height.", "tracked": false }
+            ]
+          },
+          {
+            "name": "Trunk",
+            "points": [
+              { "t": "Lean from the ankles, ribs down, shoulders back.", "tracked": false }
+            ]
+          }
+        ]
+      },
+      "pose": {
+        "A": { "armL": 85, "armR": 85, "foreL": 175, "foreR": 175 },
+        "B": { "armL": 92, "armR": 92, "foreL": 176, "foreR": 176, "lean": 6 },
+        "work": { "chest": 1, "shoulder": 0.3 }
+      }
+    },
+    {
+      "id": "face_pull",
+      "name": "Band face pull",
+      "type": "reps",
+      "view": "front",
+      "tracking": "reps",
+      "level": "intermediate",
+      "equipment": ["resistance band", "anchor at face height"],
+      "upperBody": true,
+      "muscles": {
+        "primary": ["posterior deltoid", "rhomboids", "infraspinatus"],
+        "secondary": ["middle trapezius"]
+      },
+      "band": "red",
+      "summary": "Pull a band toward the face with the elbows high and the hands finishing beside the ears.",
+      "setup": "Anchor a band at face height in front of you, hold an end in each hand, face the phone. Pull the band toward the face, elbows high and wide, hands ending beside the ears, squeezing the shoulder blades. Return slowly.",
+      "why": "Facing the phone the hands travel apart as they come back, so the wrist-to-wrist distance counts the reps. Elbow height and the squeeze itself are listed for you to check.",
+      "progress": {
+        "metric": { "kind": "dist", "pts": ["WR", "oWR"] },
+        "start": "calibrated",
+        "target": 40,
+        "targetIsDelta": true
+      },
+      "tempo": "Pull 1–2 s, squeeze 1 s, return 2 s.",
+      "dosage": "3 × 12–15.",
+      "progression": "Heavier band; pause longer.",
+      "regression": "Lighter band.",
+      "contraindications": "Pinching at the top of the shoulder with the elbows high.",
+      "faults": [
+        {
+          "id": "elbows",
+          "label": "Elbows dropping low",
+          "cue": "Elbows high",
+          "tip": "The elbows stay at shoulder height or above; dropping them turns it into a row.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Leaning back to pull",
+          "cue": "Stay upright",
+          "tip": "The band moves; the trunk does not. Stagger the feet if you need balance.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Anchor that cannot move.",
+        "stop": "Shoulder pinching.",
+        "cannotSee": "The shoulder blades squeezing — it reads the hands spreading as a proxy.",
+        "regions": [
+          {
+            "name": "Arms",
+            "points": [
+              { "t": "Elbows high and wide; hands finish beside the ears.", "tracked": true }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Upright and still.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "armL": 80, "armR": 80, "foreL": 100, "foreR": 100 },
+        "B": { "armL": 95, "armR": 95, "foreL": 165, "foreR": 165 },
+        "work": { "back": 1, "shoulder": 0.7 }
+      }
+    },
+    {
+      "id": "supine_flexion",
+      "name": "Shoulder flexion (lying, with a stick)",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["stick, broom handle or towel"],
+      "upperBody": true,
+      "muscles": { "primary": ["shoulder capsule (mobility)", "anterior deltoid"], "secondary": [] },
+      "summary": "On your back holding a stick, let the good arm lift both arms overhead toward the floor behind you.",
+      "setup": "Lie on your back, side-on to the phone at floor level, holding a stick with both hands, arms pointing at the ceiling. Using the good arm to help, take the stick overhead toward the floor behind your head as far as comfortable, then back.",
+      "why": "From the side the arm sweeps from pointing up to overhead, so its angle counts the reps. The back arching to add range is hard to see, so it is listed.",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+      "progress": { "metric": "arm_up", "start": "calibrated", "target": 100 },
+      "tempo": "Over 3 s, hold 2 s, back 3 s.",
+      "dosage": "2–3 × 10.",
+      "progression": "Less help from the good arm; add a light weight later.",
+      "regression": "Smaller range; bend the elbows.",
+      "contraindications": "Sharp pain at the front of the shoulder near the end of range.",
+      "faults": [
+        {
+          "id": "arch",
+          "label": "Arching the back to go further",
+          "cue": "Ribs down",
+          "tip": "Keep the lower back on the floor; the range should come from the shoulder.",
+          "severity": 2
+        },
+        {
+          "id": "force",
+          "label": "Forcing with the good arm",
+          "cue": "Gentle assist",
+          "tip": "The good arm guides; it should not drag the sore one past the stretch.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor with room overhead.",
+        "stop": "Sharp pain at the end of range.",
+        "cannotSee": "The lower back lifting.",
+        "regions": [
+          {
+            "name": "Arms",
+            "points": [
+              { "t": "Both hands on the stick; straight as it goes overhead.", "tracked": true }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Lower back on the floor, knees bent.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "face": "right", "torso": -90, "thigh": 135, "shin": -20, "uarm": 178, "farm": 178 },
+        "B": { "face": "right", "torso": -90, "thigh": 135, "shin": -20, "uarm": 100, "farm": 100 },
+        "work": { "shoulder": 0.8, "chest": 0.3 }
+      }
+    },
+    {
+      "id": "ir_band",
+      "name": "Internal rotation (band)",
+      "type": "reps",
+      "view": "front",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["resistance band", "anchor"],
+      "upperBody": true,
+      "muscles": { "primary": ["subscapularis"], "secondary": ["pectoralis major"] },
+      "sided": { "limb": "arm", "by": "pick" },
+      "band": "yellow",
+      "summary": "Elbow tucked at the side, rotate the forearm inward across the stomach against a band anchored beside you.",
+      "setup": "Anchor a band at elbow height on the side of the working arm, face the phone. Elbow bent to 90° and pinned to the ribs, forearm pointing at the band. Rotate the hand across the stomach, then return slowly.",
+      "why": "The hand travels across the body toward the opposite hip, so that distance counts the reps. The elbow drifting off the ribs is listed for you to feel.",
+      "progress": {
+        "metric": { "kind": "dist", "pts": ["WR", "oHIP"] },
+        "start": "calibrated",
+        "target": -18,
+        "targetIsDelta": true
+      },
+      "tempo": "In 1–2 s, out 2–3 s.",
+      "dosage": "3 × 12–15 each arm.",
+      "progression": "Heavier band; towel under the elbow removed.",
+      "regression": "Lighter band, smaller range.",
+      "contraindications": "Pain at the front of the shoulder.",
+      "faults": [
+        {
+          "id": "elbow",
+          "label": "Elbow leaving the ribs",
+          "cue": "Elbow pinned",
+          "tip": "A folded towel under the elbow keeps it against the body; if it drifts, the chest takes over.",
+          "severity": 3
+        },
+        {
+          "id": "trunk",
+          "label": "Twisting the trunk",
+          "cue": "Hips still",
+          "tip": "Only the forearm moves; the body faces the phone throughout.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Anchor that cannot move.",
+        "stop": "Front-of-shoulder pain.",
+        "cannotSee": "The elbow lifting away from the ribs.",
+        "regions": [
+          {
+            "name": "Working arm",
+            "points": [
+              { "t": "Elbow at 90°, pinned to the ribs; hand sweeps across the stomach.", "tracked": true }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Square to the phone, still.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "armR": 5, "foreR": 92, "armL": 8 },
+        "B": { "armR": 5, "foreR": 30, "armL": 8 },
+        "work": { "shoulder": 0.8, "chest": 0.3 }
+      }
+    },
+    {
+      "id": "cross_body_stretch",
+      "name": "Cross-body stretch",
+      "type": "hold",
+      "view": "front",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["none"],
+      "upperBody": true,
+      "muscles": { "primary": ["posterior deltoid", "posterior capsule"], "secondary": [] },
+      "sided": { "limb": "arm", "by": "pick" },
+      "summary": "Pull one straight arm across the chest with the other hand until the back of the shoulder stretches.",
+      "setup": "Face the phone, bring the working arm across the chest at shoulder height and hug it in with the other forearm. Keep the shoulder down. Hold.",
+      "why": "The hand held near the opposite shoulder is visible from the front, so the timer runs while the arm is actually across the body.",
+      "targets": [20, 30, 45],
+      "defaultTarget": 30,
+      "hold": { "conditions": [{ "metric": { "kind": "dist", "pts": ["WR", "oSH"] }, "max": 32 }] },
+      "tempo": "Ease in over 5 s, hold, release.",
+      "dosage": "3 × 30 s each arm.",
+      "progression": "Pull slightly lower across the chest.",
+      "regression": "Lighter pull.",
+      "contraindications": "Pinching at the front of the shoulder.",
+      "faults": [
+        {
+          "id": "shrug",
+          "label": "Shoulder rising",
+          "cue": "Shoulder down",
+          "tip": "Keep the working shoulder down and back; the stretch belongs behind it.",
+          "severity": 2
+        },
+        {
+          "id": "twist",
+          "label": "Turning the trunk",
+          "cue": "Face forward",
+          "tip": "The trunk stays square to the phone; only the arm moves.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "Standing or sitting.",
+        "stop": "Front-of-shoulder pinching.",
+        "cannotSee": "The shoulder blade rolling forward.",
+        "regions": [
+          {
+            "name": "Working arm",
+            "points": [
+              { "t": "Straight, across the chest at shoulder height, hugged in.", "tracked": true }
+            ]
+          },
+          { "name": "Shoulder", "points": [{ "t": "Down and back.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "armR": 8, "armL": 8 },
+        "B": { "armR": 88, "foreR": -70, "armL": 40, "foreL": 120 },
+        "work": { "shoulder": 0.8 }
+      }
+    },
+    {
+      "id": "sidelying_er",
+      "name": "External rotation (side-lying)",
+      "type": "reps",
+      "view": "side",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["light dumbbell", "towel"],
+      "upperBody": true,
+      "muscles": { "primary": ["infraspinatus", "teres minor"], "secondary": ["posterior deltoid"] },
+      "sided": { "limb": "arm", "by": "camera" },
+      "summary": "Lying on your side, elbow tucked with a towel, rotate a light weight up toward the ceiling.",
+      "setup": "Lie on your side facing the phone (on the floor, 1.5 m away), top elbow bent to 90° and pinned to the waist over a rolled towel, forearm across the stomach. Rotate the hand up toward the ceiling, pause, lower slowly.",
+      "why": "The forearm swings up in the camera plane, so its angle counts each rep. Whether the elbow stays pinned is listed for you to feel.",
+      "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+      "progress": {
+        "metric": { "kind": "vertical", "pts": ["EL", "WR"] },
+        "start": "calibrated",
+        "target": 60,
+        "targetIsDelta": true
+      },
+      "tempo": "Up 2 s, hold 1 s, down 3 s.",
+      "dosage": "3 × 12–15 each arm.",
+      "progression": "Heavier weight; pause longer.",
+      "regression": "No weight.",
+      "contraindications": "Shoulder pain that builds through the set.",
+      "faults": [
+        {
+          "id": "elbow",
+          "label": "Elbow lifting off the waist",
+          "cue": "Elbow on the towel",
+          "tip": "If the elbow lifts, the deltoid takes over; keep it pressed onto the towel.",
+          "severity": 3
+        },
+        {
+          "id": "roll",
+          "label": "Rolling backward",
+          "cue": "Stay on your side",
+          "tip": "Keep the hips stacked; rolling back fakes the range.",
+          "severity": 2
+        }
+      ],
+      "guide": {
+        "surface": "Firm floor, towel under the elbow.",
+        "stop": "Pain that builds.",
+        "cannotSee": "The elbow lifting away from the waist.",
+        "regions": [
+          {
+            "name": "Working arm",
+            "points": [
+              { "t": "Elbow pinned at 90°; forearm rotates up toward the ceiling.", "tracked": true }
+            ]
+          },
+          { "name": "Trunk", "points": [{ "t": "Hips and shoulders stacked.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": {
+          "face": "right",
+          "torso": -90,
+          "thigh": 120,
+          "shin": -40,
+          "uarm": 0,
+          "farm": 100,
+          "uarmF": 100,
+          "farmF": 40
+        },
+        "B": {
+          "face": "right",
+          "torso": -90,
+          "thigh": 120,
+          "shin": -40,
+          "uarm": 0,
+          "farm": 165,
+          "uarmF": 100,
+          "farmF": 40
+        },
+        "work": { "shoulder": 1 }
+      }
+    },
+    {
+      "id": "shrug_db",
+      "name": "Shoulder shrug",
+      "type": "reps",
+      "view": "front",
+      "tracking": "reps",
+      "level": "beginner",
+      "equipment": ["dumbbells or bags"],
+      "upperBody": true,
+      "muscles": { "primary": ["upper trapezius"], "secondary": ["levator scapulae"] },
+      "summary": "Holding weights at the sides, lift the shoulders straight up toward the ears and lower slowly.",
+      "setup": "Face the phone with a weight in each hand, arms straight. Lift the shoulders straight up, pause, lower fully.",
+      "why": "Facing the phone the shoulders rise toward the ears, so the ear–shoulder distance shrinking counts each rep.",
+      "progress": { "metric": "shrug", "start": "calibrated", "target": -15, "targetIsDelta": true },
+      "tempo": "Up 1 s, hold 1 s, down 2 s.",
+      "dosage": "3 × 12.",
+      "progression": "Heavier; pause at the top.",
+      "regression": "Lighter or no weight.",
+      "contraindications": "Neck pain during the lift.",
+      "faults": [
+        {
+          "id": "roll",
+          "label": "Rolling the shoulders",
+          "cue": "Straight up and down",
+          "tip": "Rolling adds nothing and grinds the joint; lift straight up.",
+          "severity": 2
+        },
+        {
+          "id": "neck",
+          "label": "Jutting the chin",
+          "cue": "Chin in",
+          "tip": "Keep the neck long and the eyes level.",
+          "severity": 1
+        }
+      ],
+      "guide": {
+        "surface": "Standing anywhere.",
+        "stop": "Neck pain.",
+        "cannotSee": "The shoulders rolling forward or back.",
+        "regions": [
+          {
+            "name": "Shoulders",
+            "points": [
+              { "t": "Lift straight toward the ears; lower fully.", "tracked": true }
+            ]
+          },
+          { "name": "Neck", "points": [{ "t": "Long, chin in.", "tracked": false }] }
+        ]
+      },
+      "pose": {
+        "A": { "armL": 6, "armR": 6 },
+        "B": { "armL": 5, "armR": 5, "lean": 0 },
+        "work": { "neck": 1, "back": 0.4 }
+      }
+    }
+  ]
+}

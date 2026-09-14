@@ -227,14 +227,15 @@
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
       'summary', 'setup', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
-      'progress', 'hold', 'faults', 'guide', 'pose', 'figure',
+      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
-    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'minP', 'persist', 'cooldown', 'phase', 'invalidates', 'rule', 'minMs'],
-    metric: ['kind', 'pts'],
-    progress: ['metric', 'start', 'target', 'targetIsDelta'],
-    hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max'],
+    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
+    metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
+    progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
+    hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
+    when: ['option', 'is', 'metric', 'rel', 'op', 'threshold'], scale: ['metric', 'rel', 'times'], display: ['label', 'unit', 'from', 'aim', 'condition'],
     guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
-    camera: ['height', 'distance', 'posture'], sided: ['limb', 'by'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
+    camera: ['height', 'distance', 'posture'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
     option: ['key', 'label', 'values', 'unit', 'default', 'labels'],
     pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side'],
     kfSide: ['preset', 'face', 'torso', 'neck', 'thigh', 'shin', 'foot', 'uarm', 'farm', 'thighF', 'shinF', 'footF', 'uarmF', 'farmF'],
@@ -272,6 +273,13 @@
     }
     checkKeys(m, 'metric', where); return clone(strip(m));
   }
+  function resolveWhen(w, shared, where) {
+    if (typeof w === 'string') return w;
+    checkKeys(w, 'when', where);
+    const out = strip(w);
+    if (out.metric !== undefined) out.metric = resolveMetric(out.metric, shared, where);
+    return out;
+  }
   function resolveFault(f, shared, where) {
     checkKeys(f, 'fault', where);
     let out = strip(f);
@@ -281,6 +289,8 @@
       const { template, ...rest } = out; out = { ...strip(T), ...rest };
       if (out.metric !== undefined && out.threshold === undefined) fail(where, `template "${template}" has no threshold of its own — give the fault one`);
     }
+    if (Array.isArray(out.when)) out.when = out.when.map((w, i) => resolveWhen(w, shared, where + ' › when[' + i + ']'));
+    if (out.scale && typeof out.scale === 'object') { checkKeys(out.scale, 'scale', where + ' › scale'); if (out.scale.metric !== 'progress') out.scale.metric = resolveMetric(out.scale.metric, shared, where + ' › scale'); }
     if (out.metric !== undefined) {
       out.metric = resolveMetric(out.metric, shared, where + ' › metric');
       /* a measurement without a number to compare against is a fault that can never fire — a mistake, not a choice */
@@ -308,6 +318,7 @@
     const e = clone(strip(raw));
     if (e.camera) checkKeys(e.camera, 'camera', where + ' › camera');
     if (e.sided) checkKeys(e.sided, 'sided', where + ' › sided');
+    if (e.display) checkKeys(e.display, 'display', where + ' › display');
     if (e.muscles) checkKeys(e.muscles, 'muscles', where + ' › muscles');
     (e.sources || []).forEach((s, i) => checkKeys(s, 'source', `${where} › sources[${i}]`));
     (e.options || []).forEach((o, i) => checkKeys(o, 'option', `${where} › options[${i}]`));
@@ -319,7 +330,7 @@
         if (!H) fail(where, `unknown hold set "${e.hold.conditions}" — shared.json knows: ${Object.keys(shared.holds).join(', ')}`);
         e.hold.conditions = clone(H);
       }
-      e.hold.conditions = (e.hold.conditions || []).map((c, i) => { checkKeys(c, 'condition', `${where} › hold[${i}]`); return { ...strip(c), metric: resolveMetric(c.metric, shared, `${where} › hold[${i}]`) }; });
+      e.hold.conditions = (e.hold.conditions || []).map((c, i) => { checkKeys(c, 'condition', `${where} › hold[${i}]`); const o = { ...strip(c), metric: resolveMetric(c.metric, shared, `${where} › hold[${i}]`) }; if (Array.isArray(o.when)) o.when = o.when.map((w, j) => resolveWhen(w, shared, `${where} › hold[${i}].when[${j}]`)); return o; });
     }
     e.faults = (e.faults || []).map((f, i) => resolveFault(f, shared, `${where} › faults[${i}]`));
     if (e.guide) {
@@ -385,7 +396,7 @@
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, why: e.why, targets, defaultTarget, options: e.options || [],
-        progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure,
+        progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
       };
       ex = SPEC.compile(spec, lib.kinematics);
       ex.faults = [...ex.faults, ...docFaults(true)];
@@ -502,14 +513,14 @@
     const inline = (x) => {
       if (x === null || typeof x !== 'object') return JSON.stringify(x);
       if (Array.isArray(x)) return '[' + x.map(inline).join(', ') + ']';
-      return '{ ' + Object.keys(x).map((k) => JSON.stringify(k) + ': ' + inline(x[k])).join(', ') + ' }';
+      return '{ ' + Object.keys(x).filter((k) => x[k] !== undefined).map((k) => JSON.stringify(k) + ': ' + inline(x[k])).join(', ') + ' }';
     };
     if (v === null || typeof v !== 'object') return JSON.stringify(v);
     const one = inline(v);
     if (one.length <= 100 && !(Array.isArray(v) && v.some((x) => x && typeof x === 'object' && !Array.isArray(x) && one.length > 60))) return one;
     const pad = indent + '  ';
     if (Array.isArray(v)) return v.length ? '[\n' + v.map((x) => pad + format(x, pad)).join(',\n') + '\n' + indent + ']' : '[]';
-    const keys = Object.keys(v);
+    const keys = Object.keys(v).filter((k) => v[k] !== undefined);   // an absent field is left out, as JSON.stringify would
     return keys.length ? '{\n' + keys.map((k) => pad + JSON.stringify(k) + ': ' + format(v[k], pad)).join(',\n') + '\n' + indent + '}' : '{}';
   }
 
