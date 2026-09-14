@@ -89,7 +89,7 @@
       contraindications: 'Wrist pain that stops weight-bearing; pain on either end of the movement.',
       faults: [ { id: 'neckonly', label: 'Only the neck moving', cue: 'Move the whole back', tip: 'Start each direction at the tailbone and let it travel up; the head is last, not first.', severity: 2 }, { id: 'rush', label: 'Rushing', cue: 'One breath each way', tip: 'The movement follows the breath; it should take at least two seconds each direction.', severity: 1 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Pain at either end of the range.', cannotSee: 'Whether the lower back is moving or only the neck.', regions: [{ name: 'Spine', points: [{ t: 'Rounds fully, then sags fully — tailbone to head.', tracked: false }, { t: 'Head follows the spine.', tracked: true }] }, { name: 'Arms', points: [{ t: 'Straight, hands under the shoulders.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 80, neck: -20, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 95, neck: 50, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, work: { back: 1, abs: .5, neck: .5 } },
+      pose: { A: { face: 'right', torso: 80, neck: -20, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 95, neck: 50, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, work: { back: 1, abs: .5, neck: .5 }, anchor: ['kn', 'wr', 'wrF']},
     },
     {
       id: 'prone_press_up', name: 'Prone press-up (McKenzie)', type: 'reps', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],
@@ -103,7 +103,7 @@
       contraindications: 'Pain moving further down the leg on the press — stop and tell your physio.',
       faults: [ { id: 'hips', label: 'Hips lifting off the floor', cue: 'Hips down', tip: 'Let the pelvis hang heavy; if the hips lift, the arms are doing a push-up instead of an extension.', severity: 3 }, { id: 'brace', label: 'Tensing the back muscles', cue: 'Let the back relax', tip: 'The arms lift you; the back muscles stay soft so the joints can move.', severity: 2 } ],
       guide: { surface: 'Firm floor or mat.', stop: 'Pain spreading further down the leg.', cannotSee: 'The hips lifting, and whether the back is relaxed.', regions: [{ name: 'Upper body', points: [{ t: 'Arms straighten; chest lifts.', tracked: true }] }, { name: 'Pelvis', points: [{ t: 'Stays on the floor.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 90, thigh: -90, shin: -90, foot: 250, uarm: 20, farm: -60 }, B: { face: 'right', torso: 58, thigh: -90, shin: -90, foot: 250, neck: 20, uarm: 55, farm: -45 }, work: { back: .8, arm: .4 } },
+      pose: { A: { face: 'right', torso: 82, thigh: -90, shin: -90, foot: 250, uarm: -120, farm: -3 }, B: { face: 'right', torso: 55, neck: 18, thigh: -90, shin: -90, foot: 250, uarm: -120, farm: -3 }, work: { back: .8, arm: .4 }, anchor: ['ft', 'wr', 'wrF']},
     },
     {
       id: 'pelvic_tilt', name: 'Pelvic tilt', type: 'reps', view: 'side', tracking: 'none', level: 'beginner', equipment: ['mat'],
@@ -182,7 +182,7 @@
       contraindications: 'Knee pain when folding; pregnancy after the second trimester.',
       faults: [ { id: 'hips', label: 'Hips coming up', cue: 'Hips to the heels', tip: 'If the hips hover, put a cushion behind the knees so you can rest rather than hold.', severity: 1 }, { id: 'shrug', label: 'Shoulders up around the ears', cue: 'Shoulders soft', tip: 'Let the arms be heavy; the reach comes from the hips going back.', severity: 1 } ],
       guide: { surface: 'A mat.', stop: 'Knee pain.', cannotSee: 'How relaxed the back is.', regions: [{ name: 'Hips', points: [{ t: 'Resting toward the heels.', tracked: true }] }, { name: 'Arms', points: [{ t: 'Long on the floor ahead.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 70, neck: 0, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 140, neck: -20, thigh: -60, shin: 90, foot: 200, uarm: -165, farm: -165 }, work: { back: 1, glute: .3 } },
+      pose: { A: { face: 'right', torso: 70, neck: 0, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 140, neck: -20, thigh: -60, shin: 90, foot: 200, uarm: -165, farm: -165 }, work: { back: 1, glute: .3 }, anchor: ['kn', 'wr', 'wrF']},
     },
     {
       id: 'knee_to_chest', name: 'Knee to chest', type: 'hold', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],

@@ -87,7 +87,7 @@
       faults: [ { id: 'elbows', label: 'Bending the elbows', cue: 'Elbows locked', tip: 'The plus is at the shoulder blades, not the elbows; keep the arms straight.', severity: 2 }, { id: 'sag', label: 'Hips sagging', cue: 'Body straight', tip: 'Brace the stomach so the body stays one line from head to knees.', severity: 2 } ],
       guide: { surface: 'Mat under the knees or hands.', stop: 'Wrist or shoulder pain.', cannotSee: 'The shoulder blades spreading — it reads the shoulder lifting as a proxy.',
         regions: [{ name: 'Shoulders', points: [{ t: 'Push the floor away until the blades spread; elbows locked.', tracked: true }] }, { name: 'Trunk', points: [{ t: 'Straight from head to knees.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -70, shin: -70, foot: -80, uarm: 0, farm: 0 }, B: { face: 'left', torso: 66, neck: -18, thigh: -70, shin: -70, foot: -80, uarm: 0, farm: 0 }, work: { shoulder: .6, chest: .8 } },
+      pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -70, shin: -70, foot: -80, uarm: -6, farm: 10 }, B: { face: 'left', torso: 66, neck: -18, thigh: -70, shin: -70, foot: -80, uarm: -6, farm: 10 }, work: { shoulder: .6, chest: .8 }, anchor: ['ft', 'wr', 'wrF']},
     },
     {
       id: 'sleeper_stretch', name: 'Sleeper stretch', type: 'hold', view: 'side', tracking: 'none', level: 'intermediate', equipment: ['none'],

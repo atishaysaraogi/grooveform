@@ -39,6 +39,22 @@ test('index.html loads every move file in the library and catalogue folders', ()
   assert.ok(iSpec < iCat && iCat < iFirst, 'coach/spec.js, then coach/catalog.js, then the catalogue files');
 });
 
+/* A joint the entry names as a contact — a foot on the floor, a hand on the bar — must land on the
+   same spot in both keyframes, or the figure slides along its own support as it animates. */
+test('every declared contact holds still between the keyframes', () => {
+  const ALIAS = { ft: 'an', ftF: 'anF' };
+  const slid = [];
+  for (const [id, fig] of (globalThis.__pendingFigures || [])) {
+    if (!fig.B || !Array.isArray(fig.anchors)) continue;
+    for (const k of fig.anchors.slice(1)) {
+      const j = ALIAS[k] || k; if (!fig.A[j] || !fig.B[j]) continue;
+      const d = Math.hypot(fig.A[j][0] - fig.B[j][0], fig.A[j][1] - fig.B[j][1]);
+      if (d > 5) slid.push(`${id}.${k} slides ${Math.round(d)}`);
+    }
+  }
+  assert.deepEqual(slid, [], 'a contact cannot reach its mark — the limb is too short for the pose');
+});
+
 /* The catalogue is where a physio edits. Every entry must carry the full record, say honestly
    what the camera can do with it, and draw a figure. */
 test('every catalogue move is complete, honest about tracking, and has a figure', () => {

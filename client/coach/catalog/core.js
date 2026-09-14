@@ -44,7 +44,7 @@
         { id: 'head', label: 'Head dropping', cue: 'Look at the floor ahead', tip: 'The neck is part of the line; look a hand-width ahead of the fingers.', severity: 1 },
       ],
       guide: { surface: 'A mat under knees and forearms.', stop: 'Shoulder or back pain.', cannotSee: 'How hard the stomach is braced.', regions: [{ name: 'Body line', points: [{ t: 'Straight from shoulder to knee — no sag, no pike.', tracked: true }] }, { name: 'Elbows', points: [{ t: 'Under the shoulders.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -69, shin: -140, foot: -30, uarm: -20, farm: 90 }, B: { face: 'left', torso: 72, neck: -15, thigh: -69, shin: -140, foot: -30, uarm: -20, farm: 90 }, work: { abs: 1, shoulder: .4, glute: .3 } },
+      pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -69, shin: -140, foot: -30, uarm: -20, farm: 90 }, B: { face: 'left', torso: 72, neck: -15, thigh: -69, shin: -140, foot: -30, uarm: -20, farm: 90 }, work: { abs: 1, shoulder: .4, glute: .3 }, anchor: ['kn', 'wr', 'wrF']},
     },
     {
       id: 'side_plank', name: 'Side plank', type: 'hold', view: 'side', tracking: 'form', level: 'intermediate', equipment: ['mat'],
@@ -61,7 +61,7 @@
         { id: 'roll', label: 'Rolling forward', cue: 'Chest to the phone', tip: 'Stack the shoulders and hips; the top hip should not fall forward.', severity: 2 },
       ],
       guide: { surface: 'A mat under the forearm.', stop: 'Shoulder pain.', cannotSee: 'Rolling forward or back.', regions: [{ name: 'Body line', points: [{ t: 'Shoulder, hip and ankle in one line.', tracked: true }] }, { name: 'Elbow', points: [{ t: 'Directly under the shoulder.', tracked: false }] }] },
-      pose: { A: { face: 'left', torso: 76, neck: -10, thigh: -76, shin: -76, foot: -40, uarm: 0, farm: 90, uarmF: 180, farmF: 180 }, B: { face: 'left', torso: 76, neck: -10, thigh: -76, shin: -76, foot: -40, uarm: 0, farm: 90, uarmF: 180, farmF: 180 }, work: { oblique: 1, glute: .5, shoulder: .4 } },
+      pose: { A: { face: 'left', torso: 76, neck: -10, thigh: -76, shin: -76, foot: -40, uarm: 0, farm: 90, uarmF: 180, farmF: 180 }, B: { face: 'left', torso: 76, neck: -10, thigh: -76, shin: -76, foot: -40, uarm: 0, farm: 90, uarmF: 180, farmF: 180 }, work: { oblique: 1, glute: .5, shoulder: .4 }, anchor: ['ft', 'wr']},
     },
     {
       id: 'bird_dog', name: 'Bird dog', type: 'hold', view: 'side', tracking: 'reps', level: 'beginner', equipment: ['mat'],
@@ -75,7 +75,7 @@
       contraindications: 'Wrist pain that stops weight-bearing.',
       faults: [ { id: 'twist', label: 'Hips twisting', cue: 'Hips level', tip: 'Imagine a glass of water on the lower back; the leg lifts only as high as the hips can stay square.', severity: 3 }, { id: 'arch', label: 'Lower back arching', cue: 'Ribs down', tip: 'Lift the leg to level with the back, no higher.', severity: 2 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Wrist or back pain.', cannotSee: 'The hips twisting.', regions: [{ name: 'Arm', points: [{ t: 'Reaches forward to level.', tracked: true }] }, { name: 'Leg', points: [{ t: 'Extends back to level, not above.', tracked: true }] }, { name: 'Back', points: [{ t: 'Flat and square throughout.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 0, farm: 0 }, B: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 92, farm: 92, thighF: -88, shinF: -90, footF: 200 }, work: { back: 1, glute: .8, abs: .6, shoulder: .4 } },
+      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 0, farm: 0 }, B: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: -90, foot: 180, uarm: 92, farm: 92, thighF: -88, shinF: -90, footF: 200 }, work: { back: 1, glute: .8, abs: .6, shoulder: .4 }, anchor: ['kn', 'wrF']},
     },
     {
       id: 'mcgill_curl_up', name: 'McGill curl-up', type: 'hold', view: 'side', tracking: 'none', level: 'beginner', equipment: ['mat'],

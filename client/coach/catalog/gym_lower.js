@@ -199,7 +199,7 @@
       contraindications: 'Lower back pain on the lift; wrist pain.',
       faults: [ { id: 'arch', label: 'Lower back arching', cue: 'Thigh to level, no higher', tip: 'Higher than the back means the spine is lifting, not the glute.', severity: 2 }, { id: 'shift', label: 'Weight shifting to one side', cue: 'Hips square', tip: 'Keep the weight even over both hands and the resting knee.', severity: 1 } ],
       guide: { surface: 'A mat under the knees.', stop: 'Lower back or wrist pain.', cannotSee: 'The hips twisting.', regions: [{ name: 'Working leg', points: [{ t: 'Thigh lifts to level with the back; knee bent.', tracked: true }] }, { name: 'Back', points: [{ t: 'Flat and still.', tracked: false }] }] },
-      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 88, neck: 25, thigh: -88, shin: 0, uarm: 0, farm: 0, foot: 240, thighF: 0, shinF: 90, footF: 180 }, work: { glute: 1, ham: .5 } },
+      pose: { A: { face: 'right', torso: 88, neck: 25, thigh: 0, shin: 90, uarm: 0, farm: 0, foot: 180 }, B: { face: 'right', torso: 88, neck: 25, thigh: -88, shin: 0, uarm: 0, farm: 0, foot: 240, thighF: 0, shinF: 90, footF: 180 }, work: { glute: 1, ham: .5 }, anchor: ['knF', 'wr', 'wrF']},
     },
     {
       id: 'wall_sit', name: 'Wall sit', type: 'hold', view: 'side', tracking: 'form', level: 'beginner', equipment: ['wall'],

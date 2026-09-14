@@ -55,7 +55,7 @@
     const elF = at(shoulder, uaF, L.uarm, true), wrF = at(elF, faF, L.farm, true);
     const sameF = thF === th && shF === sh && uaF === ua && faF === fa;
     const off = (p) => (sameF ? { x: p.x + back.x, y: p.y + back.y } : p);
-    return { h: head, sh: shoulder, hip, kn, an, ft: foot, el, wr, knF: off(knF), anF: off(anF), ftF: off(footF), elF: off(elF), wrF: off(wrF), dir };
+    return { h: head, sh: shoulder, hip, kn, an, ft: foot, el, wr, knF: off(knF), anF: off(anF), ftF: off(footF), elF: off(elF), wrF: off(wrF), dir, sameF };
   }
 
   /* ---- front view: the two hips are the roots ---------------------------------------
@@ -109,21 +109,66 @@
     return ANCHOR_ORDER.find((k) => isPt(A[k]) && isPt(B[k]) && A[k].y > fa - 3 && B[k].y > fb - 3) || null;
   }
 
+  /* ---- contacts that do not slide -------------------------------------------------------
+     Moving the whole body pins exactly one joint, which is all a squat or a bridge needs. A
+     push-up has two contacts: the toes AND the hands. So `anchor` may be a list — the first
+     joint is pinned by moving the body, and each one after it by bending its own limb back onto
+     the mark. That is a two-bone reach (planar IK): the segment lengths are the ones every other
+     figure uses, so a corrected limb is still anatomical, and an unreachable mark stops short
+     rather than stretching. The ankle is the joint that stays for a foot — the toes may still
+     lift — so ft/ftF are read as an/anF. */
+  const REACH = {
+    side: { an: ['hip', 'kn', 'an', 'thigh', 'shin', 'ft'], anF: ['hip', 'knF', 'anF', 'thigh', 'shin', 'ftF'],
+            wr: ['sh', 'el', 'wr', 'uarm', 'farm'], wrF: ['sh', 'elF', 'wrF', 'uarm', 'farm'] },
+    front: { anL: ['hipL', 'knL', 'anL', 'thigh', 'shin'], anR: ['hipR', 'knR', 'anR', 'thigh', 'shin'],
+             wrL: ['shL', 'elL', 'wrL', 'uarm', 'farm'], wrR: ['shR', 'elR', 'wrR', 'uarm', 'farm'] },
+  };
+  const REACH_ALIAS = { ft: 'an', ftF: 'anF' };
+  function reach(pose, chain, target) {
+    const [rootK, midK, endK, l1n, l2n, tailK] = chain;
+    const R = pose[rootK]; if (!isPt(R) || !isPt(pose[midK]) || !isPt(pose[endK])) return;
+    const l1 = L[l1n], l2 = L[l2n], dx = target.x - R.x, dy = target.y - R.y;
+    const d = Math.min(l1 + l2 - 0.01, Math.max(Math.abs(l1 - l2) + 0.01, Math.hypot(dx, dy) || 1e-6));
+    const base = Math.atan2(dy, dx);
+    const a = Math.acos(Math.max(-1, Math.min(1, (d * d + l1 * l1 - l2 * l2) / (2 * l1 * d))));
+    /* keep the knee (or elbow) bending the way the author drew it */
+    const side = (pose[midK].x - R.x) * dy - (pose[midK].y - R.y) * dx >= 0 ? 1 : -1;
+    const end = { x: R.x + Math.cos(base) * d, y: R.y + Math.sin(base) * d };
+    if (isPt(pose[tailK])) pose[tailK] = { x: pose[tailK].x + end.x - pose[endK].x, y: pose[tailK].y + end.y - pose[endK].y };
+    pose[midK] = { x: R.x + Math.cos(base + side * a) * l1, y: R.y + Math.sin(base + side * a) * l1 };
+    pose[endK] = end;
+  }
+
   /* Place both keyframes in the 400x175 diagram space with ONE transform, so a limb that does not
      move stays put between them. B is first shifted so its anchor joint — by default whatever
-     touches the floor in A, i.e. the planted foot — sits where A's does; then the pair is floored
-     (y 161) and centred (x 306) together. pose.anchor names another joint or null for none;
-     pose.lift raises B (a jump, landing on a box); pose.raise lifts both off the floor (a hang). */
-  function placePair(A, B, pose, posture) {
-    const anchor = pose.anchor === undefined ? (posture === 'sitting' ? 'hip' : plantedKey(A, B)) : pose.anchor;
-    let Bs = B;
-    if (anchor && isPt(A[anchor]) && isPt(B[anchor])) Bs = shift(B, A[anchor].x - B[anchor].x, A[anchor].y - B[anchor].y);
+     touches the floor in A, i.e. the planted foot — sits where A's does; any further anchors are
+     reached back onto their marks; then the pair is floored (y 161) and centred (x 306) together.
+     pose.anchor names another joint, a list of them, or null for none; pose.lift raises B (a jump,
+     landing on a box); pose.raise lifts both off the floor (a hang). */
+  function placePair(A, B, pose, posture, view) {
+    const named = pose.anchor === undefined ? (posture === 'sitting' ? 'hip' : plantedKey(A, B)) : pose.anchor;
+    const anchors = (Array.isArray(named) ? named : [named]).filter(Boolean);
+    const anchor = anchors[0];
+    let Bs = shift(B, 0, 0);
+    if (anchor && isPt(A[anchor]) && isPt(B[anchor])) Bs = shift(Bs, A[anchor].x - B[anchor].x, A[anchor].y - B[anchor].y);
+    /* A far limb that only differs from the near one by the depth offset is that same limb drawn
+       again a few pixels back, so it follows the near one rather than being solved on its own —
+       solving it would ask an arm of the same length to reach a mark the offset moved. */
+    const TWINS = [['el', 'elF'], ['wr', 'wrF'], ['kn', 'knF'], ['an', 'anF'], ['ft', 'ftF']];
+    const twinned = B.sameF ? TWINS.filter(([n, f]) => isPt(Bs[n]) && isPt(Bs[f]))
+      .map(([n, f]) => [n, f, { x: Bs[f].x - Bs[n].x, y: Bs[f].y - Bs[n].y }]) : [];
+    const solo = twinned.length ? anchors.slice(1).filter((k) => !twinned.some(([, f]) => f === k)) : anchors.slice(1);
+    for (const k of solo) {
+      const j = REACH_ALIAS[k] || k, chain = (REACH[view] || {})[j];
+      if (chain && isPt(A[j]) && isPt(Bs[j])) reach(Bs, chain, A[j]);
+    }
+    twinned.forEach(([n, f, off]) => { Bs[f] = { x: Bs[n].x + off.x, y: Bs[n].y + off.y }; });
     if (pose.lift) Bs = shift(Bs, 0, -pose.lift);
     const all = [...ptKeys(A).map((k) => A[k]), ...ptKeys(Bs).map((k) => Bs[k])];
     const maxY = Math.max(...all.map((p) => p.y)), xs = all.map((p) => p.x), cx = (Math.min(...xs) + Math.max(...xs)) / 2;
     const raise = pose.raise || 0;
     const fix = (p) => { const o = {}; ptKeys(p).forEach((k) => { o[k] = [Math.round(CENTRE_X + p[k].x - cx), Math.round(FLOOR_Y - raise - (maxY - p[k].y))]; }); return o; };
-    return { A: fix(A), B: fix(Bs) };
+    return { A: fix(A), B: fix(Bs), anchors };
   }
 
   /* Equipment, named by the joint it sits at: { kind: 'box', at: 'hip' } is a chair under the hips
@@ -145,7 +190,7 @@
   function poseToFigure(view, pose, opts) {
     const build = view === 'front' ? frontPose : sidePose;
     const rawA = build(pose.A || {}), rawB = build(pose.B || pose.A || {});
-    const { A, B } = placePair(rawA, rawB, pose, opts.posture);
+    const { A, B, anchors } = placePair(rawA, rawB, pose, opts.posture, view);
     let wall = null;
     if (pose.wall && view === 'side') {
       const xs = [...Object.values(A), ...Object.values(B)].map((p) => p[0]);
@@ -155,7 +200,7 @@
     /* `face` is the way the front of the body points, so the figure's muscles follow it. */
     const flip = view === 'side' ? (rawA.dir || 1) < 0 : false;
     const props = resolveProps(pose.props, A, B, wall);
-    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props };
+    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props, anchors };
   }
 
   function registerFigure(id, fig) {

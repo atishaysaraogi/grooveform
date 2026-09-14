@@ -102,8 +102,22 @@ front of the body points ('right' by default), which is what puts the chest
 and quads on one side and the back and glutes on the other. Both keyframes
 are placed with one transform and the joint that is on the floor in both
 (the planted foot) is held still, so a sit-to-stand keeps its feet where they
-were; `anchor` names another joint (or `null` for none), `lift` raises the
-second keyframe (a jump), `raise` lifts both off the floor (a hang). `props`
+were. A seated move (`camera.posture: 'sitting'`) pins the hip instead — the
+seat is the contact, and the foot that hangs lowest at the start is in the air
+at the end.
+
+`anchor` overrides that: a joint name, `null` for none, or **a list of every
+joint in contact**. Moving the body can only pin one joint, which is all a
+squat needs, but a push-up rests on the toes *and* the hands. With a list, the
+first joint is pinned by moving the body and each one after it by bending its
+own limb back onto the mark (a two-bone reach — the segment lengths never
+change, so the limb stays anatomical, and an unreachable mark stops short
+rather than stretching). `ft`/`ftF` are read as the ankle: the heel stays, the
+toes may still lift. A far limb that is the near one drawn again a few pixels
+back follows it rather than being solved separately. `test/library.test.js`
+fails if a declared contact ends up more than 5 units from its mark, which is
+how you find out a pose is asking a limb to be longer than it is. `lift` raises
+the second keyframe (a jump), `raise` lifts both off the floor (a hang). `props`
 draws the equipment: `{ kind: 'box', at: 'hip' }` is a chair under the hips of
 keyframe A (`'B.an'` reads keyframe B; a box always reaches the floor),
 `bar` spans two joints or a length, `disc` is a roller, `band` runs from a
