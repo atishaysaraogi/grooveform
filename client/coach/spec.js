@@ -340,11 +340,13 @@
       return m;
     }
 
+    /* Rep rules carry a cooldown as well, so the engine can hold one back when it has just been
+       said; without it a rule true on every rep would be repeated on every rep. */
     const faults = spec.faults.map((f) => {
       const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates };
-      if (f.rule === 'shallow') return { ...common, onRep: true, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
-      if (f.rule === 'fast') return { ...common, onRep: true, check: (rep) => rep.duration < f.minMs };
-      if (f.rule === 'return') return { ...common, onRep: true, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
+      if (f.rule === 'shallow') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
+      if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
+      if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
       const gate = f.minP == null ? 0 : f.minP;
       /* holds: a fault watches the held position unless it says phase "any" (it is the position itself that is missing) */
       const phase = f.phase === 'moving' || f.phase === 'rest' ? f.phase : undefined;

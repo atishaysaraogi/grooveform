@@ -108,7 +108,8 @@ enough — `"when"` (gates: an option value, another measurement's comparison,
 `"inPosition"` / `"notInPosition"`), `"phase"` (`"moving"`, `"rest"`, or
 `"any"` for a hold fault that must fire while the person is *out* of position)
 and `"scale"` (a threshold that grows with another reading). Rules that need no
-measurement: `"shallow"`, `"fast"`, `"return"`. Progress has `"startMin"` /
+measurement: `"shallow"`, `"fast"`, `"return"` — these judge the finished rep and
+are spoken at the rep, under the same `"cooldown"` as any other cue. Progress has `"startMin"` /
 `"startMax"` clamps and `"delta": -1` for a reading that falls during the rep;
 `"sided": { "auto": true }` follows whichever limb moves when no side was chosen;
 `"display"` names what the live readout shows. The `_about` guide in every
@@ -350,10 +351,15 @@ differ — the cue is shouted mid-rep, the tip explains.
 |---|---|
 | `weight` | how much it costs the set score, and how it ranks in the summary tips |
 | `persist` | milliseconds it must hold true before it counts — stops flicker |
-| `cooldown` | milliseconds before the same cue is spoken again |
+| `cooldown` | milliseconds before the same cue is spoken again — rep rules obey it too, so "Slow it down" is not said on every rep |
 | `phase` | limit it to `'moving'` / `'hold'` |
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
+
+Only one cue is spoken per rep. When a live fault and a rep rule are both due at
+the same moment, the heavier one wins on a full rep and the rep rule wins on a half
+rep (it is the reason the rep did not count); the other keeps its turn for a later
+frame. Either way the end-of-set review counts every occurrence, spoken or not.
 
 ### Guide
 

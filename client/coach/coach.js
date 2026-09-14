@@ -458,6 +458,7 @@
     const r = s.step(pts, now);
     setFrame(lost ? 'bad' : s.faults.active.size ? 'bad' : (ex.type === 'hold' && r.m && !r.m.inPosition) ? 'bad' : 'ok');
     if (!r.m) return;
+    let said = null;                       // the cue already spoken on this frame, if a rep just landed
     if (ex.type === 'reps') {
       const p = E.clamp(r.m.p, 0, 1.2); live.lastP = p;
       $('rom-fill').style.height = Math.round(p / 1.2 * 100) + '%';
@@ -465,16 +466,24 @@
       $('phase').textContent = s.counter.state === 'rest' ? 'ready' : s.counter.state === 'out' ? ((ex.display && ex.display.label) || 'lift') : 'return';
       if (r.repEvent) {
         const rep = r.repEvent.rep; recEvent('rep', { full: r.repEvent.full, n: rep.n, peak: +rep.peak.toFixed(3), duration: Math.round(rep.duration), faults: rep.faults });
+        /* One cue per rep. A live fault (leaning) and a rep rule (too fast) can both be due at the
+           same moment: on a full rep the heavier one is said, on a half rep the rep rule wins
+           because it is the reason the rep did not count. Whichever loses keeps its turn and is
+           said on a later frame rather than being dropped. */
+        const pick = r.repEvent.full
+          ? [r.cues[0], r.repCues[0]].filter(Boolean).sort((a, b) => b.weight - a.weight)[0]
+          : (r.repCues[0] || r.cues[0]);
         if (r.repEvent.full) {
           $('count').textContent = s.counter.count; voice.beep(880, 0.1);
-          const extra = r.repCues.length ? '. ' + r.repCues[0].cue : '';
-          voice.say(s.counter.count + extra, { priority: 2 });
-          showCue(r.repCues.length ? r.repCues[0].cue : ['Nice', 'Good rep', 'Clean', 'Keep going'][s.counter.count % 4], r.repCues.length ? 'warn' : 'good');
+          voice.say(s.counter.count + (pick ? '. ' + pick.cue : ''), { priority: 2 });
+          showCue(pick ? pick.cue : ['Nice', 'Good rep', 'Clean', 'Keep going'][s.counter.count % 4], pick ? 'warn' : 'good');
         } else {
           voice.beep(330, 0.15);
-          const cue = r.repCues[0]?.cue || 'Doesn\'t count — full range';
+          const cue = pick ? pick.cue : 'Doesn\'t count — full range';
           voice.say(cue, { priority: 2 }); showCue(cue, 'warn');
         }
+        /* Start its cooldown, so the same cue is not repeated on the next rep. */
+        if (pick) { said = pick; s.ackCue(pick.id, now); live.lastCueFault = pick.id; recEvent('cue', { fault: pick.id, cue: pick.cue }); }
       }
     } else {
       const sec = s.holdMs / 1000; $('count').textContent = Math.floor(sec) + 's';
@@ -485,10 +494,10 @@
       }
     }
     updateReadout(ex, r.m, s);
-    if (r.cues.length) {
+    if (r.cues.length && !said) {
       const f = r.cues[0]; const spoken = voice.say(f.cue, { priority: 1, minGap: 1500 });
       if (spoken || voice.muted || !('speechSynthesis' in window)) { s.ackCue(f.id, now); showCue(f.cue, 'warn'); voice.beep(440, 0.08); live.lastCueFault = f.id; recEvent('cue', { fault: f.id, cue: f.cue }); }
-    } else if (ex.type === 'hold' && !r.m.inPosition && ex.enterCue) {
+    } else if (!said && ex.type === 'hold' && !r.m.inPosition && ex.enterCue) {
       // holding exercise but not in the hold position: tell them how to get there instead of going quiet
       if (!live.outSince) live.outSince = now;
       if (now - live.outSince > 2500 && now - (live.lastEnterCue || 0) > 6000 && (now - live.startedAt) > 3000) { if (voice.say(ex.enterCue, { priority: 1, minGap: 1500 }) || voice.muted) { live.lastEnterCue = now; showCue(ex.enterCue, 'info'); recEvent('cue', { fault: 'enter', cue: ex.enterCue }); } }

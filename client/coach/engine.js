@@ -274,6 +274,10 @@
       cues.sort((a, b) => b.weight - a.weight);
       return cues;
     }
+    /* A cue is due when it has not been spoken inside its own cooldown. Live cues are filtered
+       by update(); rep-level cues are checked here, from step(), because they are raised at the
+       rep event rather than frame by frame. */
+    due(f, t) { return !this.lastCue[f.id] || t - this.lastCue[f.id] > (f.cooldown || 0); }
     // call once a cue has actually been spoken/shown; until then it keeps being offered
     ack(id, t) { this.lastCue[id] = t; }
   }
@@ -311,8 +315,13 @@
       const cues = this.faults.update(m, phase, t);
       if (this.counter) for (const id of this.faults.active) this.counter.noteFault(id);
       if (this.frames % 3 === 0) this.trace.push([Math.round(t - this.startT), +(m.p ?? 0).toFixed(2)]);
-      // rep-level cues fire once per rep event
-      const repCues = repEvent ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep) : [];
+      /* Rep-level cues fire at the rep event, heaviest first, and obey the same cooldown as live
+         cues — otherwise a rule that is true on every rep ("slow it down") is spoken on every rep
+         and drowns out everything else. The counting in repFaultCounts is untouched, so the
+         end-of-set review still sees every occurrence. */
+      const repCues = repEvent
+        ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
+        : [];
       return { m, cues, repCues, repEvent, done: this.complete };
     }
     review() {
