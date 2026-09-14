@@ -29,8 +29,15 @@ async function otpLogin(page, identifier, { name, role } = {}) {
 }
 /* Settings are tap-to-cycle bubbles: tap until the bubble shows the value we want. */
 async function setBubble(page, key, value) {
-  const b = await page.$(`.bubble[data-optkey="${key}"]`); if (!b) return false;
-  for (let i = 0; i < 12; i++) { if ((await b.getAttribute('data-value')) === String(value)) return true; await b.click(); }
+  /* Re-query between taps: a render between two clicks detaches an element handle, and the page
+     re-renders on its own after refreshMe() resolves. */
+  const sel = `.bubble[data-optkey="${key}"]`;
+  if (!(await page.$(sel))) return false;
+  for (let i = 0; i < 12; i++) {
+    const b = await page.waitForSelector(sel, { state: 'attached' });
+    if ((await b.getAttribute('data-value')) === String(value)) return true;
+    await b.click().catch(() => { });   // detached mid-tap: the next pass picks up the fresh node
+  }
   throw new Error(`bubble ${key} never reached ${value}`);
 }
 async function runCoachedSet(page, side = 'right') {
