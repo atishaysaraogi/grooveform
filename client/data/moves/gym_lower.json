@@ -929,63 +929,6 @@
       }
     },
     {
-      "id": "wall_sit",
-      "name": "Wall sit",
-      "type": "hold",
-      "view": "side",
-      "tracking": "form",
-      "level": "beginner",
-      "equipment": ["wall"],
-      "muscles": { "primary": ["quadriceps"], "secondary": ["gluteus maximus", "calves"] },
-      "summary": "Back against a wall, slide down until the thighs are level and hold.",
-      "setup": "Stand with the back flat on a wall, side-on to the phone. Walk the feet out and slide down until the knees are at 90° with the shins vertical. Hold.",
-      "why": "From the side the knee angle tells whether you are actually at 90°; creeping up to rest the thighs is caught directly.",
-      "targets": [20, 30, 45, 60, 90],
-      "defaultTarget": 30,
-      "hold": { "conditions": [{ "metric": "knee", "min": 75, "max": 110 }] },
-      "tempo": "Still; breathe.",
-      "dosage": "3 × 30–60 s.",
-      "progression": "Hold a weight; single leg.",
-      "regression": "Higher position (knees at 120°).",
-      "contraindications": "Kneecap pain.",
-      "faults": [
-        {
-          "id": "creep",
-          "label": "Creeping up the wall",
-          "cue": "Thighs to level",
-          "tip": "Slide back down until the knees are at a right angle.",
-          "severity": 2,
-          "metric": "knee",
-          "op": ">",
-          "threshold": 110,
-          "persist": 800,
-          "cooldown": 6000
-        },
-        {
-          "id": "knees",
-          "label": "Knees past the toes",
-          "cue": "Shins vertical",
-          "tip": "Walk the feet further from the wall so the shins stand straight.",
-          "severity": 2
-        }
-      ],
-      "guide": {
-        "surface": "A smooth wall.",
-        "stop": "Kneecap pain.",
-        "cannotSee": "The knees drifting inward.",
-        "regions": [
-          { "name": "Knees", "points": [{ "t": "At a right angle, shins vertical.", "tracked": true }] },
-          { "name": "Back", "points": [{ "t": "Flat on the wall.", "tracked": false }] }
-        ]
-      },
-      "pose": {
-        "A": { "preset": "seated", "uarm": 8, "farm": 8 },
-        "B": { "preset": "seated", "uarm": 8, "farm": 8 },
-        "work": { "thigh": 1, "glute": 0.4 },
-        "wall": "behind"
-      }
-    },
-    {
       "id": "jump_squat",
       "name": "Jump squat",
       "type": "reps",

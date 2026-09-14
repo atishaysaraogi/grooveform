@@ -109,7 +109,7 @@ test('every declared contact holds still between the keyframes', () => {
 /* The catalogue is where a physio edits. Every entry must carry the full record, say honestly
    what the camera can do with it, and draw a figure. */
 test('every catalogue move is complete, honest about tracking, and has a figure', () => {
-  assert.ok(catalogue.length >= 135, `expected the whole library as data, found ${catalogue.length}`);
+  assert.ok(catalogue.length >= 130, `expected the whole library as data, found ${catalogue.length}`);
   const vetted = catalogue.filter((e) => e.vetted);
   assert.ok(vetted.length >= 10, 'the ten vetted moves are data too');
   for (const e of vetted) assert.equal(e.tracking, 'form', e.id + ': a vetted move is coached on form');

@@ -1502,68 +1502,6 @@
       }
     },
     {
-      "id": "ir_band",
-      "name": "Internal rotation (band)",
-      "type": "reps",
-      "view": "front",
-      "tracking": "reps",
-      "level": "beginner",
-      "equipment": ["resistance band", "anchor"],
-      "upperBody": true,
-      "muscles": { "primary": ["subscapularis"], "secondary": ["pectoralis major"] },
-      "sided": { "limb": "arm", "by": "pick" },
-      "band": "yellow",
-      "summary": "Elbow tucked at the side, rotate the forearm inward across the stomach against a band anchored beside you.",
-      "setup": "Anchor a band at elbow height on the side of the working arm, face the phone. Elbow bent to 90° and pinned to the ribs, forearm pointing at the band. Rotate the hand across the stomach, then return slowly.",
-      "why": "The hand travels across the body toward the opposite hip, so that distance counts the reps. The elbow drifting off the ribs is listed for you to feel.",
-      "progress": {
-        "metric": { "kind": "dist", "pts": ["WR", "oHIP"] },
-        "start": "calibrated",
-        "target": -18,
-        "targetIsDelta": true
-      },
-      "tempo": "In 1–2 s, out 2–3 s.",
-      "dosage": "3 × 12–15 each arm.",
-      "progression": "Heavier band; towel under the elbow removed.",
-      "regression": "Lighter band, smaller range.",
-      "contraindications": "Pain at the front of the shoulder.",
-      "faults": [
-        {
-          "id": "elbow",
-          "label": "Elbow leaving the ribs",
-          "cue": "Elbow pinned",
-          "tip": "A folded towel under the elbow keeps it against the body; if it drifts, the chest takes over.",
-          "severity": 3
-        },
-        {
-          "id": "trunk",
-          "label": "Twisting the trunk",
-          "cue": "Hips still",
-          "tip": "Only the forearm moves; the body faces the phone throughout.",
-          "severity": 2
-        }
-      ],
-      "guide": {
-        "surface": "Anchor that cannot move.",
-        "stop": "Front-of-shoulder pain.",
-        "cannotSee": "The elbow lifting away from the ribs.",
-        "regions": [
-          {
-            "name": "Working arm",
-            "points": [
-              { "t": "Elbow at 90°, pinned to the ribs; hand sweeps across the stomach.", "tracked": true }
-            ]
-          },
-          { "name": "Trunk", "points": [{ "t": "Square to the phone, still.", "tracked": false }] }
-        ]
-      },
-      "pose": {
-        "A": { "armR": 5, "foreR": 92, "armL": 8 },
-        "B": { "armR": 5, "foreR": 30, "armL": 8 },
-        "work": { "shoulder": 0.8, "chest": 0.3 }
-      }
-    },
-    {
       "id": "cross_body_stretch",
       "name": "Cross-body stretch",
       "type": "hold",

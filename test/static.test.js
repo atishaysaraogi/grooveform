@@ -11,7 +11,7 @@ srv.listen(0, async () => {
   const openPage = async (opts) => { const pg = await browser.newPage(opts); await pg.addInitScript("try { localStorage.setItem('fyzio.seenIntro', '1'); } catch (e) {}"); return pg; };
   const page = await openPage({ viewport: { width: 400, height: 860 } }); page.on('pageerror', e => errors.push(String(e)));
   await page.goto(base); await page.waitForSelector('.ex-row', { timeout: 15000 });
-  assert.ok((await page.$$('.ex-row')).length >= 135, 'the whole library is on the static home page'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
+  assert.ok((await page.$$('.ex-row')).length >= 130, 'the whole library is on the static home page'); assert.equal((await page.$$('.playlist')).length, 6, 'six playlists');
   await page.click('.playlist'); await page.waitForSelector('.rt-item'); assert.ok((await page.$$('.rt-item')).length >= 2, 'playlist detail loaded from api/routines/<id>');
   assert.ok((await page.$$('.rt-config .bubble')).length > 0, 'every move on the playlist is configurable in place');
   assert.equal((await page.$$('.rt-start')).length, 1, 'one start button for the whole routine');
@@ -24,13 +24,13 @@ srv.listen(0, async () => {
   // The figure review sheet builds its script list from index.html, so it cannot drift from the library.
   const figs = await openPage({ viewport: { width: 1100, height: 900 } }); figs.on('pageerror', e => errors.push('figures: ' + e));
   await figs.goto(base + 'figures.html'); await figs.waitForSelector('.fg', { timeout: 15000 });
-  assert.ok((await figs.$$('.fg svg.demo-fig')).length >= 135, 'every move has a figure on the review sheet');
+  assert.ok((await figs.$$('.fg svg.demo-fig')).length >= 130, 'every move has a figure on the review sheet');
   await figs.close();
 
   // The Studio ships with the static site, under /studio/, with the same relative asset paths.
   const studio = await openPage({ viewport: { width: 1100, height: 800 } }); studio.on('pageerror', e => errors.push('studio: ' + e));
   await studio.goto(base + 'studio/'); await studio.waitForSelector('#btn-new2', { timeout: 15000 });
-  assert.ok(await studio.evaluate(() => !!(window.MoveSpec && window.FormEngine && window.ExerciseLibrary.all().length === window.FormEngine.EXERCISES.length && window.ExerciseLibrary.all().length >= 135)), 'studio loads the engine, the spec compiler and every move, catalogue included');
+  assert.ok(await studio.evaluate(() => !!(window.MoveSpec && window.FormEngine && window.ExerciseLibrary.all().length === window.FormEngine.EXERCISES.length && window.ExerciseLibrary.all().length >= 130)), 'studio loads the engine, the spec compiler and every move, catalogue included');
   await studio.close(); assert.deepEqual(errors, []);
 
   // Text must stay legible in both themes: the palette's grape/violet become the *background* in

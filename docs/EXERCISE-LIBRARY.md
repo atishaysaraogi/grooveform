@@ -1,6 +1,6 @@
 # The exercise library
 
-The library is **data**. Every one of the 135 moves — the ten vetted ones
+The library is **data**. Every one of the 132 moves — the ten vetted ones
 included — lives in a JSON file under `client/data/moves/`, one file per body
 region, and each file opens with a guide to every field it may contain — what
 it means, what good and bad input look like. Edit the file, reload the page, and
@@ -72,7 +72,7 @@ people (`"_note": "physio wants this re-checked"`) and is ignored.
 Things that are **not** per move live in `settings.json`: when a rep counts
 (`rep`), how long a fault must hold before it is spoken (`fault`), the standard
 rep and hold choices, the band colours, the score. Its `_about` explains each.
-A change there moves all 135 moves at once; restart the server to pick it up.
+A change there moves all 132 moves at once; restart the server to pick it up.
 
 ## The measurement language
 

@@ -1,6 +1,6 @@
 {
   "_about": {
-    "what": "Numbers and words every move shares. Edit here once and all 135 moves follow. Restart the server (or reload the page) to pick up a change.",
+    "what": "Numbers and words every move shares. Edit here once and every move follows. Restart the server (or reload the page) to pick up a change.",
     "care": "These affect every move at once. Change one value at a time and re-run: node scripts/catalog.js check",
     "fields": {
       "rep": "How far through a rep (0 = start position, 1 = target) the counter treats as resting, attempting and complete. rest: back below this and the rep is over. attempt: above this and a rep has started. full: reach this and the rep counts as a full one; between attempt and full it is a partial. Good: 0.15 / 0.32 / 0.85. Bad: full at 1.0 (nobody hits the target exactly, no rep would ever count) or rest above attempt.",

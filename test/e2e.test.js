@@ -317,7 +317,7 @@ async function runCoachedSet(page, side = 'right') {
       }
       return out;
     });
-    assert.equal(rt.checked, 135, 'every move, the ten vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
+    assert.equal(rt.checked, 132, 'every move, the ten vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
     assert.deepEqual(rt.rewritten, [], 'an untouched move must be written back as the same entry');
     /* the flow a physio sees: pick a move, edit a copy, change a number, check, download */
     await st.selectOption('#move-select', 'seated_knee_ext'); await st.waitForSelector('#edit-copy'); await st.click('#edit-copy');
