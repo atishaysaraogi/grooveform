@@ -334,12 +334,7 @@
       "camera": { "height": "hip", "distance": "3 m", "posture": "standing" },
       "targets": [8, 16, 24],
       "defaultTarget": 16,
-      "progress": {
-        "metric": { "kind": "vertical", "pts": ["HIP", "KNEE"] },
-        "start": "calibrated",
-        "target": 22,
-        "targetIsDelta": true
-      },
+      "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 22, "targetIsDelta": true },
       "display": { "label": "stretch", "unit": "°", "from": "start" },
       "tempo": "Out 1 s, back 1 s, at a beat you can hold.",
       "dosage": "4 sets of 16, both sides.",
@@ -911,12 +906,7 @@
       "camera": { "height": "hip", "distance": "3 m", "posture": "standing" },
       "targets": [16, 24, 32, 48],
       "defaultTarget": 24,
-      "progress": {
-        "metric": { "kind": "vertical", "pts": ["HIP", "KNEE"] },
-        "start": "calibrated",
-        "target": 55,
-        "targetIsDelta": true
-      },
+      "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 55, "targetIsDelta": true },
       "display": { "label": "knee up", "unit": "°", "from": "start" },
       "tempo": "One lift per beat; energetic but landed softly.",
       "dosage": "3 × 24, or 2–3 minutes continuous.",
