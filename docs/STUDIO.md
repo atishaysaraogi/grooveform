@@ -50,7 +50,7 @@ recording the survivors.
 
 | minutes | step | who does what |
 |---|---|---|
-| 5 | 2 · Describe | physio talks, builder types: name, type, view, side, camera height and distance, band or not, targets, calibration pose, the three page lines |
+| 5 | 2 · Describe | physio talks, builder types: name, type, view, side, camera height and distance, band or not, targets, calibration pose, the three page lines, **and the faults by name** — each becomes a take label |
 | 8 | 3 · Record | physio (or model) performs; builder labels each take before recording it |
 | 8 | 4 · Measure, 5 · Faults | builder drives; physio decides — see below |
 | 4 | 6 · Guide | physio dictates the form points, marks which the camera checks; builds the figure |
@@ -59,8 +59,8 @@ recording the survivors.
 
 1. Two **clean** takes — five or six reps each, the way it should be done.
 2. One take **per fault**, exaggerating that one fault and nothing else. Label
-   it with the fault before pressing record (the label chips are populated from
-   step 5, so it is fine to name the faults first and come back).
+   it with the fault before pressing record (the label chips are the faults
+   named in step 2).
 3. Two **borderline** takes — a rep the physio would accept but only just, and
    one they would cue. These are the most valuable takes in the file: they are
    where the threshold actually sits.

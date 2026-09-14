@@ -240,9 +240,14 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(await st.$eval('[data-k="id"]', (e) => e.value), 'side_leg_raise', 'id made from the name');
     await st.fill('[data-k="group"]', 'Hip strength'); await st.fill('[data-k="summary"]', 'Straight-leg raise to the side.'); await st.fill('[data-k="setup"]', 'Face the camera, 2.5 m away, hip height.'); await st.fill('[data-k="why"]', 'The leg swings across the camera plane.');
     await st.click('[data-chips="sidedKind"] [data-v="leg"]'); await st.waitForSelector('[data-chips="sided.by"]');
+    // the faults are named here, before anything is recorded, so the takes can be labelled with them
+    await st.click('#addf-name'); await st.waitForSelector('[data-k="faults.0.label"]');
+    await st.fill('[data-k="faults.0.label"]', 'Leaning away'); await st.fill('[data-k="faults.0.cue"]', 'Stay tall');
     await st.click('#next');
     // 3 · record a clean take on the right leg
-    await st.waitForSelector('#btn-cam'); await st.click('#take-side [data-v="R"]'); await st.click('#btn-cam');
+    await st.waitForSelector('#btn-cam');
+    assert.ok(await st.$('#take-label [data-v="fault:leaning_away"]'), 'the fault named in step 2 is a take label in step 3');
+    await st.click('#take-side [data-v="R"]'); await st.click('#btn-cam');
     await st.waitForFunction(() => !document.querySelector('#btn-rec').disabled);
     await st.click('#btn-rec'); await st.waitForSelector('#rec-badge', { timeout: 8000 });
     await st.waitForTimeout(11000); await st.click('#btn-rec');
@@ -260,8 +265,9 @@ async function runCoachedSet(page, side = 'right') {
     await st.screenshot({ path: path.join(SHOTS, 'studio-measure.png'), fullPage: true });
     await st.click('#next');
     // 5 · faults: a leaning fault on the trunk-lean metric, then see it fire on the leaning rep only
-    await st.waitForSelector('#addf'); await st.click('#addf'); await st.waitForSelector('[data-fi="0"]');
-    await st.fill('[data-k="faults.0.label"]', 'Leaning away'); await st.fill('[data-k="faults.0.cue"]', 'Stay tall'); await st.fill('[data-k="faults.0.tip"]', 'Do not tip the trunk to lift the leg higher.');
+    await st.waitForSelector('[data-fi="0"]');
+    assert.equal(await st.$eval('[data-k="faults.0.label"]', (e) => e.value), 'Leaning away', 'step 5 carries the fault named in step 2');
+    await st.fill('[data-k="faults.0.tip"]', 'Do not tip the trunk to lift the leg higher.');
     await st.selectOption('[data-mpath="faults.0.metric"] [data-mkind]', 'lean'); await st.waitForSelector('[data-fi="0"] [data-chips="faults.0.op"]');
     await st.click('[data-chips="faults.0.op"] [data-v="<"]'); await st.fill('[data-k="faults.0.threshold"]', '-8'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
     try { await st.waitForFunction(() => /fires on 1\/1 clean/.test(document.querySelector('[data-fi="0"] .fires').textContent), null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.GrooveformStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }

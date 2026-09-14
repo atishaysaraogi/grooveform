@@ -317,7 +317,7 @@
     if (!s) return false;
     switch (step) {
       case 'screen': return Object.keys(s.screen || {}).length >= 6;
-      case 'describe': return !!(s.id && s.name && s.group && s.summary && s.setup && s.why);
+      case 'describe': return !!(s.id && s.name && s.group && s.summary && s.setup && s.why && s.faults.some((f) => f.label));
       case 'record': return state.takes.length > 0;
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
@@ -443,6 +443,14 @@
         ${field('Set-up — where the camera goes, in the user’s words', area('setup', s.setup, 'Stand facing the camera about 2.5 m away, camera at hip height, whole body in frame.', 3))}
         ${field('Why this camera angle works', area('why', s.why, 'From the front the leg swings across the camera plane, so the raise angle, pelvis tilt and trunk lean are all measured directly.', 3))}
       </div></div></div>
+      <div class="card"><div class="row" style="align-items:baseline;gap:12px;flex-wrap:wrap"><h3>What goes wrong</h3><span class="muted" style="font-size:.85rem">Name each fault now — every one becomes a take label in step 3, and the numbers come in step 5. Most moves have three to five.</span></div>
+        <div class="stack" id="fault-names" style="margin-top:8px">${s.faults.map((f, i) => `<div class="row fault-name" data-fi="${i}" style="gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" data-k="faults.${i}.label" value="${esc(f.label)}" placeholder="Fault, e.g. Hip hiking" style="flex:1 1 180px">
+          <input type="text" data-k="faults.${i}.cue" value="${esc(f.cue)}" placeholder="Spoken cue — what to do, ≤ 8 words" style="flex:1 1 220px">
+          ${chips(`faults.${i}.severity`, [1, 2, 3], f.severity || 2, { 1: 'Minor', 2: 'Matters', 3: 'Key' })}
+          ${f.rule ? '<span class="muted" style="font-size:.8rem">rule</span>' : chips(`faults.${i}.listed`, [false, true], !!f.listed, { false: 'Camera', true: 'Person' })}
+          <button type="button" class="btn ghost small" data-delf="${i}">✕</button></div>`).join('') || '<p class="muted" style="font-size:.9rem">No faults yet.</p>'}</div>
+        <div class="row" style="margin-top:8px"><button type="button" class="btn secondary small" id="addf-name">Add a fault</button><span class="muted" style="font-size:.8rem">Camera = the coach will measure it (step 5); Person = listed on the page for them to watch.</span></div></div>
       <div class="row"><button class="btn ghost" id="back">← Screen</button><span class="spacer"></span><button class="btn primary" id="next">Record it →</button></div></div>`;
   }
   function wireDescribe(s) {
@@ -453,9 +461,14 @@
       if (k === 'sidedKind') { const v = document.querySelector('[data-chips="sidedKind"] .chip[aria-pressed="true"]').dataset.v; s.sided = v === 'none' ? null : { limb: v, by: s.sided?.by || (s.view === 'side' ? 'camera' : 'pick') }; delete s.sidedKind; }
       if (k === 'ptType') { if (s.ptType === 'A' || s.ptType === 'D') s.type = 'reps'; if (s.ptType === 'B' || s.ptType === 'C') s.type = 'hold'; }
       if (k === 'sided.auto' && s.sided && !s.sided.auto) delete s.sided.auto;
+      const fm = k.match(/^faults\.(\d+)\.(\w+)$/);
+      if (fm) { const f = s.faults[+fm[1]]; if (fm[2] === 'label' && !f.idTouched) f.id = f.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'fault' + fm[1]; if (fm[2] === 'listed') { saveState(); render(); return; } saveState(); return; }
       if (['sidedKind', 'ptType', 'targetsText', 'type', 'view', 'band', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
       else saveState();
     });
+    document.querySelectorAll('#fault-names [data-chips]').forEach((g) => { if (/severity$/.test(g.dataset.chips)) g.dataset.num = ''; });
+    $('addf-name').onclick = () => { s.faults.push({ id: 'fault' + (s.faults.length + 1), label: '', cue: '', tip: '', severity: 2, listed: false, metric: { kind: 'angle', pts: [] }, rel: 'change', op: '>', threshold: null, minP: s.type === 'reps' ? 0.3 : 0, persist: 400, invalidates: false }); saveState(); render(); setTimeout(() => { const last = document.querySelector('#fault-names .fault-name:last-child input'); if (last) last.focus(); }, 0); };
+    document.querySelectorAll('#fault-names [data-delf]').forEach((b) => { b.onclick = () => { s.faults.splice(+b.dataset.delf, 1); saveState(); render(); }; });
     document.querySelector('[data-chips="defaultTarget"]').dataset.num = '';
     $('back').onclick = () => go('screen'); $('next').onclick = () => go('record');
   }
@@ -468,7 +481,7 @@
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
     const labels = [['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
     const sided = s ? !!s.sided : !!(ex && ex.sided);
-    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
+    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault named in step 2, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file">Analyze a video file…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
@@ -803,7 +816,7 @@
     </div>`;
   }
   function faultsPanel(s) {
-    return `<div class="stack"><h2>5 · Faults, as numbers</h2><p class="lead">Each fault needs: what the camera measures, how much is too much, and the words. Then look at the strip below each one — it must fire on the exaggerated take and stay quiet on the clean ones. If a threshold from a textbook fires on every clean rep, the recordings are right and the textbook is not.</p>
+    return `<div class="stack"><h2>5 · Faults, as numbers</h2><p class="lead">The faults named in step 2, each with what the camera measures and how much is too much (a fault marked <i>Person</i> in step 2 needs no number). Then look at the strip below each one — it must fire on the exaggerated take and stay quiet on the clean ones. If a threshold from a textbook fires on every clean rep, the recordings are right and the textbook is not.</p>
       <div class="stack" id="faults">${s.faults.map((f, i) => faultCard(s, f, i)).join('') || '<p class="muted">No faults yet. Most moves need three to five.</p>'}</div>
       <div class="row"><button class="btn secondary" id="addf">Add a measured fault</button>${s.type === 'reps' ? `<button class="btn ghost" id="add-shallow" ${s.faults.some((f) => f.rule === 'shallow') ? 'disabled' : ''}>Add “not reaching the target”</button><button class="btn ghost" id="add-fast" ${s.faults.some((f) => f.rule === 'fast') ? 'disabled' : ''}>Add “too fast”</button><button class="btn ghost" id="add-return" ${s.faults.some((f) => f.rule === 'return') ? 'disabled' : ''}>Add “not returning fully”</button>` : ''}</div>
       <div class="row"><button class="btn ghost" id="back">← Measure</button><span class="spacer"></span><button class="btn primary" id="next">Guide →</button></div></div>`;
