@@ -9,7 +9,7 @@ index.html + app.js  (SPA, no build)    index.js   static files, CSP, HSTS     u
 coach/engine.js      pose → reps/faults  http.js    router, JSON, CSRF guard   otp_codes, sessions
 coach/coach.js       camera, voice, HUD  api.js     all routes + entitlements  consent_records, audit_log
 coach/library/*.js   one file per move   auth.js    OTP, sessions, consent     subscriptions, payments
-coach/catalog.js + catalog/*.js  data-defined full library, per body region
+coach/catalog.js + data/moves/*.json  the library as editable JSON, per body region
 coach/exercise-library.js  registry      payments.js mock / Razorpay          routines, routine_items
 MediaPipe Pose (CDN, on-device)          db.js      schema + migrations        connections, routine_assignments
 Razorpay Checkout (CDN, only at pay)     crypto.js  AES-GCM fields, HMAC ids   exercise_sessions, notes

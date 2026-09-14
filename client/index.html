@@ -161,28 +161,9 @@
 <script src="coach/exercise-library.js"></script>
 <script src="coach/engine.js"></script>
 <script src="coach/spec.js"></script>
-<!-- One move per file. Adding one: drop it in coach/library/ and list it here. -->
-<!-- Catalogue: data-defined moves, one file per body region. Adding one: drop it in coach/catalog/ and list it here. -->
 <script src="coach/catalog.js"></script>
-<script src="coach/catalog/knee.js"></script>
-<script src="coach/catalog/hip.js"></script>
-<script src="coach/catalog/ankle.js"></script>
-<script src="coach/catalog/shoulder.js"></script>
-<script src="coach/catalog/spine.js"></script>
-<script src="coach/catalog/core.js"></script>
-<script src="coach/catalog/elbow_wrist.js"></script>
-<script src="coach/catalog/gym_lower.js"></script>
-<script src="coach/catalog/gym_upper.js"></script>
-<script src="coach/library/heelslide.js"></script>
-<script src="coach/library/hipabd.js"></script>
-<script src="coach/library/wallsit.js"></script>
-<script src="coach/library/plank.js"></script>
-<script src="coach/library/calfstretch.js"></script>
-<script src="coach/library/shoulder_er.js"></script>
-<script src="coach/library/shoulder_abd.js"></script>
-<script src="coach/library/band_row.js"></script>
-<script src="coach/library/pullapart.js"></script>
-<script src="coach/library/trapstretch.js"></script>
+<!-- The moves themselves are data: client/data/manifest.json lists the files, and app.js loads them
+     through FyzioCatalog.load() before the first render. -->
 <script src="coach/coach.js"></script>
 <script src="app.js"></script>
 </body>

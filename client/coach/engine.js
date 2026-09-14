@@ -153,7 +153,15 @@
        faults: [{ id, label, cue, tip, weight, persist, cooldown, phase?, check(m, ctx) }]
      type 'reps' uses p; type 'hold' uses m.inPosition.
   --------------------------------------------------------- */
-  const REST = 0.15, ATTEMPT = 0.32, FULL = 0.85;
+  /* Rep thresholds, band scale, scoring: read from data/settings.json through configure(). Nothing
+     here has a built-in value — the file is the one place those numbers live. */
+  let SETTINGS = null;
+  const T = {};                                            // T.rest, T.attempt, T.full
+  const settingsOr = () => { if (!SETTINGS) throw new Error('engine: configure(settings) has not run — data/settings.json must load before any move'); return SETTINGS; };
+  function configure(s) {
+    if (!s || !s.rep || !s.band || !s.score) throw new Error('settings.json needs rep, band and score sections');
+    SETTINGS = s; T.rest = s.rep.rest; T.attempt = s.rep.attempt; T.full = s.rep.full;
+  }
 
   function sideJoints(pts, S) { const s = SIDE[S]; return { ear: pts[s.EAR], sh: pts[s.SH], el: pts[s.EL], wr: pts[s.WR], hip: pts[s.HIP], knee: pts[s.KNEE], ank: pts[s.ANK], heel: pts[s.HEEL], foot: pts[s.FOOT] }; }
 
@@ -177,10 +185,8 @@
   // how far the elbow sits outside the shoulder, image units (+ = away from the body)
   const elbowGap = (pts, s) => { const j = SIDE[s]; return (pts[j.EL].x - pts[j.SH].x) * outward(pts, s); };
 
-  // Resistance band grades — TheraBand / standard exercise-band colour scale. 'none' = bodyweight only.
-  const BAND = (dflt) => ({ key: 'band', label: 'Resistance band', values: ['none', 'tan', 'yellow', 'red', 'green', 'blue', 'black'], default: dflt,
-    labels: { none: 'No band', tan: 'Tan · extra light', yellow: 'Yellow · light', red: 'Red · medium', green: 'Green · heavy', blue: 'Blue · extra heavy', black: 'Black · special heavy' },
-    swatches: { none: 'transparent', tan: '#d9b98a', yellow: '#f2d23c', red: '#d8433b', green: '#2e9e5b', blue: '#2f6fd6', black: '#222222' } });
+  // Resistance band grades — the colour scale lives in settings.json (band). 'none' = bodyweight only.
+  const BAND = (dflt) => { const b = settingsOr().band; return { key: 'band', label: b.label, values: b.values.slice(), default: dflt, labels: { ...b.labels }, swatches: { ...b.swatches } }; };
   // Auto side selection that does not flicker at rest: keep the current side unless the other one moves clearly more (hysteresis of 8°).
   function stickySide(ref, rL, rR) { const cur = ref.autoSide || (rL >= rR ? 'L' : 'R'); const next = cur === 'L' ? (rR > rL + 8 ? 'R' : 'L') : (rL > rR + 8 ? 'L' : 'R'); ref.autoSide = next; return next; }
   /* ---- exercise library -------------------------------------------------
@@ -194,7 +200,9 @@
     ? require('./exercise-library.js') : root.ExerciseLibrary;
   if (!library) throw new Error('engine.js: load coach/exercise-library.js first');
   library.kinematics = {
-    LM, SIDE, REST, ATTEMPT, FULL, BAND,
+    LM, SIDE, BAND,
+    get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; },
+    get settings() { return settingsOr(); },
     angle, armAngle, armRot, clamp, deg, dist, elbowGap, fromVertical, headTilt,
     lineOffset, lineTilt, mid, outward, pelvisTilt, segTilt, sideJoints, stickySide, trunkLean,
   };
@@ -203,7 +211,7 @@
   /* ---------------- Rep counter (hysteresis state machine) ---------------- */
   class RepCounter {
     constructor(opts = {}) {
-      this.rest = opts.rest ?? REST; this.attempt = opts.attempt ?? ATTEMPT; this.full = opts.full ?? FULL;
+      settingsOr(); this.rest = opts.rest ?? T.rest; this.attempt = opts.attempt ?? T.attempt; this.full = opts.full ?? T.full;
       this.minRep = opts.minRep ?? 600; this.turnHyst = opts.turnHyst ?? 0.12;
       this.state = 'rest'; this.p = 0; this.peak = 0; this.t0 = 0; this.tPeak = 0; this.trough = 0; this.tTrough = 0;
       this.count = 0; this.partials = 0; this.reps = []; this.faultsThisRep = new Set();
@@ -321,38 +329,46 @@
         out.avgTempo = full.length ? full.reduce((s, r) => s + r.duration, 0) / full.length : 0;
         out.avgROM = full.length ? full.reduce((s, r) => s + Math.min(r.peak, 1.2), 0) / full.length : 0;
         out.repList = reps;
-        // each fault costs weight×3 per occurrence, capped so one recurring fault can't zero the score
-        for (const k in faultCounts) { const fc = faultCounts[k]; score -= Math.min(fc.fault.weight * 3 * fc.n, fc.fault.weight * 12); }
-        score -= this.counter.partials * 3;
-        if (this.counter.count === 0) score = Math.min(score, 40);
+        // each fault costs weight×faultCost per occurrence, capped so one recurring fault can't zero the score
+        const sc = settingsOr().score;
+        for (const k in faultCounts) { const fc = faultCounts[k]; score -= Math.min(fc.fault.weight * sc.faultCost * fc.n, fc.fault.weight * sc.faultCap); }
+        score -= this.counter.partials * sc.partialCost;
+        if (this.counter.count === 0) score = Math.min(score, sc.noRepCap);
       } else {
         out.holdSec = Math.round(this.holdMs / 100) / 10; out.goodSec = Math.round(this.goodMs / 100) / 10;
         const goodFrac = this.holdMs ? this.goodMs / this.holdMs : 0;
-        score = Math.round(40 + 60 * goodFrac);
-        if (this.holdMs < this.target * 1000) score -= Math.round(20 * (1 - this.holdMs / (this.target * 1000)));
+        const sc = settingsOr().score;
+        score = Math.round(sc.holdFloor + (100 - sc.holdFloor) * goodFrac);
+        if (this.holdMs < this.target * 1000) score -= Math.round(sc.shortHoldPenalty * (1 - this.holdMs / (this.target * 1000)));
       }
       score = clamp(Math.round(score), 0, 100); out.score = score;
       const sorted = Object.values(faultCounts).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
-      for (const fc of sorted.slice(0, 3)) tips.push({ label: fc.fault.label, tip: fc.fault.tip, n: fc.n });
+      for (const fc of sorted.slice(0, settingsOr().score.tips)) tips.push({ label: fc.fault.label, tip: fc.fault.tip, n: fc.n });
       out.tips = tips;
-      out.headline = score >= 90 ? 'Excellent form' : score >= 75 ? 'Good set — one thing to tidy up' : score >= 55 ? 'Decent — a couple of things to work on' : 'Let\'s rebuild the basics';
+      out.headline = (settingsOr().score.headlines.find((h) => score >= h.atLeast) || { text: '' }).text;
       out.trackingLossPct = this.frames ? Math.round(100 * this.lostMs / Math.max(1, out.durationMs)) : 0;
       return out;
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, REST, ATTEMPT, FULL, clamp, lerp };
-  /* Node (server + tests) has no <script> tags, so pull in every move here.
-     The browser loads the same files from index.html. Either way each one
-     registers itself into library.list, which EXERCISES points at. */
+  const FormEngine = { LM, SIDE, CONNECTIONS, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+    get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
+  /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
+     the browser's FyzioCatalog.load() uses: settings first, then the hand-written code moves the
+     manifest lists, then every catalogue file. Either way each move registers itself into
+     library.list, which EXERCISES points at. */
   if (typeof module !== 'undefined' && module.exports) {
-    const fs = require('node:fs'), path = require('node:path');
-    /* library/ holds the hand-written moves, catalog/ the data-defined ones (see coach/catalog.js). */
-    for (const sub of ['library', 'catalog']) {
-      const dir = path.join(__dirname, sub);
-      if (!fs.existsSync(dir)) continue;
-      for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.js')).sort()) require(path.join(dir, f));
-    }
+    const path = require('node:path');
+    const catalog = require('./catalog.js');
+    const DATA_DIR = path.join(__dirname, '..', 'data');
+    const data = catalog.readDataSync(DATA_DIR);
+    configure(data.settings); library.configure(data.settings);
+    for (const f of data.manifest.code) require(path.join(__dirname, '..', f));
+    catalog.defineAll(data);
+    /* Re-read the catalogue files without restarting (the dev server does this after the Studio
+       saves one). Settings and the code moves are not reloaded — those need a restart. */
+    FormEngine.reloadCatalog = () => { const fresh = catalog.readDataSync(DATA_DIR); library.remove((e) => e.catalog); catalog.defineAll(fresh); return fresh; };
+    FormEngine.DATA_DIR = DATA_DIR;
   }
 
   if (typeof module !== 'undefined' && module.exports) module.exports = FormEngine; else root.FormEngine = FormEngine;

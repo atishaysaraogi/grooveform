@@ -1,23 +1,24 @@
 /* ============================================================
-   Catalogue builder — many moves from compact data.
+   Catalogue — the library, read from data files.
 
-   The ten hand-written moves are code. Everything else in the library
-   is a catalogue entry: the fields a physio fills in (what, where the
-   camera goes, how many, what goes wrong and the cue for it, the guide,
-   equipment, muscles, level, sources) plus, where one camera can
-   actually measure it, a declarative spec that coach/spec.js compiles
-   into a real rep counter and fault checks.
+   The ten hand-written moves are code (coach/library/). Everything else
+   is an entry in client/data/moves/<region>.json: the fields a physio
+   fills in (what, where the camera goes, how many, what goes wrong and
+   the cue for it, the guide, equipment, muscles, level, sources) plus,
+   where one camera can actually measure it, the measurement and the
+   fault thresholds that coach/spec.js compiles into a rep counter and
+   live checks. This file turns those entries into moves.
 
    Three tracking tiers, decided per entry:
-     form — spec with live fault checks: the camera counts AND judges
-     reps — spec that counts reps / times the hold; faults are listed, not watched
+     form — live fault checks: the camera counts AND judges
+     reps — counts reps / times the hold; faults are listed, not watched
      none — nothing a single camera can measure; the guide is shown and
             the set is logged by hand
 
    Figures: an entry gives its two keyframes as joint ANGLES, and
-   poseToFigure turns them into the point keyframes the anatomy figure
-   draws. Angles are far easier to write by hand for a hundred moves than
-   pixel coordinates, and they cannot produce a limb of the wrong length.
+   poseToFigure turns them into the point keyframes the stick figure
+   draws. Angles are far easier to write by hand than pixel coordinates,
+   and they cannot produce a limb of the wrong length.
    ============================================================ */
 (function (root) {
   'use strict';
@@ -208,23 +209,146 @@
     else (root.__pendingFigures = root.__pendingFigures || []).push([id, fig]);
   }
 
-  const DEFAULTS = {
-    reps: { targets: [6, 8, 10, 12, 15], defaultTarget: 10 },
-    hold: { targets: [10, 15, 20, 30, 45, 60], defaultTarget: 20 },
-  };
-  const CANNOT_SEE_DEFAULT = 'Anything that only moves toward or away from the phone.';
+  /* ============================================================
+     The data layer — everything below reads the files in client/data/.
 
-  /* One catalogue entry → one library move. `grp` carries the group-level defaults. */
-  function build(e, i, grp) {
+       manifest.json   which files to load (settings, shared, moves/*.json, the code moves)
+       settings.json   numbers and words every move shares (rep thresholds, fault timing, band colours…)
+       shared.json     named measurements, fault templates, pose presets, hold sets
+       moves/*.json    the moves themselves, one file per body region
+
+     A move file is data only. Names in it ("metric": "knee", "template": "lean", "preset":
+     "standing") are looked up in shared.json and expanded here; every field name is checked
+     against the lists below so a typo is an error with a suggestion, not a silently ignored
+     field. Keys starting with "_" are notes for people and are skipped everywhere.
+     ============================================================ */
+  const KEYS = {
+    manifest: ['settings', 'shared', 'moves', 'code'],
+    file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
+    entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
+      'summary', 'setup', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
+      'progress', 'hold', 'faults', 'guide', 'pose', 'figure',
+      'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
+    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'minP', 'persist', 'cooldown', 'phase', 'invalidates', 'rule', 'minMs'],
+    metric: ['kind', 'pts'],
+    progress: ['metric', 'start', 'target', 'targetIsDelta'],
+    hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max'],
+    guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
+    camera: ['height', 'distance', 'posture'], sided: ['limb', 'by'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
+    option: ['key', 'label', 'values', 'unit', 'default', 'labels'],
+    pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side'],
+    kfSide: ['preset', 'face', 'torso', 'neck', 'thigh', 'shin', 'foot', 'uarm', 'farm', 'thighF', 'shinF', 'footF', 'uarmF', 'farmF'],
+    kfFront: ['preset', 'legL', 'legR', 'shinL', 'shinR', 'armL', 'armR', 'foreL', 'foreR', 'lean', 'headTilt', 'squat'],
+    prop: ['kind', 'at', 'to', 'w', 'dy', 'dx', 'len', 'r', 'extend'],
+    shared: ['measurements', 'faults', 'poses', 'holds'],
+    settings: ['rep', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
+  };
+  const isNote = (k) => k.startsWith('_');
+  const fail = (where, msg) => { const e = new Error(`${where}: ${msg}`); e.where = where; throw e; };
+  /* "did you mean" for a mistyped field name */
+  function distance(a, b) {
+    const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for (let j = 1; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+  function checkKeys(obj, kind, where) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) fail(where, `expected an object with fields ${KEYS[kind].join(', ')}`);
+    for (const k of Object.keys(obj)) {
+      if (isNote(k) || KEYS[kind].includes(k)) continue;
+      const near = KEYS[kind].map((x) => [distance(k.toLowerCase(), x.toLowerCase()), x]).sort((a, b) => a[0] - b[0])[0];
+      fail(where, `unknown field "${k}"${near && near[0] <= 3 ? ` — did you mean "${near[1]}"?` : ''} (allowed: ${KEYS[kind].join(', ')})`);
+    }
+  }
+  const strip = (obj) => { const o = {}; for (const k of Object.keys(obj)) if (!isNote(k)) o[k] = obj[k]; return o; };
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+
+  /* ---- names → values, from shared.json ---- */
+  function resolveMetric(m, shared, where) {
+    if (typeof m === 'string') {
+      const r = shared.measurements[m];
+      if (!r) fail(where, `unknown measurement "${m}" — shared.json knows: ${Object.keys(shared.measurements).join(', ')}`);
+      return clone(strip(r));
+    }
+    checkKeys(m, 'metric', where); return clone(strip(m));
+  }
+  function resolveFault(f, shared, where) {
+    checkKeys(f, 'fault', where);
+    let out = strip(f);
+    if (out.template) {
+      const T = shared.faults[out.template];
+      if (!T) fail(where, `unknown fault template "${out.template}" — shared.json knows: ${Object.keys(shared.faults).join(', ')}`);
+      const { template, ...rest } = out; out = { ...strip(T), ...rest };
+      if (out.metric !== undefined && out.threshold === undefined) fail(where, `template "${template}" has no threshold of its own — give the fault one`);
+    }
+    if (out.metric !== undefined) {
+      out.metric = resolveMetric(out.metric, shared, where + ' › metric');
+      /* a measurement without a number to compare against is a fault that can never fire — a mistake, not a choice */
+      if (!['<', '>'].includes(out.op)) fail(where, `a fault with a metric needs "op": "<" or ">" (got ${JSON.stringify(out.op)})`);
+      if (!Number.isFinite(out.threshold)) fail(where, `"threshold" must be a number (got ${JSON.stringify(out.threshold)})`);
+    } else if (out.op !== undefined || out.threshold !== undefined) fail(where, 'op / threshold without a metric — add "metric" or remove them');
+    return out;
+  }
+  function resolveKeyframe(kf, shared, view, where) {
+    if (kf === undefined) return kf;
+    const kind = view === 'front' ? 'kfFront' : 'kfSide';
+    checkKeys(kf, kind, where);
+    let out = strip(kf);
+    if (out.preset) {
+      const P = shared.poses[out.preset];
+      if (!P) fail(where, `unknown pose preset "${out.preset}" — shared.json knows: ${Object.keys(shared.poses).join(', ')}`);
+      const { preset, ...rest } = out; out = { ...strip(P), ...rest };
+      checkKeys(out, kind, where + ` (preset ${preset})`);
+    }
+    return out;
+  }
+  /* A raw entry → the same entry with every name expanded and every field name checked. */
+  function resolveEntry(raw, shared, where) {
+    checkKeys(raw, 'entry', where);
+    const e = clone(strip(raw));
+    if (e.camera) checkKeys(e.camera, 'camera', where + ' › camera');
+    if (e.sided) checkKeys(e.sided, 'sided', where + ' › sided');
+    if (e.muscles) checkKeys(e.muscles, 'muscles', where + ' › muscles');
+    (e.sources || []).forEach((s, i) => checkKeys(s, 'source', `${where} › sources[${i}]`));
+    (e.options || []).forEach((o, i) => checkKeys(o, 'option', `${where} › options[${i}]`));
+    if (e.progress) { checkKeys(e.progress, 'progress', where + ' › progress'); e.progress.metric = resolveMetric(e.progress.metric, shared, where + ' › progress'); }
+    if (e.hold) {
+      checkKeys(e.hold, 'hold', where + ' › hold');
+      if (typeof e.hold.conditions === 'string') {
+        const H = shared.holds[e.hold.conditions];
+        if (!H) fail(where, `unknown hold set "${e.hold.conditions}" — shared.json knows: ${Object.keys(shared.holds).join(', ')}`);
+        e.hold.conditions = clone(H);
+      }
+      e.hold.conditions = (e.hold.conditions || []).map((c, i) => { checkKeys(c, 'condition', `${where} › hold[${i}]`); return { ...strip(c), metric: resolveMetric(c.metric, shared, `${where} › hold[${i}]`) }; });
+    }
+    e.faults = (e.faults || []).map((f, i) => resolveFault(f, shared, `${where} › faults[${i}]`));
+    if (e.guide) {
+      checkKeys(e.guide, 'guide', where + ' › guide');
+      (e.guide.regions || []).forEach((r, i) => { checkKeys(r, 'region', `${where} › guide.regions[${i}]`); (r.points || []).forEach((p, j) => checkKeys(p, 'point', `${where} › guide.regions[${i}].points[${j}]`)); });
+    }
+    if (e.pose) {
+      checkKeys(e.pose, 'pose', where + ' › pose');
+      e.pose = strip(e.pose);
+      e.pose.A = resolveKeyframe(e.pose.A, shared, e.view || 'front', where + ' › pose.A');
+      e.pose.B = resolveKeyframe(e.pose.B, shared, e.view || 'front', where + ' › pose.B');
+      (e.pose.props || []).forEach((p, i) => checkKeys(p, 'prop', `${where} › pose.props[${i}]`));
+    }
+    return e;
+  }
+
+  /* One resolved entry → one library move. `grp` carries the file-level defaults. */
+  function buildEntry(e, i, grp, ctx) {
+    const st = ctx.settings;
     const tracking = e.tracking || 'none';
     const type = e.type || 'reps';
-    const dflt = DEFAULTS[type];
-    const targets = e.targets || dflt.targets, defaultTarget = e.defaultTarget || dflt.defaultTarget;
-    const guide = Object.assign({ cannotSee: CANNOT_SEE_DEFAULT }, e.guide || {});
+    const dflt = st.targets[type];
+    const targets = e.targets || dflt.choices, defaultTarget = e.defaultTarget || dflt.default;
+    const guide = Object.assign({ cannotSee: st.cannotSee }, e.guide || {});
     const physio = {
       region: e.region || grp.region, equipment: e.equipment || grp.equipment || [], muscles: e.muscles, level: e.level || 'beginner',
       tempo: e.tempo, dosage: e.dosage, progression: e.progression, regression: e.regression, contraindications: e.contraindications,
       sources: [...(grp.sources || []), ...(e.sources || [])], camera: e.camera || grp.camera,
+      clinicalName: e.clinicalName, calibrationPose: e.calibrationPose,
     };
     for (const k of Object.keys(physio)) if (physio[k] === undefined) delete physio[k];
     const order = e.order || (grp.order || 1000) + i;
@@ -237,7 +361,7 @@
       ex = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, why: e.why, defaultTarget, targets, options: e.options || [],
-        required: e.required || [11, 12, 23, 24], faults: docFaults(false), guide,
+        required: st.landmarks.always.slice(), faults: docFaults(false), guide,
       };
       if (e.sided) ex.sided = e.sided;
       if (e.upperBody) ex.upperBody = true;
@@ -245,38 +369,150 @@
       /* A counted move needs at least one thing the counter can judge; "did you reach the
          target" and "too fast" hold for any rep-based move, so they are the floor. */
       const specFaults = live.slice();
+      const SF = st.standardFaults;
       if (type === 'reps' && !specFaults.length) {
-        specFaults.push({ id: 'shallow', rule: 'shallow', label: 'Not reaching the target', cue: 'All the way', tip: 'Take each rep through the full range you set — half reps count as partials.', severity: 1 });
-        specFaults.push({ id: 'fast', rule: 'fast', label: 'Too fast', cue: 'Slow it down', tip: 'Control both directions; momentum takes the work away from the muscle.', severity: 1, minMs: e.minMs || 1500 });
+        specFaults.push({ id: 'shallow', rule: 'shallow', ...SF.shallow });
+        specFaults.push({ id: 'fast', rule: 'fast', ...SF.fast, minMs: e.minMs || SF.fast.minMs });
       }
       /* For a timed hold the one thing any camera can watch is the held position itself: the
          first hold condition, turned around, fires the moment the person drifts out of it. */
       if (type === 'hold' && !specFaults.length) {
         const c = e.hold && e.hold.conditions && e.hold.conditions[0];
-        if (!c) throw new Error('catalogue "' + e.id + '": a tracked hold needs hold.conditions');
+        if (!c) throw new Error('a tracked hold needs hold.conditions');
         const byMin = Number.isFinite(c.min);
-        specFaults.push({ id: 'drift', label: 'Drifting out of position', cue: 'Back into position', tip: 'The hold only counts while you are in the position — ease back in and keep breathing.', severity: 1,
-          metric: c.metric, rel: c.rel, op: byMin ? '<' : '>', threshold: byMin ? c.min : c.max, phase: 'hold', persist: 600, cooldown: 6000 });
+        specFaults.push({ id: 'drift', ...SF.drift, metric: c.metric, rel: c.rel, op: byMin ? '<' : '>', threshold: byMin ? c.min : c.max, phase: 'hold' });
       }
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, why: e.why, targets, defaultTarget, options: e.options || [],
-        progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus,
+        progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure,
       };
       ex = SPEC.compile(spec, lib.kinematics);
       ex.faults = [...ex.faults, ...docFaults(true)];
       ex.spec = spec;
     }
     Object.assign(ex, physio, { tracking, vetted: !!e.vetted, catalog: true });
-    if (e.pose) registerFigure(e.id, poseToFigure(ex.view, e.pose, { hold: type === 'hold', posture: (physio.camera || {}).posture, side: e.pose.side || (e.sided && ex.view === 'front' ? 'R' : 'both') }));
     return ex;
   }
 
-  /* defineCatalog(group, entries): group = { region, group, order, equipment, camera, sources } */
-  function defineCatalog(grp, entries) {
-    return entries.map((e, i) => lib.define(() => build(e, i, grp)));
+  function fileGroup(file) { const g = {}; for (const k of Object.keys(file)) if (k !== 'moves' && !isNote(k)) g[k] = file[k]; return g; }
+  const shortName = (name) => String(name).replace(/^.*\//, '');
+  /* Build every move in one file. `register` = true adds them to the library; false only checks. */
+  function buildFile(file, name, ctx, register) {
+    const where = shortName(name);
+    checkKeys(file, 'file', where);
+    if (!Array.isArray(file.moves)) fail(where, '"moves" must be a list of moves');
+    const grp = fileGroup(file);
+    const out = [];
+    file.moves.forEach((raw, i) => {
+      const id = raw && raw.id;
+      const w = `${where} › ${id || 'move #' + (i + 1)}`;
+      try {
+        const e = resolveEntry(raw, ctx.shared, w);
+        const ex = register ? lib.define(() => buildEntry(e, i, grp, ctx)) : lib.prepare(buildEntry(e, i, grp, ctx));
+        ex.file = where; ex.entry = raw;
+        if (e.pose) {
+          const fig = poseToFigure(ex.view, e.pose, { hold: ex.type === 'hold', posture: (ex.camera || {}).posture, side: e.pose.side || (e.sided && ex.view === 'front' ? 'R' : 'both') });
+          if (register) registerFigure(e.id, fig); else ex.figure = fig;
+        }
+        out.push(ex);
+      } catch (err) {
+        if (err.where) throw err;
+        const msg = String(err.message).replace(/^(exercise|spec) "[^"]*": /, '');
+        fail(w, msg);
+      }
+    });
+    return out;
+  }
+  function defineAll(data) {
+    api.data = data;
+    let n = 0;
+    for (const f of data.files) n += buildFile(f.json, f.name, data, true).length;
+    return n;
+  }
+  /* Every problem in one file, as messages a person can act on; [] means it would load cleanly.
+     `otherIds` are the ids in the files not being checked, for the duplicate test. */
+  function checkFile(file, name, ctx, otherIds = []) {
+    const problems = []; const seen = new Set(otherIds);
+    try {
+      checkKeys(file, 'file', shortName(name));
+      if (!Array.isArray(file.moves)) fail(shortName(name), '"moves" must be a list of moves');
+    } catch (e) { return [e.message]; }
+    const grp = fileGroup(file);
+    file.moves.forEach((raw, i) => {
+      const w = `${shortName(name)} › ${(raw && raw.id) || 'move #' + (i + 1)}`;
+      try {
+        const e = resolveEntry(raw, ctx.shared, w);
+        const ex = lib.prepare(buildEntry(e, i, grp, ctx));
+        const taken = lib.get(ex.id);
+        if (seen.has(ex.id) || (taken && !taken.catalog)) fail(w, `id "${ex.id}" is used twice${taken && !taken.catalog ? ' — it belongs to a hand-written code move' : ''}`);
+        seen.add(ex.id);
+        if (e.pose) poseToFigure(ex.view, e.pose, { hold: ex.type === 'hold', posture: (ex.camera || {}).posture, side: 'both' });
+      } catch (err) { problems.push(err.where ? err.message : `${w}: ${String(err.message).replace(/^(exercise|spec) "[^"]*": /, '')}`); }
+    });
+    return problems;
+  }
+  function checkShared(shared) { checkKeys(shared, 'shared', 'shared.json'); for (const k of KEYS.shared) if (!shared[k] || typeof shared[k] !== 'object') fail('shared.json', `needs a "${k}" section (an object, even if empty)`); }
+  function checkSettings(s) { checkKeys(s, 'settings', 'settings.json'); for (const k of KEYS.settings) if (s[k] === undefined) fail('settings.json', `needs "${k}"`); }
+  function checkManifest(m) { checkKeys(m, 'manifest', 'manifest.json'); for (const k of ['settings', 'shared']) if (typeof m[k] !== 'string') fail('manifest.json', `"${k}" must name a file`); for (const k of ['moves', 'code']) if (!Array.isArray(m[k])) fail('manifest.json', `"${k}" must be a list of files`); }
+
+  /* ---- reading the files: from disk (server, tests, CLI) or over HTTP (the apps) ---- */
+  function parse(text, name) { try { return JSON.parse(text); } catch (e) { fail(shortName(name), `not valid JSON — ${e.message}. A missing comma or a stray one at the end of a list are the usual causes.`); } }
+  function readDataSync(dir) {
+    const fs = require('node:fs'), path = require('node:path');
+    const read = (rel) => parse(fs.readFileSync(path.join(dir, rel), 'utf8'), rel);
+    const manifest = read('manifest.json'); checkManifest(manifest);
+    const settings = read(manifest.settings); checkSettings(settings);
+    const shared = read(manifest.shared); checkShared(shared);
+    const files = manifest.moves.map((rel) => ({ name: rel, json: read(rel) }));
+    return { dir, manifest, settings, shared, files };
+  }
+  async function fetchData(base) {
+    const get = async (rel) => {
+      const r = await fetch(`${base}/data/${rel}`, { cache: 'no-cache' });
+      if (!r.ok) fail(shortName(rel), `could not be loaded (HTTP ${r.status})`);
+      return parse(await r.text(), rel);
+    };
+    const manifest = await get('manifest.json'); checkManifest(manifest);
+    const [settings, shared] = await Promise.all([get(manifest.settings), get(manifest.shared)]);
+    checkSettings(settings); checkShared(shared);
+    const files = await Promise.all(manifest.moves.map(async (rel) => ({ name: rel, json: await get(rel) })));
+    return { base, manifest, settings, shared, files };
+  }
+  const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error(`${src} failed to load`)); document.head.appendChild(s); });
+  /* The browser entry point: read the data, configure the engine, load the code moves the manifest
+     lists, then build the catalogue. Resolves with the data; rejects with a message naming the file
+     and move at fault. Called once by app.js, the Studio and the figure sheet. */
+  async function load(base = '.') {
+    if (api.loading) return api.loading;
+    api.loading = (async () => {
+      const data = await fetchData(base);
+      root.FormEngine.configure(data.settings); lib.configure(data.settings);
+      for (const src of data.manifest.code) await loadScript(`${base}/${src}`);
+      defineAll(data);
+      return data;
+    })();
+    return api.loading;
   }
 
-  const api = { defineCatalog, poseToFigure, sidePose, frontPose, build };
+  /* ---- writing: one JSON style for the CLI, the dev server and the Studio ----
+     Short things stay on one line (a metric, the camera, a keyframe); anything longer opens out
+     one field per line, so a diff shows the one number that changed. */
+  function format(v, indent = '') {
+    const inline = (x) => {
+      if (x === null || typeof x !== 'object') return JSON.stringify(x);
+      if (Array.isArray(x)) return '[' + x.map(inline).join(', ') + ']';
+      return '{ ' + Object.keys(x).map((k) => JSON.stringify(k) + ': ' + inline(x[k])).join(', ') + ' }';
+    };
+    if (v === null || typeof v !== 'object') return JSON.stringify(v);
+    const one = inline(v);
+    if (one.length <= 100 && !(Array.isArray(v) && v.some((x) => x && typeof x === 'object' && !Array.isArray(x) && one.length > 60))) return one;
+    const pad = indent + '  ';
+    if (Array.isArray(v)) return v.length ? '[\n' + v.map((x) => pad + format(x, pad)).join(',\n') + '\n' + indent + ']' : '[]';
+    const keys = Object.keys(v);
+    return keys.length ? '{\n' + keys.map((k) => pad + JSON.stringify(k) + ': ' + format(v[k], pad)).join(',\n') + '\n' + indent + '}' : '{}';
+  }
+
+  const api = { KEYS, defineAll, buildFile, checkFile, checkShared, checkSettings, checkManifest, readDataSync, fetchData, load, format, resolveEntry, poseToFigure, sidePose, frontPose, data: null };
   if (isNode) module.exports = api; else root.FyzioCatalog = api;
 })(typeof window !== 'undefined' ? window : globalThis);

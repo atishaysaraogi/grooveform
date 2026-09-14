@@ -33,7 +33,7 @@ class Router {
     const keys = []; const re = new RegExp('^' + pattern.replace(/\//g, '\\/').replace(/:(\w+)/g, (_, k) => { keys.push(k); return '([^\\/]+)'; }) + '\\/?$');
     this.routes.push({ method, re, keys, handlers });
   }
-  get(p, ...h) { this.add('GET', p, ...h); } post(p, ...h) { this.add('POST', p, ...h); } patch(p, ...h) { this.add('PATCH', p, ...h); } delete(p, ...h) { this.add('DELETE', p, ...h); }
+  get(p, ...h) { this.add('GET', p, ...h); } post(p, ...h) { this.add('POST', p, ...h); } put(p, ...h) { this.add('PUT', p, ...h); } patch(p, ...h) { this.add('PATCH', p, ...h); } delete(p, ...h) { this.add('DELETE', p, ...h); }
   match(method, pathname) {
     for (const r of this.routes) { if (r.method !== method) continue; const m = pathname.match(r.re); if (m) { const params = {}; r.keys.forEach((k, i) => params[k] = decodeURIComponent(m[i + 1])); return { handlers: r.handlers, params }; } }
     return null;

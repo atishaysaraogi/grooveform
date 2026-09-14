@@ -12,8 +12,6 @@ const library = require(path.join(ROOT, 'client', 'coach', 'exercise-library.js'
 const engine = require(path.join(ROOT, 'client', 'coach', 'engine.js'));   // loads every move
 
 const files = fs.readdirSync(LIB_DIR).filter((f) => f.endsWith('.js')).sort();
-const CAT_DIR = path.join(ROOT, 'client', 'coach', 'catalog');
-const catFiles = fs.existsSync(CAT_DIR) ? fs.readdirSync(CAT_DIR).filter((f) => f.endsWith('.js')).sort() : [];
 const handWritten = engine.EXERCISES.filter((e) => !e.catalog);
 const catalogue = engine.EXERCISES.filter((e) => e.catalog);
 
@@ -24,19 +22,70 @@ test('every file in the library folder registers exactly one hand-written move',
     'a hand-written move id must match its filename');
 });
 
-// The browser has no readdir: it loads each move from a <script> tag. A move file with no tag
-// works on the server and silently vanishes in the browser, so check the two agree.
-test('index.html loads every move file in the library and catalogue folders', () => {
-  const html = fs.readFileSync(path.join(ROOT, 'client', 'index.html'), 'utf8');
-  const tagged = [...html.matchAll(/coach\/library\/([a-z0-9_]+)\.js/g)].map((m) => m[1]);
-  assert.deepEqual(tagged.slice().sort(), files.map((f) => f.replace(/\.js$/, '')).sort(),
-    'add a <script> tag in client/index.html for each move (and remove tags for deleted ones)');
-  assert.equal(new Set(tagged).size, tagged.length, 'a move is listed twice in index.html');
-  const catTagged = [...html.matchAll(/coach\/catalog\/([a-z0-9_]+)\.js/g)].map((m) => m[1]);
-  assert.deepEqual(catTagged.slice().sort(), catFiles.map((f) => f.replace(/\.js$/, '')).sort(),
-    'client/index.html and client/coach/catalog/ disagree — add or remove the <script> tag');
-  const iCat = html.indexOf('src="coach/catalog.js"'), iSpec = html.indexOf('src="coach/spec.js"'), iFirst = html.indexOf('src="coach/catalog/');
-  assert.ok(iSpec < iCat && iCat < iFirst, 'coach/spec.js, then coach/catalog.js, then the catalogue files');
+/* The library is data: client/data/manifest.json names every file, the browser fetches them and the
+   server reads them. The folders and the manifest must agree, and nothing may be listed twice. */
+const DATA_DIR = path.join(ROOT, 'client', 'data');
+const catalog = require(path.join(ROOT, 'client', 'coach', 'catalog.js'));
+const data = catalog.readDataSync(DATA_DIR);
+const moveFiles = fs.readdirSync(path.join(DATA_DIR, 'moves')).filter((f) => f.endsWith('.json')).sort();
+
+test('the manifest lists every code move and every moves file, and index.html lists none of them', () => {
+  assert.deepEqual(data.manifest.code.map((p) => p.replace(/^coach\/library\//, '')).sort(), files, 'manifest.json "code" and client/coach/library/ disagree');
+  assert.deepEqual(data.manifest.moves.map((p) => p.replace(/^moves\//, '')).sort(), moveFiles, 'manifest.json "moves" and client/data/moves/ disagree');
+  for (const html of ['index.html', 'studio/index.html']) {
+    const src = fs.readFileSync(path.join(ROOT, 'client', html), 'utf8');
+    assert.ok(!/coach\/(library|catalog)\//.test(src), html + ' must not list moves — the manifest does');
+    const iCat = src.indexOf('coach/catalog.js'), iSpec = src.indexOf('coach/spec.js'), iApp = src.indexOf(html === 'index.html' ? 'app.js' : 'studio.js');
+    assert.ok(iSpec < iCat && iCat < iApp, html + ': coach/spec.js, then coach/catalog.js, then the app');
+  }
+});
+
+test('every data file opens with its _about guide, and the guide covers every field a move may use', () => {
+  for (const rel of ['manifest.json', 'settings.json', 'shared.json', ...data.manifest.moves]) {
+    const j = JSON.parse(fs.readFileSync(path.join(DATA_DIR, rel), 'utf8'));
+    assert.equal(Object.keys(j)[0], '_about', rel + ' must start with _about');
+  }
+  const guides = data.files.map((f) => f.json._about);
+  for (const g of guides) {
+    assert.deepEqual(g.fields, guides[0].fields, 'the field guide must read the same in every moves file (node scripts/catalog.js sync-docs)');
+    assert.ok(g.what && g.add && g.remove && g.check, 'the guide says what the file is and how to add, remove and check a move');
+  }
+  const documented = Object.keys(guides[0].fields).sort(), allowed = catalog.KEYS.entry.slice().sort();
+  assert.deepEqual(documented, allowed, 'every allowed move field is explained in _about.fields, and nothing else is');
+  for (const [k, v] of Object.entries(guides[0].fields)) assert.ok(v.length > 20, 'field guide for ' + k + ' is too short to help');
+  const settingsDoc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'settings.json'), 'utf8'))._about.fields;
+  for (const k of catalog.KEYS.settings) assert.ok(Object.keys(settingsDoc).some((d) => d === k || d.startsWith(k + '.')), 'settings.json _about.fields must explain ' + k);
+  const sharedDoc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'shared.json'), 'utf8'))._about;
+  for (const k of catalog.KEYS.shared) assert.ok(sharedDoc[k], 'shared.json _about must explain ' + k);
+});
+
+test('every shipped file checks clean, and a mistake is reported with the file, the move and a suggestion', () => {
+  const others = (skip) => data.files.filter((f) => f.name !== skip).flatMap((f) => f.json.moves.map((m) => m.id));
+  for (const f of data.files) assert.deepEqual(catalog.checkFile(f.json, f.name, data, others(f.name)), [], f.name);
+  const knee = data.files.find((f) => f.name.endsWith('knee.json'));
+  const mutate = (fn) => { const j = JSON.parse(JSON.stringify(knee.json)); fn(j); return catalog.checkFile(j, knee.name, data, others(knee.name)); };
+  const one = (fn) => { const p = mutate(fn); assert.equal(p.length, 1, JSON.stringify(p)); return p[0]; };
+  assert.match(one((j) => { j.moves[0].sumary = j.moves[0].summary; }), /knee.json › quad_set: unknown field "sumary" — did you mean "summary"/);
+  assert.match(one((j) => { j.moves[1].progress.metric = 'kne'; }), /knee.json › slr › progress: unknown measurement "kne"/);
+  assert.match(one((j) => { j.moves[7].faults[0].threshold = 'sixty'; }), /seated_knee_ext/);
+  assert.match(one((j) => { j.moves[7].faults.push({ template: 'lean' }); }), /template "lean" has no threshold/);
+  assert.match(one((j) => { j.moves[7].pose.A.thigh_angle = 10; }), /pose.A: unknown field "thigh_angle"/);
+  assert.match(one((j) => { j.moves[7].id = 'quad_set'; }), /id "quad_set" is used twice/);
+  assert.match(one((j) => { j.moves[7].id = 'heelslide'; }), /heelslide.*used twice/);
+  assert.match(one((j) => { j.moves[0].tracking = 'form'; }), /quad_set/);
+  assert.match(one((j) => { delete j.moves[0].summary; }), /quad_set.*summary/);
+  assert.match(one((j) => { j.moves[0]._note = 'a note is fine'; j.moves[0].faults[0]._todo = 'so is this'; j.moves[0].summary = ''; }), /summary/);
+  assert.deepEqual(mutate((j) => { j.moves[0]._note = 'notes are ignored'; j._todo = 'anywhere'; }), []);
+  assert.throws(() => catalog.readDataSync(path.join(__dirname, 'no-such-dir')), /ENOENT/);
+});
+
+test('the JSON style the tools write round-trips and keeps short things on one line', () => {
+  for (const f of data.files) {
+    const text = catalog.format(f.json);
+    assert.deepEqual(JSON.parse(text), f.json, f.name + ' does not round-trip');
+    assert.equal(text + '\n', fs.readFileSync(path.join(DATA_DIR, f.name), 'utf8'), f.name + ' is not in the shared style — run: node scripts/catalog.js format');
+    assert.match(text, /"camera": \{ "height"/, 'a camera line stays on one line');
+  }
 });
 
 /* A joint the entry names as a contact — a foot on the floor, a hand on the bar — must land on the

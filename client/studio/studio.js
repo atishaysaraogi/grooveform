@@ -9,7 +9,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const E = window.FormEngine, LIB = window.ExerciseLibrary, SPEC = window.MoveSpec, ANAT = window.FyzioAnatomy;
+  const E = window.FormEngine, LIB = window.ExerciseLibrary, SPEC = window.MoveSpec, ANAT = window.FyzioAnatomy, C = window.FyzioCatalog;
   const K = LIB.kinematics;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -820,6 +820,10 @@
   $('import-input').onchange = () => { const f = $('import-input').files[0]; $('import-input').value = ''; if (f) importBundle(f); };
 
   /* ---------- boot ---------- */
-  (async () => { await loadTakes(); render(); })();
+  (async () => {
+    try { await C.load('..'); }
+    catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
+    await loadTakes(); render();
+  })();
   window.GrooveformStudio = { state, simulate, trace, buildFigure, moveFileSource, render };
 })();

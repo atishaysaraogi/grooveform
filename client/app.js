@@ -640,6 +640,14 @@
   }
 
   /* ---------- boot ---------- */
-  (async () => { try { await refreshMe(); if (me && !me.consentRequired) await flushPending(); } catch (e) { console.error(e); } route(); showIntro(false); })();
+  /* The library is data (client/data/): load it before the first render. A file that cannot load — a
+     missing comma, a mistyped field, a fault with no threshold — is shown here, naming the file and the
+     move, so whoever edited it sees the problem instead of an empty list. */
+  (async () => {
+    try { await FyzioCatalog.load('.'); }
+    catch (e) { $('view').innerHTML = `<div class="card data-error"><h2>The exercise files did not load</h2><p>${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload. <code>node scripts/catalog.js check</code> lists every problem at once.</p></div>`; console.error(e); return; }
+    try { await refreshMe(); if (me && !me.consentRequired) await flushPending(); } catch (e) { console.error(e); }
+    route(); showIntro(false);
+  })();
   window.__portal = { get me() { return me; }, get ent() { return ent; }, api, route, refreshMe };
 })();

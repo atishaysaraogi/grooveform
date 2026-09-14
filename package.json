@@ -1,7 +1,7 @@
 {
   "name": "grooveform",
   "version": "1.0.0",
-  "description": "Fyzio \u2014 camera-guided exercise coach with free and Pro exercises, curator-sent routines, a curator directory and Razorpay subscriptions. Zero-dependency Node 22 server + SQLite.",
+  "description": "Fyzio — camera-guided exercise coach with free and Pro exercises, curator-sent routines, a curator directory and Razorpay subscriptions. Zero-dependency Node 22 server + SQLite.",
   "private": true,
   "engines": {
     "node": ">=22.12"
@@ -14,7 +14,9 @@
     "keygen": "node -e \"const c=require('crypto');console.log('DATA_KEY='+c.randomBytes(32).toString('hex'));console.log('APP_SECRET='+c.randomBytes(32).toString('base64url'))\"",
     "test:solo": "node test/solo.test.js",
     "build:static": "node scripts/build-static.js",
-    "test:static": "node scripts/build-static.js && node test/static.test.js"
+    "test:static": "node scripts/build-static.js && node test/static.test.js",
+    "catalog": "node scripts/catalog.js",
+    "catalog:check": "node scripts/catalog.js check"
   },
   "license": "UNLICENSED"
 }

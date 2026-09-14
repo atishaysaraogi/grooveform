@@ -9,10 +9,14 @@ const audit = require('./audit');
 const pay = require('./payments');
 const { Router, HttpError, readJson, send, clientIp, v } = require('./http');
 
-// engine.js loads every move in client/coach/library/ and exposes them as EXERCISES.
+// engine.js loads every move — the ten code moves plus client/data/moves/*.json — and exposes them as EXERCISES.
 const engine = require(path.join(__dirname, '..', 'client', 'coach', 'engine.js'));
-const EXERCISES = engine.EXERCISES.map(e => ({ id: e.id, name: e.name, group: e.group, type: e.type, view: e.view, icon: e.icon, sided: e.sided || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map(f => ({ id: f.id, label: f.label, cue: f.cue, tip: f.tip, tracked: f.tracked !== false && typeof f.check === 'function' })), guide: e.guide, tracking: e.tracking, vetted: !!e.vetted, equipment: e.equipment || [], muscles: e.muscles || null, level: e.level || null, camera: e.camera || null, sources: e.sources || [], tempo: e.tempo || null, dosage: e.dosage || null, progression: e.progression || null, regression: e.regression || null, contraindications: e.contraindications || null, region: e.region || null, tier: config.freeExercises.includes('all') || config.freeExercises.includes(e.id) ? 'free' : 'pro' }));
-const EX_BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
+const catalog = require(path.join(__dirname, '..', 'client', 'coach', 'catalog.js'));
+const exerciseView = (e) => ({ id: e.id, name: e.name, clinicalName: e.clinicalName || null, group: e.group, type: e.type, view: e.view, icon: e.icon, sided: e.sided || null, summary: e.summary, setup: e.setup, why: e.why, calibrationPose: e.calibrationPose || null, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map(f => ({ id: f.id, label: f.label, cue: f.cue, tip: f.tip, tracked: f.tracked !== false && typeof f.check === 'function' })), guide: e.guide, tracking: e.tracking, vetted: !!e.vetted, equipment: e.equipment || [], muscles: e.muscles || null, level: e.level || null, camera: e.camera || null, sources: e.sources || [], tempo: e.tempo || null, dosage: e.dosage || null, progression: e.progression || null, regression: e.regression || null, contraindications: e.contraindications || null, region: e.region || null, tier: config.freeExercises.includes('all') || config.freeExercises.includes(e.id) ? 'free' : 'pro' });
+let EXERCISES = [];
+const EX_BY_ID = {};
+function refreshExercises() { EXERCISES = engine.EXERCISES.map(exerciseView); for (const k of Object.keys(EX_BY_ID)) delete EX_BY_ID[k]; for (const e of EXERCISES) EX_BY_ID[e.id] = e; return EXERCISES.length; }
+refreshExercises();
 const SPECIALTIES = ['Knee rehab', 'Hip & glutes', 'Shoulder & neck', 'Back pain', 'Post-surgery', 'Runners', 'Seniors & balance', 'Strength', 'Mobility', 'Desk & posture', 'Sports'];
 const router = new Router();
 const now = () => Date.now();
@@ -62,6 +66,26 @@ function meView(u) { return { ...auth.publicUser(u), entitlements: entitlements(
 /* ---------------- public ---------------- */
 router.get('/api/me', (req, res) => { const u = auth.currentUser(req); send(res, 200, { user: u ? meView(u) : null, entitlements: entitlements(u), consentVersion: config.consentVersion, notice: privacyNotice(), env: { otp: config.notifyProvider, payments: config.paymentProvider, isProd: config.isProd, appName: config.appName, solo: config.soloMode } }); });
 router.get('/api/exercises', (req, res) => { const u = auth.currentUser(req); const ent = entitlements(u); send(res, 200, { exercises: EXERCISES.map(e => ({ ...e, locked: !ent.exercises.includes(e.id) })), specialties: SPECIALTIES }); });
+/* ---------------- development only: the Studio writes catalogue files straight into the project ----------------
+   Off unless NODE_ENV=development and the request comes from this machine. The file is checked the way the app
+   would load it; nothing is written unless it checks clean, and the running server re-reads the library. */
+const devOnly = (req) => { if (config.nodeEnv !== 'development' || config.isProd) throw new HttpError(404, 'Not found'); const ip = clientIp(req); if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) throw new HttpError(403, 'Local only'); };
+router.get('/api/dev/catalog', (req, res) => { devOnly(req); const d = catalog.readDataSync(engine.DATA_DIR); send(res, 200, { files: d.manifest.moves, dir: engine.DATA_DIR }); });
+router.put('/api/dev/catalog/:file', async (req, res) => {
+  devOnly(req);
+  const name = req.params.file; if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new HttpError(400, 'File name: lower-case letters, digits, underscores');
+  const rel = 'moves/' + name + '.json'; const body = await readJson(req, 8_000_000);
+  const d = catalog.readDataSync(engine.DATA_DIR);
+  const others = d.files.filter(f => f.name !== rel).flatMap(f => f.json.moves.map(m => m.id));
+  const problems = catalog.checkFile(body, rel, d, others);
+  if (problems.length) throw new HttpError(400, 'Not saved — fix these first', { problems });
+  const fs = require('node:fs');
+  fs.writeFileSync(path.join(engine.DATA_DIR, rel), catalog.format(body) + '\n');
+  if (!d.manifest.moves.includes(rel)) { d.manifest.moves.push(rel); fs.writeFileSync(path.join(engine.DATA_DIR, 'manifest.json'), catalog.format(d.manifest) + '\n'); }
+  engine.reloadCatalog(); const n = refreshExercises();
+  audit.log({ action: 'catalog.saved', targetType: 'file', targetId: rel, ip: clientIp(req), meta: { moves: body.moves.length } });
+  send(res, 200, { saved: rel, moves: body.moves.length, library: n });
+});
 router.get('/api/plans', (req, res) => send(res, 200, { plans: pay.planList(), provider: config.paymentProvider }));
 router.get('/api/routines/prebuilt', (req, res) => { const u = auth.currentUser(req); send(res, 200, { routines: db.q("SELECT * FROM routines WHERE kind = 'prebuilt' AND archived = 0 ORDER BY rowid").all().map(r => routineView(r, { viewer: u })) }); });
 router.get('/api/curators', (req, res) => {
@@ -332,4 +356,4 @@ async function handle(req, res, pathname) {
   if (!['GET', 'HEAD'].includes(req.method) && !pathname.startsWith('/api/billing/webhook/') && req.headers['x-requested-with'] !== 'fetch') throw new HttpError(403, 'Missing X-Requested-With header');
   req.params = m.params; for (const h of m.handlers) await h(req, res);
 }
-module.exports = { handle, bootstrap, eraseUser, EXERCISES, entitlements };
+module.exports = { handle, bootstrap, eraseUser, get EXERCISES() { return EXERCISES; }, entitlements };

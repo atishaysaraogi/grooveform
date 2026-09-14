@@ -23,11 +23,15 @@
                 choice only says how to set up (lying or standing side-on) */
   const SIDE_BY = ['pick', 'camera'];
   /* Every one-sided move offers the same choice, so it is added here rather than
-     repeated in ten files. 'both' runs the sets on one side, then asks to switch. */
-  const SIDE_OPTION = Object.freeze({
-    key: 'side', label: 'Which side', values: ['left', 'right', 'both'], default: 'both',
-    labels: Object.freeze({ left: 'Left', right: 'Right', both: 'Both (one then the other)' }),
-  });
+     repeated in every file. 'both' runs the sets on one side, then asks to switch.
+     The wording comes from data/settings.json (side); the three values are fixed
+     because the coach switches on them. */
+  let SIDE_OPTION = null;
+  function configure(settings) {
+    const s = settings && settings.side;
+    if (!s || !s.labels) throw new Error('settings.json needs a side section with labels');
+    SIDE_OPTION = Object.freeze({ key: 'side', label: s.label, values: ['left', 'right', 'both'], default: ['left', 'right', 'both'].includes(s.default) ? s.default : 'both', labels: Object.freeze({ ...s.labels }) });
+  }
   const TYPES = ['reps', 'hold'];
   const VIEWS = ['front', 'side'];
   /* What the camera can do with a move:
@@ -145,7 +149,21 @@
     define(factory) {
       if (!isFn(factory)) throw new Error('ExerciseLibrary.define expects a function');
       if (!library.kinematics) throw new Error('ExerciseLibrary: engine.js must load before any exercise');
-      const ex = factory(library.kinematics);
+      const ex = library.prepare(factory(library.kinematics));
+      if (index[ex.id]) throw new Error(`exercise "${ex.id}" is already registered`);
+      index[ex.id] = ex;
+      /* Insert in `order`, so the catalogue reads the same however the files were
+         loaded — fetched in the browser, read from disk on the server. */
+      let at = list.length;
+      while (at > 0 && list[at - 1].order > ex.order) at--;
+      list.splice(at, 0, ex);
+      return ex;
+    },
+
+    /* Everything define() does to a move short of registering it — so a file can be checked
+       (the Studio, the dev server, the CLI) without touching the live list. */
+    prepare(ex) {
+      if (!SIDE_OPTION) throw new Error('ExerciseLibrary: configure(settings) has not run');
       if (ex && ex.tracking === undefined) ex.tracking = 'form';   // the hand-written moves
       /* A one-sided move always offers Left / Right / Both. Adding it here keeps the
          choice identical everywhere and out of every move file. */
@@ -153,17 +171,15 @@
         ex.options = [...(ex.options || []), SIDE_OPTION];
       }
       validate(ex);
-      if (index[ex.id]) throw new Error(`exercise "${ex.id}" is already registered`);
-      index[ex.id] = ex;
-      /* Insert in `order`, so the catalogue reads the same however the files were
-         loaded — <script> tags in the browser, readdir on the server. */
-      let at = list.length;
-      while (at > 0 && list[at - 1].order > ex.order) at--;
-      list.splice(at, 0, ex);
       return ex;
     },
+    /* Drop every registered move the predicate matches (the dev server does this before re-reading
+       the catalogue files). */
+    remove(pred) {
+      for (let i = list.length - 1; i >= 0; i--) if (pred(list[i])) { delete index[list[i].id]; list.splice(i, 1); }
+    },
 
-    SIDE_OPTION, TRACKING, LEVELS, CAM_HEIGHTS, POSTURES,
+    configure, get SIDE_OPTION() { return SIDE_OPTION; }, TRACKING, LEVELS, CAM_HEIGHTS, POSTURES,
     all() { return list.slice(); },
     get(id) { return index[id] || null; },
     ids() { return list.map((e) => e.id); },

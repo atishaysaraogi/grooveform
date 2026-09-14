@@ -41,8 +41,8 @@
 </main>
 
 <script>
-/* The script list lives in index.html and the library test keeps it honest, so read it from there
-   rather than repeating it here where it would quietly drift. */
+/* The engine scripts are listed in index.html, so read them from there rather than repeating the list;
+   the moves themselves are data, loaded the same way the app loads them (FyzioCatalog.load). */
 (async () => {
   const html = await (await fetch('index.html')).text();
   const srcs = [...html.matchAll(/<script src="(coach\/[^"]+)"><\/script>/g)].map((m) => m[1]);
@@ -50,8 +50,9 @@
     const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src));
     document.head.appendChild(s);
   });
+  await FyzioCatalog.load('.');
   render();
-})().catch((e) => { document.getElementById('list').innerHTML = '<p class="error">Could not load the move library: ' + e.message + '</p>'; });
+})().catch((e) => { document.getElementById('list').innerHTML = '<p class="error">Could not load the move library: ' + esc(e.message) + '</p>'; });
 
 const FLAG = 'jodd.figureFlags';
 const flags = new Set((() => { try { return JSON.parse(localStorage.getItem(FLAG) || '[]'); } catch { return []; } })());

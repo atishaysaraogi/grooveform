@@ -1,24 +1,32 @@
 # The exercise library
 
-Every move lives in its own file under `client/coach/library/`. That file holds
-**everything** about the move — what it is, where the camera goes, what counts as
-a rep, how it is measured, the faults with their spoken cues and written tips, and
-the full set-up guide. Nothing about a move is spread across other files.
+The library is **data**. Every move except ten lives in a JSON file under
+`client/data/moves/`, one file per body region, and each file opens with a guide
+to every field it may contain — what it means, what good and bad input look
+like. Edit the file, reload the page, and the move is different. Nothing about
+a move is spread across other files.
 
 ```
+client/data/
+  manifest.json          which files make up the library (add a line, add a file)
+  settings.json          numbers and words every move shares: rep thresholds, fault timing,
+                         band colours, scoring, the standard faults
+  shared.json            named measurements ("knee"), fault templates ("lean"), pose presets
+                         ("standing"), hold sets ("balance") — referred to by name from the moves
+  moves/
+    knee.json            one body region per file, a dozen or so moves each
+    hip.json  ankle.json  shoulder.json  spine.json  core.json  elbow_wrist.json
+    gym_lower.json  gym_upper.json
 client/coach/
   exercise-library.js    the registry: define(), validation, lookup
   engine.js              kinematics, smoothing, rep counting, set review
-  spec.js                compiles a declarative spec into a move
-  catalog.js             builds many moves from compact physio data + joint-angle figures
+  spec.js                compiles a declarative move into a rep counter and fault checks
+  catalog.js             reads the data files, checks every field name, builds the moves and
+                         the joint-angle figures
   library/
-    heelslide.js         one hand-written, vetted move per file
-    hipabd.js
-    …
-  catalog/
-    knee.js              one body region per file, a dozen or so moves each
-    hip.js  ankle.js  shoulder.js  spine.js  core.js  elbow_wrist.js
-    gym_lower.js  gym_upper.js
+    heelslide.js         the ten hand-written moves: code, for what the data format cannot say
+    hipabd.js …
+scripts/catalog.js       the offline tool: check · list · new · remove · format · sync-docs
 ```
 
 `engine.js` publishes a kinematics toolkit into the registry and exposes
@@ -26,19 +34,58 @@ client/coach/
 derives `/api/exercises` from it, so a new move shows up everywhere at once:
 catalogue, exercise page, routine builder, static build.
 
-## Three ways to write a move
+## Editing the library
 
-A move is **hand-written** (a factory returning the object below — the ten
-vetted moves), a **spec** written in the Studio (`/studio/`, see
-`docs/STUDIO.md`): a JSON of named landmarks and thresholds that
-`coach/spec.js` compiles into the same shape at load time, or a **catalogue
-entry**: the physio's record of a move (what, where the phone goes, dosage,
-faults, guide, sources) plus, where one camera can measure it, the same spec
-fields. All three register through `define()` and pass the same validator.
-Spec moves are the normal path for a move that comes out of a session with a
-physio; hand-written ones are for anything the spec language cannot say (a
-phase machine, a custom side rule); the catalogue is the breadth — every
-physio and gym move we could document, whether or not a phone can track it.
+There are three ways in, all ending in the same JSON file:
+
+**In the Studio** (`/studio/`, see `docs/STUDIO.md`). Pick any move from the
+dropdown and press *Edit a copy*, or *New move*. The seven steps edit every
+field, and step 7 either **saves the file into the project** — when the site is
+run locally with `npm run dev` — or **downloads the region file** to drop into
+`client/data/moves/`. Either way the file is checked before it is written; a
+problem is reported by file and move.
+
+**In a text editor.** Open `client/data/moves/<region>.json`. The `_about` block
+at the top explains every field with good and bad examples. Copy a move that
+looks like the new one, change every field, give it a new id. Save; reload. A
+mistake — a missing comma, a mistyped field, a fault with a measurement but no
+threshold — is shown on screen in place of the exercise list, naming the file,
+the move and (for a field name) the nearest correct spelling.
+
+**From the command line**, no server needed:
+
+```
+node scripts/catalog.js check              every file: parse, field names, names in shared.json, the library's rules
+node scripts/catalog.js list [knee]        ids and names
+node scripts/catalog.js new knee my_move   append a template with placeholder text to fill in
+node scripts/catalog.js remove my_move     delete a move from whichever file has it
+node scripts/catalog.js format             rewrite every file in the shared style
+node scripts/catalog.js sync-docs          copy the field guide from the first moves file to the others
+```
+
+`npm test` runs the same checks, so nothing wrong can be pushed unnoticed.
+
+Anything written as a **word instead of an object** — `"metric": "knee"`,
+`"template": "lean"`, `"preset": "standing"`, `"conditions": "balance"` — is
+looked up in `shared.json`. When a measurement, a fault or a pose would be
+typed twice, put it there once. Any field beginning with `_` is a note for
+people (`"_note": "physio wants this re-checked"`) and is ignored.
+
+Things that are **not** per move live in `settings.json`: when a rep counts
+(`rep`), how long a fault must hold before it is spoken (`fault`), the standard
+rep and hold choices, the band colours, the score. Its `_about` explains each.
+A change there moves all 135 moves at once; restart the server to pick it up.
+
+## Three kinds of move
+
+A move is a **catalogue entry** (JSON, above — 125 of them), a **spec** written
+in the Studio (the same fields, as the Studio saves them), or **hand-written**
+(a factory returning the object below — the ten vetted moves under
+`client/coach/library/`, listed in `manifest.json` under `code`). All three
+register through `define()` and pass the same validator. Hand-written is for
+anything the data format cannot say — a phase machine, a custom side rule, a
+measurement normalised by a limb length. That is real duplication and it is
+deliberate: those ten are also the only moves the Studio cannot edit.
 
 ## Tracking tiers and the vetted flag
 
@@ -62,37 +109,56 @@ actually checks live.
 
 ## The catalogue
 
-`client/coach/catalog/<region>.js` calls `FyzioCatalog.defineCatalog(group, entries)`.
-The group carries defaults (region, camera, sources); each entry is the record a
-physio fills in:
+A moves file is a group (region, heading, default camera, sources) and a list of
+moves. Each move is the record a physio fills in. The `_about` block at the top
+of every file documents each field; this is the shape:
 
-```js
+```json
 {
-  id: 'slr', name: 'Straight leg raise', type: 'reps', view: 'side', tracking: 'form',
-  level: 'beginner', equipment: ['none'], muscles: { primary: ['quadriceps'], secondary: [] },
-  sided: { limb: 'leg', by: 'camera' },
-  summary, setup, why,                         // the same text fields as any move
-  camera: { height: 'floor', distance: '2 m', posture: 'lying' },
-  tempo: 'Lift 2 s, hold 2 s, lower 3 s.', dosage: '2–3 × 10 each leg.',
-  progression: '…', regression: '…', contraindications: '…',
-  progress: { metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, start: 'calibrated', target: 35, targetIsDelta: true },
-  faults: [
-    // with metric/op/threshold → checked live (the move is then at least `reps`, `form` if any fault is live)
-    { id: 'kneebend', label: 'Knee bending', cue: 'Lock the knee', tip: '…', severity: 3, metric: KNEE, op: '<', threshold: 165 },
-    // without → listed for the person to watch
-    { id: 'arch', label: 'Lower back arching', cue: 'Back flat', tip: '…', severity: 2 },
-  ],
-  guide: { surface, stop, cannotSee, regions: [{ name, points: [{ t, tracked }] }] },
-  pose: { A: { face: 'right', torso: -90, thigh: 90, shin: 90 }, B: { …, thigh: 125, shin: 125 }, work: { thigh: 1 } },
+  "_about": { "…": "what the file is, how to add and remove, and a guide to every field" },
+  "region": "knee", "group": "Knee", "order": 1100,
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "sources": [{ "name": "E3 Rehab — Exercises for knee pain", "url": "https://…" }],
+  "moves": [
+    {
+      "id": "slr", "name": "Straight leg raise", "type": "reps", "view": "side", "tracking": "form",
+      "level": "beginner", "equipment": ["none"], "muscles": { "primary": ["quadriceps"], "secondary": [] },
+      "sided": { "limb": "leg", "by": "camera" },
+      "summary": "…", "setup": "…", "why": "…",
+      "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+      "tempo": "Lift 2 s, hold 2 s, lower 3 s.", "dosage": "2–3 × 10 each leg.",
+      "progression": "…", "regression": "…", "contraindications": "…",
+      "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 35, "targetIsDelta": true },
+      "faults": [
+        { "id": "kneebend", "label": "Knee bending", "cue": "Lock the knee", "tip": "…", "severity": 3,
+          "metric": "knee", "op": "<", "threshold": 165 },
+        { "id": "arch", "label": "Lower back arching", "cue": "Back flat", "tip": "…", "severity": 2 }
+      ],
+      "guide": { "surface": "…", "stop": "…", "cannotSee": "…",
+        "regions": [{ "name": "Working leg", "points": [{ "t": "…", "tracked": true }] }] },
+      "pose": { "A": { "preset": "supine", "thigh": 90, "shin": 90 }, "B": { "preset": "supine", "thigh": 125, "shin": 125 }, "work": { "thigh": 1 } }
+    }
+  ]
 }
 ```
 
+A fault **with** `metric`, `op` and `threshold` is checked live (the move is
+then at least `reps`, and `form` if it says so); one **without** is listed for
+the person to watch. A measurement with no number, or a number with no
+measurement, is an error rather than a silently dead fault. `"template": "lean"`
+with a `"threshold"` pulls a whole fault from `shared.json`; any field written
+next to it wins over the template's.
+
+Every field name is checked against a fixed list when the file loads, so
+`"sumary"` fails with *did you mean "summary"?* instead of a blank line on the
+page. The same list is what the `_about` guide documents, and a test holds the
+two equal.
+
 **Reviewing the figures:** `/figures.html` on the site (or `client/figures.html`
 locally) draws every move's animation on one page with its id, a search box and
-a "looks wrong" tick that collects the ids you flag. It builds its script list
-from `index.html`, so it can never list a different set of moves than the app.
+a "looks wrong" tick that collects the ids you flag. It loads the moves the same way the app does, so it can never show a different set.
 Quote the ids back with a sentence each on what the body should be doing, and
-each one maps to exactly one `pose` block below.
+each one maps to exactly one `pose` block in a moves file.
 
 `pose` gives the two keyframes of the figure as **joint angles** (see the header
 of `catalog.js` for the conventions) and `catalog.js` turns them into the
@@ -132,7 +198,7 @@ faults gets the generic "not reaching the target" and "too fast" checks; a
 timed hold with none gets "drifting out of position" from its first hold
 condition.
 
-`test/library.test.js` checks every catalogue entry: the physio fields, at least
+`test/library.test.js` checks every data file (every field name, the `_about` guide, the shared style) and every catalogue entry: the physio fields, at least
 two faults with a cue that differs from the tip and is short enough to speak,
 a `cannotSee` line, a figure, and that the tier is honest (a `none` move has no
 checks and no guide point claiming the camera watches it; a `form` move has a
@@ -140,18 +206,18 @@ live fault).
 
 ## Adding a move
 
-For a catalogue move: add an entry to the matching `client/coach/catalog/<region>.js`
-(or a new region file, listed in `index.html` after `coach/catalog.js`) and run
-`npm test`. For a hand-written move, two steps.
+For a catalogue move — the normal case — see *Editing the library* above:
+Studio, text editor or `node scripts/catalog.js new <file> <id>`. A new body
+region is a new file under `client/data/moves/` plus one line in
+`manifest.json`.
+
+A hand-written move is code and takes two steps:
 
 1. Create `client/coach/library/<id>.js` (filename must equal the move's `id`).
-2. Add one line to `client/index.html`, next to the others:
-   `<script src="coach/library/<id>.js"></script>`
+2. List it in `client/data/manifest.json` under `code`.
 
-That is all. `engine.js` finds the file by itself on the server and in tests; the
-`<script>` tag is only because the browser cannot read a directory.
-`test/library.test.js` fails if the folder and `index.html` disagree, so a
-forgotten tag is caught rather than silently dropping the move in the browser.
+`engine.js` and the browser both read the manifest, so nothing else changes.
+`test/library.test.js` fails if the folder and the manifest disagree.
 
 To make it free without a subscription, add its id to `FREE_EXERCISES` (or leave
 `FREE_EXERCISES=all`).

@@ -74,8 +74,8 @@
     return out;
   }
 
-  const SEVERITY_WEIGHT = { 1: 1, 2: 2, 3: 3 };
-  const PHASE_DEFAULTS = { persist: 400, cooldown: 5000 };
+  /* Severity → weight, and how long a fault must hold before it is spoken: data/settings.json (fault). */
+  const faultSettings = (k) => { const s = k.settings && k.settings.fault; if (!s) throw new Error('settings.json needs a fault section'); return s; };
 
   /* --- validation of the spec itself (before it becomes an exercise) --- */
   function checkSpec(spec) {
@@ -160,9 +160,10 @@
     const liveFaults = spec.faults.filter((f) => f.rule !== 'shallow' && f.rule !== 'fast');
     liveFaults.forEach((f) => useMetric(f.metric));
 
-    const required = new Set([11, 12, 23, 24]);
+    const lmk = k.settings.landmarks;
+    const required = new Set(lmk.always);
     for (const S of ['L', 'R']) for (const m of metrics) metricLandmarks(m, S, k).forEach((i) => required.add(i));
-    if (!spec.upperBody) [25, 26, 27, 28].forEach((i) => required.add(i));
+    if (!spec.upperBody) lmk.legs.forEach((i) => required.add(i));
 
     const options = [];
     if (prog && typeof prog.target === 'string') {
@@ -203,13 +204,14 @@
       return m;
     }
 
+    const fs = faultSettings(k);
     const faults = spec.faults.map((f) => {
-      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: SEVERITY_WEIGHT[+f.severity] || 1, invalidates: !!f.invalidates };
+      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates };
       if (f.rule === 'shallow') return { ...common, onRep: true, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
       if (f.rule === 'fast') return { ...common, onRep: true, check: (rep) => rep.duration < f.minMs };
       const gate = f.minP == null ? 0 : f.minP;
       return {
-        ...common, persist: f.persist || PHASE_DEFAULTS.persist, cooldown: f.cooldown || PHASE_DEFAULTS.cooldown,
+        ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown,
         phase: f.phase === 'moving' || f.phase === 'rest' ? f.phase : (spec.type === 'hold' ? 'hold' : undefined),
         check: (m) => (spec.type === 'hold' ? m.inPosition !== false : (m.p ?? 0) >= gate) && (f.op === '>' ? m['f_' + f.id] > f.threshold : m['f_' + f.id] < f.threshold),
       };

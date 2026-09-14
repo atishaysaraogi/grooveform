@@ -4,7 +4,7 @@
 pose model, same move library) and runs entirely in the browser, so it works on
 GitHub Pages and on a laptop with no server. A physio and one person from the
 build side sit down with it, and a move that survives the session comes out as
-a file that drops straight into `client/coach/library/`.
+a move in `client/data/moves/<region>.json` — the same file a physio can also edit by hand.
 
 It is the executable version of `docs/PT-INTAKE.md`. Read that first for the
 *why*; this is the *how*.
@@ -13,10 +13,11 @@ It is the executable version of `docs/PT-INTAKE.md`. Read that first for the
 
 For each move:
 
-- **`<id>.js`** — the move file. It carries no code, only a spec: measurements as
-  named landmarks, a start/target pair for progress, each fault as a metric, a
-  comparison and a threshold. `coach/spec.js` compiles it into exactly the shape
-  the hand-written moves have, so the app cannot tell the difference.
+- **The move**, as one object in `client/data/moves/<region>.json`. It carries no
+  code, only fields: measurements as named landmarks, a start/target pair for
+  progress, each fault as a metric, a comparison and a threshold, and the words.
+  `coach/spec.js` compiles it into exactly the shape the hand-written moves have,
+  so the app cannot tell the difference.
 - **The demo figure** — two keyframes lifted out of the physio's own clean take
   (start pose, peak of the best rep), with the muscles they chose.
 - **The session file** — every move worked on that day plus every take: label,
@@ -125,33 +126,47 @@ Then *Build from the best clean take* makes the demo figure.
 ### Check & export
 
 Step 7 lists anything missing in plain words, then what is worth fixing (no
-borderline take, a clean take that still fires a fault, no figure). *Download
-`<id>.js`*. *Try it in the app* opens Grooveform with the draft added — in this
-browser only — so the physio can run a set against the real coach before leaving.
+borderline take, a clean take that still fires a fault, no figure). Then the
+move goes into the library file it belongs to:
+
+- **Save into the project** — shown when the site is running locally with
+  `npm run dev`. The move is written into `client/data/moves/<region>.json`
+  (a new move is appended; an edited one replaces itself), the file is checked
+  first exactly as the app would load it, and the running server re-reads the
+  library. Reload the app and it is there. Commit the file.
+- **Download `<region>.json`** — everywhere else (GitHub Pages included). The
+  same file, with this move in it; drop it over the one in
+  `client/data/moves/` and commit.
+
+*Try it in the app* opens the app with the draft added — in this browser only —
+so the physio can run a set against the real coach before leaving. *Download
+as code* still produces the old-style `<id>.js` for anything that must be
+hand-written.
 
 At the end of the day: **Save session file** (top right). One JSON with every
-move and take. Send it with the move files.
+move and take. Keep it with the commit: when a threshold is questioned later,
+the takes are re-checked in minutes without another recording session.
 
-## Built-in moves
+## Editing an existing move
 
-The dropdown also lists the ten hand-written moves. Their rules cannot be edited
-in the Studio, but takes can be recorded against them and step 5 shows how their
-current faults fire. That is how the field complaint "it keeps telling me to
-stop shrugging" gets a recording, a look at the shrug metric on that recording,
-and a corrected threshold.
+The dropdown lists every move in the library. Choosing a catalogue move shows
+**Edit a copy**: the move opens as a draft with every field filled — the physio
+records against it, watches the current thresholds fire on the takes, moves the
+numbers, rewrites the words, and saves. The draft remembers which file and which
+move it came from, so saving replaces the original.
+
+The ten hand-written moves cannot be edited here — their rules are code. They
+can still be recorded against, and step 5 shows how their current faults fire.
+That is how the field complaint "it keeps telling me to stop shrugging" gets a
+recording, a look at the shrug metric on that recording, and a number to change
+in `client/coach/library/band_row.js`.
 
 ## Installing a move
 
-1. Copy `<id>.js` into `client/coach/library/`.
-2. Add `<script src="coach/library/<id>.js"></script>` to `client/index.html`
-   next to the others, and to `client/studio/index.html`.
-3. `npm test` — `test/library.test.js` checks the file and the tag agree and the
-   move carries everything the page renders; `test/spec.test.js` covers the
-   compiler.
-4. Optionally add it to a playlist in `server/api.js` → `PREBUILT`.
-
-A spec move can be hand-tuned afterwards by editing the numbers in the file; or
-re-open the session file in the Studio, change it there, and export again.
+A catalogue move installs itself: it is in the JSON file. `npm test` checks the
+file and `node scripts/catalog.js check` does the same without a server. For a
+hand-written move, copy `<id>.js` into `client/coach/library/` and list it in
+`client/data/manifest.json` under `code`.
 
 ## Where things are
 
@@ -160,6 +175,8 @@ client/coach/spec.js        spec → exercise compiler (also validates a spec, i
 client/studio/index.html    the Studio page
 client/studio/studio.js     screens, recorder, simulator, charts, figure builder, export
 client/studio/studio.css
+client/coach/catalog.js     reads and checks the data files; FyzioCatalog.format() writes them
+client/data/moves/*.json    where a saved move ends up
 client/coach/coach.js       FyzioAnatomy.register(id, figure) — spec moves supply their own keyframes (drawn as the animated stick figure; the anatomical renderer is archived in coach/archive/)
 test/spec.test.js           a spec compiles, counts reps, fires faults as the numbers say
 test/e2e.test.js            "studio:" step — the whole flow in a browser with a synthetic stream
