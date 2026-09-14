@@ -800,6 +800,62 @@
   }
 
   /* ---------- review ---------- */
+  /* Hand a file to the person. On claude.ai the viewer mediates saves through its downloads
+     capability; elsewhere a plain download link works. `st` is where to say what happened. */
+  async function saveFile(name, data, type, st, orElse = '') {
+    let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+    if (dl) {
+      try { await dl.save({ filename: name, data }); if (st) st.textContent = 'Saved as ' + name + '.'; return true; }
+      catch (e) { if (st) st.textContent = e && e.code === 'declined' ? 'Download cancelled.' : 'Download unavailable here' + (orElse ? ' — ' + orElse : '') + '.'; return false; }
+    }
+    try {
+      const blob = data instanceof Blob ? data : new Blob([data], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); if (st) st.textContent = 'Saved as ' + name + '.'; return true;
+    } catch (e) { if (st) st.textContent = 'Download blocked here' + (orElse ? ' — ' + orElse : '') + '.'; return false; }
+  }
+  const recName = (ext) => `jodd-${lastRec.exercise}-${String(lastRec.started || '').replace(/[:.]/g, '-')}.${ext}`;
+
+  /* ---------- watch it back ----------
+     What the replay needs to know about the move, without the move's code: its name, what each
+     fault is called and which joints it watches (so they light up while the fault is on). */
+  function replayMeta(ex, rv) {
+    const S = (lastRec.events.find((e) => e.type === 'calibrate') || {}).side || 'L';
+    const faults = {};
+    for (const f of ex.faults) {
+      const raw = ((ex.spec && ex.spec.faults) || []).find((x) => x.id === f.id);
+      let landmarks = [];
+      try { const m = raw && raw.metric ? raw.metric : ex.spec && ex.spec.progress ? ex.spec.progress.metric : null; if (m && window.MoveSpec) landmarks = MoveSpec.metricLandmarks(m, S, E); } catch (e) { landmarks = []; }
+      faults[f.id] = { label: f.label, cue: f.cue, tip: f.tip, landmarks };
+    }
+    const side = lastRec.opts && lastRec.opts.work ? `${sideName(lastRec.opts.work)} ${limbWord(ex)}` : lastRec.opts && SIDE_CODE[lastRec.opts.side] ? `${lastRec.opts.side} ${limbWord(ex)}` : '';
+    return { name: ex.name, type: ex.type, target: rv.target, side, faults };
+  }
+  let replayer = null;
+  function renderReplay(rv) {
+    const panel = $('rv-replay'); if (!panel) return;
+    const ex = (live && live.ex) || current.ex;
+    if (!lastRec || !window.Replay || !ex || !lastRec.frames.some((f) => f.s === 'active' && f.lm)) { panel.hidden = true; return; }
+    panel.hidden = false; if (replayer) replayer.destroy();
+    const meta = replayMeta(ex, rv); const st = $('rv-replay-status'); st.textContent = '';
+    replayer = Replay.mount($('rv-replay-host'), lastRec, meta);
+    $('btn-report').onclick = async () => {
+      st.textContent = 'Building the report…';
+      let src = ''; try { src = await (await fetch('coach/replay.js')).text(); } catch (e) { src = ''; }
+      if (!src) { st.textContent = 'Could not load the player for the report — try again online.'; return; }
+      const review = { ...rv, faults: Object.fromEntries(Object.entries(rv.faults).map(([k, v]) => [k, { n: v.n, fault: { label: v.fault.label, tip: v.fault.tip, weight: v.fault.weight } }])) };
+      saveFile(recName('html'), Replay.reportHtml(lastRec, meta, review, src), 'text/html', st);
+    };
+    const bv = $('btn-video'); bv.hidden = !Replay.canRecord();
+    bv.onclick = async () => {
+      bv.disabled = true; const tl = replayer.timeline; const secs = Math.round(tl.duration / 1000);
+      st.textContent = `Recording the replay — about ${secs} s, it renders in real time…`;
+      try {
+        const blob = await Replay.record(lastRec, meta, { onProgress: (p) => { st.textContent = `Recording the replay… ${Math.round(p * 100)}%`; } });
+        await saveFile(recName(blob.type.includes('mp4') ? 'mp4' : 'webm'), blob, blob.type, st);
+      } catch (e) { st.textContent = 'Could not record here: ' + (e && e.message || e); }
+      bv.disabled = false;
+    };
+  }
   function fmtTempo(ms) { return ms ? (ms / 1000).toFixed(1) + ' s' : '—'; }
   function spokenSummary(rv) {
     let s = rv.headline + '. ';
@@ -833,22 +889,11 @@
     const items = Object.values(rv.faults).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
     fl.innerHTML = items.length ? items.map(fc => `<div class="fault"><span class="n">×${fc.n}</span><span><span class="l">${fc.fault.label}</span><br><span class="t">${fc.fault.tip}</span></span></div>`).join('') : '<p class="empty">No faults flagged. Same again next set — or add a couple of reps.</p>';
     const spk = $('btn-speak-review'); if (spk) spk.onclick = () => { voice.unlock(); voice.say(spokenSummary(rv), { priority: 2 }); };
+    renderReplay(rv);
     const dg = $('rv-diag'); if (!dg) return; dg.hidden = !lastRec;
     if (lastRec) {
       $('rv-diag-info').textContent = `${lastRec.frames.length} frames · ${(JSON.stringify(lastRec).length / 1024).toFixed(0)} KB · landmarks + metrics, no video`;
-      $('btn-diag-download').onclick = async () => {
-        const name = `grooveform-${lastRec.exercise}-${lastRec.started.replace(/[:.]/g, '-')}.json`;
-        const txt = JSON.stringify(lastRec); const st = $('rv-diag-status');
-        // On claude.ai the viewer mediates saves through the downloads capability; elsewhere a plain download link works.
-        let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
-        if (dl) {
-          try { await dl.save({ filename: name, data: txt }); st.textContent = 'Saved as ' + name + '.'; }
-          catch (e) { st.textContent = e && e.code === 'declined' ? 'Download cancelled.' : 'Download unavailable here — use Copy JSON instead.'; }
-          return;
-        }
-        try { const blob = new Blob([txt], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); st.textContent = 'Saved as ' + name + '.'; }
-        catch (e) { st.textContent = 'Download blocked here — use Copy JSON.'; }
-      };
+      $('btn-diag-download').onclick = () => saveFile(recName('json'), JSON.stringify(lastRec), 'application/json', $('rv-diag-status'), 'use Copy JSON instead');
       $('btn-diag-copy').onclick = async () => {
         const txt = JSON.stringify(lastRec);
         try { await navigator.clipboard.writeText(txt); $('rv-diag-status').textContent = 'Copied — paste it into a .json file or straight into the chat.'; }

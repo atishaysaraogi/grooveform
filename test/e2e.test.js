@@ -221,6 +221,14 @@ async function runCoachedSet(page, side = 'right') {
     const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, camera: r.camera, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted on a crooked phone: ' + JSON.stringify(rec));
     assert.equal(rec.camera && rec.camera.rollFrom, 'body', 'the 10° roll was read from the trunk, no sensor in a headless browser: ' + JSON.stringify(rec.camera));
     assert.ok(Math.abs(rec.camera.roll - 10) < 2, 'and measured right: ' + JSON.stringify(rec.camera));
+    /* the set can be watched back: the player is up, its timeline has the eight reps, and the report carries it all */
+    assert.ok(await pro.$('#rv-replay:not([hidden]) canvas.rp-stage'), 'the replay panel shows with a stage');
+    const rp = await pro.evaluate(() => { const tl = window.Replay.timeline(window.FyzioCoach.lastRec); return { reps: tl.reps.filter(r => r.full).length, cues: tl.cues.length, dur: tl.duration }; });
+    assert.equal(rp.reps, 8, 'the timeline shows the eight counted reps: ' + JSON.stringify(rp)); assert.ok(rp.dur > 15000, 'and spans the set: ' + JSON.stringify(rp));
+    await pro.click('#rv-replay .rp-timeline', { position: { x: 40, y: 20 } }); await pro.click('#rv-replay .rp-play'); await pro.waitForTimeout(400); await pro.click('#rv-replay .rp-play');
+    const html = await pro.evaluate(async () => { const src = await (await fetch('coach/replay.js')).text(); const r = window.FyzioCoach.lastRec; return window.Replay.reportHtml(r, { name: 'Shoulder abduction', type: 'reps', target: 8, faults: {} }, { score: 90, headline: 'x', type: 'reps', target: 8, reps: 8, partials: 0, faults: {} }, src).length; });
+    assert.ok(html > 20000, 'the report is a full page with the recording inside: ' + html + ' bytes');
+    await pro.screenshot({ path: path.join(SHOTS, 'review-replay.png') });
     assert.equal(rec.work, 'L', 'the chosen left arm is the working limb: ' + JSON.stringify(rec));
     /* the set opens by naming the side and describing the movement, before the count-in */
     assert.match(rec.opening || '', /^Left arm\./, 'the opening names the side: ' + JSON.stringify(rec.opening));

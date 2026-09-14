@@ -501,3 +501,14 @@ a.ex-card .name { color: var(--text, inherit); }
 .modal { position: fixed; inset: 0; z-index: 50; background: rgba(43, 21, 70, .72); overflow-y: auto; padding: 16px; }
 .modal-card { background: var(--bg); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; max-width: 760px; width: 100%; margin: 16px auto; box-sizing: border-box; }
 .modal-card h2 { font-size: 1.3rem; }
+
+/* ---------- replay: watch a set back ---------- */
+.rp { display: grid; gap: 8px; }
+.rp-stage { width: 100%; border-radius: 16px; display: block; background: #14121a; }
+.rp-bar { display: flex; gap: 10px; align-items: center; }
+.rp-seek { flex: 1; min-width: 0; accent-color: var(--accent); }
+.rp-time { font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; font-weight: 800; }
+.rp-timeline { width: 100%; height: 64px; border: 2px solid var(--ink); border-radius: 12px; display: block; cursor: pointer; }
+.rp-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--muted); }
+.rp-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+.rp-legend i.tick { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 9px solid var(--bad); border-radius: 0; background: none; }
