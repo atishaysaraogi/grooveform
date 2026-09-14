@@ -85,6 +85,23 @@
       "regression": "Squat to a box; shallower.",
       "contraindications": "Knee pain at depth; unable to keep the heels down.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "valgus" },
         {
           "id": "heels",
@@ -94,10 +111,24 @@
           "severity": 2
         },
         {
+          "id": "butt",
+          "label": "Tailbone tucking under",
+          "cue": "Stop before the tuck",
+          "tip": "At the bottom the pelvis can tuck and round the lower back. Your depth ends just before that.",
+          "severity": 2
+        },
+        {
           "id": "depth",
           "label": "Cutting depth",
           "cue": "Thighs to level",
           "tip": "Go as deep as the heels stay down and the back stays neutral.",
+          "severity": 1
+        },
+        {
+          "id": "head",
+          "label": "Looking up",
+          "cue": "Eyes on the floor ahead",
+          "tip": "Craning up extends the neck. Look at a spot on the floor a few metres away.",
           "severity": 1
         }
       ],
@@ -141,6 +172,23 @@
       "regression": "Bodyweight squat to a box.",
       "contraindications": "Knee pain at depth; lower back pain with the weight.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "fold", "threshold": 48 },
         {
           "id": "heels",
@@ -154,6 +202,20 @@
           "label": "Lower back rounding at the bottom",
           "cue": "Stop before the tuck",
           "tip": "Squat only as deep as the lower back stays neutral.",
+          "severity": 2
+        },
+        {
+          "id": "drift",
+          "label": "Weight drifting away from the chest",
+          "cue": "Elbows in, weight close",
+          "tip": "The weight rests against the chest. Letting it drift out pulls you forward.",
+          "severity": 2
+        },
+        {
+          "id": "heels2",
+          "label": "Heels lifting",
+          "cue": "Heels stay down",
+          "tip": "Shallower is better than a heel that lifts.",
           "severity": 2
         }
       ],
@@ -191,13 +253,44 @@
       "regression": "Narrower stance; shallower.",
       "contraindications": "Groin strain; hip pinching at depth.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "valgus", "threshold": -14 },
         {
           "id": "lean",
           "label": "Trunk tipping forward",
-          "cue": "Torso upright",
+          "cue": "Chest up, sit between the heels",
           "tip": "A sumo squat is more upright than a normal squat; sit down, not back.",
           "severity": 2
+        },
+        {
+          "id": "toes",
+          "label": "Knees not tracking the toes",
+          "cue": "Knees follow the toes out",
+          "tip": "In a wide stance the knees must travel out over the toes, not forward.",
+          "severity": 2
+        },
+        {
+          "id": "depth",
+          "label": "Bouncing at the bottom",
+          "cue": "Pause, then drive up",
+          "tip": "Bouncing out of the bottom loads the groin. Pause and push.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -245,12 +338,43 @@
       "regression": "Split squat with no step; shorter step.",
       "contraindications": "Kneecap pain on the front leg; balance problems.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "knock",
+          "label": "Knee dropping inward",
+          "cue": "Knee over the middle toes",
+          "tip": "The front knee tracks over the foot. Inward collapse is the commonest lunge fault.",
+          "severity": 3
+        },
         { "template": "fold", "threshold": 62 },
         {
           "id": "kneefwd",
           "label": "Front knee shooting past the toes",
           "cue": "Shin near vertical",
           "tip": "Take a longer step so the shin stays close to upright; the knee should stay over the foot.",
+          "severity": 2
+        },
+        {
+          "id": "short2",
+          "label": "Step too short",
+          "cue": "Longer step forward",
+          "tip": "A short step drives the knee far past the toes and loads the kneecap.",
           "severity": 2
         },
         {
@@ -313,6 +437,23 @@
       "contraindications": "Kneecap pain on the front leg.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "lean",
           "label": "Trunk tipping forward",
           "cue": "Chest up",
@@ -325,6 +466,20 @@
           "cue": "Front heel drives",
           "tip": "The back foot is a kickstand; the front leg does the work.",
           "severity": 2
+        },
+        {
+          "id": "front",
+          "label": "Front heel lifting",
+          "cue": "Front heel stays down",
+          "tip": "Weight through the front heel is what puts the work in the glute.",
+          "severity": 2
+        },
+        {
+          "id": "lean2",
+          "label": "Folding forward",
+          "cue": "Chest up, trunk tall",
+          "tip": "A little forward lean is fine; folding shifts the load to the lower back.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -377,16 +532,30 @@
       "contraindications": "Kneecap pain; balance problems.",
       "faults": [
         {
+          "id": "knock2",
+          "label": "Knee dropping inward",
+          "cue": "Knee over the middle toes",
+          "tip": "Momentum makes inward collapse more likely here than in a static lunge.",
+          "severity": 3
+        },
+        {
           "id": "lean",
           "label": "Trunk tipping forward",
-          "cue": "Chest up",
+          "cue": "Chest up, trunk tall",
           "tip": "Lower straight down each step.",
+          "severity": 2
+        },
+        {
+          "id": "narrow",
+          "label": "Walking a tightrope",
+          "cue": "Feet on two rails",
+          "tip": "Land with the feet hip-width apart, not in one line, or balance eats the set.",
           "severity": 2
         },
         {
           "id": "wobble",
           "label": "Wobbling side to side",
-          "cue": "Feet on two rails",
+          "cue": "Feet hip-width apart",
           "tip": "Keep the feet hip-width apart, not on a tightrope.",
           "severity": 1
         }
@@ -448,6 +617,23 @@
       "contraindications": "Groin strain; knee pain on the bent side.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "knee",
           "label": "Bent knee caving inward",
           "cue": "Knee over the foot",
@@ -455,10 +641,24 @@
           "severity": 3
         },
         {
+          "id": "toes2",
+          "label": "Toes turning out",
+          "cue": "Both feet pointing forward",
+          "tip": "Turning the stepping foot out moves the work from the groin to the front of the hip.",
+          "severity": 2
+        },
+        {
           "id": "toes",
           "label": "Toes turning out",
           "cue": "Toes forward",
           "tip": "Both feet point at the phone; the stretch is in the straight leg's inner thigh.",
+          "severity": 1
+        },
+        {
+          "id": "straight",
+          "label": "Bending the trailing knee",
+          "cue": "Trailing leg long",
+          "tip": "The leg you are not sitting into stays straight; that is where the stretch belongs.",
           "severity": 1
         }
       ],
@@ -512,7 +712,23 @@
       "regression": "Bodyweight hip hinge with a dowel on the back.",
       "contraindications": "Lower back pain; hamstring strain.",
       "faults": [
-        { "template": "kneebend", "threshold": 140 },
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         {
           "id": "round",
           "label": "Back rounding",
@@ -521,10 +737,32 @@
           "severity": 3
         },
         {
+          "id": "bar",
+          "label": "Weight drifting away from the legs",
+          "cue": "Drag it down your thighs",
+          "tip": "The weight stays in contact with the legs. Away from the body it becomes a back exercise.",
+          "severity": 3
+        },
+        { "template": "kneebend", "threshold": 140 },
+        {
           "id": "drift",
           "label": "Weights drifting away from the legs",
           "cue": "Weights on the legs",
           "tip": "Drag the weights down the thighs; away from the body loads the lower back.",
+          "severity": 2
+        },
+        {
+          "id": "squat2",
+          "label": "Squatting instead of hinging",
+          "cue": "Hips back, not down",
+          "tip": "Knees stay softly bent and still. The hips travel backwards.",
+          "severity": 2
+        },
+        {
+          "id": "lock",
+          "label": "Snapping the hips at the top",
+          "cue": "Stand tall, do not lean back",
+          "tip": "Finishing by leaning back hyperextends the lower back. Stop at upright.",
           "severity": 2
         }
       ],
@@ -568,6 +806,23 @@
       "contraindications": "Balance problems without support; hamstring strain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "open",
           "label": "Hip opening to the side",
           "cue": "Hips square",
@@ -580,6 +835,13 @@
           "cue": "Long spine",
           "tip": "Reach the head forward and the heel back; stop before the back rounds.",
           "severity": 2
+        },
+        {
+          "id": "fast2",
+          "label": "Rushing to stay balanced",
+          "cue": "Slower — balance comes from control",
+          "tip": "Speed hides poor balance. Three seconds down is the standard.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -634,7 +896,23 @@
       "regression": "Weights on a low step; kettlebell between the feet.",
       "contraindications": "Lower back pain; unable to keep a flat back at the bottom.",
       "faults": [
-        { "template": "fold", "threshold": 22 },
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         {
           "id": "round",
           "label": "Back rounding",
@@ -643,10 +921,25 @@
           "severity": 3
         },
         {
+          "id": "round2",
+          "label": "Rounding at the bottom",
+          "cue": "Flat back — lift higher",
+          "tip": "If the back rounds to reach the floor, start from a raised surface instead.",
+          "severity": 3
+        },
+        { "template": "fold", "threshold": 22 },
+        {
           "id": "hips",
           "label": "Hips shooting up first",
           "cue": "Hips and chest together",
           "tip": "The shoulders and hips rise at the same rate; if the hips lead, the back finishes the lift.",
+          "severity": 2
+        },
+        {
+          "id": "jerk",
+          "label": "Jerking off the floor",
+          "cue": "Take the slack, then lift",
+          "tip": "Pull the tension on first, then stand. A jerk loads the back before it is braced.",
           "severity": 2
         }
       ],
@@ -694,13 +987,44 @@
       "regression": "Smaller hinge.",
       "contraindications": "Lower back pain.",
       "faults": [
-        { "template": "kneebend", "threshold": 145 },
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         {
           "id": "round",
           "label": "Back rounding",
-          "cue": "Flat back",
+          "cue": "Flatten the back",
           "tip": "Stop before the back rounds; the range grows as the hamstrings loosen.",
           "severity": 3
+        },
+        {
+          "id": "depth2",
+          "label": "Going too low",
+          "cue": "Stop at a flat back",
+          "tip": "Your depth ends where the back would round, usually well above horizontal.",
+          "severity": 3
+        },
+        { "template": "kneebend", "threshold": 145 },
+        {
+          "id": "neck4",
+          "label": "Looking up",
+          "cue": "Neck follows the spine",
+          "tip": "Craning to look forward as you fold hyperextends the neck.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -739,11 +1063,21 @@
       "contraindications": "Kneecap pain; balance problems.",
       "faults": [
         {
-          "id": "lean",
-          "label": "Trunk folding forward",
-          "cue": "Chest up",
-          "tip": "A slight forward lean is fine; folding shifts the work to the back.",
-          "severity": 2
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
         },
         {
           "id": "kneein",
@@ -751,6 +1085,27 @@
           "cue": "Knee over the foot",
           "tip": "Push the knee out over the little toe.",
           "severity": 3
+        },
+        {
+          "id": "lean",
+          "label": "Trunk folding forward",
+          "cue": "Chest up",
+          "tip": "A slight forward lean is fine; folding shifts the work to the back.",
+          "severity": 2
+        },
+        {
+          "id": "high2",
+          "label": "Rear foot too high",
+          "cue": "Lower bench, shin height",
+          "tip": "A high rear foot arches the lower back. Knee height or lower is plenty.",
+          "severity": 2
+        },
+        {
+          "id": "short3",
+          "label": "Stance too short",
+          "cue": "Front foot further forward",
+          "tip": "Too close and the front knee is driven far over the toes.",
+          "severity": 2
         }
       ],
       "guide": {
@@ -812,16 +1167,30 @@
         {
           "id": "knee",
           "label": "Front knee caving",
-          "cue": "Knee over the foot",
+          "cue": "Knee over the middle toes",
           "tip": "The front knee stays over the front foot even as the other leg crosses behind.",
           "severity": 3
         },
         {
           "id": "hips",
           "label": "Hips turning",
-          "cue": "Hips to the phone",
+          "cue": "Keep the hips square",
           "tip": "Only the leg crosses; the pelvis keeps facing forward.",
           "severity": 2
+        },
+        {
+          "id": "twist2",
+          "label": "Twisting the hips",
+          "cue": "Hips square to the front",
+          "tip": "Let the legs cross without the pelvis turning, or the knee takes the twist.",
+          "severity": 2
+        },
+        {
+          "id": "deep",
+          "label": "Too deep too soon",
+          "cue": "Shallower — control first",
+          "tip": "This is a harder position for the knee than a normal lunge. Earn the depth.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -872,6 +1241,30 @@
       "contraindications": "Lower back pain on the lift; wrist pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "arch3",
+          "label": "Arching the lower back",
+          "cue": "Ribs down, flat back",
+          "tip": "Most of a big kickback is lower-back arch, not hip. Lift only to the line of the body.",
+          "severity": 3
+        },
+        {
           "id": "arch",
           "label": "Lower back arching",
           "cue": "Thigh to level, no higher",
@@ -883,6 +1276,13 @@
           "label": "Weight shifting to one side",
           "cue": "Hips square",
           "tip": "Keep the weight even over both hands and the resting knee.",
+          "severity": 1
+        },
+        {
+          "id": "neck5",
+          "label": "Head lifting",
+          "cue": "Eyes on the floor",
+          "tip": "The head stays in line with the spine, not looking forward.",
           "severity": 1
         }
       ],
@@ -949,6 +1349,23 @@
       "contraindications": "Knee or ankle injury; anyone told to avoid impact.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "stiff",
           "label": "Landing with stiff legs",
           "cue": "Land soft",
@@ -960,6 +1377,20 @@
           "label": "Knees caving on landing",
           "cue": "Knees out",
           "tip": "Land with the knees over the toes.",
+          "severity": 3
+        },
+        {
+          "id": "land",
+          "label": "Landing stiff and loud",
+          "cue": "Land quiet, knees soft",
+          "tip": "Noise is force. Absorb the landing through the hips and knees.",
+          "severity": 3
+        },
+        {
+          "id": "valgus2",
+          "label": "Knees caving on landing",
+          "cue": "Knees out on landing",
+          "tip": "The landing is where knees collapse inward. Stop the set when they do.",
           "severity": 3
         }
       ],
@@ -1004,17 +1435,31 @@
       "contraindications": "Knee, ankle or Achilles injury; anyone told to avoid impact.",
       "faults": [
         {
+          "id": "down",
+          "label": "Jumping back down",
+          "cue": "Step down, always",
+          "tip": "Jumping down is where box-jump injuries happen and it adds nothing.",
+          "severity": 3
+        },
+        {
           "id": "deep",
           "label": "Landing in a deep squat",
-          "cue": "Land tall",
+          "cue": "Stand tall on the box",
           "tip": "A deep landing means the box is too high; the hips should land above the knees.",
           "severity": 2
         },
         {
           "id": "jumpdown",
           "label": "Jumping down",
-          "cue": "Step down",
+          "cue": "Step down, do not jump",
           "tip": "The jump down loads the tendons more than the jump up. Step.",
+          "severity": 2
+        },
+        {
+          "id": "tuck",
+          "label": "Tucking the knees to reach",
+          "cue": "Lower box, stand up tall",
+          "tip": "If you have to tuck to land, the box is too high. You should finish standing straight.",
           "severity": 2
         }
       ],

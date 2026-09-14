@@ -108,11 +108,42 @@
           "threshold": -10
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "flare",
           "label": "Elbows flaring wide",
           "cue": "Elbows at 45°",
           "tip": "Arrow, not T: elbows halfway between tucked and wide.",
           "severity": 2
+        },
+        {
+          "id": "partial2",
+          "label": "Half reps",
+          "cue": "Chest to fist height",
+          "tip": "Lower until the chest is a fist off the floor; if that is too hard, go to the knees.",
+          "severity": 2
+        },
+        {
+          "id": "head2",
+          "label": "Head leading the way down",
+          "cue": "Chest touches first",
+          "tip": "Poking the chin down makes the range look bigger than it is.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -176,6 +207,23 @@
       "contraindications": "Wrist or shoulder pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "sag",
           "label": "Hips sagging",
           "cue": "Hips up",
@@ -183,10 +231,24 @@
           "severity": 2
         },
         {
+          "id": "sag2",
+          "label": "Hips sagging",
+          "cue": "One line, head to heels",
+          "tip": "The plank line matters as much here as on the floor.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Cutting depth",
           "cue": "Chest to the edge",
           "tip": "Touch the chest to the surface each rep.",
+          "severity": 1
+        },
+        {
+          "id": "high3",
+          "label": "Surface too high",
+          "cue": "Lower surface when it is easy",
+          "tip": "The higher the hands, the easier it is. Lower the surface as you get stronger.",
           "severity": 1
         }
       ],
@@ -247,6 +309,23 @@
       "contraindications": "Wrist or knee pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "hips",
           "label": "Hips bending",
           "cue": "Hips forward",
@@ -254,10 +333,24 @@
           "severity": 2
         },
         {
+          "id": "hips2",
+          "label": "Hips piking up",
+          "cue": "Straight line, knees to head",
+          "tip": "The line runs from knees to head, not hips to head. Push the hips forward a little.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Cutting depth",
           "cue": "Chest to the floor",
           "tip": "Lower until the chest nearly touches.",
+          "severity": 1
+        },
+        {
+          "id": "knees2",
+          "label": "Knees hurting on the floor",
+          "cue": "Fold a mat under the knees",
+          "tip": "Padding under the knees is not cheating.",
           "severity": 1
         }
       ],
@@ -317,10 +410,41 @@
       "contraindications": "Shoulder or wrist pain; high blood pressure when the head is low.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "neck6",
+          "label": "Head landing on the floor",
+          "cue": "Crown lowers between the hands",
+          "tip": "The head goes down between the hands, and never takes weight.",
+          "severity": 3
+        },
+        {
           "id": "hips",
           "label": "Hips dropping",
           "cue": "Hips high",
           "tip": "Keep the hips stacked over the shoulders so the press is vertical.",
+          "severity": 2
+        },
+        {
+          "id": "flat",
+          "label": "Hips dropping out of the pike",
+          "cue": "Hips high, make a V",
+          "tip": "As the hips drop it becomes a normal push-up and the shoulders stop working.",
           "severity": 2
         },
         {
@@ -391,10 +515,41 @@
       "contraindications": "Front-of-shoulder pain — this move is hard on irritable shoulders.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "shoulder3",
+          "label": "Dropping too low",
+          "cue": "Stop at ninety degrees",
+          "tip": "Below a right angle at the elbow this move wrenches the front of the shoulder. Many shoulders should not do it at all.",
+          "severity": 3
+        },
+        {
           "id": "deep",
           "label": "Going too deep",
           "cue": "Elbows to 90°",
           "tip": "Below 90° the front of the shoulder takes the strain.",
+          "severity": 2
+        },
+        {
+          "id": "drift2",
+          "label": "Hips drifting forward",
+          "cue": "Hips brush the bench",
+          "tip": "Away from the bench the shoulder is pulled into a worse position.",
           "severity": 2
         },
         {
@@ -449,6 +604,23 @@
       "contraindications": "Shoulder or elbow pain hanging.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "kip",
           "label": "Swinging or kicking",
           "cue": "Dead still",
@@ -456,10 +628,24 @@
           "severity": 2
         },
         {
+          "id": "partial3",
+          "label": "Not reaching full hang",
+          "cue": "Arms straight at the bottom",
+          "tip": "The full hang at the bottom is the part that builds the shoulder.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Not lowering fully",
           "cue": "Straight arms at the bottom",
           "tip": "Each rep starts from a full hang.",
+          "severity": 1
+        },
+        {
+          "id": "shrug3",
+          "label": "Shoulders at the ears",
+          "cue": "Blades down before you pull",
+          "tip": "Set the shoulder blades down first, then pull.",
           "severity": 1
         }
       ],
@@ -508,6 +694,23 @@
       "contraindications": "Elbow or wrist pain with the underhand grip.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "kip",
           "label": "Swinging",
           "cue": "Dead still",
@@ -515,10 +718,24 @@
           "severity": 2
         },
         {
+          "id": "kip2",
+          "label": "Kicking the legs",
+          "cue": "Legs still — pull with the arms",
+          "tip": "Swinging turns a strength exercise into a party trick.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Not lowering fully",
           "cue": "Straight arms at the bottom",
           "tip": "Each rep starts from a full hang.",
+          "severity": 1
+        },
+        {
+          "id": "wrist3",
+          "label": "Wrist pain in the grip",
+          "cue": "Wider grip, or use rings",
+          "tip": "A fully supinated fixed bar can bother the wrist. Rings let the hand rotate.",
           "severity": 1
         }
       ],
@@ -561,10 +778,41 @@
       "contraindications": "Shoulder pain at the top.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "sag",
           "label": "Hips sagging",
           "cue": "Plank the body",
           "tip": "Squeeze the glutes so the body moves as one plank.",
+          "severity": 2
+        },
+        {
+          "id": "sag3",
+          "label": "Hips sagging",
+          "cue": "Squeeze the glutes, one line",
+          "tip": "The body stays a plank. Sagging hips make the pull easier and load the back.",
+          "severity": 2
+        },
+        {
+          "id": "partial4",
+          "label": "Chest not reaching the bar",
+          "cue": "Chest to the bar",
+          "tip": "Touch the bar with the chest each rep, or raise the bar until you can.",
           "severity": 2
         },
         {
@@ -623,7 +871,7 @@
         {
           "id": "stand",
           "label": "Standing up with the weight",
-          "cue": "Stay hinged",
+          "cue": "Stay hinged over",
           "tip": "The trunk holds still; if it rises, the weight is too heavy.",
           "severity": 3,
           "metric": "trunk",
@@ -633,11 +881,42 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "round",
           "label": "Back rounding",
-          "cue": "Flat back",
+          "cue": "Flatten the back",
           "tip": "Brace and keep the chest proud; lower the weight if it rounds.",
           "severity": 3
+        },
+        {
+          "id": "stand2",
+          "label": "Standing up as you pull",
+          "cue": "Trunk still through the pull",
+          "tip": "Rising with each rep turns the row into a shrug and loads the lower back.",
+          "severity": 2
+        },
+        {
+          "id": "shrug4",
+          "label": "Shrugging at the top",
+          "cue": "Elbows back, shoulders down",
+          "tip": "Pull the elbow past the ribs with the shoulder blade drawing down and in.",
+          "severity": 2
         }
       ],
       "guide": {
@@ -677,6 +956,23 @@
       "contraindications": "Lower back pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "twist",
           "label": "Trunk twisting to lift",
           "cue": "Shoulders square",
@@ -684,10 +980,24 @@
           "severity": 2
         },
         {
+          "id": "twist3",
+          "label": "Twisting the trunk to lift",
+          "cue": "Shoulders level",
+          "tip": "Rotating the body to finish the rep means the weight is too heavy.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Not reaching the hip",
           "cue": "Elbow past the ribs",
           "tip": "Finish with the elbow behind the body.",
+          "severity": 1
+        },
+        {
+          "id": "elbow3",
+          "label": "Elbow flaring out",
+          "cue": "Elbow past your hip",
+          "tip": "Draw the elbow back along the body rather than out to the side.",
           "severity": 1
         }
       ],
@@ -751,7 +1061,23 @@
       "regression": "Seated with back support; lighter.",
       "contraindications": "Shoulder pain overhead; lower back pain with the press.",
       "faults": [
-        { "template": "shrug_lift" },
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         {
           "id": "arch",
           "label": "Lower back arching",
@@ -760,10 +1086,25 @@
           "severity": 3
         },
         {
+          "id": "arch4",
+          "label": "Arching the lower back",
+          "cue": "Ribs down, squeeze the glutes",
+          "tip": "Leaning back under the weight is how the lower back gets hurt. Brace and press straight up.",
+          "severity": 3
+        },
+        { "template": "shrug_lift" },
+        {
           "id": "short",
           "label": "Not locking out",
           "cue": "Arms straight overhead",
           "tip": "Finish with the biceps by the ears.",
+          "severity": 1
+        },
+        {
+          "id": "partial5",
+          "label": "Not locking out overhead",
+          "cue": "Arms straight, biceps by the ears",
+          "tip": "Finish with the arms straight and the weight over the middle of the head.",
           "severity": 1
         }
       ],
@@ -803,7 +1144,6 @@
       "regression": "Lighter; one arm with the other hand on a support.",
       "contraindications": "Shoulder pain lifting to the side (impingement).",
       "faults": [
-        { "template": "shrug_lift" },
         {
           "id": "high",
           "label": "Raising above the shoulders",
@@ -817,10 +1157,42 @@
           "persist": 250
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2500
+        },
+        { "template": "shrug_lift" },
+        {
           "id": "swing",
           "label": "Swinging the weights up",
           "cue": "Slow and controlled",
           "tip": "If you need a swing, the weight is too heavy.",
+          "severity": 2
+        },
+        {
+          "id": "high4",
+          "label": "Raising above shoulder height",
+          "cue": "Stop level with the shoulders",
+          "tip": "Higher than shoulder level swaps the side of the shoulder for the upper trapezius.",
+          "severity": 2
+        },
+        {
+          "id": "swing2",
+          "label": "Swinging the weights up",
+          "cue": "Two seconds up, three down",
+          "tip": "If you have to swing, the weight is too heavy. This is a small muscle.",
           "severity": 2
         }
       ],
@@ -865,6 +1237,23 @@
       "contraindications": "Front-of-shoulder pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2500
+        },
+        {
           "id": "lean",
           "label": "Leaning back",
           "cue": "Stay tall",
@@ -872,10 +1261,24 @@
           "severity": 2
         },
         {
+          "id": "lean3",
+          "label": "Leaning back to lift",
+          "cue": "Stand tall, ribs down",
+          "tip": "Rocking backwards uses the lower back to throw the weight up.",
+          "severity": 2
+        },
+        {
           "id": "swing",
           "label": "Swinging the weights",
           "cue": "Slow and controlled",
           "tip": "Lower the weight rather than swing it.",
+          "severity": 1
+        },
+        {
+          "id": "high5",
+          "label": "Going far above shoulder height",
+          "cue": "Stop at shoulder height",
+          "tip": "Above the shoulder the trapezius takes over.",
           "severity": 1
         }
       ],
@@ -920,12 +1323,43 @@
       "regression": "Lighter; seated with the back supported.",
       "contraindications": "Elbow or wrist pain under load.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2000
+        },
         { "template": "swing" },
+        {
+          "id": "elbow4",
+          "label": "Elbows drifting forward",
+          "cue": "Elbows pinned at your sides",
+          "tip": "When the elbow travels forward the front of the shoulder is lifting the weight.",
+          "severity": 2
+        },
         {
           "id": "short",
           "label": "Not straightening fully",
-          "cue": "All the way down",
+          "cue": "Straighten the arms fully",
           "tip": "Each rep starts from a straight arm.",
+          "severity": 1
+        },
+        {
+          "id": "wrist4",
+          "label": "Curling the wrists",
+          "cue": "Wrists straight and firm",
+          "tip": "A bent wrist under load is a common source of forearm pain.",
           "severity": 1
         }
       ],
@@ -971,6 +1405,23 @@
       "contraindications": "Elbow pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2000
+        },
+        {
           "id": "swing",
           "label": "Upper arm swinging",
           "cue": "Elbow pinned",
@@ -978,10 +1429,24 @@
           "severity": 2
         },
         {
+          "id": "swing3",
+          "label": "Swinging the body",
+          "cue": "Trunk still",
+          "tip": "Rocking to start the curl means the weight is too heavy.",
+          "severity": 2
+        },
+        {
           "id": "short",
           "label": "Not straightening fully",
           "cue": "All the way down",
           "tip": "Start each rep from straight.",
+          "severity": 1
+        },
+        {
+          "id": "partial6",
+          "label": "Short range",
+          "cue": "All the way down each rep",
+          "tip": "Straighten the arm fully between reps; that is where the brachialis works.",
           "severity": 1
         }
       ],
@@ -1021,6 +1486,23 @@
       "contraindications": "Elbow pain at full straightening.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "drop",
           "label": "Upper arm dropping",
           "cue": "Upper arm level",
@@ -1028,10 +1510,24 @@
           "severity": 2
         },
         {
+          "id": "drop3",
+          "label": "Upper arm dropping",
+          "cue": "Upper arm level and still",
+          "tip": "The upper arm stays parallel to the floor; only the forearm moves.",
+          "severity": 2
+        },
+        {
           "id": "swing",
           "label": "Swinging the weight",
           "cue": "Slow and controlled",
           "tip": "Straighten under control; no flick.",
+          "severity": 1
+        },
+        {
+          "id": "lock2",
+          "label": "Snapping the elbow straight",
+          "cue": "Straighten, do not snap",
+          "tip": "Locking hard at the end is where the elbow gets sore.",
           "severity": 1
         }
       ],
@@ -1093,6 +1589,23 @@
       "contraindications": "Shoulder pain overhead; elbow pain.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "flare",
           "label": "Elbows flaring out",
           "cue": "Elbows in",
@@ -1104,6 +1617,20 @@
           "label": "Lower back arching",
           "cue": "Ribs down",
           "tip": "Brace so the weight overhead does not pull the back into an arch.",
+          "severity": 2
+        },
+        {
+          "id": "flare2",
+          "label": "Elbows flaring out",
+          "cue": "Elbows point forward",
+          "tip": "Keeping the elbows close aims the work at the triceps rather than the shoulder.",
+          "severity": 2
+        },
+        {
+          "id": "arch5",
+          "label": "Ribs flaring",
+          "cue": "Ribs down, brace",
+          "tip": "Overhead work tends to arch the back. Brace before the first rep.",
           "severity": 2
         }
       ],
@@ -1134,7 +1661,10 @@
       "tracking": "none",
       "level": "beginner",
       "equipment": ["heavy dumbbells or kettlebells"],
-      "muscles": { "primary": ["grip", "core", "upper trapezius"], "secondary": ["whole body"] },
+      "muscles": {
+        "primary": ["grip", "abdominals", "upper trapezius"],
+        "secondary": ["spinal erectors", "quadriceps"]
+      },
       "upperBody": true,
       "summary": "Heavy weights in each hand, walk tall for distance or time.",
       "setup": "Pick up a heavy weight in each hand. Stand tall, shoulders back, and walk with short, steady steps for the distance or time.",
@@ -1150,15 +1680,29 @@
         {
           "id": "lean",
           "label": "Leaning to one side",
-          "cue": "Tall and level",
+          "cue": "Stand tall, ribs down",
           "tip": "Brace the sides of the trunk; the weights should not tip you.",
+          "severity": 2
+        },
+        {
+          "id": "shrug5",
+          "label": "Shoulders creeping up",
+          "cue": "Shoulders down, chest tall",
+          "tip": "Let the weight hang from a set shoulder rather than hanging off the neck.",
           "severity": 2
         },
         {
           "id": "shrug",
           "label": "Shoulders shrugging",
-          "cue": "Shoulders back and down",
+          "cue": "Let the shoulders settle down",
           "tip": "Let the arms hang long from a packed shoulder.",
+          "severity": 1
+        },
+        {
+          "id": "rush2",
+          "label": "Walking fast",
+          "cue": "Slow, deliberate steps",
+          "tip": "Rushing wastes the bracing that makes this a core exercise.",
           "severity": 1
         }
       ],
@@ -1200,15 +1744,29 @@
         {
           "id": "hips",
           "label": "Hips rising",
-          "cue": "Hips low",
+          "cue": "Keep the hips low",
           "tip": "Keep the body in a plank line; the knee comes to the chest under it.",
           "severity": 2
         },
         {
           "id": "bounce",
           "label": "Bouncing the hips",
-          "cue": "Quiet hips",
+          "cue": "Stop bouncing — hips still",
           "tip": "The legs move; the trunk does not.",
+          "severity": 1
+        },
+        {
+          "id": "hands",
+          "label": "Hands creeping back",
+          "cue": "Hands under the shoulders",
+          "tip": "As you tire the hands drift; reset them under the shoulders.",
+          "severity": 1
+        },
+        {
+          "id": "partial7",
+          "label": "Knees barely moving",
+          "cue": "Knee toward the elbow",
+          "tip": "Short, fast shuffles look busy but do nothing. Drive the knee forward.",
           "severity": 1
         }
       ],
@@ -1257,7 +1815,7 @@
       "tracking": "none",
       "level": "advanced",
       "equipment": ["none"],
-      "muscles": { "primary": ["whole body"], "secondary": ["cardio"] },
+      "muscles": { "primary": ["quadriceps", "chest", "shoulders"], "secondary": ["abdominals", "calves"] },
       "summary": "Squat, hands to the floor, jump the feet back to a plank, back in, and jump up.",
       "setup": "From standing, squat and put the hands down, jump the feet back to a plank (add a push-up if you like), jump them back in, and jump up with the arms overhead.",
       "why": "The body goes from standing to lying to jumping — the calibrated counter cannot follow it. Logged by hand.",
@@ -1270,15 +1828,29 @@
         {
           "id": "sag",
           "label": "Hips sagging in the plank",
-          "cue": "Brace before the feet go back",
+          "cue": "One line at the bottom",
           "tip": "The hips land level with the shoulders, not below.",
           "severity": 2
         },
         {
           "id": "round",
           "label": "Back rounding on the way up",
-          "cue": "Chest up",
+          "cue": "Flat back as you stand",
           "tip": "Land the feet wide enough to stand with the chest up.",
+          "severity": 2
+        },
+        {
+          "id": "sag4",
+          "label": "Hips sagging in the plank",
+          "cue": "One line at the bottom",
+          "tip": "The tired middle of a burpee set is where the back starts to sag.",
+          "severity": 2
+        },
+        {
+          "id": "land2",
+          "label": "Landing hard",
+          "cue": "Land soft and quiet",
+          "tip": "Absorb the jump. Loud landings are how the knees and ankles complain later.",
           "severity": 2
         }
       ],
@@ -1319,16 +1891,30 @@
         {
           "id": "rock",
           "label": "Hips rocking side to side",
-          "cue": "Hips still",
+          "cue": "Keep the hips still",
           "tip": "Widen the feet and brace before each tap; if the hips rock, slow down.",
           "severity": 3
         },
         {
           "id": "sag",
           "label": "Hips sagging",
-          "cue": "Plank line",
+          "cue": "One line, head to heels",
           "tip": "Squeeze the glutes.",
           "severity": 2
+        },
+        {
+          "id": "rush3",
+          "label": "Tapping quickly",
+          "cue": "One second per tap",
+          "tip": "Slow taps are the anti-rotation work; fast taps are just a plank with wobble.",
+          "severity": 2
+        },
+        {
+          "id": "wide",
+          "label": "Feet too close",
+          "cue": "Feet wider apart",
+          "tip": "A wide base is what lets the hips stay level while a hand lifts.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1368,15 +1954,29 @@
         {
           "id": "stand",
           "label": "Standing up as the arms lift",
-          "cue": "Stay hinged",
+          "cue": "Stay hinged over",
           "tip": "The trunk holds still; if it rises, the weight is too heavy.",
+          "severity": 2
+        },
+        {
+          "id": "bend3",
+          "label": "Bending the elbows",
+          "cue": "Arms long, soft elbows",
+          "tip": "Bending the elbows turns it into a row and takes the rear shoulder out.",
           "severity": 2
         },
         {
           "id": "shrug",
           "label": "Shrugging",
-          "cue": "Shoulders away from the ears",
+          "cue": "Shoulders down, blades together",
           "tip": "Lead with the elbows out, not up.",
+          "severity": 1
+        },
+        {
+          "id": "high6",
+          "label": "Lifting above shoulder line",
+          "cue": "Stop level with the shoulders",
+          "tip": "Past shoulder height the trapezius takes the load.",
           "severity": 1
         }
       ],
@@ -1403,7 +2003,7 @@
       "tracking": "none",
       "level": "intermediate",
       "equipment": ["none"],
-      "muscles": { "primary": ["core", "shoulders", "quadriceps"], "secondary": ["whole body"] },
+      "muscles": { "primary": ["abdominals", "shoulders", "quadriceps"], "secondary": ["obliques", "hip flexors"] },
       "summary": "On hands and feet with the knees hovering, crawl forward moving opposite hand and foot together.",
       "setup": "Hands under the shoulders, knees under the hips and lifted a few centimetres. Move the right hand and left foot forward together, then the other pair, keeping the back flat and the hips low.",
       "why": "Crawling takes you out of frame. Logged by hand.",
@@ -1418,15 +2018,29 @@
         {
           "id": "hips",
           "label": "Hips rising",
-          "cue": "Hips low, back flat",
+          "cue": "Keep the hips low",
           "tip": "Imagine a plate balanced on the lower back.",
+          "severity": 2
+        },
+        {
+          "id": "high7",
+          "label": "Hips too high",
+          "cue": "Knees low, hover the floor",
+          "tip": "The knees stay a few centimetres off the floor; high hips make it a walk.",
           "severity": 2
         },
         {
           "id": "sway",
           "label": "Hips swaying",
-          "cue": "Small steps",
+          "cue": "Move the hips as little as possible",
           "tip": "Shorter steps keep the hips still.",
+          "severity": 1
+        },
+        {
+          "id": "same",
+          "label": "Same-side hand and foot",
+          "cue": "Opposite hand and foot",
+          "tip": "Opposite limbs move together; same-side crawling loses the anti-rotation work.",
           "severity": 1
         }
       ],

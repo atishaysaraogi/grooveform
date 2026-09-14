@@ -372,19 +372,20 @@ a.ex-card .name { color: var(--text, inherit); }
 .intro[hidden] { display: none; }
 .intro-card { background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; max-width: 560px; width: 100%; margin: 16px auto; display: flex; flex-direction: column; gap: 10px; }
 .intro-card h2 { font-size: clamp(1.35rem, 5vw, 1.9rem); }
-.intro-steps { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 14px; }
-.intro-steps li { display: grid; grid-template-columns: 26px 76px 1fr; grid-template-areas: "n art name" "n art copy"; column-gap: 10px; row-gap: 2px; align-items: start; }
-.intro-steps .n { grid-area: n; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--grape); font-family: var(--font-display); font-size: .95rem; display: grid; place-items: center; }
-.intro-steps .art { grid-area: art; width: 76px; height: auto; align-self: center; }
+.intro-steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 18px; }
+@media (min-width: 560px) { .intro-steps { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+.intro-steps li { display: grid; grid-template-columns: 68px 1fr; grid-template-areas: "art name" "art copy"; column-gap: 12px; row-gap: 2px; align-items: center; }
+@media (min-width: 560px) { .intro-steps li { grid-template-columns: 1fr; grid-template-areas: "art" "name" "copy"; justify-items: center; text-align: center; row-gap: 6px; } }
+.intro-steps .art { grid-area: art; width: 68px; height: 68px; }
+@media (min-width: 560px) { .intro-steps .art { width: 84px; height: 84px; } }
 .intro-steps strong { grid-area: name; align-self: end; }
-.intro-steps .muted { grid-area: copy; font-size: .9rem; line-height: 1.35; }
+.intro-steps .muted { grid-area: copy; font-size: .88rem; line-height: 1.35; }
 .intro-steps .art .ink { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-.intro-steps .art .floor { stroke: var(--line); stroke-width: 4; stroke-linecap: round; }
-.intro-steps .art .dot { fill: var(--accent); }
-.intro-steps .art .beam { stroke: var(--accent-2); stroke-width: 2.5; stroke-dasharray: 5 5; fill: none; }
-.intro-steps .art .bubble { fill: var(--accent); stroke: var(--ink); stroke-width: 4; }
-.intro-steps .art .cue-line { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
-.intro-steps .art .bubble + .cue-line { stroke: var(--grape); }
+.intro-steps .art .ink.solid { fill: var(--accent); }
+.intro-steps .art .frame { fill: var(--surface-2); stroke: var(--ink); stroke-width: 4; }
+.intro-steps .art .corner { fill: none; stroke: var(--pink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.intro-steps .art .floor { stroke: var(--line); stroke-width: 4; stroke-linecap: round; fill: none; }
+.intro-steps .art .wave { fill: none; stroke: var(--pink); stroke-width: 4; stroke-linecap: round; }
 .intro-steps .art .bar { stroke: var(--ink); stroke-width: 3; }
 .intro-steps .art .bar.a { fill: var(--pink); } .intro-steps .art .bar.b { fill: var(--tangerine); } .intro-steps .art .bar.c { fill: var(--lime); }
 .intro-actions { margin-top: 4px; }

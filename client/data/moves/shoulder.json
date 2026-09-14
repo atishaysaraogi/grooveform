@@ -580,7 +580,7 @@
           "id": "high",
           "label": "Raising above shoulder height",
           "cue": "Stop at shoulder height",
-          "tip": "Above about 90° the shoulder blade has to rotate and the space under the acromion narrows; for rehab, stop with the hand level with the shoulder.",
+          "tip": "The tender range for most irritable shoulders is roughly 60–120°, so rehab usually stops with the hand level with the shoulder. Go higher later, once it is comfortable.",
           "severity": 2,
           "metric": { "kind": "vertical", "pts": ["SH", "EL"] },
           "rel": "change",
@@ -765,19 +765,6 @@
           "persist": 500
         },
         {
-          "id": "overbent",
-          "label": "Elbow bent past 90°",
-          "cue": "Forearm level — open the elbow to ninety",
-          "tip": "Pulling the hand up toward the chest shortens the lever and shifts the work to the biceps. Keep the forearm parallel to the floor.",
-          "severity": 1,
-          "metric": { "kind": "height", "pts": ["EL", "WR"], "per": ["SH", "EL"] },
-          "op": "<",
-          "threshold": -40,
-          "minP": 0.15,
-          "persist": 600,
-          "cooldown": 6000
-        },
-        {
           "id": "twist",
           "label": "Twisting the torso",
           "cue": "Chest to the camera — arm only",
@@ -801,6 +788,19 @@
           "op": "<",
           "threshold": -10,
           "persist": 500
+        },
+        {
+          "id": "overbent",
+          "label": "Elbow bent past 90°",
+          "cue": "Forearm level — open the elbow to ninety",
+          "tip": "Pulling the hand up toward the chest shortens the lever and shifts the work to the biceps. Keep the forearm parallel to the floor.",
+          "severity": 1,
+          "metric": { "kind": "height", "pts": ["EL", "WR"], "per": ["SH", "EL"] },
+          "op": "<",
+          "threshold": -40,
+          "minP": 0.15,
+          "persist": 600,
+          "cooldown": 6000
         },
         {
           "id": "lean",
@@ -874,16 +874,30 @@
         {
           "id": "muscle",
           "label": "Swinging with the shoulder muscles",
-          "cue": "Let it hang",
+          "cue": "Let the arm hang loose",
           "tip": "The body rocks and the arm follows like a rope; if the shoulder is working, it is not a pendulum.",
           "severity": 3
         },
         {
           "id": "big",
           "label": "Circles too big too soon",
-          "cue": "Small circles",
+          "cue": "Smaller circles for now",
           "tip": "Dinner-plate size to start; grow it over days, not minutes.",
           "severity": 2
+        },
+        {
+          "id": "lock",
+          "label": "Elbow bent",
+          "cue": "Let the arm hang long",
+          "tip": "A bent elbow means the shoulder is holding on. The arm should hang like a rope from the socket.",
+          "severity": 2
+        },
+        {
+          "id": "back",
+          "label": "Rounding the back to lean",
+          "cue": "Hinge at the hips",
+          "tip": "Support yourself on a table and fold at the hips; rounding the back loads it for nothing.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -951,13 +965,44 @@
       "regression": "Stop where the wrists start to leave the wall.",
       "contraindications": "Pinching at the top of the shoulder.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "shrug" },
         {
           "id": "wrists",
           "label": "Wrists leaving the wall",
-          "cue": "Wrists on the wall",
+          "cue": "Keep the wrists on the wall",
           "tip": "Go only as high as the wrists can stay in contact; the range grows over weeks.",
           "severity": 2
+        },
+        {
+          "id": "arch",
+          "label": "Arching the back to go higher",
+          "cue": "Ribs down, smaller range",
+          "tip": "When the range runs out the back arches to fake it. Stop where the ribs stay down.",
+          "severity": 2
+        },
+        {
+          "id": "press",
+          "label": "Not pressing into the wall",
+          "cue": "Press the forearms in",
+          "tip": "Light pressure into the wall the whole way is what switches on the shoulder blade muscles.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1008,12 +1053,50 @@
       "regression": "No weight; smaller range.",
       "contraindications": "Pain in the painful arc (60–120°) that does not settle.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "shrug" },
+        {
+          "id": "plane",
+          "label": "Arm drifting straight out or forward",
+          "cue": "Halfway between front and side",
+          "tip": "Scaption is the 30–45° plane. Straight out to the side is a different, tighter exercise.",
+          "severity": 2
+        },
+        {
+          "id": "thumb",
+          "label": "Thumb pointing down",
+          "cue": "Thumb up, like pouring out",
+          "tip": "Thumb down closes the space at the top of the shoulder. Lead with the thumb up.",
+          "severity": 2
+        },
         {
           "id": "high",
           "label": "Going above shoulder height",
           "cue": "Stop at shoulder height",
           "tip": "The cuff works best up to horizontal; higher just adds strain.",
+          "severity": 1
+        },
+        {
+          "id": "drop",
+          "label": "Dropping the arm",
+          "cue": "Lower over three seconds",
+          "tip": "Lowering slowly is where a cuff tendon is loaded most usefully.",
           "severity": 1
         }
       ],
@@ -1062,18 +1145,32 @@
       "contraindications": "Neck pain lying face down.",
       "faults": [
         {
-          "id": "neck",
-          "label": "Lifting the head and neck",
-          "cue": "Nose down",
-          "tip": "Keep the forehead on the floor or a towel; the arms lift, not the head.",
-          "severity": 2
-        },
-        {
           "id": "shrug",
           "label": "Shrugging into the ears",
           "cue": "Blades down and back",
           "tip": "Each letter starts by pulling the shoulder blades down; the arms follow.",
           "severity": 3
+        },
+        {
+          "id": "neck",
+          "label": "Lifting the head and neck",
+          "cue": "Rest your forehead down",
+          "tip": "Keep the forehead on the floor or a towel; the arms lift, not the head.",
+          "severity": 2
+        },
+        {
+          "id": "height",
+          "label": "Lifting too high",
+          "cue": "Just off the floor is enough",
+          "tip": "A couple of centimetres with the blades squeezed beats a big lift from the lower back.",
+          "severity": 2
+        },
+        {
+          "id": "order",
+          "label": "Rushing between letters",
+          "cue": "Reset between each letter",
+          "tip": "Y, T and W each need the blades set again. Run them together and the traps take over.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1141,17 +1238,48 @@
       "contraindications": "Wrist pain bearing weight.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "plus",
+          "label": "Skipping the push at the top",
+          "cue": "Push the floor away at the top",
+          "tip": "The extra push that rounds the upper back is the whole exercise; a normal push-up misses it.",
+          "severity": 3
+        },
+        {
           "id": "elbows",
           "label": "Bending the elbows",
-          "cue": "Elbows locked",
+          "cue": "Keep the elbows locked",
           "tip": "The plus is at the shoulder blades, not the elbows; keep the arms straight.",
           "severity": 2
         },
         {
           "id": "sag",
           "label": "Hips sagging",
-          "cue": "Body straight",
+          "cue": "One line, head to heels",
           "tip": "Brace the stomach so the body stays one line from head to knees.",
+          "severity": 2
+        },
+        {
+          "id": "shrug",
+          "label": "Shrugging instead of protracting",
+          "cue": "Blades apart, shoulders down",
+          "tip": "The blades slide apart around the ribs — they should not travel up toward the ears.",
           "severity": 2
         }
       ],
@@ -1205,7 +1333,7 @@
       "muscles": { "primary": ["posterior shoulder capsule", "infraspinatus"], "secondary": [] },
       "sided": { "limb": "arm", "by": "camera" },
       "summary": "Lying on the affected side, elbow at 90°, gently press the forearm down toward the floor.",
-      "setup": "Lie on the affected side with the shoulder and elbow at 90°, forearm pointing up. With the other hand, press the forearm gently toward the floor until a stretch is felt behind the shoulder. Hold. Stop short of pinching.",
+      "setup": "Lie on the affected side, rolled very slightly back so you are on the outer edge of the shoulder blade — that pins it and is what keeps the stretch safe. Shoulder and elbow at 90°, forearm pointing up. With the other hand, press the forearm gently toward the floor until a stretch is felt behind the shoulder. Hold. Stop short of pinching.",
       "why": "The rotation happens toward the phone whichever way it is placed, and the pressure is applied by hand. Follow the guide and log the hold.",
       "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
       "targets": [20, 30, 45],
@@ -1219,14 +1347,28 @@
         {
           "id": "force",
           "label": "Forcing the forearm down",
-          "cue": "Gentle",
+          "cue": "Ease off — gentler",
           "tip": "A mild stretch behind the shoulder; pressing hard makes the joint guard.",
+          "severity": 3
+        },
+        {
+          "id": "scap",
+          "label": "Shoulder blade not pinned",
+          "cue": "Roll onto the blade edge",
+          "tip": "Lie slightly back onto the outer edge of the shoulder blade so it cannot slide. Without that the stretch pinches the front.",
+          "severity": 3
+        },
+        {
+          "id": "pinch",
+          "label": "Feeling it at the front",
+          "cue": "Behind the shoulder only",
+          "tip": "The stretch belongs behind the shoulder. Pinching at the front means stop and ask your physio.",
           "severity": 3
         },
         {
           "id": "roll",
           "label": "Rolling onto the back",
-          "cue": "Stay on your side",
+          "cue": "Stay square on your side",
           "tip": "Keep the shoulder blade pinned so the stretch stays in the capsule.",
           "severity": 2
         }
@@ -1291,13 +1433,44 @@
       "regression": "Halve the range and keep every contact point.",
       "contraindications": "Lower back pain from arching to keep contact.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "shrug" },
         {
           "id": "contact",
           "label": "Arms peeling off the wall",
-          "cue": "Keep contact",
+          "cue": "Keep everything touching the wall",
           "tip": "Cut the range in half and keep hands, wrists and elbows on the wall the whole way.",
           "severity": 2
+        },
+        {
+          "id": "range",
+          "label": "Going higher than the contact allows",
+          "cue": "Stop where contact breaks",
+          "tip": "Your range is where the wrists, elbows and back all still touch. Going past it trains the wrong thing.",
+          "severity": 2
+        },
+        {
+          "id": "chin",
+          "label": "Chin poking forward",
+          "cue": "Back of the head on the wall",
+          "tip": "The head is part of the contact. If it lifts off, the neck is compensating.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1344,16 +1517,30 @@
         {
           "id": "shrug",
           "label": "Shoulders rising",
-          "cue": "Shoulders down",
+          "cue": "Let the shoulders drop",
           "tip": "Keep the shoulder blades down and back; the stretch is in the chest, not the neck.",
           "severity": 2
         },
         {
           "id": "arch",
           "label": "Arching the lower back",
-          "cue": "Ribs down",
+          "cue": "Ribs down as you step",
           "tip": "Brace lightly and lean from the ankles, not the lower back.",
           "severity": 2
+        },
+        {
+          "id": "high",
+          "label": "Elbow too high",
+          "cue": "Elbow at shoulder height",
+          "tip": "Above shoulder height the stretch moves into the front of the joint instead of the chest.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Leaning instead of stepping",
+          "cue": "Step through, chest open",
+          "tip": "Take a small step forward rather than throwing the body at the doorway.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1411,17 +1598,48 @@
       "contraindications": "Pinching at the top of the shoulder with the elbows high.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "elbows",
           "label": "Elbows dropping low",
-          "cue": "Elbows high",
+          "cue": "Elbows high and wide",
           "tip": "The elbows stay at shoulder height or above; dropping them turns it into a row.",
           "severity": 2
         },
         {
           "id": "lean",
           "label": "Leaning back to pull",
-          "cue": "Stay upright",
+          "cue": "Stand tall — no rocking",
           "tip": "The band moves; the trunk does not. Stagger the feet if you need balance.",
+          "severity": 2
+        },
+        {
+          "id": "low",
+          "label": "Pulling to the chest",
+          "cue": "Pull to your forehead",
+          "tip": "A face pull finishes at eye level with the hands wide. To the chest it is just a row.",
+          "severity": 2
+        },
+        {
+          "id": "rotate",
+          "label": "No external rotation at the end",
+          "cue": "Knuckles back at the end",
+          "tip": "Finish with the backs of the hands travelling back — that is the rotator cuff part.",
           "severity": 2
         }
       ],
@@ -1467,17 +1685,41 @@
       "contraindications": "Sharp pain at the front of the shoulder near the end of range.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "arch",
           "label": "Arching the back to go further",
-          "cue": "Ribs down",
+          "cue": "Keep the ribs down",
           "tip": "Keep the lower back on the floor; the range should come from the shoulder.",
           "severity": 2
         },
         {
           "id": "force",
           "label": "Forcing with the good arm",
-          "cue": "Gentle assist",
+          "cue": "Guide it — do not push",
           "tip": "The good arm guides; it should not drag the sore one past the stretch.",
+          "severity": 2
+        },
+        {
+          "id": "shrug",
+          "label": "Shrugging at the top",
+          "cue": "Shoulders down as you reach",
+          "tip": "When the range runs out the shoulder rides up. Stop just before that point.",
           "severity": 2
         }
       ],
@@ -1527,15 +1769,29 @@
         {
           "id": "shrug",
           "label": "Shoulder rising",
-          "cue": "Shoulder down",
+          "cue": "Let that shoulder drop",
           "tip": "Keep the working shoulder down and back; the stretch belongs behind it.",
+          "severity": 2
+        },
+        {
+          "id": "elbow",
+          "label": "Pulling on the elbow",
+          "cue": "Pull the upper arm across",
+          "tip": "Hooking the elbow twists the joint; hold above the elbow and draw the arm across.",
           "severity": 2
         },
         {
           "id": "twist",
           "label": "Turning the trunk",
-          "cue": "Face forward",
+          "cue": "Keep facing forward",
           "tip": "The trunk stays square to the phone; only the arm moves.",
+          "severity": 1
+        },
+        {
+          "id": "shrug2",
+          "label": "Shoulder riding up",
+          "cue": "Both shoulders level",
+          "tip": "The stretched shoulder must stay down or the stretch goes into the neck.",
           "severity": 1
         }
       ],
@@ -1587,18 +1843,49 @@
       "contraindications": "Shoulder pain that builds through the set.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "elbow",
           "label": "Elbow lifting off the waist",
-          "cue": "Elbow on the towel",
+          "cue": "Keep the elbow on the towel",
           "tip": "If the elbow lifts, the deltoid takes over; keep it pressed onto the towel.",
           "severity": 3
         },
         {
           "id": "roll",
           "label": "Rolling backward",
-          "cue": "Stay on your side",
+          "cue": "Stay square on your side",
           "tip": "Keep the hips stacked; rolling back fakes the range.",
           "severity": 2
+        },
+        {
+          "id": "roll2",
+          "label": "Rolling the trunk back",
+          "cue": "Chest stays facing the wall",
+          "tip": "Rolling backwards fakes extra range. The shoulder rotates; the body does not.",
+          "severity": 2
+        },
+        {
+          "id": "high",
+          "label": "Rotating past vertical",
+          "cue": "Stop at vertical",
+          "tip": "The forearm rises to upright and no further; past that gravity stops resisting anyway.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1660,17 +1947,48 @@
       "contraindications": "Neck pain during the lift.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "roll",
           "label": "Rolling the shoulders",
-          "cue": "Straight up and down",
+          "cue": "Straight up, straight down",
           "tip": "Rolling adds nothing and grinds the joint; lift straight up.",
+          "severity": 2
+        },
+        {
+          "id": "circle",
+          "label": "Rolling the shoulders",
+          "cue": "Straight up, straight down",
+          "tip": "Rolling grinds the shoulder blade. Lift straight up toward the ears and lower under control.",
           "severity": 2
         },
         {
           "id": "neck",
           "label": "Jutting the chin",
-          "cue": "Chin in",
+          "cue": "Chin in, neck long",
           "tip": "Keep the neck long and the eyes level.",
+          "severity": 1
+        },
+        {
+          "id": "hold",
+          "label": "No pause at the top",
+          "cue": "Squeeze one second at the top",
+          "tip": "A brief hold at the top is where the muscle actually shortens under load.",
           "severity": 1
         }
       ],

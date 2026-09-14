@@ -283,6 +283,23 @@
       "contraindications": "Back pain that increases as the limbs lower.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "arch",
           "label": "Lower back arching",
           "cue": "Back flat",
@@ -392,10 +409,24 @@
           "cooldown": 6000
         },
         {
+          "id": "clench",
+          "label": "Holding the breath",
+          "cue": "Breathe normally",
+          "tip": "A plank you cannot breathe in is a plank held too hard or too long.",
+          "severity": 2
+        },
+        {
           "id": "head",
           "label": "Head dropping",
           "cue": "Look at the floor ahead",
           "tip": "The neck is part of the line; look a hand-width ahead of the fingers.",
+          "severity": 1
+        },
+        {
+          "id": "hands",
+          "label": "Hands clasped",
+          "cue": "Forearms parallel",
+          "tip": "Clasping the hands narrows the base and rolls the shoulders in.",
           "severity": 1
         }
       ],
@@ -479,6 +510,27 @@
           "cue": "Chest to the phone",
           "tip": "Stack the shoulders and hips; the top hip should not fall forward.",
           "severity": 2
+        },
+        {
+          "id": "forward",
+          "label": "Rolling the chest forward",
+          "cue": "Chest open to the front",
+          "tip": "A side plank that rolls forward becomes a normal plank and the waist stops working.",
+          "severity": 2
+        },
+        {
+          "id": "elbow",
+          "label": "Elbow not under the shoulder",
+          "cue": "Elbow under your shoulder",
+          "tip": "Set the elbow directly below the shoulder to protect the joint.",
+          "severity": 2
+        },
+        {
+          "id": "head",
+          "label": "Head dropping",
+          "cue": "Head in line with the spine",
+          "tip": "Let the head continue the line of the body rather than hanging toward the floor.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -565,6 +617,13 @@
           "cue": "Ribs down",
           "tip": "Lift the leg to level with the back, no higher.",
           "severity": 2
+        },
+        {
+          "id": "high",
+          "label": "Lifting the leg too high",
+          "cue": "Heel no higher than the hip",
+          "tip": "Above hip height the lower back arches. Reach long behind you instead of high.",
+          "severity": 2
         }
       ],
       "guide": {
@@ -620,22 +679,36 @@
       "targets": [8, 10, 15],
       "defaultTarget": 10,
       "tempo": "Hold 8–10 s, rest 3 s.",
-      "dosage": "5, 3, 1 holds (descending pyramid), daily.",
+      "dosage": "6, 4 then 2 holds (descending pyramid), daily.",
       "progression": "Elbows off the floor.",
       "regression": "Shorter holds; head barely lifting.",
       "contraindications": "Neck pain on the lift.",
       "faults": [
         {
+          "id": "flat",
+          "label": "Flattening the back",
+          "cue": "Keep the natural arch",
+          "tip": "Unlike a crunch, the lower back does not flatten. Only the head and shoulders lift.",
+          "severity": 3
+        },
+        {
           "id": "neck",
           "label": "Chin poking forward",
-          "cue": "Head and chest as one",
+          "cue": "Head and shoulders as one block",
           "tip": "The head and shoulders lift together as a block; the neck does not curl.",
+          "severity": 2
+        },
+        {
+          "id": "hands",
+          "label": "Hands not under the back",
+          "cue": "Hands under the lower back",
+          "tip": "The hands keep the lower back in its natural arch — that is what makes this version safe.",
           "severity": 2
         },
         {
           "id": "high",
           "label": "Lifting too high",
-          "cue": "Just off the floor",
+          "cue": "Lift just a couple of centimetres",
           "tip": "The lift is small on purpose; higher loads the spine without adding much for the abs.",
           "severity": 1
         }
@@ -759,16 +832,30 @@
         {
           "id": "twist",
           "label": "Turning toward the anchor",
-          "cue": "Hips and chest square",
+          "cue": "Resist the pull — stay square",
           "tip": "Brace before the press; the point is to not move.",
           "severity": 3
         },
         {
           "id": "lean",
           "label": "Leaning away",
-          "cue": "Stay tall",
+          "cue": "Stand tall, hips level",
           "tip": "Leaning away uses body weight instead of the core. Stand tall and let the abs do it.",
           "severity": 2
+        },
+        {
+          "id": "arms",
+          "label": "Rushing the press",
+          "cue": "Press out, hold, return",
+          "tip": "The hold with the arms out is where the anti-twist work happens.",
+          "severity": 2
+        },
+        {
+          "id": "feet",
+          "label": "Feet shifting",
+          "cue": "Feet planted, hips forward",
+          "tip": "Shuffling the feet lets the body turn instead of resisting the turn.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -810,16 +897,30 @@
       "contraindications": "Neck or lower back pain.",
       "faults": [
         {
+          "id": "pull",
+          "label": "Pulling on the head",
+          "cue": "Fingertips behind the ears",
+          "tip": "Hands support the head; they never pull it. Yanking the neck is how people hurt themselves here.",
+          "severity": 3
+        },
+        {
           "id": "neck",
           "label": "Pulling on the neck",
-          "cue": "Hands light",
+          "cue": "Fingertips only, chin off the chest",
           "tip": "Fingertips only; turn the chest, not the head.",
+          "severity": 2
+        },
+        {
+          "id": "low",
+          "label": "Legs too low",
+          "cue": "Keep the back flat",
+          "tip": "Lower the legs only as far as the lower back stays down.",
           "severity": 2
         },
         {
           "id": "rush",
           "label": "Rushing",
-          "cue": "Slow the pedal",
+          "cue": "Two seconds each side",
           "tip": "Speed lets momentum do the work; two seconds per side.",
           "severity": 1
         }
@@ -890,6 +991,23 @@
       "contraindications": "Back pain during the lowering.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "arch",
           "label": "Lower back arching",
           "cue": "Stop before the back lifts",
@@ -901,6 +1019,20 @@
           "label": "Dropping the legs",
           "cue": "Slow on the way down",
           "tip": "The lowering is the exercise. Three seconds minimum.",
+          "severity": 1
+        },
+        {
+          "id": "hands",
+          "label": "Pushing with the hands",
+          "cue": "Hands rest, do not press",
+          "tip": "Pressing the hands into the floor hides how much the abdominals are really doing.",
+          "severity": 1
+        },
+        {
+          "id": "knees",
+          "label": "Bending the knees to go lower",
+          "cue": "Legs long, smaller range",
+          "tip": "Bending the knees to reach the floor cheats the range. Shorten the range instead.",
           "severity": 1
         }
       ],
@@ -928,7 +1060,7 @@
       "level": "beginner",
       "equipment": ["mat"],
       "muscles": { "primary": ["spinal erectors", "gluteus maximus"], "secondary": ["hamstrings", "shoulders"] },
-      "summary": "Face down, lift the arms and legs a few centimetres off the floor together, hold, lower.",
+      "summary": "Face down, lift the arms and legs a centimetre or two off the floor, hold, lower.",
       "setup": "Lie on your front, side-on to the phone at floor level, arms overhead. Lift arms, chest and legs off the floor together, hold two seconds, lower slowly.",
       "why": "From the side the shoulder line rises against the hip each rep, so reps are counted. Lifting too high is not judged.",
       "camera": { "height": "floor", "distance": "2 m", "posture": "prone" },
@@ -940,15 +1072,46 @@
       },
       "tempo": "Lift 2 s, hold 2 s, lower 2 s.",
       "dosage": "3 × 10.",
-      "progression": "Longer holds; opposite arm and leg.",
-      "regression": "Arms only, then legs only.",
-      "contraindications": "Pain in the lower back at the top.",
+      "progression": "Longer holds; add a light hand weight.",
+      "regression": "Arms only, then legs only — or swap to the bird dog.",
+      "contraindications": "Any lower-back pain. A full superman puts a lot of compression through the lower back — if your back is irritable, do the bird dog instead, which trains the same muscles for far less load.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "load",
+          "label": "Lifting arms and legs high",
+          "cue": "Barely off the floor",
+          "tip": "A big arch loads the lower joints of the spine hard. A centimetre with a long reach is the aim — if your back is irritable, use the bird dog instead.",
+          "severity": 3
+        },
         {
           "id": "high",
           "label": "Lifting too high",
           "cue": "A few centimetres",
           "tip": "Higher pinches the lower back; a small lift with a long reach is the aim.",
+          "severity": 2
+        },
+        {
+          "id": "neck2",
+          "label": "Looking up",
+          "cue": "Eyes on the floor",
+          "tip": "Lifting the head extends the neck along with the back and adds nothing.",
           "severity": 2
         },
         {
@@ -1008,6 +1171,23 @@
       "contraindications": "Back pain as the foot lifts.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "rock",
           "label": "Pelvis rocking",
           "cue": "Hips still",
@@ -1015,10 +1195,24 @@
           "severity": 2
         },
         {
+          "id": "arch",
+          "label": "Back arching as the foot lifts",
+          "cue": "Ribs down, back flat",
+          "tip": "If the back lifts, the leg is going too high or too fast. Smaller and slower.",
+          "severity": 2
+        },
+        {
           "id": "breath",
           "label": "Holding the breath",
           "cue": "Breathe out to lift",
           "tip": "Exhale on the lift and the brace stays on without straining.",
+          "severity": 1
+        },
+        {
+          "id": "rush",
+          "label": "Marching quickly",
+          "cue": "Two seconds each leg",
+          "tip": "Speed lets momentum swing the leg. Slow marching is what recruits the deep abdominals.",
           "severity": 1
         }
       ],

@@ -409,7 +409,7 @@
         {
           "id": "kneebend",
           "label": "Knees bending to help",
-          "cue": "Knees straight",
+          "cue": "Keep the knees straight",
           "tip": "Lock the knees so the calf does the lifting; bent knees shift the work and shorten the range.",
           "severity": 2,
           "metric": "knee",
@@ -419,11 +419,49 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2000
+        },
+        {
           "id": "roll",
           "label": "Rolling onto the outside of the feet",
-          "cue": "Big toe down",
+          "cue": "Press through the big toe",
           "tip": "Press through the big toe joint at the top so the ankle rises straight rather than rolling out.",
           "severity": 2
+        },
+        {
+          "id": "shallow2",
+          "label": "Not reaching full height",
+          "cue": "All the way up on your toes",
+          "tip": "The last centimetre at the top is where the calf works hardest. Rise until the heels are high.",
+          "severity": 2
+        },
+        {
+          "id": "drop",
+          "label": "Dropping the heels",
+          "cue": "Lower over three seconds",
+          "tip": "The controlled lowering is what builds and rehabilitates the Achilles.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Leaning on the support",
+          "cue": "Fingertips only",
+          "tip": "Pushing down through the hands takes body weight off the calves.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -471,7 +509,7 @@
         {
           "id": "kneebend",
           "label": "Knee bending to help",
-          "cue": "Knee straight",
+          "cue": "Keep the knee straight",
           "tip": "Keep the knee locked; the rise comes from the ankle alone.",
           "severity": 2,
           "metric": "knee",
@@ -481,11 +519,42 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 2000
+        },
+        {
           "id": "roll",
           "label": "Ankle rolling outward",
-          "cue": "Big toe down",
+          "cue": "Press through the big toe",
           "tip": "Drive through the big toe joint so the heel rises straight up.",
           "severity": 3
+        },
+        {
+          "id": "shallow2",
+          "label": "Not reaching full height",
+          "cue": "All the way up on your toes",
+          "tip": "Full height every rep; when you cannot, the set is finished.",
+          "severity": 2
+        },
+        {
+          "id": "drop",
+          "label": "Dropping the heel",
+          "cue": "Lower over three seconds",
+          "tip": "Control on the way down is the part that rebuilds an Achilles tendon.",
+          "severity": 2
         }
       ],
       "guide": {
@@ -529,9 +598,26 @@
       "contraindications": "Shin pain that persists after the set.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "heels",
           "label": "Heels lifting",
-          "cue": "Heels planted",
+          "cue": "Keep the heels planted",
           "tip": "The heels stay down; if they lift you are rocking, not lifting the toes.",
           "severity": 2
         },
@@ -540,6 +626,20 @@
           "label": "Bouncing the reps",
           "cue": "Pause at the top",
           "tip": "Hold the toes up for a second on every rep.",
+          "severity": 1
+        },
+        {
+          "id": "toes",
+          "label": "Curling the toes",
+          "cue": "Lift the whole foot",
+          "tip": "Curling the toes upward is a smaller muscle. Bring the whole forefoot up as a block.",
+          "severity": 1
+        },
+        {
+          "id": "lean",
+          "label": "Sliding down the wall",
+          "cue": "Back stays put",
+          "tip": "Sliding down turns it into a squat and takes the shin out of the movement.",
           "severity": 1
         }
       ],
@@ -589,15 +689,29 @@
         {
           "id": "knee",
           "label": "Moving the knee instead of the ankle",
-          "cue": "Ankle only",
+          "cue": "Move the ankle only",
           "tip": "Rest the thigh so the shin stays still; the ankle draws the letters.",
+          "severity": 2
+        },
+        {
+          "id": "pain",
+          "label": "Pushing through a sharp catch",
+          "cue": "Stop at sharp pain",
+          "tip": "A stretch is fine; a sharp catch in one direction is worth telling your physio about.",
           "severity": 2
         },
         {
           "id": "small",
           "label": "Letters too small",
-          "cue": "Draw them big",
+          "cue": "Draw the letters bigger",
           "tip": "Reach the end of the range in every direction; the point is motion, not speed.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "label": "Rushing the letters",
+          "cue": "Slower — one letter, one breath",
+          "tip": "Speed hides the stiff directions. Slow enough to notice where it catches.",
           "severity": 1
         }
       ],
@@ -646,15 +760,29 @@
         {
           "id": "heel",
           "label": "Heel lifting",
-          "cue": "Heel down",
+          "cue": "Keep the heel down",
           "tip": "The heel stays planted so the toes, not the ankle, pull the towel.",
           "severity": 2
         },
         {
           "id": "claw",
           "label": "Clawing with the tips of the toes",
-          "cue": "Flat toes, spread",
+          "cue": "Flat toes — pull with the arch",
           "tip": "Spread the toes and pull with the whole pad, not the tips.",
+          "severity": 1
+        },
+        {
+          "id": "toes",
+          "label": "Curling with the toe tips",
+          "cue": "Grip with the whole foot",
+          "tip": "The arch should do the pulling. Clawing with the toe tips can aggravate the top of the foot.",
+          "severity": 1
+        },
+        {
+          "id": "lift",
+          "label": "Lifting the foot to reset",
+          "cue": "Heel stays down between grips",
+          "tip": "Lifting the whole foot to grab more towel uses the shin instead of the arch.",
           "severity": 1
         }
       ],
@@ -700,17 +828,48 @@
       "contraindications": "Shin pain that persists.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "knee",
           "label": "Bending the knee to help",
-          "cue": "Leg straight",
+          "cue": "Keep the leg straight",
           "tip": "Keep the knee straight so the shin muscle does the pulling.",
           "severity": 2
         },
         {
           "id": "snap",
           "label": "Letting the band snap back",
-          "cue": "Release slowly",
+          "cue": "Let it back down slowly",
           "tip": "The return is half the work — two seconds out.",
+          "severity": 1
+        },
+        {
+          "id": "toes",
+          "label": "Leading with the toes",
+          "cue": "Lead with the whole foot",
+          "tip": "Pull the foot up as one piece; toe-only movement misses the tibialis anterior.",
+          "severity": 1
+        },
+        {
+          "id": "roll",
+          "label": "Rolling the foot inward",
+          "cue": "Foot straight up",
+          "tip": "Rolling in swaps the target for a different muscle. Keep the little toe and big toe level.",
           "severity": 1
         }
       ],
@@ -760,15 +919,29 @@
         {
           "id": "knee",
           "label": "Rotating the whole leg",
-          "cue": "Knee still",
+          "cue": "Knee still — foot only",
           "tip": "Hold the shin with a hand if needed; only the foot turns.",
+          "severity": 2
+        },
+        {
+          "id": "hip",
+          "label": "Turning the whole leg",
+          "cue": "Move the foot only",
+          "tip": "If the thigh rolls, the hip is doing it. Pin the knee and turn only below the ankle.",
           "severity": 2
         },
         {
           "id": "range",
           "label": "Tiny movements",
-          "cue": "Full turn",
+          "cue": "Turn the foot all the way",
           "tip": "Take the sole as far out (or in) as it goes each rep.",
+          "severity": 1
+        },
+        {
+          "id": "snap",
+          "label": "Letting the band snap back",
+          "cue": "Return slowly",
+          "tip": "The slow return is the half most people skip, and the half the ankle needs.",
           "severity": 1
         }
       ],
@@ -817,15 +990,29 @@
         {
           "id": "hipdrop",
           "label": "Free-side hip dropping",
-          "cue": "Hips level",
+          "cue": "Level the hips",
           "tip": "Lift the free hip slightly; the standing hip muscles hold the pelvis level.",
           "severity": 3
         },
         {
           "id": "lock",
           "label": "Locking the standing knee",
-          "cue": "Soft knee",
+          "cue": "Keep a soft knee",
           "tip": "A slightly bent knee lets the ankle and hip do the balancing.",
+          "severity": 1
+        },
+        {
+          "id": "toes",
+          "label": "Gripping with the toes",
+          "cue": "Toes relaxed and long",
+          "tip": "Clawing the toes is a sign of a wobbling ankle. Spread them and let the whole foot work.",
+          "severity": 1
+        },
+        {
+          "id": "eyes",
+          "label": "Eyes darting around",
+          "cue": "Fix your eyes on one spot",
+          "tip": "A steady gaze steadies the balance. Progress by closing the eyes once 30 s is easy.",
           "severity": 1
         }
       ],
@@ -873,18 +1060,32 @@
       "contraindications": "Dizziness; falls risk.",
       "faults": [
         {
+          "id": "step",
+          "label": "Stepping out",
+          "cue": "Step back on the line",
+          "tip": "If you step, restart the hold — do not count the time before it.",
+          "severity": 2
+        },
+        {
           "id": "arms",
           "label": "Waving the arms",
-          "cue": "Arms quiet",
+          "cue": "Let the arms settle",
           "tip": "Use the ankles and hips to balance; keep the hands relaxed at the sides.",
           "severity": 1
         },
         {
-          "id": "step",
-          "label": "Stepping out",
-          "cue": "Reset and hold",
-          "tip": "If you step, restart the hold — do not count the time before it.",
-          "severity": 2
+          "id": "gap",
+          "label": "Feet not in line",
+          "cue": "Heel touching the front toes",
+          "tip": "A gap between the feet makes it a normal stance. Heel to toe on one line is the drill.",
+          "severity": 1
+        },
+        {
+          "id": "wall",
+          "label": "Leaning on the wall",
+          "cue": "Fingertips, not weight",
+          "tip": "Hold something for safety, but let the ankles do the balancing.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -925,15 +1126,29 @@
         {
           "id": "drop",
           "label": "Toes or heels dropping mid-way",
-          "cue": "Keep them up",
+          "cue": "Keep the toes up",
           "tip": "Shorten the walk before the foot drops; the position is the exercise.",
           "severity": 2
         },
         {
           "id": "lean",
           "label": "Leaning to keep balance",
-          "cue": "Stand tall",
+          "cue": "Stand tall as you walk",
           "tip": "Eyes ahead, trunk upright; use small steps rather than leaning.",
+          "severity": 1
+        },
+        {
+          "id": "short",
+          "label": "Distance too short",
+          "cue": "Ten metres each way",
+          "tip": "The point is fatigue in the shin and calf. A few steps will not reach it.",
+          "severity": 1
+        },
+        {
+          "id": "knees",
+          "label": "Bending the knees to cheat",
+          "cue": "Legs long",
+          "tip": "Bending the knees lets the hips lift the foot instead of the shin.",
           "severity": 1
         }
       ],
@@ -981,15 +1196,29 @@
         {
           "id": "valgus",
           "label": "Knee caving on landing",
-          "cue": "Knee over toes",
+          "cue": "Knee over the middle toes",
           "tip": "Land with the knee tracking over the middle of the foot; if it dives inward, hop smaller.",
+          "severity": 3
+        },
+        {
+          "id": "stick",
+          "label": "Not sticking the landing",
+          "cue": "Freeze for one second",
+          "tip": "The landing is the exercise. If you cannot hold it still for a second, hop smaller.",
           "severity": 3
         },
         {
           "id": "stiff",
           "label": "Landing stiff",
-          "cue": "Land soft",
+          "cue": "Land softly, bend the knee",
           "tip": "Bend the knee and hip on landing so it is quiet; a loud landing is a stiff one.",
+          "severity": 2
+        },
+        {
+          "id": "far",
+          "label": "Hopping too far too soon",
+          "cue": "Smaller hops, perfect landings",
+          "tip": "Distance is the last thing to add. Control first, height second, distance last.",
           "severity": 2
         }
       ],

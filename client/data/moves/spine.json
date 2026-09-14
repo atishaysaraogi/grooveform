@@ -241,7 +241,7 @@
       "tracking": "reps",
       "level": "beginner",
       "equipment": ["none"],
-      "muscles": { "primary": ["deep neck flexors"], "secondary": ["upper trapezius (lengthens)"] },
+      "muscles": { "primary": ["deep neck flexors"], "secondary": ["suboccipitals (lengthen)"] },
       "upperBody": true,
       "summary": "Glide the chin straight back to make a double chin, hold, release.",
       "setup": "Sit or stand tall, side-on to the phone at eye height. Without tipping the head, draw the chin straight back so the ears move over the shoulders. Hold two seconds, release.",
@@ -261,17 +261,48 @@
       "contraindications": "Dizziness, or pain shooting into the arm.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "nod",
           "label": "Nodding instead of gliding",
-          "cue": "Slide, do not nod",
+          "cue": "Slide the chin straight back",
           "tip": "The chin moves straight back like a drawer closing. If the eyes drop, you are nodding.",
+          "severity": 2
+        },
+        {
+          "id": "hold",
+          "label": "Not holding the tuck",
+          "cue": "Hold two seconds",
+          "tip": "The hold is what trains the deep neck muscles; a quick nod does nothing.",
           "severity": 2
         },
         {
           "id": "shrug",
           "label": "Shoulders rising",
-          "cue": "Shoulders down",
+          "cue": "Let the shoulders hang",
           "tip": "Let the shoulders hang. The neck moves, nothing else.",
+          "severity": 1
+        },
+        {
+          "id": "jaw",
+          "label": "Clenching the jaw",
+          "cue": "Teeth apart, jaw soft",
+          "tip": "A clenched jaw usually means the neck is straining. Keep the tongue and jaw relaxed.",
           "severity": 1
         }
       ],
@@ -319,8 +350,15 @@
         {
           "id": "shrug",
           "label": "Shrugging up",
-          "cue": "Down, not up",
+          "cue": "Blades down, not up",
           "tip": "The blades go together and down. If the shoulders rise toward the ears, the upper trapezius has taken over.",
+          "severity": 2
+        },
+        {
+          "id": "hold",
+          "label": "Letting go too soon",
+          "cue": "Hold five seconds",
+          "tip": "These are endurance muscles. Short holds do not reach them.",
           "severity": 2
         },
         {
@@ -328,6 +366,13 @@
           "label": "Arching the lower back",
           "cue": "Ribs down",
           "tip": "The squeeze happens between the blades, not by throwing the chest forward.",
+          "severity": 1
+        },
+        {
+          "id": "hard",
+          "label": "Squeezing too hard",
+          "cue": "Half effort is enough",
+          "tip": "A gentle set is what these muscles need; a maximal squeeze recruits the neck.",
           "severity": 1
         }
       ],
@@ -368,18 +413,32 @@
       "contraindications": "Osteoporosis, or pain in the lower back during the arch.",
       "faults": [
         {
+          "id": "lumbar",
+          "label": "Arching from the lower back",
+          "cue": "Roller above the waist",
+          "tip": "The roller sits under the ribs, not the lower back. Arching low is where people get sore.",
+          "severity": 3
+        },
+        {
           "id": "lowback",
           "label": "Arching the lower back instead",
-          "cue": "Ribs down",
+          "cue": "Ribs down — arch higher up",
           "tip": "Keep the buttocks on the floor and the stomach lightly braced so the arch stays in the upper back.",
           "severity": 2
         },
         {
           "id": "neck",
           "label": "Pulling on the neck",
-          "cue": "Hands support, not pull",
+          "cue": "Hands support the head",
           "tip": "Cradle the head; the neck should feel no strain.",
           "severity": 2
+        },
+        {
+          "id": "spots",
+          "label": "Working only one spot",
+          "cue": "Move the roller up a level",
+          "tip": "Do a few arches, then shift the roller a hand-width and repeat.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -441,8 +500,22 @@
         {
           "id": "pull",
           "label": "Pulling hard with the hand",
-          "cue": "Weight, not pull",
+          "cue": "Let the hand rest, do not pull",
           "tip": "The hand is a weight resting on the head. Pulling makes the muscle guard.",
+          "severity": 2
+        },
+        {
+          "id": "turn",
+          "label": "Not turning the head far enough",
+          "cue": "Nose toward your armpit",
+          "tip": "The levator stretch needs the head turned about 45° before it tips — straight down is the trapezius.",
+          "severity": 2
+        },
+        {
+          "id": "shoulder",
+          "label": "Stretched shoulder lifting",
+          "cue": "That shoulder stays down",
+          "tip": "Anchor the shoulder by sitting on the hand, or the stretch goes nowhere.",
           "severity": 2
         }
       ],
@@ -493,9 +566,26 @@
       "contraindications": "Wrist pain that stops weight-bearing; pain on either end of the movement.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "neckonly",
           "label": "Only the neck moving",
-          "cue": "Move the whole back",
+          "cue": "Move the whole spine",
           "tip": "Start each direction at the tailbone and let it travel up; the head is last, not first.",
           "severity": 2
         },
@@ -504,6 +594,20 @@
           "label": "Rushing",
           "cue": "One breath each way",
           "tip": "The movement follows the breath; it should take at least two seconds each direction.",
+          "severity": 1
+        },
+        {
+          "id": "elbows",
+          "label": "Bending the elbows",
+          "cue": "Arms straight, push the floor",
+          "tip": "Soft elbows let the shoulders sag and the movement leaves the spine.",
+          "severity": 1
+        },
+        {
+          "id": "end",
+          "label": "Forcing the ends of the range",
+          "cue": "Stay inside comfortable",
+          "tip": "This is a mobility drill, not a stretch. Move through the easy middle of the range.",
           "severity": 1
         }
       ],
@@ -569,17 +673,48 @@
       "contraindications": "Pain moving further down the leg on the press — stop and tell your physio.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "hips",
           "label": "Hips lifting off the floor",
-          "cue": "Hips down",
+          "cue": "Keep the hips on the floor",
           "tip": "Let the pelvis hang heavy; if the hips lift, the arms are doing a push-up instead of an extension.",
+          "severity": 3
+        },
+        {
+          "id": "peripheral",
+          "label": "Pain moving down the leg",
+          "cue": "Stop — pain is spreading",
+          "tip": "Pain travelling further from the back is the one signal to stop and tell your physio. Pain moving toward the back is a good sign.",
           "severity": 3
         },
         {
           "id": "brace",
           "label": "Tensing the back muscles",
-          "cue": "Let the back relax",
+          "cue": "Let the back go soft",
           "tip": "The arms lift you; the back muscles stay soft so the joints can move.",
+          "severity": 2
+        },
+        {
+          "id": "legs",
+          "label": "Squeezing the buttocks",
+          "cue": "Let the legs go soft",
+          "tip": "Clenching the glutes tips the pelvis and blocks the extension you are trying to get.",
           "severity": 2
         }
       ],
@@ -628,17 +763,31 @@
       "contraindications": "None in most cases — this is usually the first back exercise.",
       "faults": [
         {
+          "id": "feet",
+          "label": "Pushing through the feet",
+          "cue": "Feet quiet on the floor",
+          "tip": "Pressing the heels down tilts the pelvis for you. The stomach should do it.",
+          "severity": 2
+        },
+        {
           "id": "glutes",
           "label": "Squeezing the buttocks instead",
-          "cue": "Stomach, not bottom",
+          "cue": "Use the stomach, not the bottom",
           "tip": "The tilt comes from the abdominals pulling the pelvis; the buttocks stay soft.",
           "severity": 1
         },
         {
           "id": "breath",
           "label": "Holding the breath",
-          "cue": "Breathe out to tilt",
+          "cue": "Breathe out as you tilt",
           "tip": "The exhale helps the stomach draw in.",
+          "severity": 1
+        },
+        {
+          "id": "hold",
+          "label": "No hold at the end",
+          "cue": "Hold three seconds",
+          "tip": "The hold is what teaches the control; a quick flick teaches nothing.",
           "severity": 1
         }
       ],
@@ -676,17 +825,41 @@
       "contraindications": "Pain spreading down the leg on the lean.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "knees",
           "label": "Knees bending",
-          "cue": "Knees straight",
+          "cue": "Keep the knees straight",
           "tip": "Bending the knees turns it into a squat; the movement should come from the back.",
           "severity": 2
         },
         {
           "id": "neck",
           "label": "Throwing the head back",
-          "cue": "Look ahead",
+          "cue": "Look straight ahead",
           "tip": "The neck stays in line; bend from the waist.",
+          "severity": 1
+        },
+        {
+          "id": "hold",
+          "label": "Not pausing at the end",
+          "cue": "Hold one second at the end",
+          "tip": "A brief pause at the end of the lean is where the movement is gained.",
           "severity": 1
         }
       ],
@@ -733,15 +906,29 @@
         {
           "id": "knees",
           "label": "Top knee lifting",
-          "cue": "Knees together",
+          "cue": "Keep the knees stacked",
           "tip": "If the knees separate, the movement is coming from the lower back instead of the mid-back.",
+          "severity": 2
+        },
+        {
+          "id": "hips",
+          "label": "Hips rolling with the chest",
+          "cue": "Knees stay stacked and down",
+          "tip": "If the top knee lifts, the rotation has left the mid-back and gone to the lower back.",
           "severity": 2
         },
         {
           "id": "arm",
           "label": "Leading with the arm",
-          "cue": "Turn the chest",
+          "cue": "Turn the chest, not the arm",
           "tip": "The arm follows the chest; it does not drag it.",
+          "severity": 1
+        },
+        {
+          "id": "breathe",
+          "label": "Holding the breath",
+          "cue": "Breathe out as you open",
+          "tip": "A long breath out at the end of the turn gains a few more degrees for free.",
           "severity": 1
         }
       ],
@@ -805,15 +992,29 @@
         {
           "id": "move",
           "label": "Head moving",
-          "cue": "Press, do not push",
+          "cue": "Hold still — press gently",
           "tip": "The hand and head cancel each other out; if the head moves, ease off.",
+          "severity": 2
+        },
+        {
+          "id": "hard",
+          "label": "Pressing too hard",
+          "cue": "A third of your strength",
+          "tip": "These are gentle holds. A maximal push provokes the neck rather than training it.",
           "severity": 2
         },
         {
           "id": "breath",
           "label": "Holding the breath",
-          "cue": "Keep breathing",
+          "cue": "Keep breathing through it",
           "tip": "Count out loud through the hold.",
+          "severity": 1
+        },
+        {
+          "id": "head",
+          "label": "Head moving",
+          "cue": "Nothing moves — just press",
+          "tip": "The hand and head push against each other and neither wins. Any movement means too much force.",
           "severity": 1
         }
       ],
@@ -854,15 +1055,29 @@
         {
           "id": "hips",
           "label": "Hips turning too",
-          "cue": "Knees still",
+          "cue": "Keep the knees pointing forward",
           "tip": "Squeeze the knees together so the turn happens above the waist.",
+          "severity": 2
+        },
+        {
+          "id": "arms",
+          "label": "Pulling with the arms",
+          "cue": "Turn the ribs, not the arms",
+          "tip": "Yanking on the chair turns the shoulders without moving the spine underneath.",
           "severity": 2
         },
         {
           "id": "lean",
           "label": "Leaning instead of turning",
-          "cue": "Turn, do not lean",
+          "cue": "Turn tall, do not lean",
           "tip": "Keep the head level and the trunk tall.",
+          "severity": 1
+        },
+        {
+          "id": "slump",
+          "label": "Slumping before the turn",
+          "cue": "Sit tall, then turn",
+          "tip": "Rotation needs a tall spine. From a slump, the mid-back barely moves.",
           "severity": 1
         }
       ],
@@ -909,15 +1124,29 @@
         {
           "id": "hips",
           "label": "Hips coming up",
-          "cue": "Hips to the heels",
+          "cue": "Sit back toward your heels",
           "tip": "If the hips hover, put a cushion behind the knees so you can rest rather than hold.",
           "severity": 1
         },
         {
           "id": "shrug",
           "label": "Shoulders up around the ears",
-          "cue": "Shoulders soft",
+          "cue": "Let the shoulders soften",
           "tip": "Let the arms be heavy; the reach comes from the hips going back.",
+          "severity": 1
+        },
+        {
+          "id": "knees",
+          "label": "Knees too close together",
+          "cue": "Knees wide, big toes touching",
+          "tip": "Widening the knees lets the chest sink between the thighs and the lower back open.",
+          "severity": 1
+        },
+        {
+          "id": "breathe",
+          "label": "Shallow breathing",
+          "cue": "Breathe into your back",
+          "tip": "Long breaths into the back ribs are what make this position release.",
           "severity": 1
         }
       ],
@@ -979,6 +1208,13 @@
       "contraindications": "Hip pinching at the front, or pain down the leg.",
       "faults": [
         {
+          "id": "shin",
+          "label": "Pulling on the shin",
+          "cue": "Hold behind the thigh",
+          "tip": "Pulling on the front of the shin compresses the knee. Hold behind the thigh instead.",
+          "severity": 2
+        },
+        {
           "id": "lift",
           "label": "Head and shoulders lifting",
           "cue": "Head down",
@@ -990,6 +1226,13 @@
           "label": "Yanking the knee",
           "cue": "Ease, do not yank",
           "tip": "Draw steadily; the muscle lets go only if the pull is gentle.",
+          "severity": 1
+        },
+        {
+          "id": "neck",
+          "label": "Lifting the head",
+          "cue": "Head stays down",
+          "tip": "Curling the head up adds neck strain and does nothing for the hip or back.",
           "severity": 1
         }
       ],
@@ -1039,14 +1282,28 @@
         {
           "id": "shoulder",
           "label": "Shoulder lifting",
-          "cue": "Shoulders down",
+          "cue": "Keep both shoulders down",
           "tip": "Roll only as far as both shoulders stay on the floor.",
+          "severity": 2
+        },
+        {
+          "id": "far",
+          "label": "Dropping the knees too far",
+          "cue": "Stop where the shoulder lifts",
+          "tip": "Your range ends when the opposite shoulder starts to peel off the floor.",
+          "severity": 2
+        },
+        {
+          "id": "fast",
+          "label": "Swinging the knees",
+          "cue": "Three seconds each way",
+          "tip": "Swinging uses momentum through the lower back — the opposite of what this drill is for.",
           "severity": 2
         },
         {
           "id": "knees",
           "label": "Knees separating",
-          "cue": "Knees together",
+          "cue": "Keep the knees together",
           "tip": "Keep the knees glued so both hips roll as one.",
           "severity": 1
         }

@@ -88,16 +88,30 @@
       "contraindications": "Sharp pain at the outside of the elbow that lingers after the set.",
       "faults": [
         {
+          "id": "assist",
+          "label": "Not assisting back up",
+          "cue": "Other hand lifts it back",
+          "tip": "Only the lowering is loaded. Use the other hand to return the weight to the top.",
+          "severity": 3
+        },
+        {
           "id": "fast",
           "label": "Dropping the wrist",
-          "cue": "Slow on the way down",
+          "cue": "Lower over four seconds",
           "tip": "The slow lowering is the whole point; the way up is assisted.",
+          "severity": 2
+        },
+        {
+          "id": "elbow2",
+          "label": "Elbow lifting off the support",
+          "cue": "Forearm stays supported",
+          "tip": "The forearm rests on the thigh or table throughout so only the wrist moves.",
           "severity": 2
         },
         {
           "id": "lift",
           "label": "Forearm lifting off the table",
-          "cue": "Forearm flat",
+          "cue": "Lift it back with the other hand",
           "tip": "Only the wrist moves; pin the forearm down.",
           "severity": 1
         }
@@ -140,15 +154,29 @@
         {
           "id": "elbow",
           "label": "Elbow lifting",
-          "cue": "Elbow down",
+          "cue": "Keep the forearm down",
           "tip": "If the elbow rises the biceps are helping; keep it pinned on the thigh.",
+          "severity": 2
+        },
+        {
+          "id": "heavy",
+          "label": "Weight too heavy",
+          "cue": "Lighter — the forearm is small",
+          "tip": "These are small muscles. Heavy weight recruits the shoulder and irritates the elbow.",
           "severity": 2
         },
         {
           "id": "fast",
           "label": "Rushing",
-          "cue": "Slow it down",
+          "cue": "Lower it slowly",
           "tip": "Three seconds to lower.",
+          "severity": 1
+        },
+        {
+          "id": "range",
+          "label": "Short range",
+          "cue": "Let the wrist drop fully",
+          "tip": "Let the weight roll to the fingertips at the bottom and curl all the way up.",
           "severity": 1
         }
       ],
@@ -189,15 +217,29 @@
         {
           "id": "elbow",
           "label": "Elbow drifting away from the side",
-          "cue": "Elbow tucked",
+          "cue": "Keep the elbow at your side",
           "tip": "Tuck a towel under the arm to keep the elbow still.",
           "severity": 2
         },
         {
           "id": "shoulder",
           "label": "Shoulder rotating",
-          "cue": "Only the forearm turns",
+          "cue": "Shoulder still — forearm turns",
           "tip": "If the elbow swings in and out, the shoulder is turning instead.",
+          "severity": 1
+        },
+        {
+          "id": "wrist",
+          "label": "Bending the wrist",
+          "cue": "Wrist straight, turn the forearm",
+          "tip": "The rotation comes from the forearm bones, not from flicking the wrist.",
+          "severity": 1
+        },
+        {
+          "id": "full",
+          "label": "Half turns",
+          "cue": "Palm fully up, fully down",
+          "tip": "Go to both ends of the turn; the stiffness usually lives at the very end.",
           "severity": 1
         }
       ],
@@ -239,15 +281,29 @@
         {
           "id": "fast",
           "label": "Untwisting too fast",
-          "cue": "Four seconds",
+          "cue": "Untwist over four seconds",
           "tip": "The slow untwist loads the tendon; fast is wasted.",
+          "severity": 2
+        },
+        {
+          "id": "sore",
+          "label": "Expecting it to be painless",
+          "cue": "A mild ache is expected",
+          "tip": "A mild ache during and shortly after is normal and part of how this works; sharp or lasting pain is not.",
           "severity": 2
         },
         {
           "id": "elbow",
           "label": "Elbows bending",
-          "cue": "Arms straight",
+          "cue": "Keep the arm straight out",
           "tip": "Keep both elbows straight so the wrist does the work.",
+          "severity": 1
+        },
+        {
+          "id": "grip",
+          "label": "Gripping too tightly",
+          "cue": "Firm, not white-knuckled",
+          "tip": "A death grip fatigues the hand before the tendon is loaded.",
           "severity": 1
         }
       ],
@@ -293,17 +349,31 @@
       "contraindications": "Pain in the fingers or a recent hand fracture without clearance.",
       "faults": [
         {
+          "id": "breath2",
+          "label": "Holding the breath",
+          "cue": "Breathe through the squeeze",
+          "tip": "Breath-holding spikes blood pressure during a hard grip. Keep breathing out.",
+          "severity": 2
+        },
+        {
           "id": "wrist",
           "label": "Wrist bending on the squeeze",
-          "cue": "Wrist straight",
+          "cue": "Keep the wrist straight",
           "tip": "Keep the wrist neutral so the fingers do the work.",
           "severity": 1
         },
         {
           "id": "breath",
           "label": "Holding the breath",
-          "cue": "Keep breathing",
+          "cue": "Breathe out as you squeeze",
           "tip": "Count out loud.",
+          "severity": 1
+        },
+        {
+          "id": "wrist2",
+          "label": "Curling the wrist",
+          "cue": "Wrist straight",
+          "tip": "A neutral wrist puts the work in the hand rather than the forearm tendons.",
           "severity": 1
         }
       ],
@@ -342,17 +412,31 @@
       "contraindications": "Sharp pain or catching in a finger.",
       "faults": [
         {
+          "id": "force",
+          "label": "Forcing a stiff finger",
+          "cue": "Gentle — to comfortable stiffness",
+          "tip": "Glides are about moving the tendons, not stretching. Force makes a stiff hand stiffer.",
+          "severity": 2
+        },
+        {
           "id": "skip",
           "label": "Skipping positions",
-          "cue": "All five shapes",
+          "cue": "Move through every shape",
           "tip": "Each shape glides a different tendon; go through them all.",
           "severity": 1
         },
         {
           "id": "wrist",
           "label": "Wrist bending",
-          "cue": "Wrist straight",
+          "cue": "Keep the wrist still",
           "tip": "Keep the wrist neutral so the glide is in the fingers.",
+          "severity": 1
+        },
+        {
+          "id": "hold2",
+          "label": "Not holding each shape",
+          "cue": "Hold each shape three seconds",
+          "tip": "The hold is what glides the tendon through its sheath.",
           "severity": 1
         }
       ],
@@ -400,15 +484,29 @@
         {
           "id": "elbow",
           "label": "Elbow bending",
-          "cue": "Elbow straight",
+          "cue": "Keep the elbow straight",
           "tip": "A bent elbow takes the stretch off the forearm.",
           "severity": 1
         },
         {
           "id": "pull",
           "label": "Pulling too hard",
-          "cue": "Gentle",
+          "cue": "Gentle pull — no forcing",
           "tip": "A stretch, not a pain.",
+          "severity": 1
+        },
+        {
+          "id": "bounce",
+          "label": "Bouncing the stretch",
+          "cue": "Hold still",
+          "tip": "A steady hold lengthens the tissue; bouncing just provokes it.",
+          "severity": 1
+        },
+        {
+          "id": "fingers",
+          "label": "Fingers not included",
+          "cue": "Open the fingers too",
+          "tip": "Straightening the fingers as well reaches the whole flexor group.",
           "severity": 1
         }
       ],
@@ -451,15 +549,29 @@
         {
           "id": "elbow",
           "label": "Elbow bending",
-          "cue": "Elbow straight",
+          "cue": "Keep the elbow straight",
           "tip": "A bent elbow takes the stretch off the forearm.",
           "severity": 1
         },
         {
           "id": "shrug",
           "label": "Shoulder rising",
-          "cue": "Shoulder down",
+          "cue": "Let the shoulder drop",
           "tip": "Keep the shoulder relaxed so the stretch stays in the forearm.",
+          "severity": 1
+        },
+        {
+          "id": "bounce2",
+          "label": "Bouncing the stretch",
+          "cue": "Hold still",
+          "tip": "Steady and gentle. This tendon is usually already irritable.",
+          "severity": 1
+        },
+        {
+          "id": "fist",
+          "label": "Open hand",
+          "cue": "Make a loose fist",
+          "tip": "A gentle fist adds the finger extensors to the stretch.",
           "severity": 1
         }
       ],
@@ -501,6 +613,13 @@
       "contraindications": "Shoulder pain overhead.",
       "faults": [
         {
+          "id": "neck3",
+          "label": "Head pushed forward",
+          "cue": "Head back, ears over shoulders",
+          "tip": "Letting the head drift forward turns a triceps stretch into neck strain.",
+          "severity": 2
+        },
+        {
           "id": "lean",
           "label": "Leaning away",
           "cue": "Stay tall",
@@ -512,6 +631,13 @@
           "label": "Shoulder hiking",
           "cue": "Shoulder down",
           "tip": "Let the shoulder drop while the elbow points up.",
+          "severity": 1
+        },
+        {
+          "id": "arch2",
+          "label": "Arching the ribs",
+          "cue": "Ribs down",
+          "tip": "When the shoulder runs out of range the ribs flare. Stop before that.",
           "severity": 1
         }
       ],
@@ -560,7 +686,7 @@
         {
           "id": "swing",
           "label": "Upper arm swinging forward",
-          "cue": "Upper arm still",
+          "cue": "Keep the upper arm still",
           "tip": "Pin the elbow to the side; only the forearm moves.",
           "severity": 2,
           "metric": "upper_arm",
@@ -570,10 +696,41 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1600
+        },
+        {
           "id": "short",
           "label": "Not straightening fully",
-          "cue": "All the way straight",
+          "cue": "All the way, both directions",
           "tip": "Full straightening is the range that gets lost after injury; finish each rep.",
+          "severity": 2
+        },
+        {
+          "id": "shoulder2",
+          "label": "Swinging from the shoulder",
+          "cue": "Upper arm still",
+          "tip": "Pin the upper arm to your side so the movement is all at the elbow.",
+          "severity": 2
+        },
+        {
+          "id": "end",
+          "label": "Stopping short of the ends",
+          "cue": "All the way both ways",
+          "tip": "Range is lost at the very ends. Go gently to both, every rep.",
           "severity": 2
         }
       ],

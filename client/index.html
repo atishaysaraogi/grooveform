@@ -26,48 +26,43 @@
 <main id="view" class="wrap"></main>
 <div id="toast" class="toast" hidden></div>
 
-<!-- ===== First run: the three steps of a session ===== -->
+<!-- ===== First run: what a session needs, as three pictures ===== -->
 <div id="intro" class="intro" hidden>
   <div class="intro-card">
     <span class="eyebrow">How jodd.io works</span>
-    <h2>Three steps, then you put the phone down.</h2>
-    <ol class="intro-steps">
+    <h2>Prop up the phone. Turn the sound on. Move.</h2>
+    <ul class="intro-steps">
       <li>
-        <span class="n">1</span>
-        <svg class="art" viewBox="0 0 120 80" role="img" aria-label="A phone propped up a few steps away from a person">
-          <rect x="4" y="26" width="20" height="34" rx="4" class="ink"/><circle cx="14" cy="43" r="4" class="dot"/>
-          <path d="M14 62 v8 M8 70 h12" class="ink"/>
-          <path d="M34 66 h80" class="floor"/>
-          <circle cx="92" cy="24" r="6" class="ink"/><path d="M92 30 v18 M80 38 h24 M92 48 l-8 14 M92 48 l8 14" class="ink"/>
-          <path d="M26 40 L74 30 M26 46 L74 58" class="beam"/>
+        <svg class="art" viewBox="0 0 96 96" role="img" aria-label="A phone propped up, seeing a whole person inside the frame">
+          <rect x="10" y="12" width="76" height="72" rx="10" class="frame"/>
+          <path d="M22 24 v-6 h6 M74 24 v-6 h-6 M22 72 v6 h6 M74 72 v6 h-6" class="corner"/>
+          <circle cx="48" cy="32" r="7" class="ink"/>
+          <path d="M48 39 v20 M36 46 h24 M48 59 l-8 17 M48 59 l8 17" class="ink"/>
+          <path d="M30 80 h36" class="floor"/>
         </svg>
-        <strong>Position the camera</strong>
-        <span class="muted">Prop the phone where it can see all of you. The app checks the framing and tells you what to move.</span>
+        <strong>All of you in frame</strong>
+        <span class="muted">Prop the phone a couple of metres away, where it can see you head to foot. The app checks the framing before it starts counting.</span>
       </li>
       <li>
-        <span class="n">2</span>
-        <svg class="art" viewBox="0 0 120 80" role="img" aria-label="A figure mid-exercise with a spoken cue">
-          <path d="M20 68 h80" class="floor"/>
-          <circle cx="46" cy="18" r="7" class="ink"/><path d="M46 25 v22 M32 34 h28 M46 47 l-9 21 M46 47 l9 21" class="ink"/>
-          <rect x="70" y="14" width="42" height="20" rx="10" class="bubble"/>
-          <path d="M78 24 h26 M78 30 h16" class="cue-line"/>
+        <svg class="art" viewBox="0 0 96 96" role="img" aria-label="A speaker with sound waves">
+          <path d="M20 38 h14 L52 22 v52 L34 58 H20 z" class="ink solid"/>
+          <path d="M62 34 a20 20 0 0 1 0 28" class="wave"/>
+          <path d="M72 26 a32 32 0 0 1 0 44" class="wave"/>
         </svg>
-        <strong>Follow the voice</strong>
-        <span class="muted">It counts your reps out loud and calls out one thing to fix when your form slips.</span>
+        <strong>Sound up</strong>
+        <span class="muted">It counts your reps out loud and says the one thing to fix, so you never look at the screen mid-set.</span>
       </li>
       <li>
-        <span class="n">3</span>
-        <svg class="art" viewBox="0 0 120 80" role="img" aria-label="A results card with a score and a bar chart">
-          <rect x="14" y="12" width="92" height="56" rx="8" class="ink"/>
-          <path d="M26 30 h30 M26 38 h20" class="cue-line"/>
-          <rect x="70" y="24" width="8" height="30" rx="2" class="bar a"/>
-          <rect x="82" y="34" width="8" height="20" rx="2" class="bar b"/>
-          <rect x="94" y="18" width="8" height="36" rx="2" class="bar c"/>
+        <svg class="art" viewBox="0 0 96 96" role="img" aria-label="A bar chart of results">
+          <path d="M18 76 h60" class="floor"/><path d="M18 20 v56" class="floor"/>
+          <rect x="28" y="48" width="12" height="28" rx="3" class="bar a"/>
+          <rect x="46" y="34" width="12" height="42" rx="3" class="bar b"/>
+          <rect x="64" y="24" width="12" height="52" rx="3" class="bar c"/>
         </svg>
-        <strong>Review the set</strong>
-        <span class="muted">Every rep scored, the faults counted, and what to work on before the next set.</span>
+        <strong>See the set</strong>
+        <span class="muted">Every rep scored, each fault counted, and the one thing to work on next time.</span>
       </li>
-    </ol>
+    </ul>
     <div class="row intro-actions">
       <button class="btn primary" id="intro-go">Got it</button>
       <span class="muted">You can see this again in Settings.</span>

@@ -72,8 +72,8 @@
     {
       "id": "wallsit",
       "name": "Wall sit",
-      "summary": "Quad endurance at a safe 90° knee angle.",
-      "setup": "Camera side-on, 2–3 m away, roughly hip height. Back flat on the wall, feet about 50 cm out, shoulder-width apart. Whole body in frame.",
+      "summary": "Quad endurance against a wall, at a depth your knees are happy with.",
+      "setup": "Camera side-on, 2–3 m away, roughly hip height. Back flat on the wall, feet a good step out from it, shoulder-width apart. Slide down to a comfortable depth — thighs level is the classic target, a shallower bend if the kneecap complains. Whole body in frame.",
       "why": "From the side the camera reads knee angle and whether your shins are vertical (knees not past toes) — both invisible from the front.",
       "targets": [20, 30, 45, 60],
       "defaultTarget": 30,
@@ -161,8 +161,8 @@
       "tempo": "Slide down over 2 s, hold, stand up over 2 s.",
       "dosage": "3 holds of 20–60 s.",
       "progression": "Longer holds; a weight on the thighs.",
-      "regression": "Shallower knee bend, shorter holds.",
-      "contraindications": "Kneecap pain, or pain that lingers after the hold.",
+      "regression": "Shallower knee bend (much easier on the kneecap), shorter holds.",
+      "contraindications": "Kneecap pain. Around 90° is where the kneecap is loaded most, so start shallower — a quarter or half bend — and deepen only if it stays comfortable.",
       "view": "side",
       "type": "hold",
       "hold": { "conditions": [{ "metric": "knee", "min": 55, "max": 118 }] },
@@ -172,7 +172,7 @@
           "id": "high",
           "label": "Sitting too high",
           "cue": "Slide down a little",
-          "tip": "Aim for a 90° knee — thighs parallel to the floor.",
+          "tip": "Thighs parallel is the classic target. Sitting higher than that is fine and easier on the kneecap — it is the hold time that builds the quad.",
           "severity": 2,
           "metric": "knee",
           "op": ">",
@@ -186,7 +186,7 @@
           "id": "low",
           "label": "Below 90°",
           "cue": "Come up a touch — knees at ninety",
-          "tip": "Deeper than 90° increases kneecap load; stay at parallel.",
+          "tip": "Compression behind the kneecap is greatest around a right angle, and grows as you go deeper still. If the kneecap complains, sit higher rather than lower.",
           "severity": 2,
           "metric": "knee",
           "op": "<",
@@ -208,6 +208,17 @@
           "persist": 1500
         },
         {
+          "id": "shin",
+          "label": "Knees past toes",
+          "cue": "Walk your feet out — shins vertical",
+          "tip": "Keep the shin vertical so the load stays in the quads, not the kneecap.",
+          "severity": 2,
+          "metric": { "kind": "gap", "pts": ["KNEE", "ANK"], "sign": "forward", "per": ["KNEE", "ANK"] },
+          "op": ">",
+          "threshold": 35,
+          "persist": 800
+        },
+        {
           "id": "hands",
           "label": "Hands resting on thighs",
           "cue": "Hands off your thighs",
@@ -218,17 +229,6 @@
           "threshold": 12,
           "persist": 1200,
           "cooldown": 8000
-        },
-        {
-          "id": "shin",
-          "label": "Knees past toes",
-          "cue": "Walk your feet out — shins vertical",
-          "tip": "Keep the shin vertical so the load stays in the quads, not the kneecap.",
-          "severity": 2,
-          "metric": { "kind": "gap", "pts": ["KNEE", "ANK"], "sign": "forward", "per": ["KNEE", "ANK"] },
-          "op": ">",
-          "threshold": 35,
-          "persist": 800
         }
       ],
       "pose": {
@@ -349,7 +349,7 @@
       "tracking": "form",
       "level": "beginner",
       "equipment": ["none", "towel or strap (optional)"],
-      "muscles": { "primary": ["hamstrings"], "secondary": ["quadriceps"] },
+      "muscles": { "primary": ["knee flexion (mobility)"], "secondary": ["hamstrings"] },
       "tempo": "2–3 s in, hold 2–5 s, 2–3 s out.",
       "dosage": "2–3 × 10, 2–3 times a day after surgery.",
       "progression": "Slide further as range returns; add a strap pull at the end.",
@@ -479,15 +479,29 @@
         {
           "id": "bend",
           "label": "Knee bending instead of pressing down",
-          "cue": "Press the knee down",
+          "cue": "Press the back of the knee down",
           "tip": "The back of the knee should flatten toward the floor. If the heel lifts, the hip is doing the work.",
+          "severity": 2
+        },
+        {
+          "id": "short",
+          "label": "Letting go too soon",
+          "cue": "Hold the squeeze five seconds",
+          "tip": "The squeeze has to last for the muscle to learn it. Count it out loud.",
           "severity": 2
         },
         {
           "id": "breath",
           "label": "Holding the breath",
-          "cue": "Keep breathing",
+          "cue": "Keep breathing through the squeeze",
           "tip": "Count out loud through the squeeze so the breath cannot stop.",
+          "severity": 1
+        },
+        {
+          "id": "toes",
+          "label": "Pointing the toes",
+          "cue": "Toes up toward you",
+          "tip": "Pulling the toes up helps the thigh switch on; pointing them lets the calf take over.",
           "severity": 1
         }
       ],
@@ -541,7 +555,7 @@
         {
           "id": "kneebend",
           "label": "Knee bending on the way up",
-          "cue": "Lock the knee",
+          "cue": "Lock the knee straight",
           "tip": "If the knee bends even a little, the hip flexors take over and the quad does nothing. Tighten the thigh before the leg leaves the floor.",
           "severity": 3,
           "metric": "knee",
@@ -551,11 +565,49 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "arch",
           "label": "Lower back arching",
-          "cue": "Back flat",
+          "cue": "Press the back flat",
           "tip": "Press the lower back gently toward the floor; keeping the other knee bent makes this easier.",
           "severity": 2
+        },
+        {
+          "id": "drop",
+          "label": "Dropping the leg",
+          "cue": "Lower it slowly",
+          "tip": "The lowering is half the exercise. Three seconds down, every rep.",
+          "severity": 2
+        },
+        {
+          "id": "high",
+          "label": "Lifting too high",
+          "cue": "Stop level with the other knee",
+          "tip": "Above the other knee the hip flexors take over and the pelvis tips. Height is not the point.",
+          "severity": 1
+        },
+        {
+          "id": "other",
+          "label": "Pushing off the other leg",
+          "cue": "Other leg stays quiet",
+          "tip": "Bracing through the other foot hides how much work the lifting leg is really doing.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -592,7 +644,7 @@
       "tracking": "form",
       "level": "beginner",
       "equipment": ["resistance band", "anchor point"],
-      "muscles": { "primary": ["quadriceps (VMO)"], "secondary": ["gluteus maximus"] },
+      "muscles": { "primary": ["quadriceps"], "secondary": ["gluteus maximus"] },
       "sided": { "limb": "leg", "by": "camera" },
       "band": "yellow",
       "summary": "A band behind the knee pulls it forward; you press the knee back to fully straight.",
@@ -605,13 +657,44 @@
       "regression": "Lighter band, or hands on a support.",
       "contraindications": "A knee that locks or gives way, or pain at the back of the knee under the band.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "lean", "threshold": 72 },
         {
           "id": "hips",
           "label": "Hips pushing back",
-          "cue": "Hips forward",
+          "cue": "Hips over your feet",
           "tip": "The band should straighten the knee, not fold you at the hip. Keep the hips over the feet.",
           "severity": 2
+        },
+        {
+          "id": "lockback",
+          "label": "Snapping the knee back",
+          "cue": "Straighten, do not lock hard",
+          "tip": "Push into straight under control. Snapping into hyperextension loads the back of the joint.",
+          "severity": 2
+        },
+        {
+          "id": "heel",
+          "label": "Heel lifting",
+          "cue": "Whole foot on the floor",
+          "tip": "The heel stays down so the quad does the work rather than the calf.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -662,13 +745,44 @@
       "regression": "Lower step, hand on a rail.",
       "contraindications": "Pain under the kneecap on the way down; poor balance without a rail.",
       "faults": [
+        {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
         { "template": "lean", "threshold": 65, "minP": 0.3 },
         {
           "id": "push",
           "label": "Pushing off the back foot",
-          "cue": "Lead leg does the work",
+          "cue": "Push through the top foot",
           "tip": "The floor foot should be almost weightless. If you bounce off it, the lead leg is not lifting you.",
           "severity": 2
+        },
+        {
+          "id": "drop",
+          "label": "Dropping down the step",
+          "cue": "Lower under control",
+          "tip": "Coming down slowly is where the strength is built and the knee is protected.",
+          "severity": 2
+        },
+        {
+          "id": "height",
+          "label": "Step too high",
+          "cue": "Lower step, better control",
+          "tip": "If the knee passes much beyond the toes or the trunk folds, the step is too tall.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -722,7 +836,7 @@
         {
           "id": "valgus",
           "label": "Knees caving inward",
-          "cue": "Knees out",
+          "cue": "Push the knees out",
           "tip": "Screw the feet into the floor so the knees track over the second toe. Caving loads the inside of the knee.",
           "severity": 3,
           "metric": "knees_apart",
@@ -733,11 +847,42 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "heels",
           "label": "Heels lifting",
-          "cue": "Heels down",
+          "cue": "Keep the heels down",
           "tip": "Sit the hips back rather than driving the knees forward; the weight belongs in the whole foot.",
           "severity": 2
+        },
+        {
+          "id": "toes",
+          "label": "Weight on the toes",
+          "cue": "Weight through mid-foot",
+          "tip": "Rocking forward loads the kneecap. Feel the pressure across the whole foot.",
+          "severity": 2
+        },
+        {
+          "id": "depth",
+          "label": "Going too deep",
+          "cue": "Small bend — a third of the way",
+          "tip": "A mini squat is a short range on purpose; depth is added later, once it is painless.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -786,18 +931,49 @@
       "contraindications": "Dizziness on standing.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "hands",
           "label": "Pushing up with the hands",
-          "cue": "No hands",
+          "cue": "Arms crossed — no hands",
           "tip": "Cross the arms over the chest so the legs must do all the work.",
           "severity": 2
         },
         {
           "id": "drop",
           "label": "Dropping into the seat",
-          "cue": "Lower slowly",
+          "cue": "Sit down slowly",
           "tip": "The sit-down is half the exercise. Take three seconds and touch the seat lightly.",
           "severity": 2
+        },
+        {
+          "id": "thump",
+          "label": "Dropping into the chair",
+          "cue": "Sit down slowly",
+          "tip": "Falling into the seat skips the hardest and most useful part of the movement.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Throwing the body forward",
+          "cue": "Nose over toes, then up",
+          "tip": "A controlled forward lean is right; a lunge of the head and shoulders is momentum.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -850,7 +1026,7 @@
         {
           "id": "swing",
           "label": "Thigh swinging forward",
-          "cue": "Thigh still",
+          "cue": "Keep the thigh still",
           "tip": "The hip should not move — only the knee bends. Squeeze the buttock to keep the thigh pointing down.",
           "severity": 3,
           "metric": "thigh",
@@ -860,11 +1036,42 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "arch",
           "label": "Arching the lower back",
-          "cue": "Ribs down",
+          "cue": "Ribs down, no arching",
           "tip": "Brace the stomach lightly so the back does not sway as the heel rises.",
           "severity": 2
+        },
+        {
+          "id": "hipflex",
+          "label": "Thigh drifting forward",
+          "cue": "Knees side by side",
+          "tip": "If the thigh comes forward the hip is helping. Keep both knees level with each other.",
+          "severity": 2
+        },
+        {
+          "id": "partial",
+          "label": "Short of a right angle",
+          "cue": "Heel to your backside",
+          "tip": "Bend until the knee is at least ninety; short curls miss the range that matters.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -913,7 +1120,7 @@
         {
           "id": "leanback",
           "label": "Leaning back to help",
-          "cue": "Sit tall",
+          "cue": "Sit tall against the back",
           "tip": "Leaning back lets the hip flexors join in. Keep the trunk upright and the thigh on the seat.",
           "severity": 2,
           "metric": "trunk",
@@ -923,10 +1130,48 @@
           "persist": 300
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
+          "id": "thigh",
+          "label": "Thigh lifting off the seat",
+          "cue": "Thigh stays on the seat",
+          "tip": "A thigh that lifts turns this into a hip lift. Sit heavy and move only the shin.",
+          "severity": 2
+        },
+        {
           "id": "drop",
           "label": "Letting the leg drop",
-          "cue": "Lower slowly",
+          "cue": "Lower the leg slowly",
           "tip": "The lowering builds the muscle. Three seconds down, every rep.",
+          "severity": 1
+        },
+        {
+          "id": "hold",
+          "label": "No pause at the top",
+          "cue": "Hold two seconds at the top",
+          "tip": "The pause with the leg level is where the quad works hardest. Count it.",
+          "severity": 1
+        },
+        {
+          "id": "grip",
+          "label": "Gripping the seat",
+          "cue": "Hands resting, not pulling",
+          "tip": "Pulling on the chair braces the whole body and takes load off the thigh.",
           "severity": 1
         }
       ],
@@ -990,18 +1235,49 @@
       "contraindications": "Kneecap pain in the front leg, or hip flexor pain in the rear leg.",
       "faults": [
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "valgus",
           "label": "Front knee caving inward",
-          "cue": "Knee over toes",
+          "cue": "Knee over the middle toes",
           "tip": "Point the knee where the toes point. If it falls inward, shorten the stride and go shallower.",
           "severity": 3
         },
         {
           "id": "forward",
           "label": "Knee shooting forward",
-          "cue": "Straight down",
+          "cue": "Lower straight down",
           "tip": "Lower like an elevator, not a slide. The front shin stays near vertical.",
           "severity": 2
+        },
+        {
+          "id": "short",
+          "label": "Stride too short",
+          "cue": "Longer stride",
+          "tip": "A short stride drives the front knee far over the toes and loads the kneecap.",
+          "severity": 1
+        },
+        {
+          "id": "wobble",
+          "label": "Wobbling side to side",
+          "cue": "Feet hip-width apart",
+          "tip": "Set the feet on two rails, not a tightrope, and the balance problem disappears.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1056,15 +1332,29 @@
         {
           "id": "bend",
           "label": "Knee bending to cheat the stretch",
-          "cue": "Knee straight",
+          "cue": "Keep the knee straight",
           "tip": "A bent knee moves the stretch off the hamstring. Lower the leg until it can stay straight.",
           "severity": 2
         },
         {
           "id": "hiplift",
           "label": "Hip lifting off the floor",
-          "cue": "Hip down",
+          "cue": "Keep the hip down",
           "tip": "Keep the other leg and both hips on the floor; the stretch should be in the thigh, not the back.",
+          "severity": 2
+        },
+        {
+          "id": "other",
+          "label": "Other leg lifting off the floor",
+          "cue": "Other leg flat and heavy",
+          "tip": "If the other leg rises the pelvis has tipped and the stretch is coming from the back.",
+          "severity": 2
+        },
+        {
+          "id": "bounce",
+          "label": "Bouncing into the stretch",
+          "cue": "Hold still — no bouncing",
+          "tip": "A steady hold lengthens the muscle; bouncing makes it tighten to protect itself.",
           "severity": 2
         }
       ],
@@ -1133,16 +1423,30 @@
         {
           "id": "knee",
           "label": "Knee drifting forward or out",
-          "cue": "Knee points down",
+          "cue": "Point the knee at the floor",
           "tip": "Keep the two knees side by side. The stretch comes from the hip extending, not the knee flaring.",
           "severity": 2
         },
         {
           "id": "arch",
           "label": "Arching the back",
-          "cue": "Tuck the pelvis",
+          "cue": "Tuck the tailbone under",
           "tip": "Squeeze the buttock and tuck the tailbone under — that is where the stretch deepens.",
           "severity": 2
+        },
+        {
+          "id": "hold",
+          "label": "Holding the foot too hard",
+          "cue": "Ease off — gentle pull",
+          "tip": "Pulling the heel hard into the backside compresses the kneecap. A firm stretch is enough.",
+          "severity": 2
+        },
+        {
+          "id": "lean",
+          "label": "Leaning forward",
+          "cue": "Stand tall, chest up",
+          "tip": "Folding forward slackens the hip flexor and the stretch disappears.",
+          "severity": 1
         }
       ],
       "guide": {
@@ -1213,7 +1517,7 @@
         {
           "id": "hipdrop",
           "label": "Hip dropping on the free side",
-          "cue": "Hips level",
+          "cue": "Level the hips",
           "tip": "Think of lifting the free hip as you lower. A dropping pelvis means the standing hip is not holding you.",
           "severity": 3,
           "metric": "pelvis",
@@ -1224,11 +1528,42 @@
           "persist": 350
         },
         {
+          "id": "shallow",
+          "rule": "shallow",
+          "label": "Not reaching the target",
+          "cue": "All the way",
+          "tip": "Take each rep through the full range you set — half reps count as partials.",
+          "severity": 1
+        },
+        {
+          "id": "fast",
+          "rule": "fast",
+          "label": "Too fast",
+          "cue": "Slow it down",
+          "tip": "Control both directions; momentum takes the work away from the muscle.",
+          "severity": 1,
+          "minMs": 1500
+        },
+        {
           "id": "valgus",
           "label": "Knee caving inward",
-          "cue": "Knee over toes",
+          "cue": "Knee over the middle toes",
           "tip": "Keep the standing knee over the middle of the foot as you lower.",
           "severity": 3
+        },
+        {
+          "id": "speed",
+          "label": "Dropping instead of lowering",
+          "cue": "Three seconds down",
+          "tip": "The whole point is the slow lowering. If the heel lands with a thud, the step is too tall.",
+          "severity": 3
+        },
+        {
+          "id": "touch",
+          "label": "Taking weight on the lower foot",
+          "cue": "Tap, do not stand",
+          "tip": "The heel touches the floor and comes straight back. Weight stays on the top leg.",
+          "severity": 2
         }
       ],
       "guide": {
