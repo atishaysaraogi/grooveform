@@ -24,9 +24,22 @@ Boots the real server on a random port with a throwaway SQLite file, `NOTIFY_PRO
 
 Run: `npm test`. ~3 s.
 
+## 2b. The library files — `test/library.test.js` and `test/studio-save.test.js`
+
+The moves are data (`client/data/`), so the tests read the files the way the app does: every move file
+opens with its `_about` guide and the guide names exactly the fields a move may use; every file checks
+clean; a mistake is reported with the file, the move and a suggestion (`"sumary" — did you mean
+"summary"?`); the files are in the one style the tools write (`node scripts/catalog.js format`); every
+declared figure contact holds still; the tracking tier is honest. `studio-save.test.js` boots the server
+in development mode against a scratch copy of the data folder and exercises the Studio's *Save into
+the project* route: a clean file is written and the library re-read, a bad one is refused with its
+problems and nothing is written, a new region file lands in the manifest.
+
+Without a server: `node scripts/catalog.js check` runs the same file checks.
+
 ## 3. Browser end-to-end — `test/e2e.test.js`
 
-Drives the real UI in Chromium with a synthetic pose stream (`?mock=1` → `window.__mockPose(t)`), so a whole coached set runs without a camera. 15 steps across five browser contexts (a phone-sized anonymous visitor who becomes a free member, a curator, a Pro member, an admin):
+Drives the real UI in Chromium with a synthetic pose stream (`?mock=1` → `window.__mockPose(t)`), so a whole coached set runs without a camera. The Studio steps build a move from a recording and open an existing one as a copy — every catalogue move must round-trip through the Studio to the identical compiled move — and save it back into its file. Steps across five browser contexts (a phone-sized anonymous visitor who becomes a free member, a curator, a Pro member, an admin):
 
 visitor home and locks → free exercise coached set → "Sign in to save" → registration + consent → set saved → notes / session note / history filter → free-tier limits → curator registration + listing → hidden until subscribed → mock Curator checkout → appears in directory with filters → member requests, curator accepts → curator builds a routine with targets/notes and sends it → member sees it, pro exercise unlocked, completes it with effort + note → curator sees the set and comments → member sees the comment → ending the connection re-locks → Pro member checkout, copy prebuilt, edit, cancel keeps access → export + erasure → admin verifies → badge public → CSRF guard, zero JS errors.
 

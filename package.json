@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "NODE_ENV=development ADMIN_IDENTIFIER=${ADMIN_IDENTIFIER:-admin@example.com} node --watch server/index.js",
-    "test": "node --test test/api.test.js test/engine.test.js test/library.test.js test/spec.test.js",
+    "test": "node --test test/api.test.js test/engine.test.js test/library.test.js test/spec.test.js test/studio-save.test.js",
     "test:e2e": "node test/e2e.test.js",
     "keygen": "node -e \"const c=require('crypto');console.log('DATA_KEY='+c.randomBytes(32).toString('hex'));console.log('APP_SECRET='+c.randomBytes(32).toString('base64url'))\"",
     "test:solo": "node test/solo.test.js",

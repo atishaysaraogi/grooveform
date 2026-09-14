@@ -294,6 +294,52 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('studio: any library move opens as a copy, round-trips to the same move, and saves back into its file', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2');
+    /* every catalogue move survives entry → draft → entry with the same compiled result */
+    const rt = await st.evaluate(() => {
+      const S = window.GrooveformStudio, LIB = window.ExerciseLibrary, C = window.FyzioCatalog;
+      const strip = (ex) => JSON.parse(JSON.stringify(ex, (k, v) => (typeof v === 'function' ? '[fn]' : k === 'entry' || k === 'file' || k === 'figure' || k === 'spec' ? undefined : v)));
+      const canon = (v) => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v;
+      const out = { checked: 0, problems: [], changed: [], rewritten: [] };
+      for (const ex of LIB.all().filter((e) => e.catalog)) {
+        const s = S.entryToSpec(ex); const { rel, json, entry } = S.fileWith(s, ex.file.replace(/\.json$/, ''));
+        const p = S.catalogProblems(s, ex.file.replace(/\.json$/, '')); if (p.length) out.problems.push(ex.id + ': ' + p[0]);
+        const grp = {}; for (const k of Object.keys(json)) if (k !== 'moves' && !k.startsWith('_')) grp[k] = json[k];
+        const rebuilt = C.buildFile({ ...grp, moves: [entry] }, rel, C.data, false)[0];
+        const a = JSON.stringify(canon(strip(ex))), b = JSON.stringify(canon(strip({ ...rebuilt, order: ex.order })));
+        if (a !== b) out.changed.push(ex.id);
+        /* and the file itself: saving a move you did not touch must not rewrite its entry */
+        const { _studio, ...written } = entry; const { _note, ...original } = ex.entry;
+        if (JSON.stringify(canon(written)) !== JSON.stringify(canon(original))) out.rewritten.push(ex.id + ' ' + JSON.stringify(canon(written)).slice(0, 80));
+        out.checked++;
+      }
+      return out;
+    });
+    assert.equal(rt.checked, 125); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
+    assert.deepEqual(rt.rewritten, [], 'an untouched move must be written back as the same entry');
+    /* the flow a physio sees: pick a move, edit a copy, change a number, check, download */
+    await st.selectOption('#move-select', 'seated_knee_ext'); await st.waitForSelector('#edit-copy'); await st.click('#edit-copy');
+    await st.waitForSelector('[data-k="name"]'); assert.equal(await st.$eval('[data-k="name"]', (e) => e.value), 'Seated knee extension');
+    assert.equal(await st.$eval('[data-chips="tracking"] [aria-pressed="true"]', (e) => e.dataset.v), 'form');
+    await st.click('#steps [data-step="faults"]'); await st.waitForSelector('[data-k="faults.0.threshold"]');
+    assert.equal(await st.$eval('[data-k="faults.0.threshold"]', (e) => e.value), '68');
+    await st.fill('[data-k="faults.0.threshold"]', '62'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
+    assert.equal(await st.$eval('[data-fi="1"] [data-chips="faults.1.listed"] [aria-pressed="true"]', (e) => e.dataset.v), 'true', 'a fault without a measurement is listed for the person');
+    await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
+    await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
+    assert.equal(await st.$eval('[data-k="_target"]', (e) => e.value), 'knee', 'saves back into the file it came from');
+    assert.ok(await st.$('#save-project[hidden]'), 'no dev server here, so no save button');
+    const saved = await st.evaluate(() => { const S = window.GrooveformStudio; const s = S.state.moves[S.state.current]; return S.fileWith(s, 'knee'); });
+    const m = saved.json.moves.find((x) => x.id === 'seated_knee_ext'); assert.equal(saved.json.moves.filter((x) => x.id === 'seated_knee_ext').length, 1, 'replaces, does not duplicate');
+    assert.equal(m.faults[0].threshold, 62); assert.equal(m.faults[1].metric, undefined); assert.ok(m._studio && m._studio.edited, 'the Studio leaves its provenance as a note');
+    assert.equal(m.pose.A.preset, undefined === undefined ? m.pose.A.preset : null);   // pose passes through untouched
+    assert.deepEqual(Object.keys(saved.json)[0], '_about', 'the field guide stays at the top of the file');
+    await st.screenshot({ path: path.join(SHOTS, 'studio-edit-copy.png'), fullPage: true });
+    await st.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');

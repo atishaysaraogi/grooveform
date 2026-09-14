@@ -360,7 +360,8 @@
   if (typeof module !== 'undefined' && module.exports) {
     const path = require('node:path');
     const catalog = require('./catalog.js');
-    const DATA_DIR = path.join(__dirname, '..', 'data');
+    /* GROOVEFORM_DATA_DIR points a test at a scratch copy of client/data/; the app never sets it. */
+    const DATA_DIR = process.env.GROOVEFORM_DATA_DIR || path.join(__dirname, '..', 'data');
     const data = catalog.readDataSync(DATA_DIR);
     configure(data.settings); library.configure(data.settings);
     for (const f of data.manifest.code) require(path.join(__dirname, '..', f));

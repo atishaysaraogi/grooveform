@@ -61,8 +61,108 @@
       faults: [],
       guide: { surface: '', cannotSee: '', stop: '', regions: [{ name: 'Trunk & pelvis', points: [] }, { name: 'Working limb', points: [] }] },
       dosage: '', progression: '', regression: '', notes: '', muscles: {}, figure: null, order: 500,
+      tracking: 'form', level: 'beginner', equipmentText: 'none', muscleNames: { primary: [], secondary: [] }, tempo: '', contraindications: '', sourcesText: '',
       created: Date.now(),
     };
+  }
+  /* ---------- catalogue ⇄ Studio draft ----------
+     A catalogue move (client/data/moves/<file>.json) opens in the Studio as a draft with every field
+     filled, and a draft goes back as one entry in that file. The Studio's own fields (screen answers,
+     PT type, notes) travel in the entry under "_studio", which the loader ignores. */
+  const SHARED = () => (C.data && C.data.shared) || { measurements: {}, faults: {}, poses: {}, holds: {} };
+  const SETTINGS = () => (C.data && C.data.settings) || E.settings;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const listText = (a) => (a || []).join(', ');
+  const listFrom = (t) => String(t || '').split(/[,\n]+/).map((x) => x.trim()).filter(Boolean);
+  function entryToSpec(ex) {
+    const raw = ex.entry; const r = C.resolveEntry(raw, SHARED(), ex.id); const st = SETTINGS();
+    const s = blankSpec();
+    Object.assign(s, {
+      id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
+      camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, why: ex.why, calibrationPose: r.calibrationPose || '',
+      band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
+      tracking: ex.tracking, level: r.level || 'beginner', equipmentText: listText(ex.equipment), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
+      tempo: r.tempo || '', dosage: r.dosage || '', progression: r.progression || '', regression: r.regression || '', contraindications: r.contraindications || '',
+      sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
+      muscles: { ...((raw.pose && raw.pose.work) || {}) }, pose: raw.pose ? JSON.parse(JSON.stringify(raw.pose)) : null, figure: raw.figure || null,
+      minMs: r.minMs, focus: r.focus, order: raw.order, vetted: !!r.vetted,
+      _file: ex.file, _replaces: ex.id, _key: ex.id, created: Date.now(),
+    });
+    if (r.progress) s.progress = { targetIsDelta: false, ...r.progress };
+    if (r.hold) s.hold = { conditions: r.hold.conditions.map((c) => ({ rel: 'abs', min: null, max: null, ...c })) };
+    s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? (ex.type === 'reps' ? 0.3 : 0), persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
+    s.guide = { surface: '', cannotSee: '', stop: '', ...JSON.parse(JSON.stringify(r.guide || {})) };
+    if (!Array.isArray(s.guide.regions) || !s.guide.regions.length) s.guide.regions = [{ name: 'Trunk & pelvis', points: [] }];
+    if (raw._studio) { const m = raw._studio; s.screen = m.screen || {}; s.ptType = m.ptType || s.ptType; s.notes = m.notes || ''; }
+    return s;
+  }
+  /* fold a value back to its name in shared.json, so the file stays as tidy as a hand-written one */
+  const foldMetric = (m) => { for (const [n, v] of Object.entries(SHARED().measurements)) if (same(v, m)) return n; return m; };
+  function foldFault(f) {
+    const out = { ...f };
+    if (out.metric) out.metric = foldMetric(out.metric);
+    for (const [name, T] of Object.entries(SHARED().faults)) {
+      const keys = ['label', 'cue', 'tip', 'severity', 'metric', 'op', 'rel'];
+      if (!keys.every((k) => same(out[k], T[k]))) continue;
+      const r = { template: name };
+      for (const k of Object.keys(out)) if (!keys.includes(k) && !same(out[k], T[k])) r[k] = out[k];
+      if (T.threshold === undefined && r.threshold === undefined) r.threshold = out.threshold;
+      return r;
+    }
+    return out;
+  }
+  const isLive = (f) => !f.listed && f.metric && f.metric.pts.length >= ((SPEC.KINDS[f.metric.kind] || {}).n || 0) && Number.isFinite(f.threshold);
+  function specToEntry(s) {
+    const e = {};
+    const put = (k, v) => { if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return; e[k] = v; };
+    put('id', s.id); put('name', s.name); put('clinicalName', s.clinicalName); put('type', s.type); put('view', s.view); put('tracking', s.tracking || 'form');
+    if (s.vetted) put('vetted', true);
+    put('level', s.level); put('equipment', listFrom(s.equipmentText).length ? listFrom(s.equipmentText) : ['none']);
+    put('muscles', { primary: (s.muscleNames || {}).primary || [], secondary: (s.muscleNames || {}).secondary || [] });
+    if (s.sided) put('sided', { limb: s.sided.limb, by: s.sided.by });
+    if (s.upperBody) put('upperBody', true);
+    put('summary', s.summary); put('setup', s.setup); put('why', s.why); put('calibrationPose', s.calibrationPose);
+    put('camera', s.camera); put('targets', s.targets); put('defaultTarget', s.defaultTarget);
+    if (s.options && s.options.length) put('options', s.options);
+    if (s.band !== false && s.band !== undefined) put('band', s.band);
+    if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
+    const tracked = s.tracking !== 'none';
+    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start, target: s.progress.target }; if (s.progress.targetIsDelta) p.targetIsDelta = true; put('progress', p); }
+    if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; return o; }); if (cs.length) put('hold', { conditions: cs }); }
+    put('faults', (s.faults || []).map((f) => {
+      const base = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, severity: +f.severity || 2 };
+      if (f.rule) return { ...base, rule: f.rule, ...(f.rule === 'fast' ? { minMs: f.minMs } : {}) };
+      if (!tracked || !isLive(f)) return base;
+      const o = { ...base, metric: f.metric }; if (f.rel === 'change') o.rel = 'change'; o.op = f.op; o.threshold = f.threshold;
+      if (f.minP != null && f.minP !== 0) o.minP = f.minP; if (f.persist) o.persist = f.persist; if (f.cooldown) o.cooldown = f.cooldown; if (f.phase) o.phase = f.phase; if (f.invalidates) o.invalidates = true;
+      return foldFault(o);
+    }));
+    put('guide', { surface: s.guide.surface, stop: s.guide.stop, cannotSee: s.guide.cannotSee, regions: (s.guide.regions || []).filter((r) => r.name && r.points.some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) });
+    if (s.pose) { const pose = JSON.parse(JSON.stringify(s.pose)); if (Object.keys(s.muscles || {}).length) pose.work = { ...s.muscles }; put('pose', pose); }
+    else if (s.figure) put('figure', { ...s.figure, w: { ...(s.muscles || {}) } });
+    put('tempo', s.tempo); put('dosage', s.dosage); put('progression', s.progression); put('regression', s.regression); put('contraindications', s.contraindications);
+    const sources = listFrom(s.sourcesText.replace(/\n/g, ',')).map((line) => { const [name, url] = line.split('|').map((x) => x.trim()); return url ? { name, url } : { name }; });
+    put('sources', sources);
+    if (s.order && s.order !== 500) put('order', s.order);
+    e._studio = { screen: s.screen || {}, ptType: s.ptType, notes: s.notes || '', edited: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined };
+    return e;
+  }
+  /* the file this draft belongs in, with the draft in it (replacing the move it was opened from) */
+  const fileNames = () => (C.data ? C.data.manifest.moves : []).map((p) => p.replace(/^moves\//, '').replace(/\.json$/, ''));
+  function targetFileName(s) { if (s._file) return s._file.replace(/^moves\//, '').replace(/\.json$/, ''); const byGroup = (C.data ? C.data.files : []).find((f) => f.json.group === s.group); return byGroup ? byGroup.name.replace(/^moves\//, '').replace(/\.json$/, '') : (fileNames()[0] || 'knee'); }
+  function fileWith(s, name) {
+    const rel = 'moves/' + name + '.json';
+    const existing = C.data.files.find((f) => f.name === rel);
+    const json = existing ? JSON.parse(JSON.stringify(existing.json)) : { _about: (C.data.files[0] || { json: {} }).json._about, region: name, group: s.group || name, order: 2000 + fileNames().length * 100, camera: s.camera, sources: [], moves: [] };
+    const entry = specToEntry(s);
+    const i = json.moves.findIndex((m) => m.id === (s._replaces || s.id) || m.id === s.id);
+    if (i >= 0) json.moves[i] = entry; else json.moves.push(entry);
+    return { rel, json, entry, isNew: !existing };
+  }
+  function catalogProblems(s, name) {
+    if (!C.data) return ['the library has not loaded'];
+    try { const { rel, json } = fileWith(s, name); const others = C.data.files.filter((f) => f.name !== rel).flatMap((f) => f.json.moves.map((m) => m.id)); return C.checkFile(json, rel, C.data, others); }
+    catch (e) { return [e.message]; }
   }
   const builtin = (id) => LIB.get(id);
   const isBuiltin = (id) => !!builtin(id) && !state.moves[id];
@@ -202,7 +302,7 @@
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
       case 'guide': return !!(s.guide.surface && s.guide.stop && s.guide.cannotSee);
-      case 'export': return SPEC.checkSpec(s).length === 0;
+      case 'export': return catalogProblems(s, targetFileName(s)).length === 0;
     }
     return false;
   }
@@ -212,7 +312,7 @@
     const sel = $('move-select'); const specs = Object.entries(state.moves).sort((a, b) => (a[1].created || 0) - (b[1].created || 0));
     const opt = (v, t, dis) => `<option value="${esc(v)}" ${dis ? 'disabled' : ''} ${state.current === v ? 'selected' : ''}>${esc(t)}</option>`;
     sel.innerHTML = opt('', specs.length ? 'Your moves' : '— New move to begin —', true) + specs.map(([key, s]) => opt(key, (s.name || 'Untitled') + (SPEC.checkSpec(s).length ? ' ·' : ' ✓'))).join('')
-      + opt('', 'Built-in moves (record & check only)', true) + LIB.all().map((e) => opt(e.id, e.name)).join('');
+      + opt('', 'Library moves — open one, then “Edit a copy”', true) + LIB.all().filter((e) => !state.moves[e.id]).map((e) => opt(e.id, e.name + (e.catalog ? '' : ' (code)'))).join('');
     sel.value = state.current || '';
   }
   $('move-select').onchange = async (e) => { state.current = e.target.value || null; state.step = isBuiltin(state.current) ? 'record' : state.step; await loadTakes(); saveState(); render(); };
@@ -309,6 +409,8 @@
         ${field('One-sided?', chips('sidedKind', ['none', 'leg', 'arm', 'side'], s.sided ? s.sided.limb : 'none', { none: 'No — both at once', leg: 'One leg', arm: 'One arm', side: 'One side' }), 'A one-sided move offers Left / Right / Both on the page.')}
         ${s.sided ? field('Which limb is working is decided by', chips('sided.by', ['pick', 'camera'], s.sided.by, { pick: 'The person’s choice (front-on)', camera: 'The limb nearest the camera (side-on)' })) : ''}
         ${field('Upper body only', chips('upperBody', [false, true], s.upperBody, { false: 'Legs must be in frame', true: 'Works from the hips up' }), 'Upper-body moves can be done seated at a desk with only the torso in frame.')}
+        ${field('What the camera does', chips('tracking', ['form', 'reps', 'none'], s.tracking || 'form', { form: 'Counts and judges', reps: 'Counts only', none: 'Nothing — guide only' }), '“Counts and judges” needs at least one fault with a measurement and a threshold; “counts only” needs the progress measurement; “nothing” lists the guide and the person logs the set by hand.')}
+        ${field('Level', chips('level', ['beginner', 'intermediate', 'advanced'], s.level || 'beginner'))}
       </div></div>
       <div class="card"><div class="fields">
         <div class="fields two">${field('Camera height', chips('camera.height', ['floor', 'knee', 'hip', 'chest', 'eye'], s.camera.height))}${field('Distance', chips('camera.distance', ['1.5 m', '2 m', '2.5 m', '3 m'], s.camera.distance))}</div>
@@ -329,7 +431,7 @@
       if (k === 'targetsText') { const t = s.targetsText.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0); if (t.length) { s.targets = t; if (!t.includes(s.defaultTarget)) s.defaultTarget = t[Math.floor(t.length / 2)]; } }
       if (k === 'sidedKind') { const v = document.querySelector('[data-chips="sidedKind"] .chip[aria-pressed="true"]').dataset.v; s.sided = v === 'none' ? null : { limb: v, by: s.sided?.by || (s.view === 'side' ? 'camera' : 'pick') }; delete s.sidedKind; }
       if (k === 'ptType') { if (s.ptType === 'A' || s.ptType === 'D') s.type = 'reps'; if (s.ptType === 'B' || s.ptType === 'C') s.type = 'hold'; }
-      if (['sidedKind', 'ptType', 'targetsText', 'type', 'view', 'band', 'upperBody', 'sided.by'].includes(k)) { saveState(); render(); }
+      if (['sidedKind', 'ptType', 'targetsText', 'type', 'view', 'band', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
       else saveState();
     });
     document.querySelector('[data-chips="defaultTarget"]').dataset.num = '';
@@ -344,7 +446,7 @@
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
     const labels = [['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
     const sided = s ? !!s.sided : !!(ex && ex.sided);
-    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is a built-in move. Record takes here and see how its current rules fire on them (step 5).` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
+    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file">Analyze a video file…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
@@ -378,8 +480,14 @@
     if ((s && s.sided) || (ex && ex.sided)) rows.push(['Left', n((t) => t.side === 'L'), 1], ['Right', n((t) => t.side === 'R'), 1]);
     return `<div class="fires">${rows.map(([l, c, want]) => `<span class="${c >= want ? 'ok' : c ? 'warn' : ''}">${esc(l)} ${c}/${want}</span>`).join('')}</div>`;
   }
+  function editCopy(id) {
+    const ex = builtin(id); if (!ex || !ex.catalog) return;
+    try { const s = entryToSpec(ex); state.moves[s._key] = s; state.current = s._key; state.step = 'describe'; saveState(); loadTakes().then(render); toast('Editing a copy of ' + ex.name + ' — save it in step 7'); }
+    catch (e) { toast('Could not open: ' + e.message, 6000); }
+  }
   function wireRecord() {
     const s = cur();
+    if ($('edit-copy')) $('edit-copy').onclick = () => editCopy(state.current);
     if ($('back')) $('back').onclick = () => go('describe');
     $('next').onclick = () => go(s ? 'measure' : 'faults');
     $('take-label').onclick = (e) => { const b = e.target.closest('.chip'); if (!b) return; rec.label = b.dataset.v; $('take-label').querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c === b)); };
@@ -614,8 +722,9 @@
         ${field('Spoken cue <span class="wc ' + (wc(f.cue) > 6 ? 'over' : '') + '" id="wc-' + i + '">' + wc(f.cue) + '/6 words</span>', text(`faults.${i}.cue`, f.cue, 'Hip down'), 'Said mid-rep. Six words or fewer, imperative, no clinical terms.')}
         ${field('Written tip (read after the set)', area(`faults.${i}.tip`, f.tip, 'If the pelvis lifts on the working side the leg is being hitched, not lifted. Keep both hip bones level and accept a smaller raise.', 2))}
       </div>
+      ${isRule ? '' : field('Watched by', chips(`faults.${i}.listed`, [false, true], !!f.listed, { false: 'The camera — measured below', true: 'The person — listed on the page only' }))}
       ${isRule ? `<p class="notice">${f.rule === 'shallow' ? 'Built-in rule: the rep did not reach the target (peak between 32% and 85%). No measurement needed.' : `Built-in rule: the rep took less than <input type="number" data-k="faults.${i}.minMs" value="${f.minMs || 2000}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> ms.`}</p>`
-        : `${metricEditor(`faults.${i}.metric`, f.metric)}
+        : f.listed ? '<p class="notice">Listed under “what goes wrong” for the person to watch; the camera does not check it.</p>' : `${metricEditor(`faults.${i}.metric`, f.metric)}
         <div class="row" style="gap:14px">${field('Measured as', chips(`faults.${i}.rel`, ['abs', 'change'], f.rel || 'abs', { abs: 'Absolute', change: 'Change from start' }))}${field('Fault when', `<div class="row">${chips(`faults.${i}.op`, ['>', '<'], f.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.threshold" value="${f.threshold ?? ''}" style="width:100px"><span class="muted">${esc((SPEC.KINDS[f.metric.kind] || {}).unit || '')}</span><button class="btn ghost small" data-suggest="${i}">Suggest</button></div>`)}</div>
         <div class="row" style="gap:14px">${s.type === 'reps' ? field('Only once the rep is', chips(`faults.${i}.minP`, [0, 0.2, 0.3, 0.5], f.minP ?? 0.3, { 0: 'any time', 0.2: '20% under way', 0.3: '30% under way', 0.5: 'half way' })) : ''}${field('Must persist', chips(`faults.${i}.persist`, [250, 400, 600, 900], f.persist || 400, { 250: '¼ s', 400: '0.4 s', 600: '0.6 s', 900: '0.9 s' }))}${field('Invalidates the rep', chips(`faults.${i}.invalidates`, [false, true], !!f.invalidates, { false: 'No', true: 'Yes' }))}</div>
         ${state.takes.length ? `<canvas class="chart" id="chart-f${i}"></canvas>` : ''}`}
@@ -636,6 +745,7 @@
       const m = k.match(/^faults\.(\d+)\.(\w+)$/); if (!m) return; const i = +m[1], f = s.faults[i], key = m[2];
       if (key === 'label' && !f.idTouched) { f.id = f.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'fault' + i; root.querySelector(`[data-fi="${i}"] .muted`).textContent = 'id ' + f.id; }
       if (key === 'cue') { const el = $('wc-' + i); el.textContent = wc(f.cue) + '/6 words'; el.classList.toggle('over', wc(f.cue) > 6); }
+      if (key === 'listed') return rerender();
       if (['threshold', 'minMs', 'op', 'rel', 'minP', 'persist', 'invalidates', 'severity'].includes(key)) { resim(); if (key === 'rel') return rerender(); drawFaultCharts(s); const card = root.querySelector(`[data-fi="${i}"]`); card.querySelector('.fires').outerHTML = fireReport(f); }
     });
     wireMetricEditors(root, s, rerender);
@@ -688,9 +798,15 @@
           <button class="btn ghost small" data-addp="${ri}">Add a point</button></div>`).join('')}</div><button class="btn ghost small" id="addr" style="margin-top:8px">Add a region</button></div>
       </div><div class="stack">
         <div class="card"><div class="fields">
+          ${field('Tempo', text('tempo', s.tempo, 'Up 2 s, hold 1 s, down 3 s'))}
           ${field('Dosage (sets × reps or seconds, days per week)', text('dosage', s.dosage, '3 × 10, daily'))}
           ${field('Make it harder', text('progression', s.progression, 'Next band colour; add a 2-second pause at the top'))}
           ${field('Make it easier', text('regression', s.regression, 'No band; smaller range; hold the chair'))}
+          ${field('Do not do this if', text('contraindications', s.contraindications, 'Sharp pain in the joint; swelling that grows during the session'))}
+          ${field('Equipment', text('equipmentText', s.equipmentText, 'none — or: chair, band, door anchor'), 'Comma-separated. “(optional)” after an item says so.')}
+          ${field('Muscles — main', text('muscleNames.primaryText', listText((s.muscleNames || {}).primary), 'quadriceps, gluteus maximus'), 'Plain names, comma-separated. Shown in the details panel.')}
+          ${field('Muscles — also', text('muscleNames.secondaryText', listText((s.muscleNames || {}).secondary), 'hamstrings'))}
+          ${field('Sources', area('sourcesText', s.sourcesText, 'E3 Rehab — knee pain | https://…', 2), 'One per line: name | url. Added to the file’s own sources.')}
         </div></div>
         <div class="card"><h3>Muscles the figure should light up</h3><p class="muted" style="font-size:.85rem;margin-bottom:8px">Tap to cycle: off → some → most.</p><div class="muscles">${ANAT.regions.map((r) => `<button type="button" class="chip small" data-mus="${r}" aria-pressed="${(s.muscles[r] || 0) > 0}">${r}${s.muscles[r] ? ' · ' + (s.muscles[r] >= 1 ? 'most' : 'some') : ''}</button>`).join('')}</div></div>
         <div class="card"><h3>Demo figure</h3><p class="muted" style="font-size:.85rem">Built from a clean take: the start pose and the peak of the best rep become the two keyframes.</p>
@@ -700,7 +816,9 @@
       <div class="row"><button class="btn ghost" id="back">← Faults</button><span class="spacer"></span><button class="btn primary" id="next">Check &amp; export →</button></div></div>`;
   }
   function wireGuide(s) {
-    const root = $('main'); bind(root, s, () => { });
+    const root = $('main'); bind(root, s, (k) => {
+      if (k === 'muscleNames.primaryText' || k === 'muscleNames.secondaryText') { const which = k.includes('primary') ? 'primary' : 'secondary'; s.muscleNames = s.muscleNames || { primary: [], secondary: [] }; s.muscleNames[which] = listFrom(s.muscleNames[which + 'Text']); delete s.muscleNames[which + 'Text']; saveState(); }
+    });
     root.querySelectorAll('[data-tr]').forEach((b) => { b.onclick = () => { const [ri, pi] = b.dataset.tr.split('.').map(Number); const p = s.guide.regions[ri].points[pi]; p.tracked = !p.tracked; saveState(); render(); }; });
     root.querySelectorAll('[data-delp]').forEach((b) => { b.onclick = () => { const [ri, pi] = b.dataset.delp.split('.').map(Number); s.guide.regions[ri].points.splice(pi, 1); saveState(); render(); }; });
     root.querySelectorAll('[data-addp]').forEach((b) => { b.onclick = () => { s.guide.regions[+b.dataset.addp].points.push({ t: '', tracked: false }); saveState(); render(); const inputs = root.querySelectorAll(`[data-ri="${b.dataset.addp}"] input[type=text]`); }; });
@@ -751,7 +869,7 @@
 
   /* ===================== 7 · check & export ===================== */
   function moveFileSource(s) {
-    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', 'idTouched', 'screen', 'created', 'targetsText', 'romValues']) delete clean[k]; for (const f of clean.faults) delete f.idTouched;
+    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
     const credit = state.pt.name ? ` Authored with ${state.pt.name}.` : '';
     return `/* ${s.name} — written in Grooveform Studio.${credit}
    A declarative move: no code, only measurements and thresholds. It is compiled by
@@ -766,33 +884,52 @@
 })(typeof window !== 'undefined' ? window : globalThis);
 `;
   }
+  let devSave = null;   // null = not asked yet, false = not available (static site), { files } = the dev server will write files
+  async function probeDevSave() { if (devSave !== null) return devSave; try { const r = await fetch('../api/dev/catalog', { cache: 'no-store' }); devSave = r.ok ? await r.json() : false; } catch { devSave = false; } return devSave; }
   function exportPanel(s) {
-    const problems = SPEC.checkSpec(s); let libErr = null; let ex = null;
-    if (!problems.length) { try { ex = SPEC.compile(JSON.parse(JSON.stringify(s)), K); LIB.validate(ex); } catch (e) { libErr = e.message; } }
-    if (!problems.length && LIB.get(s.id) && !state.moves[s.id] && state.current !== s.id) problems.push('id "' + s.id + '" is already a built-in move');
+    const name = s._target || targetFileName(s);
+    const problems = catalogProblems(s, name);
     const warn = [];
     if (!state.takes.some((t) => t.label === 'clean')) warn.push('No clean take recorded — thresholds are guesses.');
-    for (const f of s.faults) if (!f.rule && !state.takes.some((t) => t.label === 'fault:' + f.id)) warn.push(`No take showing “${f.label}” — its threshold has not been checked against a real fault.`);
-    for (const t of state.takes.filter((t) => t.label === 'clean')) { const sim = state.sims[t.id]; if (sim && !sim.error) { const fired = Object.keys(sim.faultSpans); if (fired.length) warn.push(`A clean take still fires: ${fired.join(', ')}.`); if (s.type === 'reps' && sim.full < 2) warn.push('A clean take counts fewer than 2 reps — check the start/target or the calibration window.'); } }
+    for (const f of s.faults) if (!f.rule && !f.listed && !state.takes.some((t) => t.label === 'fault:' + f.id)) warn.push(`No take showing “${f.label}” — its threshold has not been checked against a real fault.`);
+    for (const t of state.takes.filter((t) => t.label === 'clean')) { const sim = state.sims[t.id]; if (sim && !sim.error) { const fired = Object.keys(sim.faultSpans); if (fired.length) warn.push(`A clean take still fires: ${fired.join(', ')}.`); if (s.type === 'reps' && s.tracking !== 'none' && sim.full < 2) warn.push('A clean take counts fewer than 2 reps — check the start/target or the calibration window.'); } }
     if (!state.takes.some((t) => t.label === 'borderline')) warn.push('No borderline take — the most valuable kind.');
-    if (!s.figure) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
+    if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
-    return `<div class="stack"><h2>7 · Check &amp; export</h2>
-      <div class="st-grid"><div class="card"><h3>${problems.length || libErr ? 'Not ready' : 'Ready to ship'}</h3><ul class="problems" style="margin:0;padding-left:18px">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}${libErr ? `<li>${esc(libErr)}</li>` : ''}${!problems.length && !libErr ? '<li class="ok">Spec complete and accepted by the library validator.</li>' : ''}</ul>
-        ${warn.length ? `<h3 style="margin-top:12px">Worth fixing</h3><ul style="margin:0;padding-left:18px;font-size:.9rem">${warn.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
-        ${ex ? `<p class="muted" style="font-size:.85rem;margin-top:10px">Landmarks required in frame: ${ex.required.join(', ')} · options: ${ex.options.map((o) => o.key).join(', ') || 'none'}</p>` : ''}</div>
-      <div class="card"><h3>Hand it over</h3><p style="font-size:.92rem">Two files. The <b>move file</b> drops into <code>client/coach/library/</code> and needs one script tag in <code>index.html</code>. The <b>session file</b> (top right) carries every move and take from today — send that too, so thresholds can be re-checked later without another recording session.</p>
-        <div class="row" style="margin-top:10px"><button class="btn primary" id="dl-js" ${problems.length || libErr ? 'disabled' : ''}>Download ${esc(s.id || 'move')}.js</button><button class="btn ghost" id="dl-json">Download spec JSON</button><button class="btn ghost" id="copy-js">Copy move file</button></div>
-        <div class="row" style="margin-top:10px"><button class="btn secondary" id="try">Try it in the app</button><span class="muted" style="font-size:.85rem">Opens Grooveform with this move added for this browser only.</span></div></div></div>
-      <div class="card"><h3>Move file preview</h3><pre class="code">${esc(moveFileSource(s))}</pre></div>
+    let preview = ''; try { preview = C.format(fileWith(s, name).entry); } catch (e) { preview = e.message; }
+    const ready = !problems.length;
+    return `<div class="stack"><h2>7 · Check &amp; save</h2>
+      <div class="st-grid"><div class="card"><h3>${ready ? 'Ready to ship' : 'Not ready'}</h3><ul class="problems" style="margin:0;padding-left:18px">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}${ready ? '<li class="ok">Checked exactly as the app loads it: every field name, every measurement, the library’s own rules.</li>' : ''}</ul>
+        ${warn.length ? `<h3 style="margin-top:12px">Worth fixing</h3><ul style="margin:0;padding-left:18px;font-size:.9rem">${warn.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>
+      <div class="card"><h3>Into the library</h3><p style="font-size:.92rem">The move becomes one entry in <code>client/data/moves/&lt;file&gt;.json</code>${s._replaces ? `, replacing <b>${esc(s._replaces)}</b>` : ''}. Every move in that file is the same kind of editable data.</p>
+        <div class="fields" style="margin-top:8px">${field('File', `<select data-k="_target">${fileNames().map((f) => `<option value="${esc(f)}" ${f === name ? 'selected' : ''}>${esc(f)}.json</option>`).join('')}</select>`)}</div>
+        <div class="row" style="margin-top:10px"><button class="btn primary" id="save-project" ${ready ? '' : 'disabled'} hidden>Save into the project</button><button class="btn primary" id="dl-file" ${ready ? '' : 'disabled'}>Download ${esc(name)}.json</button><span class="muted" id="save-note" style="font-size:.85rem"></span></div>
+        <div class="row" style="margin-top:10px"><button class="btn secondary" id="try">Try it in the app</button><span class="muted" style="font-size:.85rem">Opens the app with this move added, in this browser only.</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn ghost small" id="copy-entry">Copy the entry</button><button class="btn ghost small" id="dl-js">Download as code (.js)</button><button class="btn ghost small" id="dl-json">Download session spec</button></div></div></div>
+      <div class="card"><h3>The entry, as it will be written</h3><pre class="code">${esc(preview)}</pre></div>
       <div class="row"><button class="btn ghost" id="back">← Guide</button></div></div>`;
   }
   function download(name, content, type = 'application/octet-stream') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
   function wireExport(s) {
+    const name = s._target || targetFileName(s);
+    bind($('main'), s, (k) => { if (k === '_target') render(); });
+    probeDevSave().then((d) => { if (d && $('save-project')) { $('save-project').hidden = false; $('save-note').textContent = 'Local server running — saving writes client/data/moves/' + name + '.json'; } });
+    $('save-project').onclick = async () => {
+      const { rel, json } = fileWith(s, name);
+      try {
+        const r = await fetch('../api/dev/catalog/' + name, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' }, body: JSON.stringify(json) });
+        const d = await r.json();
+        if (!r.ok) { toast((d.problems || [d.error]).join(' · '), 8000); return; }
+        const f = C.data.files.find((x) => x.name === rel); if (f) f.json = json; else { C.data.files.push({ name: rel, json }); C.data.manifest.moves.push(rel); }
+        s._file = rel; s._replaces = s.id; saveState();
+        $('save-note').textContent = `Saved — ${d.moves} moves in ${rel}, ${d.library} in the library. Reload the app to see it; commit the file to keep it.`; toast('Saved into the project');
+      } catch (e) { toast('Save failed: ' + e.message, 6000); }
+    };
+    $('dl-file').onclick = () => { const { json } = fileWith(s, name); download(name + '.json', C.format(json) + '\n', 'application/json'); $('save-note').textContent = 'Drop it over client/data/moves/' + name + '.json and commit.'; };
+    $('copy-entry').onclick = async () => { try { await navigator.clipboard.writeText(C.format(fileWith(s, name).entry)); toast('Copied'); } catch { toast('Copy failed — use download'); } };
     $('dl-js').onclick = () => download(`${s.id}.js`, moveFileSource(s), 'text/javascript');
     $('dl-json').onclick = () => download(`${s.id || 'move'}.spec.json`, JSON.stringify(s, null, 2), 'application/json');
-    $('copy-js').onclick = async () => { try { await navigator.clipboard.writeText(moveFileSource(s)); toast('Copied'); } catch { toast('Copy failed — use download'); } };
-    $('try').onclick = () => { try { const drafts = JSON.parse(localStorage.getItem('grooveform.drafts') || '{}'); drafts[s.id] = s; localStorage.setItem('grooveform.drafts', JSON.stringify(drafts)); window.open('../#/exercise/' + s.id, '_blank'); } catch (e) { toast(e.message); } };
+    $('try').onclick = () => { try { const drafts = JSON.parse(localStorage.getItem('grooveform.drafts') || '{}'); const { json, entry } = fileWith(s, name); const grp = {}; for (const k of Object.keys(json)) if (k !== 'moves' && !k.startsWith('_')) grp[k] = json[k]; drafts[s.id] = { entry, group: grp }; localStorage.setItem('grooveform.drafts', JSON.stringify(drafts)); window.open('../#/exercise/' + s.id, '_blank'); } catch (e) { toast(e.message); } };
     $('back').onclick = () => go('guide');
   }
 
@@ -825,5 +962,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.GrooveformStudio = { state, simulate, trace, buildFigure, moveFileSource, render };
+  window.GrooveformStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, fileWith, catalogProblems, editCopy };
 })();

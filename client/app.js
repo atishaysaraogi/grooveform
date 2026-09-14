@@ -27,8 +27,9 @@
     const out = [];
     for (const id in drafts) {
       try {
-        const spec = drafts[id]; if (!window.MoveSpec || !window.ExerciseLibrary) break;
-        const e = ExerciseLibrary.get(id) || ExerciseLibrary.define((k) => MoveSpec.compile(spec, k));
+        const d = drafts[id]; if (!window.MoveSpec || !window.ExerciseLibrary) break;
+        /* a Studio draft is a catalogue entry (built the way the data files are) or, from older sessions, a bare spec */
+        const e = ExerciseLibrary.get(id) || (d.entry ? FyzioCatalog.buildFile({ ...(d.group || {}), moves: [d.entry] }, 'draft', FyzioCatalog.data, true)[0] : ExerciseLibrary.define((k) => MoveSpec.compile(d, k)));
         out.push({ id: e.id, name: e.name + ' (draft)', group: e.group, type: e.type, view: e.view, icon: e.icon, sided: e.sided || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map((f) => ({ id: f.id, label: f.label, tip: f.tip })), guide: e.guide, tier: 'free', locked: false, draft: true });
       } catch (err) { console.warn('draft move skipped:', id, err.message); }
     }
@@ -222,7 +223,7 @@
   }
   /* The fields a physio fills in. Every catalogue move carries them; hand-written moves carry what they have. */
   function physioCard(cat) {
-    const rows = [['Level', cat.level], ['Equipment', (cat.equipment || []).join(', ')], ['Muscles', cat.muscles ? [...(cat.muscles.primary || []), ...(cat.muscles.secondary || []).map(m => m + ' (secondary)')].join(', ') : ''], ['Tempo', cat.tempo], ['Dosage', cat.dosage], ['Progression', cat.progression], ['Regression', cat.regression], ['Do not do this if', cat.contraindications]].filter(r => r[1]);
+    const rows = [['Clinical name', cat.clinicalName], ['Start position', cat.calibrationPose], ['Level', cat.level], ['Equipment', (cat.equipment || []).join(', ')], ['Muscles', cat.muscles ? [...(cat.muscles.primary || []), ...(cat.muscles.secondary || []).map(m => m + ' (secondary)')].join(', ') : ''], ['Tempo', cat.tempo], ['Dosage', cat.dosage], ['Progression', cat.progression], ['Regression', cat.regression], ['Do not do this if', cat.contraindications]].filter(r => r[1]);
     if (!rows.length) return '';
     const src = (cat.sources || []).filter(s => s && s.name);
     return `<div class="card physio"><h3>Dosage and notes</h3><dl class="physio-dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${src.length ? `<p class="muted sources">Based on: ${src.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)).join(' · ')}. Wording is ours; check the source for the clinical detail.</p>` : ''}</div>`;
