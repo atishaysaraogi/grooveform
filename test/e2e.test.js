@@ -339,7 +339,10 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#steps [data-step="faults"]'); await st.waitForSelector('[data-k="faults.0.threshold"]');
     assert.equal(await st.$eval('[data-k="faults.0.threshold"]', (e) => e.value), '68');
     await st.fill('[data-k="faults.0.threshold"]', '62'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
-    assert.equal(await st.$eval('[data-fi="1"] [data-chips="faults.1.listed"] [aria-pressed="true"]', (e) => e.dataset.v), 'true', 'a fault without a measurement is listed for the person');
+    /* a fault with no measurement shows as person-watched — find it by id, not by position */
+    const listedAt = await st.evaluate(() => { const S = window.GrooveformStudio; const s = S.state.moves[S.state.current]; return s.faults.findIndex((f) => f.id === 'drop'); });
+    assert.ok(listedAt >= 0, 'the drop fault survived the round trip');
+    assert.equal(await st.$eval(`[data-chips="faults.${listedAt}.listed"] [aria-pressed="true"]`, (e) => e.dataset.v), 'true', 'a fault without a measurement is listed for the person');
     await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
     await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
     assert.equal(await st.$eval('[data-k="_target"]', (e) => e.value), 'knee', 'saves back into the file it came from');
