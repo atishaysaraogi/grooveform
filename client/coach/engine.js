@@ -139,6 +139,79 @@
     }
     return [...edges];
   }
+  /* ---------------- Camera tolerance ----------------
+     Every measurement is 2-D image geometry, so a phone that is not where the move asks for it
+     bends the numbers in known ways. Three corrections, all applied to the points the move
+     measures (never to the ones drawn over the video, which must stay on the body):
+
+       level    — the phone is rolled about its own lens axis (propped crooked), so "vertical" in
+                  the image is not gravity. Rotating every point by the roll puts it back. The
+                  roll comes from the phone's motion sensor when it has one, and otherwise from
+                  the body at calibration: a standing or sitting trunk is upright, a lying one is
+                  along the floor.
+       yaw      — the person is not square to the lens. Estimated from the shoulder and hip lines:
+                  MediaPipe gives each point a depth (z), so the angle of the shoulder line to the
+                  camera is read directly; without depth the width-to-torso ratio gives a rougher
+                  figure from population proportions, good enough to say "turn a little" but not
+                  to correct with.
+       unfore-  — off-axis by yaw, everything in the plane of the move is squashed in x by
+       shorten    cos(yaw). Dividing x by cos(yaw) undoes it. Only done when the yaw came from
+                  depth, i.e. was measured rather than assumed.
+     Numbers come from settings.json → camera. */
+  const rad = d => d * Math.PI / 180;
+  function rotatePts(pts, degrees, cx, cy) {
+    if (!pts || !degrees) return pts;
+    const c = Math.cos(rad(degrees)), s = Math.sin(rad(degrees));
+    return pts.map(p => p ? { ...p, x: cx + (p.x - cx) * c - (p.y - cy) * s, y: cy + (p.x - cx) * s + (p.y - cy) * c } : p);
+  }
+  function scaleX(pts, k, cx) {
+    if (!pts || !k || k === 1) return pts;
+    return pts.map(p => p ? { ...p, x: cx + (p.x - cx) * k } : p);
+  }
+  /* Roll of the image, in degrees: where gravity points in the picture, measured from straight
+     down (y-down coordinates: roll = atan2(down.x, down.y)). rotatePts(pts, +roll) levels it.
+     From the body at the calibration frame: a standing or sitting trunk points along gravity; a
+     lying one lies across it. null when the posture gives no safe reference. */
+  function rollFromBody(pts, posture) {
+    if (!pts) return null;
+    const sh = mid(pts[11], pts[12]), hp = mid(pts[23], pts[24]);
+    const dx = hp.x - sh.x, dy = hp.y - sh.y;
+    if (Math.hypot(dx, dy) < 0.05) return null;
+    if (posture === 'standing' || posture === 'sitting') return deg(Math.atan2(dx, dy));           // shoulder→hip is "down"
+    if (posture === 'lying' || posture === 'prone' || posture === 'sidelying') {
+      const a = deg(Math.atan2(dy, dx)); const t = a > 90 ? a - 180 : a < -90 ? a + 180 : a;       // trunk's angle from the floor line, either way the head points
+      return -t;                                                                                   // the floor is 90° from "down", so the picture's tilt is the opposite sign
+    }
+    return null;                                                                                   // kneeling covers upright and all-fours; no safe assumption
+  }
+  /* Yaw, degrees away from the ideal view, from the shoulder and hip lines. With depth (z) it is
+     measured outright. Without it, it is guessed from how the width-to-torso ratio has changed
+     since calibration (ratio0): facing the camera the width shrinks by cos(yaw) as they turn, a
+     self-calibrating read; side-on it grows from near nothing, so population proportions
+     (widthRatio) stand in. A guess is good enough to say "turn back", not to correct with. */
+  function yawOf(pts, view, cam, ratio0) {
+    if (!pts) return null;
+    const hasZ = [11, 12, 23, 24].some(i => Math.abs(pts[i].z || 0) > 1e-4);
+    if (hasZ) {
+      const line = (a, b) => { const dx = Math.abs(pts[a].x - pts[b].x), dz = Math.abs(pts[a].z - pts[b].z); return view === 'front' ? deg(Math.atan2(dz, dx)) : deg(Math.atan2(dx, dz)); };
+      /* shoulders are the wider, better-seen pair; hips steady it */
+      return { deg: 0.65 * line(11, 12) + 0.35 * line(23, 24), measured: true, ratio: orientation(pts).ratio };
+    }
+    const o = orientation(pts); const W = cam.widthRatio || 0.55;
+    const r = view === 'front' ? Math.min(1, o.ratio / (ratio0 || W)) : Math.min(1, Math.max(0, o.ratio - (ratio0 || 0)) / W);
+    return { deg: deg(view === 'front' ? Math.acos(r) : Math.asin(r)), measured: false, ratio: o.ratio };
+  }
+  /* The corrected points a move measures: levelled by the roll, then un-squashed by the yaw. The
+     pivot is the mid-hip so rotating and scaling do not move the body around the frame. */
+  function correctPts(pts, corr) {
+    if (!pts || !corr) return pts;
+    const hp = mid(pts[23], pts[24]); let out = pts;
+    if (corr.roll) out = rotatePts(out, corr.roll, hp.x, hp.y);
+    if (corr.stretch && corr.stretch !== 1) out = scaleX(out, corr.stretch, hp.x);
+    return out;
+  }
+  const Camera = { rotatePts, scaleX, rollFromBody, yawOf, correctPts };
+
   function bodyHeight(pts) {
     let miny = 1, maxy = 0; for (const i of [0, 11, 12, 23, 24, 25, 26, 27, 28]) { miny = Math.min(miny, pts[i].y); maxy = Math.max(maxy, pts[i].y); }
     return maxy - miny;
@@ -363,7 +436,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's FyzioCatalog.load() uses: settings first, then the hand-written code moves the

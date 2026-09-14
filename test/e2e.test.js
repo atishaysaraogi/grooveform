@@ -210,12 +210,17 @@ async function runCoachedSet(page, side = 'right') {
     await pro.goto(base + '/?mock=1#/exercise/shoulder_abd'); await pro.waitForSelector('#do-start');
     await pro.evaluate(() => {   // synthetic front-facing upper body: the LEFT arm (image right) raises out to the side
       function frame(map) { const pts = []; for (let i = 0; i < 33; i++) pts.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 }); for (const k in map) { const [x, y] = map[k]; pts[+k] = { x: x / (16 / 9) + 0.5 - 0.5 / (16 / 9), y, z: 0, visibility: 0.95 }; } return pts; }
-      function abd(raise) { const sh = [0.59, 0.30], a = raise * Math.PI / 180, up = 0.13, fo = 0.12; const el = [sh[0] + Math.sin(a) * up, sh[1] + Math.cos(a) * up], wr = [el[0] + Math.sin(a) * fo, el[1] + Math.cos(a) * fo];
-        return frame({ 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15], 11: sh, 12: [0.41, 0.30], 13: el, 14: [0.39, 0.42], 15: wr, 16: [0.38, 0.53], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95], 29: [0.55, 0.97], 30: [0.43, 0.97], 31: [0.57, 0.98], 32: [0.45, 0.98] }); }
+      /* the phone is propped 10° crooked: the whole picture is rolled (in the square, isotropic space frame() maps from), and the coach must level it from the upright trunk */
+      const rolled = (map) => { const c = Math.cos(-10 * Math.PI / 180), s = Math.sin(-10 * Math.PI / 180); const out = {}; for (const k in map) { const [x, y] = map[k]; out[k] = [0.5 + (x - 0.5) * c - (y - 0.5) * s, 0.5 + (x - 0.5) * s + (y - 0.5) * c]; } return out; };
       window.__mockPose = t => { if (t < 10500) return abd(0); const tt = t - 10500, rep = Math.floor(tt / 2800), ph = (tt % 2800) / 2800; if (rep >= 8) return abd(0); return abd(92 * Math.sin(Math.PI * ph)); };
+      function abd(raise) { const sh = [0.59, 0.30], a = raise * Math.PI / 180, up = 0.13, fo = 0.12; const el = [sh[0] + Math.sin(a) * up, sh[1] + Math.cos(a) * up], wr = [el[0] + Math.sin(a) * fo, el[1] + Math.cos(a) * fo];
+        return frame(rolled({ 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15], 11: sh, 12: [0.41, 0.30], 13: el, 14: [0.39, 0.42], 15: wr, 16: [0.38, 0.53], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95], 29: [0.55, 0.97], 30: [0.43, 0.97], 31: [0.57, 0.98], 32: [0.45, 0.98] })); }
+
     });
     await setBubble(pro, 'target', 8); await runCoachedSet(pro, 'left');   // this fixture raises the LEFT arm
-    const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted: ' + JSON.stringify(rec));
+    const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, camera: r.camera, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted on a crooked phone: ' + JSON.stringify(rec));
+    assert.equal(rec.camera && rec.camera.rollFrom, 'body', 'the 10° roll was read from the trunk, no sensor in a headless browser: ' + JSON.stringify(rec.camera));
+    assert.ok(Math.abs(rec.camera.roll - 10) < 2, 'and measured right: ' + JSON.stringify(rec.camera));
     assert.equal(rec.work, 'L', 'the chosen left arm is the working limb: ' + JSON.stringify(rec));
     /* the set opens by naming the side and describing the movement, before the count-in */
     assert.match(rec.opening || '', /^Left arm\./, 'the opening names the side: ' + JSON.stringify(rec.opening));

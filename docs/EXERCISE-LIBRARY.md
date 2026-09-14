@@ -358,6 +358,27 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
 
+### A phone that is not where the move asked
+
+Everything a move measures is 2‑D image geometry, so a phone off its ideal spot
+bends the numbers in known ways. The engine corrects three of them before a
+frame reaches `measure` (`FormEngine.Camera`; the skeleton drawn over the video
+is left alone so it stays on the body):
+
+| deviation | what happens | what the engine does |
+|---|---|---|
+| **roll** — the phone propped crooked | the whole picture turns, and every "vertical" reading with it | turns it back. The angle comes from the phone's motion sensor when it has one, otherwise from the body at calibration: a standing or sitting trunk is upright, a lying one lies along the floor (`camera.posture` decides). A sensor that disagrees with the body by more than a few degrees is not trusted. |
+| **yaw** — the person not square to the lens | everything in the plane of the move is squashed sideways by cos(yaw) | reads the turn from the shoulder and hip lines — measured outright when the pose model gives depth, guessed from how the width has changed since calibration when it does not — and stretches the picture back out when it was measured. Turning past `camera.tolerance` for `yawPersist` ms mid‑set gets a spoken "turn back". |
+| **distance / height** | scale and perspective | already absorbed: readings are `per: "torso"` and faults `rel: "change"`. |
+
+Pitch (the phone tilted back or forward) changes perspective, not which way is
+down, so it needs no correction beyond the two above. Numbers live in
+`settings.json` → `camera`; a move can set its own `camera.tolerance`. What was
+decided for a set is written into the recording as `camera`, so a doubtful
+correction can be seen in the review's JSON. `test/engine.test.js` runs the
+oracle recordings through a 12° roll and a 20° yaw and requires the same reps
+and faults out.
+
 ### The spoken opening
 
 A set does not start in silence. As the camera comes up — while the person is

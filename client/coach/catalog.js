@@ -235,14 +235,14 @@
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
     when: ['option', 'is', 'metric', 'rel', 'op', 'threshold'], scale: ['metric', 'rel', 'times'], display: ['label', 'unit', 'from', 'aim', 'condition'],
     guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
-    camera: ['height', 'distance', 'posture'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
+    camera: ['height', 'distance', 'posture', 'tolerance'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
     option: ['key', 'label', 'values', 'unit', 'default', 'labels'],
     pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side'],
     kfSide: ['preset', 'face', 'torso', 'neck', 'thigh', 'shin', 'foot', 'uarm', 'farm', 'thighF', 'shinF', 'footF', 'uarmF', 'farmF'],
     kfFront: ['preset', 'legL', 'legR', 'shinL', 'shinR', 'armL', 'armR', 'foreL', 'foreR', 'lean', 'headTilt', 'squat'],
     prop: ['kind', 'at', 'to', 'w', 'dy', 'dx', 'len', 'r', 'extend'],
     shared: ['measurements', 'faults', 'poses', 'holds'],
-    settings: ['rep', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
+    settings: ['rep', 'camera', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
   };
   const isNote = (k) => k.startsWith('_');
   const fail = (where, msg) => { const e = new Error(`${where}: ${msg}`); e.where = where; throw e; };

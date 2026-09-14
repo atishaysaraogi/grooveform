@@ -269,6 +269,64 @@
 
   /* ---------- live session ---------- */
   const smoother = new E.PoseSmoother();
+
+  /* ---------- phone roll from the motion sensor ----------
+     A phone propped crooked rolls the whole picture, and every "vertical" reading with it. The
+     accelerometer gives gravity in the phone's own frame; projected onto the screen and turned
+     by the screen's orientation it says where "down" is in the video, as an angle from straight
+     down (the engine's roll convention). Only the roll about the lens axis matters: tilting the
+     phone back or forward changes perspective, not which way is down. iOS asks once, on a tap. */
+  const levelSensor = {
+    roll: null, seen: 0, asked: false,
+    request() {
+      if (this.asked || typeof DeviceMotionEvent === 'undefined') return; this.asked = true;
+      const listen = () => window.addEventListener('devicemotion', (e) => this.onMotion(e), { passive: true });
+      try { if (typeof DeviceMotionEvent.requestPermission === 'function') DeviceMotionEvent.requestPermission().then((r) => { if (r === 'granted') listen(); }).catch(() => { }); else listen(); } catch (e) { }
+    },
+    onMotion(e) {
+      const g = e.accelerationIncludingGravity; if (!g || g.x == null || g.y == null) return;
+      /* gravity's reaction points up, so "down" on the screen is (-x, -y); the video has y downward */
+      let roll = Math.atan2(-g.x, g.y) * 180 / Math.PI;
+      const a = (screen.orientation && Number.isFinite(screen.orientation.angle)) ? screen.orientation.angle : (Number(window.orientation) || 0);
+      roll -= a; roll = ((roll + 540) % 360) - 180;
+      /* 180° means the picture is upside down (phone held the other way up) — not a roll to fix */
+      if (Math.abs(roll) > 90) roll = roll > 0 ? roll - 180 : roll + 180;
+      this.roll = this.roll == null ? roll : this.roll + 0.2 * (roll - this.roll); this.seen++;
+    },
+  };
+  /* What to correct this set by, decided at calibration and updated a little each frame. */
+  function cameraCorrection(ptsRaw) {
+    const cam = E.settings.camera || {}, ex = live.ex, posture = (ex.camera || {}).posture;
+    const body = cam.level === 'off' || cam.level === 'sensor' ? null : E.Camera.rollFromBody(ptsRaw, posture);
+    const sensor = cam.level === 'off' || cam.level === 'body' || live.file || levelSensor.seen < 5 ? null : levelSensor.roll;
+    /* the sensor is exact when the screen-to-picture mapping is right; if the body disagrees with it
+       by more than a few degrees, that mapping is suspect on this device and the body wins */
+    let roll = null, from = null;
+    if (sensor != null && Math.abs(sensor) <= (cam.maxRoll || 25) && (body == null || Math.abs(sensor - body) <= 8)) { roll = sensor; from = 'sensor'; }
+    else if (body != null && Math.abs(body) <= (cam.maxRoll || 25)) { roll = body; from = 'body'; }
+    const levelled = roll ? E.Camera.rotatePts(ptsRaw, roll, E.mid(ptsRaw[23], ptsRaw[24]).x, E.mid(ptsRaw[23], ptsRaw[24]).y) : ptsRaw;
+    /* at calibration the person has just passed the view check, so a guessed yaw starts at zero and
+       is read as change from here; a measured one (depth present) is taken as it is */
+    const yaw = E.Camera.yawOf(levelled, ex.view, cam, E.orientation(levelled).ratio);
+    const stretch = yaw && (cam.unforeshorten === 'always' || (cam.unforeshorten !== 'off' && yaw.measured)) ? 1 / Math.max(0.5, Math.cos(yaw.deg * Math.PI / 180)) : 1;
+    return { roll: roll || 0, rollFrom: from, sensorRoll: sensor, bodyRoll: body, yaw: yaw ? yaw.deg : 0, yawMeasured: !!(yaw && yaw.measured), ratio0: yaw ? yaw.ratio : null, stretch, tolerance: Number.isFinite((ex.camera || {}).tolerance) ? ex.camera.tolerance : (cam.tolerance || 25) };
+  }
+  /* The person turning mid-set: re-read the yaw each frame (smoothed), keep the stretch honest,
+     and say so once it has held past the tolerance. Returns the current yaw for the record. */
+  function watchYaw(ptsRaw, now) {
+    const c = live.corr; if (!c) return;
+    const cam = E.settings.camera || {};
+    const y = E.Camera.yawOf(ptsRaw, live.ex.view, cam, c.ratio0); if (!y) return;
+    c.yaw += 0.1 * (y.deg - c.yaw);
+    if (c.yawMeasured && cam.unforeshorten !== 'off') c.stretch = 1 / Math.max(0.5, Math.cos(c.yaw * Math.PI / 180));
+    if (c.yaw > c.tolerance) {
+      if (!live.turnedSince) live.turnedSince = now;
+      if (now - live.turnedSince > (cam.yawPersist || 1500) && now - (live.lastTurnCue || 0) > 6000) {
+        live.lastTurnCue = now; const cue = live.ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on to the camera';
+        if (voice.say(cue, { priority: 1, minGap: 1500 }) || voice.muted) { showCue(cue, 'info'); recEvent('turned', { yaw: Math.round(c.yaw), cue }); }
+      }
+    } else live.turnedSince = 0;
+  }
   function applySmoothing() { const [c, b] = SMOOTH[settings.smooth] || SMOOTH.med; smoother.setSmoothing(c, b); }
   applySmoothing();
   let live = null; // { ex, target, session, state, ... }
@@ -294,6 +352,7 @@
   async function startLive(ex, target, file = null) {
     current.ex = ex; current.target = target; mockT = 0;   /* mock clock restarts per set */
     voice.unlock();
+    if (!file) levelSensor.request();   /* same tap as the voice unlock: iOS wants a gesture for both */
     show('screen-live');
     $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant ? ' · ' + ((((ex.options || []).find((o) => o.key === 'variant') || {}).labels || {})[current.opts.variant] || current.opts.variant.toUpperCase()).split(' (')[0] : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
     /* The side was picked before the set, so name it on screen from the start — not only once
@@ -307,7 +366,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0 };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0 };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -373,10 +432,12 @@
     if (raw) live.lastPoseT = now;
     record(raw, now, aspect);
     const lost = now - live.lastPoseT > 400;
+    /* The skeleton and the framing checks belong on the picture as it is; the move measures a
+       levelled, un-squashed copy (see cameraCorrection) so a crooked or off-axis phone reads true. */
     draw(pts, aspect, W, H, lost);
     if (live.state === 'position') positionStep(pts, aspect, now, lost);
     else if (live.state === 'countdown') countdownStep(pts, now);
-    else if (live.state === 'active') activeStep(lost ? null : pts, now, lost);
+    else if (live.state === 'active') { if (pts && !lost) watchYaw(pts, now); activeStep(lost ? null : E.Camera.correctPts(pts, live.corr), now, lost); }
   }
 
   const SIDE_CODE = { left: 'L', right: 'R' };            // 'both' and undefined -> null (auto)
@@ -447,7 +508,8 @@
       const moving = live.prevHip && E.dist(hip, live.prevHip) > (live.file ? 0.03 : 0.012); live.prevHip = hip;
       if (moving) live.steadySince = now; else if (!live.steadySince) live.steadySince = now;
       const held = now - live.steadySince;
-      overlay('Hold your start position', live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.', { checks: c.checks, progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') });
+      const tilt = !live.file && levelSensor.seen >= 5 && levelSensor.roll != null && Math.abs(levelSensor.roll) >= 3 && Math.abs(levelSensor.roll) <= ((E.settings.camera || {}).maxRoll || 25) ? ` · phone tilted ${Math.round(Math.abs(levelSensor.roll))}°, corrected` : '';
+      overlay('Hold your start position', live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.', { checks: c.checks, progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt });
       if (held > (live.file ? 400 : 1200)) {
         /* The side was chosen before the set, so there is nothing to identify — start counting in. */
         live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0;
@@ -470,7 +532,8 @@
       const side = want || E.nearSide(pts);
       /* On a camera-side move the visible limb IS the working one, so record it for the review. */
       if (live.ex.sided && live.ex.sided.by === 'camera') live.session.opts.work = side;
-      live.session.calibrate(pts, side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref });
+      live.corr = cameraCorrection(pts); live.rec.camera = { ...live.corr };
+      live.session.calibrate(E.Camera.correctPts(pts, live.corr), side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref, camera: live.rec.camera });
       if (live.session.opts.work) $('live-name').textContent = `${live.ex.name} · ${sideName(live.session.opts.work)} ${limbWord(live.ex)}`;
       live.state = 'active'; hideOverlay(); voice.say('Go', { priority: 2 }); voice.beep(990, 0.12);
       showCue(live.ex.type === 'reps' ? 'Go — the coach is counting' : 'Hold it — timer running', 'good');

@@ -193,4 +193,87 @@ function trap(tilt, { shoulderUp = 0, turn = 0, handUp = 0 } = {}) {
   console.log('upper trap stretch:', { hold: review.holdSec, good: review.goodSec, side: sess.m.side, faults: faultsOf(review), cues, score: review.score });
   assert(review.holdSec >= 12 && review.holdSec <= 15, 'hold counted only while tilted: ' + review.holdSec); assert(review.faults.shoulder); assert(review.faults.turn); assert(review.faults.hand);
 }
+
+/* ---- Camera tolerance: the same recordings through a phone that is propped crooked (rolled)
+       and a person who is not square to the lens (yawed) must count and cue the same. ---- */
+{
+  const C = E.Camera;
+  /* the picture rolled by r degrees about its centre, then the person turned by y degrees about
+     the vertical axis through the hips — with depth for the far-side pairs, as the pose model gives */
+  const bend = (frames, { roll = 0, yaw = 0, view }) => frames.map((pts) => {
+    let out = pts.map(p => ({ ...p }));
+    if (view === 'side') for (const i of [12, 24, 14, 26, 28, 8]) out[i].z = 0.06;      // far side is behind the near side
+    if (yaw) { const hx = (out[23].x + out[24].x) / 2, c = Math.cos(yaw * Math.PI / 180), s = Math.sin(yaw * Math.PI / 180);
+      out = out.map(p => ({ ...p, x: hx + (p.x - hx) * c - p.z * s, z: (p.x - hx) * s + p.z * c })); }
+    if (roll) out = C.rotatePts(out, -roll, 0.5, 0.5);                                   // the picture turned the wrong way by `roll`
+    return out;
+  });
+  /* what the coach does: level and un-squash every measured frame using what it learned at calibration */
+  function runBent(ex, frames, opts, corrFrom) {
+    const sess = new E.SetSession(ex, { target: 100, ...opts }); const sm = new E.PoseSmoother();
+    let t = 0; const cues = []; const events = [];
+    const first = corrFrom(sm.update(frames[0], t, 1));
+    sess.calibrate(first.pts, E.nearSide(first.pts));
+    for (const f of frames) { t += 1000 / 30; const pts = C.correctPts(sm.update(f, t, 1), first.corr); const r = sess.step(pts, t); for (const c of r.cues) sess.ackCue(c.id, t); if (r.repCues[0]) sess.ackCue(r.repCues[0].id, t); cues.push(...r.cues.map(c => c.id), ...r.repCues.map(c => c.id)); if (r.repEvent) events.push(r.repEvent); }
+    return { review: sess.review(), cues, events };
+  }
+  const same = (a, b, what) => { assert.strictEqual(a.review.reps, b.review.reps, what + ': reps'); assert.strictEqual(a.review.partials, b.review.partials, what + ': partials'); assert.deepStrictEqual(Object.keys(faultsOf(a.review)).sort(), Object.keys(faultsOf(b.review)).sort(), what + ': faults ' + JSON.stringify([faultsOf(a.review), faultsOf(b.review)])); };
+
+  /* heel slide (lying, side view): 12° roll, corrected from the body */
+  { const hs = ex('heelslide'); const frames = [];
+    for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 100; i++) { const k = Math.sin(Math.PI * i / 100); frames.push(heelslide((r === 2 ? 60 : 95) * k, r === 1 && k > 0.5 ? 0.3 : 0, 0)); }
+    for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+    const straight = runBent(hs, frames, { rom: 90 }, (pts) => ({ pts, corr: null }));
+    const rolled = bend(frames, { roll: 12, view: 'side' });
+    const est = C.rollFromBody(new E.PoseSmoother().update(rolled[0], 0, 1), 'lying');
+    assert(Math.abs(est - 12) < 1.5, 'roll read back from the lying trunk: ' + est);
+    const fixed = runBent(hs, rolled, { rom: 90 }, (pts) => ({ pts: C.correctPts(pts, { roll: est }), corr: { roll: est } }));
+    const unfixed = runBent(hs, rolled, { rom: 90 }, (pts) => ({ pts, corr: null }));
+    console.log('heel slide rolled 12°:', { straight: faultsOf(straight.review), levelled: faultsOf(fixed.review), uncorrected: faultsOf(unfixed.review) });
+    same(fixed, straight, 'heel slide levelled');
+  }
+  /* heel slide yawed 20° with depth: the turn is measured and the picture stretched back */
+  { const hs = ex('heelslide'); const frames = [];
+    for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 100; i++) { const k = Math.sin(Math.PI * i / 100); frames.push(heelslide((r === 2 ? 60 : 95) * k, r === 1 && k > 0.5 ? 0.3 : 0, 0)); }
+    for (let i = 0; i < 40; i++) frames.push(heelslide(0));
+    const straight = runBent(hs, bend(frames, { view: 'side' }), { rom: 90 }, (pts) => ({ pts, corr: null }));
+    const yawed = bend(frames, { yaw: 20, view: 'side' });
+    const y = C.yawOf(new E.PoseSmoother().update(yawed[0], 0, 1), 'side', E.settings.camera);
+    assert(y.measured && Math.abs(y.deg - 20) < 2, 'yaw read back from depth: ' + JSON.stringify(y));
+    const corr = { stretch: 1 / Math.cos(y.deg * Math.PI / 180) };
+    const fixed = runBent(hs, yawed, { rom: 90 }, (pts) => ({ pts: C.correctPts(pts, corr), corr }));
+    const unfixed = runBent(hs, yawed, { rom: 90 }, (pts) => ({ pts, corr: null }));
+    console.log('heel slide yawed 20°:', { straight: { reps: straight.review.reps, partials: straight.review.partials }, stretched: { reps: fixed.review.reps, partials: fixed.review.partials }, uncorrected: { reps: unfixed.review.reps, partials: unfixed.review.partials } });
+    same(fixed, straight, 'heel slide un-foreshortened');
+  }
+  /* standing hip abduction (front view): 10° roll read from the upright trunk, 20° yaw from depth */
+  { const frames = [];
+    for (let i = 0; i < 40; i++) frames.push(hipabd(0));
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 80; i++) { const k = Math.sin(Math.PI * i / 80); frames.push(hipabd(32 * k, r === 1 ? 22 * k : 0, r === 3 ? 30 * k : 0)); }
+    for (let i = 0; i < 40; i++) frames.push(hipabd(0));
+    const ha = ex('hipabd');
+    const straight = runBent(ha, frames, { rom: 30 }, (pts) => ({ pts, corr: null }));
+    const rolled = bend(frames, { roll: 10, view: 'front' });
+    const est = C.rollFromBody(new E.PoseSmoother().update(rolled[0], 0, 1), 'standing');
+    assert(Math.abs(est - 10) < 1.5, 'roll read back from the standing trunk: ' + est);
+    const fixed = runBent(ha, rolled, { rom: 30 }, (pts) => ({ pts: C.correctPts(pts, { roll: est }), corr: { roll: est } }));
+    console.log('hip abduction rolled 10°:', { straight: faultsOf(straight.review), levelled: faultsOf(fixed.review) });
+    same(fixed, straight, 'hip abduction levelled');
+    const yawed = bend(frames, { yaw: 20, view: 'front' });
+    const y = C.yawOf(new E.PoseSmoother().update(yawed[0], 0, 1), 'front', E.settings.camera);
+    assert(y.measured && Math.abs(y.deg - 20) < 2, 'front yaw read back from depth: ' + JSON.stringify(y));
+    const corr = { stretch: 1 / Math.cos(y.deg * Math.PI / 180) };
+    const fy = runBent(ha, yawed, { rom: 30 }, (pts) => ({ pts: C.correctPts(pts, corr), corr }));
+    console.log('hip abduction yawed 20°:', { straight: faultsOf(straight.review), stretched: faultsOf(fy.review) });
+    same(fy, straight, 'hip abduction un-foreshortened');
+    /* without depth the turn is still noticed, from proportions, well enough to say "turn back" */
+    const flat = yawed.map(f => f.map(p => ({ ...p, z: 0 })));
+    const ratio0 = E.orientation(new E.PoseSmoother().update(frames[0], 0, 1)).ratio;
+    const g = C.yawOf(new E.PoseSmoother().update(flat[0], 0, 1), 'front', E.settings.camera, ratio0);
+    assert(!g.measured && Math.abs(g.deg - 20) < 3, 'a guessed yaw still reads a 20° turn from the width change: ' + JSON.stringify(g));
+  }
+}
+console.log('CAMERA TOLERANCE TESTS PASSED');
 console.log('ALL ENGINE TESTS PASSED');
