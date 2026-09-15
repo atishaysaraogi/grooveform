@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "intermediate",
   "equipment": ["none", "dumbbells (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["hamstrings", "calves"] },
   "sided": { "limb": "leg", "by": "camera" },
   "summary": "Step forward and lower until both knees are at about 90°, then push back to standing.",

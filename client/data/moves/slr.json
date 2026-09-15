@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "beginner",
   "equipment": ["none", "ankle weight (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["quadriceps", "hip flexors"], "secondary": ["abdominals"] },
   "sided": { "limb": "leg", "by": "camera" },
   "summary": "Lying on your back, lock the knee straight and lift the whole leg to the height of the other knee.",

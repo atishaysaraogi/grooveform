@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["dumbbell"],
+  "weight": "none",
   "muscles": { "primary": ["triceps"], "secondary": [] },
   "upperBody": true,
   "summary": "One dumbbell held overhead in both hands, lower it behind the head by bending the elbows, press back up.",

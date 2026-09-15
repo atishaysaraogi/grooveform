@@ -348,6 +348,9 @@
 
   // Resistance band grades — the colour scale lives in settings.json (band). 'none' = bodyweight only.
   const BAND = (dflt) => { const b = settingsOr().band; return { key: 'band', label: b.label, values: b.values.slice(), default: dflt, labels: { ...b.labels }, swatches: { ...b.swatches } }; };
+  /* Hand weight in kilograms — the steps live in settings.json (weight); 'custom' lets the person
+     type their own, and a number that is not one of the steps is that custom entry. */
+  const WEIGHT = (dflt) => { const w = settingsOr().weight || { label: 'Weight', unit: 'kg', values: ['none', 1, 2, 5, 'custom'], labels: {} }; return { key: 'weight', label: w.label, values: w.values.slice(), default: dflt, labels: { ...w.labels }, custom: w.values.includes('custom'), customUnit: w.unit || 'kg' }; };
   // Auto side selection that does not flicker at rest: keep the current side unless the other one moves clearly more (hysteresis of 8°).
   function stickySide(ref, rL, rR) { const cur = ref.autoSide || (rL >= rR ? 'L' : 'R'); const next = cur === 'L' ? (rR > rL + 8 ? 'R' : 'L') : (rL > rR + 8 ? 'L' : 'R'); ref.autoSide = next; return next; }
   /* ---- exercise library -------------------------------------------------
@@ -361,7 +364,7 @@
     ? require('./exercise-library.js') : root.ExerciseLibrary;
   if (!library) throw new Error('engine.js: load coach/exercise-library.js first');
   library.kinematics = {
-    LM, SIDE, BAND,
+    LM, SIDE, BAND, WEIGHT,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; },
     get settings() { return settingsOr(); },
     angle, armAngle, armRot, clamp, deg, dist, elbowGap, fromVertical, headTilt,
@@ -374,6 +377,8 @@
     constructor(opts = {}) {
       settingsOr(); this.rest = opts.rest ?? T.rest; this.attempt = opts.attempt ?? T.attempt; this.full = opts.full ?? T.full;
       this.minRep = opts.minRep ?? 600; this.turnHyst = opts.turnHyst ?? 0.12;
+      /* a rep with a hold: the top only counts once p has stayed at or above `full` for holdMs */
+      this.holdMs = opts.holdMs || 0; this.topMs = 0; this.lastT = null; this.holdDone = false;
       this.state = 'rest'; this.p = 0; this.peak = 0; this.t0 = 0; this.tPeak = 0; this.trough = 0; this.tTrough = 0;
       this.count = 0; this.partials = 0; this.reps = []; this.faultsThisRep = new Set();
       this.alpha = 0.4;
@@ -382,9 +387,11 @@
     update(pRaw, t) {
       this.p = this.p === null ? pRaw : this.alpha * pRaw + (1 - this.alpha) * this.p;
       const p = this.p; let ev = null;
+      const dt = this.lastT === null ? 0 : Math.min(Math.max(0, t - this.lastT), 200); this.lastT = t;
+      if (this.holdMs && this.state !== 'rest') { if (p >= this.full) { this.topMs += dt; if (!this.holdDone && this.topMs >= this.holdMs) { this.holdDone = true; ev = { type: 'held', ms: this.topMs }; } } }
       switch (this.state) {
         case 'rest':
-          if (p > this.attempt) { this.state = 'out'; this.t0 = t; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); }
+          if (p > this.attempt) { this.state = 'out'; this.t0 = t; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false; }
           break;
         case 'out':
           if (p > this.peak) { this.peak = p; this.tPeak = t; }
@@ -396,21 +403,23 @@
           else if (p < this.rest) { ev = this._finish(t, 'rest'); }
           else if (this.trough < this.attempt && p > this.trough + this.turnHyst) {
             // bounced at the bottom without fully resting (e.g. no lock-out) — close the rep at the trough and start the next
-            ev = this._finish(this.tTrough, 'out'); this.t0 = this.tTrough; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set();
+            ev = this._finish(this.tTrough, 'out'); this.t0 = this.tTrough; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false;
           }
           break;
       }
       return ev;
     }
     _finish(t, next) {
-      const duration = t - this.t0, full = this.peak >= this.full;
-      const rep = { n: 0, full, peak: this.peak, endP: this.p, duration, tDown: this.tPeak - this.t0, tUp: t - this.tPeak, t, faults: [...this.faultsThisRep] };
+      const duration = t - this.t0, reached = this.peak >= this.full, held = !this.holdMs || this.topMs >= this.holdMs, full = reached && held;
+      const rep = { n: 0, full, peak: this.peak, endP: this.p, duration, tDown: this.tPeak - this.t0, tUp: t - this.tPeak, t, faults: [...this.faultsThisRep], topMs: Math.round(this.topMs), shortHold: reached && !held };
       this.state = next;
       if (duration < this.minRep) return null;
       if (full) { this.count++; rep.n = this.count; } else this.partials++;
       this.reps.push(rep); return { type: 'rep', full, rep };
     }
     get phase() { return this.state === 'rest' ? 'rest' : 'moving'; }
+    /* at the top of a rep-with-hold: how long it has been held so far, else null */
+    get holding() { return this.holdMs && this.state !== 'rest' && this.p >= this.full ? this.topMs : null; }
     noteFault(id) { if (this.state !== 'rest') this.faultsThisRep.add(id); }
   }
 
@@ -450,7 +459,7 @@
   class SetSession {
     constructor(exercise, opts = {}) {
       this.ex = exercise; this.opts = opts; this.target = opts.target ?? exercise.defaultTarget;
-      this.ref = null; this.side = 'L'; this.counter = exercise.type === 'reps' ? new RepCounter() : null;
+      this.ref = null; this.side = 'L'; this.counter = exercise.type === 'reps' ? new RepCounter(exercise.repHold ? { holdMs: exercise.repHold * 1000 } : {}) : null;
       this.faults = new FaultTracker(exercise.faults);
       this.startT = null; this.lastT = null; this.holdMs = 0; this.goodMs = 0; this.lostMs = 0; this.frames = 0;
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
@@ -469,9 +478,10 @@
       const dt = this.lastT ? Math.min(t - this.lastT, 200) : 0; this.lastT = t; this.frames++;
       if (!pts) { this.lostMs += dt; return { m: this.m, cues: [], repEvent: null, done: false }; }
       const m = this.ex.measure(pts, this.side, this.ref); this.m = m;
-      let repEvent = null, phase = 'hold';
+      let repEvent = null, held = null, phase = 'hold';
       if (this.counter) {
         repEvent = this.counter.update(m.p, t); phase = this.counter.phase;
+        if (repEvent && repEvent.type === 'held') { held = repEvent; repEvent = null; }
         if (repEvent) {
           for (const f of this.ex.faults.filter(f => f.onRep)) if (f.check(repEvent.rep)) { repEvent.rep.faults.push(f.id); }
           for (const id of repEvent.rep.faults) this.repFaultCounts[id] = (this.repFaultCounts[id] || 0) + 1;
@@ -492,7 +502,7 @@
       const repCues = repEvent
         ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
-      return { m, cues, repCues, repEvent, done: this.complete };
+      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, done: this.complete };
     }
     review() {
       const ex = this.ex; const faultCounts = {}; const tips = [];

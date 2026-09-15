@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "beginner",
   "equipment": ["light dumbbells"],
+  "weight": "none",
   "muscles": { "primary": ["lateral deltoid"], "secondary": ["upper trapezius", "supraspinatus"] },
   "upperBody": true,
   "summary": "Light dumbbells by the sides, raise the arms out to shoulder height with soft elbows, lower slowly.",

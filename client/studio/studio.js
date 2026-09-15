@@ -55,7 +55,7 @@
     return {
       id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '', listed: undefined,
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
-      summary: '', setup: '', brief: '', why: '', band: false, options: [],
+      summary: '', setup: '', brief: '', why: '', band: false, weight: false, repHold: 0, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
       calibrationPose: '', showAsk: '',
       progress: { metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false },
@@ -85,7 +85,7 @@
       _fileCamera: grpCam ? { ...grpCam } : null,
       id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', listed: r.listed, group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
       camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, brief: ex.brief || '', why: ex.why, calibrationPose: r.calibrationPose || '', showAsk: (raw.show && raw.show.ask) || '',
-      band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
+      band: r.band === undefined ? false : r.band, weight: r.weight === undefined ? false : r.weight, repHold: ex.type === 'reps' && r.repHold ? r.repHold : 0, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
       tracking: ex.tracking, level: r.level || 'beginner', equipmentText: (ex.equipment || []).join('\n'), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
       tempo: r.tempo || '', dosage: r.dosage || '', progression: r.progression || '', regression: r.regression || '', contraindications: r.contraindications || '',
       sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
@@ -139,6 +139,8 @@
     put('icon', s.icon);
     if (s.options && s.options.length) put('options', s.options);
     if (s.band !== false && s.band !== undefined) put('band', s.band);
+    if (s.weight !== false && s.weight !== undefined) put('weight', s.weight);
+    if (s.type === 'reps' && s.repHold > 0) put('repHold', s.repHold);
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
     if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1;
@@ -541,7 +543,7 @@
   function wireScreen(s) { bind($('main'), s, (k) => { if (k.startsWith('screen')) { const v = verdictOf(s.screen); const el = $('verdict'); el.className = 'verdict ' + v.cls; el.textContent = v.text; } render(); }); $('next').onclick = () => go('describe'); }
 
   /* ===================== 2 · describe ===================== */
-  const PT_TYPES = { A: 'A · Rep with a range target', B: 'B · Timed hold in a position', C: 'C · Stretch (timed, anchor must not move)', D: 'D · One-sided rep or hold', E: 'E · Isometric — timer only', F: 'F · Balance (not supported yet)', G: 'G · Functional cycle (not supported yet)' };
+  const PT_TYPES = { A: 'A · Rep with a range target', B: 'B · Timed hold in a position', C: 'C · Stretch (timed, anchor must not move)', D: 'D · One-sided rep or hold', E: 'E · Isometric — timer only', F: 'F · Balance (not supported yet)', G: 'G · Functional cycle (not supported yet)', H: 'H · Rep with a hold at the top' };
   function describePanel(s) {
     const idHint = s.id ? (LIB.get(s.id) && !state.moves[s.id] ? 'That id is a built-in move — pick another.' : '') : 'Made from the name; letters, digits, underscores.';
     return `<div class="stack"><h2>2 · Describe it</h2><p class="lead">What the move is, what kind it is, and where the camera goes. The three text lines at the bottom appear on the exercise page word for word.</p>
@@ -549,8 +551,9 @@
         ${field('Name shown to the user', text('name', s.name, 'Side leg raise'), 'Consumer name. The clinical name goes below.')}
         ${field('Id', text('id', s.id, 'side_leg_raise'), idHint)}
         ${field('Group', text('group', s.group, 'Hip strength'), 'Shown as the eyebrow on the page. Reuse an existing one: ' + [...new Set(LIB.all().map((e) => e.group))].join(' · '))}
-        ${field('Exercise type', `<select data-k="ptType">${Object.entries(PT_TYPES).map(([k, v]) => `<option value="${k}" ${s.ptType === k ? 'selected' : ''}>${v}</option>`).join('')}</select>`, 'A and D count reps. B, C count seconds in position. E is a plain timer. F and G need engine work — note them and move on.')}
-        <div class="fields two">${field('Counts', chips('type', ['reps', 'hold'], s.type, { reps: 'Reps', hold: 'Seconds held' }))}${field('Camera view', chips('view', ['front', 'side'], s.view, { front: 'Facing the camera', side: 'Side-on' }))}</div>
+        ${field('Exercise type', `<select data-k="ptType">${Object.entries(PT_TYPES).map(([k, v]) => `<option value="${k}" ${s.ptType === k ? 'selected' : ''}>${v}</option>`).join('')}</select>`, 'A and D count reps. H counts reps that must pause at the top. B, C count seconds in position. E is a plain timer. F and G need engine work — note them and move on.')}
+        <div class="fields two">${field('Counts', chips('counts', ['reps', 'repHold', 'hold'], s.type === 'hold' ? 'hold' : (s.repHold > 0 ? 'repHold' : 'reps'), { reps: 'Reps', repHold: 'Reps with a hold', hold: 'Seconds held' }))}${field('Camera view', chips('view', ['front', 'side'], s.view, { front: 'Facing the camera', side: 'Side-on' }))}</div>
+        ${s.type === 'reps' && s.repHold > 0 ? field('Hold at the top for', chips('repHold', [1, 2, 3, 5], s.repHold, { 1: '1 s', 2: '2 s', 3: '3 s', 5: '5 s' }), 'A rep only counts once the reading has stayed at the target this long; reach the top and come straight down and it is a partial, cued “Hold it there”.') : ''}
         ${field('One-sided?', chips('sidedKind', ['none', 'leg', 'arm', 'side'], s.sided ? s.sided.limb : 'none', { none: 'No — both at once', leg: 'One leg', arm: 'One arm', side: 'One side' }), 'A one-sided move offers Left / Right / Both on the page.')}
         ${s.sided ? field('Which limb is working is decided by', chips('sided.by', ['pick', 'camera'], s.sided.by, { pick: 'The person’s choice (front-on)', camera: 'The limb nearest the camera (side-on)' })) : ''}
         ${s.sided && s.sided.by === 'pick' ? field('If no side was chosen', chips('sided.auto', [false, true], !!s.sided.auto, { false: 'Assume the left', true: 'Follow whichever limb moves' })) : ''}
@@ -561,6 +564,7 @@
       <div class="card"><div class="fields">
         <div class="fields two">${field('Camera height', chips('camera.height', ['floor', 'knee', 'hip', 'chest', 'eye'], s.camera.height))}${field('Distance', chips('camera.distance', ['1.5 m', '2 m', '2.5 m', '3 m'], s.camera.distance))}</div>
         ${field('Resistance band', chips('band', [false, 'none', 'yellow', 'red', 'green'], s.band, { false: 'No band option', none: 'Optional, default none', yellow: 'Default yellow', red: 'Default red', green: 'Default green' }), 'TheraBand colours; the user picks the colour, the app never describes resistance.')}
+        ${field('Weight', chips('weight', [false, 'none', 1, 2, 5], s.weight, { false: 'No weight option', none: 'Optional, default none', 1: 'Default 1 kg', 2: 'Default 2 kg', 5: 'Default 5 kg' }), 'The alternative to a band: a hand weight in kilograms — 1, 2, 5 or one the person types. A move may offer both.')}
         ${field('Rep / second choices offered', text('targetsText', (s.targets || []).join(', '), '6, 8, 10, 12, 15'), 'Default: the one marked *')}
         ${field('Default', chips('defaultTarget', s.targets, s.defaultTarget))}
         ${s.type === 'reps' ? field('Ask them to show the end position (optional)', area('showAsk', s.showAsk, 'arms straight out to the sides, level with your shoulders, nothing in your hands', 2), 'Only when the target depends on the body or the camera angle, or the equipment hides the joints. The person holds this pose once before the set and what it reads becomes the target; the number in step 4 stays as the fallback.') : ''}
@@ -586,17 +590,19 @@
       if (k === 'id') { s.idTouched = true; s.id = s.id.toLowerCase().replace(/[^a-z0-9_]/g, '_'); }
       if (k === 'targetsText') { const t = s.targetsText.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0); if (t.length) { s.targets = t; if (!t.includes(s.defaultTarget)) s.defaultTarget = t[Math.floor(t.length / 2)]; } }
       if (k === 'sidedKind') { const v = document.querySelector('[data-chips="sidedKind"] .chip[aria-pressed="true"]').dataset.v; s.sided = v === 'none' ? null : { limb: v, by: s.sided?.by || (s.view === 'side' ? 'camera' : 'pick') }; delete s.sidedKind; }
-      if (k === 'ptType') { if (s.ptType === 'A' || s.ptType === 'D') s.type = 'reps'; if (s.ptType === 'B' || s.ptType === 'C') s.type = 'hold'; }
+      if (k === 'ptType') { if (s.ptType === 'A' || s.ptType === 'D') { s.type = 'reps'; s.repHold = 0; } if (s.ptType === 'H') { s.type = 'reps'; s.repHold = s.repHold || 2; } if (s.ptType === 'B' || s.ptType === 'C') s.type = 'hold'; }
+      if (k === 'counts') { const v = s.counts; delete s.counts; s.type = v === 'hold' ? 'hold' : 'reps'; s.repHold = v === 'repHold' ? (s.repHold || 2) : 0; if (v === 'repHold' && !['H', 'D'].includes(s.ptType)) s.ptType = 'H'; }
       if (k === 'sided.auto' && s.sided && !s.sided.auto) delete s.sided.auto;
       const fm = k.match(/^faults\.(\d+)\.(\w+)$/);
       if (fm) { const f = s.faults[+fm[1]]; if (fm[2] === 'label' && !f.idTouched) f.id = f.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'fault' + fm[1]; if (fm[2] === 'listed') { saveState(); render(); return; } saveState(); return; }
-      if (['sidedKind', 'ptType', 'targetsText', 'type', 'view', 'band', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
+      if (['sidedKind', 'ptType', 'targetsText', 'type', 'counts', 'view', 'band', 'weight', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
       else saveState();
     });
     document.querySelectorAll('#fault-names [data-chips]').forEach((g) => { if (/severity$/.test(g.dataset.chips)) g.dataset.num = ''; });
     $('addf-name').onclick = () => { s.faults.push({ id: 'fault' + (s.faults.length + 1), label: '', cue: '', tip: '', severity: 2, listed: false, metric: { kind: 'angle', pts: [] }, rel: 'change', op: '>', threshold: null, minP: s.type === 'reps' ? 0.3 : 0, persist: 400, invalidates: false }); saveState(); render(); setTimeout(() => { const last = document.querySelector('#fault-names .fault-name:last-child input'); if (last) last.focus(); }, 0); };
     document.querySelectorAll('#fault-names [data-delf]').forEach((b) => { b.onclick = () => { s.faults.splice(+b.dataset.delf, 1); saveState(); render(); }; });
     document.querySelector('[data-chips="defaultTarget"]').dataset.num = '';
+    document.querySelectorAll('[data-chips="repHold"], [data-chips="weight"]').forEach((g) => { g.dataset.num = ''; });
     $('back').onclick = () => go('screen'); $('next').onclick = () => go('record');
   }
 
@@ -1058,14 +1064,16 @@
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lmPop.path) { e.preventDefault(); closeLmPop(); } });
   document.addEventListener('pointerdown', (e) => { if (lmPop.path && !e.target.closest('#lm-pop') && !e.target.closest('.slot')) closeLmPop(); });
-  const SEGMENTS = [['torso', 'torso'], ['SH-EL', 'upper arm'], ['EL-WR', 'forearm'], ['HIP-KNEE', 'thigh'], ['KNEE-ANK', 'shin'], ['SH-oSH', 'shoulder width'], ['HIP-oHIP', 'hip width'], ['EAR-oEAR', 'ear to ear'], ['SH-HIP', 'trunk']];
+  const SEGMENTS = [['torso', 'torso'], ['height', 'their height'], ['SH-EL', 'upper arm'], ['EL-WR', 'forearm'], ['HIP-KNEE', 'thigh'], ['KNEE-ANK', 'shin'], ['SH-oSH', 'shoulder width'], ['HIP-oHIP', 'hip width'], ['EAR-oEAR', 'ear to ear'], ['SH-HIP', 'trunk']];
   const PCT = ['dist', 'rise', 'height', 'ratio', 'gap', 'rotation', 'near'];
   /* the measurement's extras: what a % is of, which way is +, ignore the sign, negate for an option value */
   function metricExtras(m) {
     const spec = cur(); const opts = (spec && spec.options || []).filter((o) => Array.isArray(o.values) && o.values.length);
-    const per = Array.isArray(m.per) ? m.per.join('-') : 'torso';
+    const per = Array.isArray(m.per) ? m.per.join('-') : (m.per === 'height' ? 'height' : 'torso');
     const parts = [];
     if (PCT.includes(m.kind)) parts.push(`<label class="mini">% of <select data-mk="per">${SEGMENTS.map(([v, l]) => `<option value="${v}" ${v === per ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`);
+    /* a share of the person's height can be read as a real length, using the height they set in the app */
+    if (PCT.includes(m.kind) && per === 'height') parts.push(`<label class="mini">read in <select data-mk="unit"><option value="" ${!m.unit ? 'selected' : ''}>% of height</option><option value="in" ${m.unit === 'in' ? 'selected' : ''}>inches</option><option value="cm" ${m.unit === 'cm' ? 'selected' : ''}>centimetres</option></select></label>`);
     if (['gap', 'rotation', 'lean'].includes(m.kind)) parts.push(`<label class="mini">+ is <select data-mk="sign"><option value="outward" ${m.sign !== 'forward' ? 'selected' : ''}>away from the midline (front view)</option><option value="forward" ${m.sign === 'forward' ? 'selected' : ''}>the way the toes point (side view)</option></select></label>`);
     if (!['angle', 'ratio', 'dist', 'near', 'rise'].includes(m.kind)) parts.push(`<label class="mini"><input type="checkbox" data-mk="abs" ${m.abs ? 'checked' : ''}> ignore the sign</label>`);
     if (opts.length) parts.push(`<label class="mini">negate when <select data-mk="flip"><option value="">never</option>${opts.flatMap((o) => o.values.map((v) => `<option value="${esc(o.key + '=' + v)}" ${m.flip && m.flip.option === o.key && String(m.flip.when) === String(v) ? 'selected' : ''}>${esc(o.label)} = ${esc((o.labels || {})[v] || v)}</option>`)).join('')}</select></label>`);
@@ -1075,7 +1083,8 @@
     root.querySelectorAll('[data-mpath]').forEach((box) => {
       const get = () => box.dataset.mpath.split('.').reduce((o, k) => o[k], s);
       box.querySelectorAll('[data-mk]').forEach((el) => { el.onchange = () => { const m = get(); const k = el.dataset.mk;
-        if (k === 'per') { if (el.value === 'torso') delete m.per; else m.per = el.value.split('-'); }
+        if (k === 'per') { if (el.value === 'torso') delete m.per; else if (el.value === 'height') m.per = 'height'; else m.per = el.value.split('-'); if (m.per !== 'height') delete m.unit; }
+        if (k === 'unit') { if (!el.value) delete m.unit; else m.unit = el.value; }
         if (k === 'sign') { if (el.value === 'outward') delete m.sign; else m.sign = el.value; }
         if (k === 'abs') { if (el.checked) m.abs = true; else delete m.abs; }
         if (k === 'flip') { if (!el.value) delete m.flip; else { const [option, when] = el.value.split('='); const o = (s.options || []).find((x) => x.key === option); const v = o && o.values.find((x) => String(x) === when); m.flip = { option, when: v === undefined ? when : v }; } }
@@ -1122,7 +1131,7 @@
         </div><div class="stack">
           <div class="card"><div class="fields">
             ${field('Start value', `<div class="row">${chips('progress.startMode', ['calibrated', 'fixed'], pr.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed number' })}${pr.start === 'calibrated' ? '' : `<input type="number" step="1" data-k="progress.start" value="${esc(pr.start)}" style="width:110px">`}</div>`, 'Calibrated = whatever the metric reads while the person holds the start pose. Use it unless the start pose varies between people in a way that matters.')}
-            ${field('Target value', `<div class="row"><input type="number" step="1" data-k="progress.targetNum" value="${esc(typeof pr.target === 'number' ? pr.target : (romOpt ? romOpt.default : ''))}" style="width:110px" ${romOpt ? 'disabled' : ''}><span class="muted">${esc((SPEC.KINDS[pr.metric.kind] || {}).unit || '')}</span></div>`, pr.start === 'calibrated' ? (pr.targetIsDelta ? 'Interpreted as a change from the calibrated start.' : 'Absolute value the metric must reach.') : '')}
+            ${field('Target value', `<div class="row"><input type="number" step="1" data-k="progress.targetNum" value="${esc(typeof pr.target === 'number' ? pr.target : (romOpt ? romOpt.default : ''))}" style="width:110px" ${romOpt ? 'disabled' : ''}><span class="muted">${esc(SPEC.unitOf(pr.metric) || '')}</span></div>`, pr.start === 'calibrated' ? (pr.targetIsDelta ? 'Interpreted as a change from the calibrated start.' : 'Absolute value the metric must reach.') : '')}
             ${pr.start === 'calibrated' ? field('Target is', chips('progress.targetIsDelta', [false, true], !!pr.targetIsDelta, { false: 'An absolute value', true: 'A change from the start' })) : ''}
             ${pr.start === 'calibrated' && pr.targetIsDelta ? field('During the rep the reading', chips('progress.delta', [1, -1], pr.delta === -1 ? -1 : 1, { 1: 'rises', '-1': 'falls (a knee angle closing)' })) : ''}
             ${pr.start === 'calibrated' ? field('Treat the start as at least / at most', `<div class="row"><input type="number" step="1" data-k="progress.startMin" value="${pr.startMin ?? ''}" placeholder="min" style="width:90px"><input type="number" step="1" data-k="progress.startMax" value="${pr.startMax ?? ''}" placeholder="max" style="width:90px"></div>`, 'A knee that calibrates at 150° can be treated as 160°. Leave empty for no clamp.') : ''}
@@ -1154,7 +1163,7 @@
     bind(root, s, (k) => {
       if (k === 'progress.startMode') { s.progress.start = document.querySelector('[data-chips="progress.startMode"] .chip[aria-pressed="true"]').dataset.v === 'calibrated' ? 'calibrated' : (Number.isFinite(s.progress.start) ? s.progress.start : 0); delete s.progress.startMode; rerender(); return; }
       if (k === 'progress.targetNum') { const v = s.progress.targetNum; delete s.progress.targetNum; if (Number.isFinite(v)) { s.progress.target = v; resim(); drawMeasureCharts(s); } return; }
-      if (k === 'romMode') { const on = document.querySelector('[data-chips="romMode"] .chip[aria-pressed="true"]').dataset.v === 'true'; delete s.romMode; s.options = (s.options || []).filter((o) => o.key !== 'rom'); if (on) { const vals = [45, 60, 75, 90]; s.options.push({ key: 'rom', label: 'Range target', values: vals, unit: (SPEC.KINDS[s.progress.metric.kind] || {}).unit || '', default: vals[vals.length - 1] }); s.progress.target = 'opt:rom'; } else if (typeof s.progress.target === 'string') s.progress.target = 90; rerender(); return; }
+      if (k === 'romMode') { const on = document.querySelector('[data-chips="romMode"] .chip[aria-pressed="true"]').dataset.v === 'true'; delete s.romMode; s.options = (s.options || []).filter((o) => o.key !== 'rom'); if (on) { const vals = [45, 60, 75, 90]; s.options.push({ key: 'rom', label: 'Range target', values: vals, unit: SPEC.unitOf(s.progress.metric) || '', default: vals[vals.length - 1] }); s.progress.target = 'opt:rom'; } else if (typeof s.progress.target === 'string') s.progress.target = 90; rerender(); return; }
       if (k === 'romValues') { const o = s.options.find((x) => x.key === 'rom'); const vals = s.romValues.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n)); delete s.romValues; if (o && vals.length) { o.values = vals; o.default = vals[vals.length - 1]; resim(); drawMeasureCharts(s); } return; }
       if (k === 'progress.delta') { s.progress.delta = document.querySelector('[data-chips="progress.delta"] .chip[aria-pressed="true"]').dataset.v === '-1' ? -1 : 1; if (s.progress.delta === 1) delete s.progress.delta; resim(); drawMeasureCharts(s); return; }
       if (k === 'progress.startMin' || k === 'progress.startMax') { if (!Number.isFinite(s.progress[k.slice(9)])) delete s.progress[k.slice(9)]; resim(); drawMeasureCharts(s); return; }
@@ -1198,10 +1207,10 @@
       const series = takeSeries(pr.metric, 'abs'); const lines = [];
       const first = state.sims[state.takes[0].id]; const ref = first && first.session ? first.session.ref : null;
       if (ref) { lines.push({ y: ref.start, label: 'start', color: '#7a3fb8' }, { y: ref.target, label: 'target', color: '#ff2e88' }); }
-      if ($('chart-metric')) drawChart($('chart-metric'), series, { lines, yLabel: (SPEC.KINDS[pr.metric.kind] || {}).unit });
+      if ($('chart-metric')) drawChart($('chart-metric'), series, { lines, yLabel: SPEC.unitOf(pr.metric) });
       if ($('chart-p')) drawChart($('chart-p'), state.takes.filter(usable).map((t) => ({ data: (state.sims[t.id] && state.sims[t.id].p) || [], color: COLORS[labelOf(t)] || COLORS.other })), { lines: [{ y: E.FULL, label: 'full', color: '#4f9a1e' }, { y: E.ATTEMPT, label: 'attempt', color: '#ffb830' }, { y: E.REST, label: 'rest', color: '#7a3fb8' }], y0: 0, y1: 1, marks: state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].reps) || []).map((r) => ({ t: r.t, y: r.full ? 1 : 0.5, color: r.full ? '#4f9a1e' : '#ffb830' }))) });
     } else {
-      s.hold.conditions.forEach((c, i) => { const n = (SPEC.KINDS[c.metric.kind] || {}).n; if (c.metric.pts.length < n || !$('chart-c' + i)) return; drawChart($('chart-c' + i), takeSeries(c.metric, c.rel), { lines: [{ y: c.min, label: 'min', color: '#7a3fb8' }, { y: c.max, label: 'max', color: '#ff2e88' }], yLabel: (SPEC.KINDS[c.metric.kind] || {}).unit }); });
+      s.hold.conditions.forEach((c, i) => { const n = (SPEC.KINDS[c.metric.kind] || {}).n; if (c.metric.pts.length < n || !$('chart-c' + i)) return; drawChart($('chart-c' + i), takeSeries(c.metric, c.rel), { lines: [{ y: c.min, label: 'min', color: '#7a3fb8' }, { y: c.max, label: 'max', color: '#ff2e88' }], yLabel: SPEC.unitOf(c.metric) }); });
     }
   }
 
@@ -1241,7 +1250,7 @@
       ${isRule ? '' : field('Watched by', chips(`faults.${i}.listed`, [false, true], !!f.listed, { false: 'The camera — measured below', true: 'The person — listed on the page only' }))}
       ${isRule ? `<p class="notice">${f.rule === 'shallow' ? 'Built-in rule: the rep did not reach the target (peak between the attempt and full thresholds). No measurement needed.' : f.rule === 'return' ? `Built-in rule: the rep ended above <input type="number" step="0.05" data-k="faults.${i}.threshold" value="${f.threshold ?? 0.25}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> of the way to the target — it did not come all the way back.` : `Built-in rule: the rep took less than <input type="number" data-k="faults.${i}.minMs" value="${f.minMs || 2000}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> ms.`}</p>`
         : f.listed ? '<p class="notice">Listed under “what goes wrong” for the person to watch; the camera does not check it.</p>' : `${metricEditor(`faults.${i}.metric`, f.metric)}
-        <div class="row" style="gap:14px">${field('Measured as', chips(`faults.${i}.rel`, ['abs', 'change'], f.rel || 'abs', { abs: 'Absolute', change: 'Change from start' }))}${field('Fault when', `<div class="row">${chips(`faults.${i}.op`, ['>', '<'], f.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.threshold" value="${f.threshold ?? ''}" style="width:100px"><span class="muted">${esc((SPEC.KINDS[f.metric.kind] || {}).unit || '')}</span><button class="btn ghost small" data-suggest="${i}">Suggest</button></div>`)}</div>
+        <div class="row" style="gap:14px">${field('Measured as', chips(`faults.${i}.rel`, ['abs', 'change'], f.rel || 'abs', { abs: 'Absolute', change: 'Change from start' }))}${field('Fault when', `<div class="row">${chips(`faults.${i}.op`, ['>', '<'], f.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.threshold" value="${f.threshold ?? ''}" style="width:100px"><span class="muted">${esc(SPEC.unitOf(f.metric))}</span><button class="btn ghost small" data-suggest="${i}">Suggest</button></div>`)}</div>
         <div class="row" style="gap:14px">${s.type === 'reps'
           ? field('Check it', chips(`faults.${i}.phase`, ['', 'start'], f.phase === 'start' ? 'start' : '', { '': 'during the set', start: 'at the start position, before the set' }), START_HELP)
           : field('Watch it', chips(`faults.${i}.phase`, ['hold', 'any', 'start'], f.phase === 'start' ? 'start' : f.phase === 'any' ? 'any' : 'hold', { hold: 'while in position', any: 'any time — even out of position', start: 'at the start position, before the hold' }), START_HELP)}
@@ -1291,7 +1300,7 @@
     s.faults.forEach((f, i) => {
       const c = $('chart-f' + i); if (!c || f.rule) return; const n = (SPEC.KINDS[f.metric.kind] || {}).n; if (f.metric.pts.length < n) return;
       const spans = state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].faultSpans[f.id]) || []).map(([t0, t1]) => ({ t0, t1, color: shows(t, 'fault:' + f.id) ? 'rgba(255,46,136,.22)' : labelOf(t) === 'clean' ? 'rgba(209,32,107,.35)' : 'rgba(255,184,48,.25)' })));
-      drawChart(c, takeSeries(f.metric, f.rel), { lines: [{ y: f.threshold, label: 'threshold', color: '#ff2e88' }], spans, yLabel: (SPEC.KINDS[f.metric.kind] || {}).unit });
+      drawChart(c, takeSeries(f.metric, f.rel), { lines: [{ y: f.threshold, label: 'threshold', color: '#ff2e88' }], spans, yLabel: SPEC.unitOf(f.metric) });
     });
   }
   function suggestThreshold(s, f) {
@@ -1672,8 +1681,11 @@
       if (k === '_region') render();
       if (k === 'listed') { const v = document.querySelector('[data-chips="listed"] .chip[aria-pressed="true"]').dataset.v; s.listed = v === 'auto' ? undefined : v === 'yes'; saveState(); render(); return; }
       if (k === 'vetted') { const on = document.querySelector('[data-chips="vetted"] .chip[aria-pressed="true"]').dataset.v === 'true'; const t = tuningReport(s);
-        if (on && !t.pass) { s.vetted = false; toast('Vetted only once every live fault behaves on the takes', 5000); render(); return; }
-        s.vetted = on; if (on) s._tuned = { date: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, takes: state.takes.length, faults: t.rows.map((r) => r.id) }; else delete s._tuned; saveState(); render(); }
+        /* Vetted is the author's call. When the tuning report still fails it is said, and the
+           failing faults are written into the tuning record, so the override is on the file. */
+        const failing = on && !t.pass ? (t.rows.some((r) => !r.ok) ? t.rows.filter((r) => !r.ok).map((r) => r.id) : [t.reason]) : [];
+        if (failing.length) toast('Vetted anyway — ' + (t.rows.some((r) => !r.ok) ? failing.join(', ') + ' still misbehave' + (failing.length === 1 ? 's' : '') + ' on the takes' : t.reason) + '; that is noted in the tuning record', 6000);
+        s.vetted = on; if (on) s._tuned = { date: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, takes: state.takes.length, faults: t.rows.map((r) => r.id), ...(failing.length ? { override: failing } : {}) }; else delete s._tuned; saveState(); render(); }
     });
     probeDevSave().then((d) => { if (d && $('save-project')) { $('save-project').hidden = false; $('save-note').textContent = 'Local server running — saving writes client/data/moves/' + (s.id || 'id') + '.json'; } });
     $('save-project').onclick = async () => {

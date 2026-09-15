@@ -7,6 +7,7 @@
   "tracking": "none",
   "level": "beginner",
   "equipment": ["light dumbbells"],
+  "weight": "none",
   "muscles": { "primary": ["rear deltoid", "rhomboids"], "secondary": ["middle trapezius"] },
   "upperBody": true,
   "summary": "Hinged forward, raise light dumbbells out to the sides with soft elbows, squeezing the shoulder blades.",

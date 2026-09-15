@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["dumbbells or bags"],
+  "weight": "none",
   "upperBody": true,
   "muscles": { "primary": ["upper trapezius"], "secondary": ["levator scapulae"] },
   "summary": "Holding weights at the sides, lift the shoulders straight up toward the ears and lower slowly.",

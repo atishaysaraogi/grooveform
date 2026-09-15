@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["dumbbell", "bench or chair"],
+  "weight": "none",
   "muscles": { "primary": ["latissimus dorsi", "rhomboids"], "secondary": ["biceps", "rear deltoid"] },
   "upperBody": true,
   "sided": { "limb": "arm", "by": "camera" },

@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["none", "dumbbells (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["gluteus maximus", "quadriceps"], "secondary": ["hamstrings"] },
   "sided": { "limb": "leg", "by": "camera" },
   "summary": "Step back and lower until the back knee nearly touches, then drive up through the front heel.",

@@ -70,13 +70,38 @@
   }
   const midIdx = { mSH: [11, 12], mHIP: [23, 24], mEAR: [7, 8] };
   function torso(pts, k) { return Math.max(k.dist(k.mid(pts[11], pts[12]), k.mid(pts[23], pts[24])), 0.05); }
-  const segKey = (m, S) => (m.per && m.per !== 'torso' ? m.per.join('-') : 'torso') + ':' + S;
+  const segKey = (m, S) => (m.per && m.per !== 'torso' ? (m.per === 'height' ? 'height' : m.per.join('-')) : 'torso') + ':' + S;
+  /* The person's standing height in image units, estimated from the segments the pose model
+     gives on this frame: trunk (mid-shoulder to mid-hip) plus the longer thigh and the longer
+     shin, which between them are about 78 % of stature (Drillis & Contini); with the legs out
+     of frame the trunk alone, at about 29 %. Measured at calibration, so a bend later in the
+     set does not shrink the ruler. */
+  const STATURE = { trunk: 0.288, thigh: 0.245, shin: 0.246 };
+  function stature(pts, k) {
+    const seen = (i) => (pts[i].v ?? pts[i].visibility ?? 1) >= 0.5;
+    const trunk = torso(pts, k);
+    if ([25, 26, 27, 28].every(seen)) {
+      const thigh = Math.max(k.dist(pts[23], pts[25]), k.dist(pts[24], pts[26])), shin = Math.max(k.dist(pts[25], pts[27]), k.dist(pts[26], pts[28]));
+      return Math.max((trunk + thigh + shin) / (STATURE.trunk + STATURE.thigh + STATURE.shin), 0.1);
+    }
+    return Math.max(trunk / STATURE.trunk, 0.1);
+  }
+  const HEIGHT_UNITS = { in: 1, cm: 2.54 };
+  /* A metric in inches or centimetres reads a share of the person's height, then that share of
+     the height they gave the app (opts.heightIn, 5'11" when unset). */
+  const DEFAULT_HEIGHT_IN = 71;
+  function unitScale(m, opts) {
+    if (!m.unit) return 1;
+    const inch = (opts && Number.isFinite(opts.heightIn) ? opts.heightIn : DEFAULT_HEIGHT_IN) / 100;
+    return m.unit === 'cm' ? inch * 2.54 : inch;
+  }
   const lenKey = (m, S) => m.pts.join('-') + ':' + S;
 
   /* The reference length a % kind is divided by: the torso, or the segment `per`, as measured at
      calibration when there is one (ref), else on this frame. */
   function unitLen(m, pts, S, k, ref) {
     if (!m.per || m.per === 'torso') return ref && ref.torso ? ref.torso : torso(pts, k);
+    if (m.per === 'height') return ref && ref.stature ? ref.stature : stature(pts, k);
     const key = segKey(m, S);
     if (ref && ref.lens && ref.lens[key]) return ref.lens[key];
     return Math.max(k.dist(resolve(m.per[0], pts, S, k), resolve(m.per[1], pts, S, k)), 0.03);
@@ -125,6 +150,7 @@
       default: throw new Error('unknown metric kind ' + m.kind);
     }
     if (m.abs) v = Math.abs(v);
+    if (m.unit && m.per === 'height') v *= unitScale(m, opts || (ref && ref.opts));
     if (m.flip && opts) { const want = Array.isArray(m.flip.when) ? m.flip.when : [m.flip.when]; if (want.includes(opts[m.flip.option])) v = -v; }
     return v;
   }
@@ -145,7 +171,7 @@
      the reference lengths, the way the toes point. The Studio uses this to trace a metric over a
      take exactly as the coach would. */
   function calibrateRef(metrics, pts, k, opts) {
-    const ref = { torso: torso(pts, k), pts0: pts.map((p) => ({ x: p.x, y: p.y, z: p.z, v: p.v })), lens: {}, fwd: {}, base: { L: [], R: [] } };
+    const ref = { torso: torso(pts, k), stature: stature(pts, k), pts0: pts.map((p) => ({ x: p.x, y: p.y, z: p.z, v: p.v })), lens: {}, fwd: {}, base: { L: [], R: [] } };
     for (const S of ['L', 'R']) {
       const j = k.SIDE[S]; ref.fwd[S] = Math.sign(pts[j.FOOT].x - pts[j.HEEL].x) || 1;
       for (const m of metrics) {
@@ -158,7 +184,7 @@
   }
 
   const faultSettings = (k) => { const s = k.settings && k.settings.fault; if (!s) throw new Error('settings.json needs a fault section'); return s; };
-  const RULES = ['shallow', 'fast', 'return'];
+  const RULES = ['shallow', 'fast', 'return', 'shortHold'];
   /* When a fault is watched. The first four are inside a running set; "start" is the odd one out —
      it is checked once, on the start position, before the set begins, so a set-up error (feet too
      far away, band already taut, knee already bent) is said while it can still be fixed rather
@@ -179,6 +205,8 @@
     need(spec.name, 'name is missing');
     need(spec.group, 'group is missing');
     need(['reps', 'hold'].includes(spec.type), 'type must be reps or hold');
+    if (spec.repHold !== undefined && spec.repHold !== null && spec.repHold !== 0) { need(spec.type === 'reps', 'repHold (a hold at the top of each rep) is for a counted move — a timed move is a hold already'); need(Number.isFinite(spec.repHold) && spec.repHold > 0 && spec.repHold <= 30, 'repHold: seconds, more than 0 and at most 30'); }
+    if (spec.weight !== undefined && spec.weight !== false) need(spec.weight === true || spec.weight === 'none' || (Number.isFinite(spec.weight) && spec.weight > 0), 'weight must be true, "none" or a number of kilograms');
     need(['front', 'side'].includes(spec.view), 'view must be front or side');
     need(spec.summary, 'summary (one line for the tile) is missing');
     need(spec.setup, 'setup (where the camera goes) is missing');
@@ -187,7 +215,9 @@
     const mOk = (m, where) => {
       if (!m || !KINDS[m.kind]) { problems.push(where + ': pick a measurement'); return false; }
       const n = KINDS[m.kind].n; if ((m.pts || []).length < n) { problems.push(where + ': needs ' + n + ' landmarks'); return false; }
-      if (m.per !== undefined && m.per !== 'torso' && !(Array.isArray(m.per) && m.per.length === 2)) problems.push(where + ': per must be "torso" or two landmarks');
+      if (m.per !== undefined && m.per !== 'torso' && m.per !== 'height' && !(Array.isArray(m.per) && m.per.length === 2)) problems.push(where + ': per must be "torso", "height" or two landmarks');
+      if (m.unit !== undefined && !HEIGHT_UNITS[m.unit]) problems.push(where + ': unit must be "in" or "cm"');
+      if (m.unit !== undefined && m.per !== 'height') problems.push(where + ': inches or centimetres need per: "height" — nothing else on the body has a known length');
       if (m.sign !== undefined && !['outward', 'forward'].includes(m.sign)) problems.push(where + ': sign must be outward or forward');
       if (m.flip && !optKeys.includes(m.flip.option)) problems.push(where + ': flip refers to option "' + m.flip.option + '" which is not defined');
       return true;
@@ -307,6 +337,7 @@
     }
     for (const o of spec.options || []) options.push({ key: o.key, label: o.label, values: o.values.slice(), unit: o.unit, default: o.default, labels: o.labels ? { ...o.labels } : undefined });
     if (spec.band) options.push(BAND(spec.band === true ? 'none' : spec.band));
+    if (spec.weight !== undefined && spec.weight !== false) options.push(k.WEIGHT(spec.weight === true ? 'none' : spec.weight));
 
     const focusNames = (Array.isArray(spec.focus) ? spec.focus : spec.focus ? [spec.focus] : (prog ? [prog.metric.pts[prog.metric.pts.length - 1]] : holdConds.length ? [holdConds[0].metric.pts[0]] : [])).filter(Boolean);
     const autoSide = !!(spec.sided && spec.sided.auto);
@@ -440,6 +471,8 @@
       if (f.rule === 'shallow') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
       if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
       if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
+      /* the top was reached but not held for the move's repHold seconds */
+      if (f.rule === 'shortHold') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => !!rep.shortHold };
       const gate = f.minP == null ? 0 : f.minP;
       const over = (m) => m.gates[f.id] && (f.op === '>' ? m['f_' + f.id] > f.threshold : m['f_' + f.id] < f.threshold);
       /* the start position, judged once before the set: no progress gate to pass and no held
@@ -459,7 +492,7 @@
       summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why, show: spec.show || null, showTarget,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
-      calibrate, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,
+      calibrate, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted, repHold: spec.type === 'reps' && spec.repHold ? spec.repHold : 0,
       guide: { surface: spec.guide.surface, stop: spec.guide.stop, cannotSee: spec.guide.cannotSee, regions: spec.guide.regions.filter((r) => r.name && (r.points || []).some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) },
       display: spec.display || null, enterCue: spec.enterCue || null, metrics, iProg, holdConds,
       spec,
@@ -473,6 +506,8 @@
     return ex;
   }
 
-  const api = { KINDS, NAMES, RULES, PHASES, compile, checkSpec, evalMetric, calibrateRef, metricLandmarks, describeKind, resolve };
+  /* the unit a metric reads in: its own (inches, centimetres) or the kind's (°, %) */
+  const unitOf = (m) => (m && m.unit) || ((KINDS[m && m.kind] || {}).unit) || '';
+  const api = { KINDS, NAMES, RULES, PHASES, compile, checkSpec, evalMetric, calibrateRef, metricLandmarks, describeKind, resolve, stature, unitOf, DEFAULT_HEIGHT_IN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MoveSpec = api;
 })(typeof window !== 'undefined' ? window : globalThis);

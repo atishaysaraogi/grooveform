@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "beginner",
   "equipment": ["dumbbells"],
+  "weight": "none",
   "muscles": { "primary": ["biceps"], "secondary": ["forearm flexors"] },
   "upperBody": true,
   "sided": { "limb": "arm", "by": "camera" },

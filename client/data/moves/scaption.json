@@ -11,6 +11,7 @@
   "muscles": { "primary": ["supraspinatus", "deltoid"], "secondary": ["lower trapezius", "serratus anterior"] },
   "sided": { "limb": "arm", "by": "pick" },
   "band": true,
+  "weight": "none",
   "summary": "Raise a straight arm to shoulder height about 30° in front of the side, thumb up.",
   "setup": "Face the phone with a light weight, thumb pointing up. Raise the arm in the plane of the shoulder blade — a little in front of straight out to the side — to shoulder height, then lower slowly.",
   "brief": "Stand with a light weight, thumb pointing up. Raise the arm in the plane of the shoulder blade to shoulder height, then lower slowly.",

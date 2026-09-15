@@ -5,7 +5,7 @@
 const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path'); const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 process.env.DB_PATH = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fyzio-e2e-')), 'e2e.sqlite'); process.env.PORT = '0'; process.env.NODE_ENV = 'test'; process.env.NOTIFY_PROVIDER = 'console'; process.env.PAYMENT_PROVIDER = 'mock';
-process.env.ADMIN_IDENTIFIER = 'admin@fyzio.test'; process.env.FREE_EXERCISES = 'hipabd,plank'; process.env.SOLO_MODE = 'false';   // marketplace flows on; solo mode is covered by test/solo.test.js   // hip abduction free so the mock pose stream can drive an anonymous set
+process.env.ADMIN_IDENTIFIER = 'admin@fyzio.test'; process.env.FREE_EXERCISES = 'hipabd,plank,goblet_squat'; process.env.SOLO_MODE = 'false';   // marketplace flows on; solo mode is covered by test/solo.test.js   // the goblet squat is free so a visitor sees its weight bubble; hip abduction free so the mock pose stream can drive an anonymous set
 const { start, server } = require('../server/index.js');
 const SHOTS = path.join(__dirname, '..', 'docs', 'screenshots'); fs.mkdirSync(SHOTS, { recursive: true });
 
@@ -617,6 +617,87 @@ async function runCoachedSet(page, side = 'right') {
     assert.ok(!/—/.test(said.text) && !/×/.test(said.text), 'and the typography is not: ' + said.text);
     assert.equal(said.voice, 'Microsoft Sonia Online (Natural) - English (United Kingdom)');
     await page.close();
+  });
+
+  await step('reps with a hold, a hand weight, height in the settings, the animation toggle on the page, vetted as the author\'s call', async () => {
+    const page = await newPage();
+    /* Settings: the person's height, 5'11" unless they say otherwise */
+    await page.goto(base + '/?mock=1#/settings'); await page.waitForSelector('#cs-height');
+    assert.equal(await page.$eval('#cs-height', (e) => e.value), '71', 'default height is 5\'11"');
+    assert.match(await page.$eval('#cs-height', (e) => e.selectedOptions[0].textContent), /5'11" \(180 cm\)/);
+    await page.selectOption('#cs-height', '60');
+    assert.equal(await page.evaluate(() => window.OnTrackCoach.settings.heightIn), 60, 'the height is a number of inches in the coach settings');
+    await page.selectOption('#cs-height', '71');
+    /* The exercise page: the animation toggle sits beside the figure and is the same setting as Settings */
+    await page.goto(base + '/?mock=1#/exercise/goblet_squat'); await page.waitForSelector('#do-start');
+    assert.ok(await page.$('#demo-host svg.demo-fig'), 'stick figure by default');
+    assert.equal(await page.$eval('.fig-toggle [data-fig="lines"]', (e) => e.getAttribute('aria-pressed')), 'true');
+    await page.click('.fig-toggle [data-fig="muscles"]');
+    await page.waitForSelector('#demo-host canvas.demo-fig.muscle');
+    assert.equal(await page.evaluate(() => window.OnTrackCoach.settings.figure), 'muscles', 'the toggle writes the setting');
+    await page.goto(base + '/?mock=1#/settings'); await page.waitForSelector('#cs-figure');
+    assert.equal(await page.$eval('#cs-figure', (e) => e.value), 'muscles', 'and Settings shows the same choice');
+    await page.selectOption('#cs-figure', 'lines');
+    /* A dumbbell move offers a weight: none → 1 → 2 → 5 kg → Other…, where the person types their own */
+    await page.goto(base + '/?mock=1#/exercise/goblet_squat'); await page.waitForSelector('.bubble[data-optkey="weight"]');
+    const w = '.bubble[data-optkey="weight"]';
+    assert.equal(await page.$eval(w, (e) => e.textContent.trim()), 'No weight');
+    for (const want of ['1 kg', '2 kg', '5 kg']) { await page.click(w); assert.equal(await page.$eval(w, (e) => e.textContent.trim()), want); }
+    await page.click(w); await page.waitForSelector('.bubble-in');
+    await page.fill('.bubble-in', '7.5'); await page.keyboard.press('Enter');
+    await page.waitForFunction(() => !document.querySelector('.bubble-in'));
+    assert.equal(await page.$eval(w, (e) => e.textContent.trim()), '7.5 kg', 'the typed weight sits on the bubble');
+    await page.click(w); assert.equal(await page.$eval(w, (e) => e.textContent.trim()), 'No weight', 'and the next tap wraps round');
+    await page.click(w); await page.click(w); await page.click(w); await page.click(w); await page.waitForSelector('.bubble-in');
+    await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.bubble-in'));
+    assert.equal(await page.$eval(w, (e) => e.textContent.trim()), 'No weight', 'an empty box falls back to no weight');
+    /* every dumbbell move offers it; a bodyweight one does not */
+    const offered = await page.evaluate(() => window.ExerciseLibrary.all().filter((e) => e.options.some((o) => o.key === 'weight')).map((e) => e.id));
+    assert.ok(offered.includes('goblet_squat') && offered.includes('biceps_curl') && !offered.includes('bodyweight_squat'), offered.join(','));
+    await page.close();
+
+    /* Studio: the third kind of counting, and a measurement in inches of the person's height */
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2'); await st.click('#btn-new2');
+    await st.waitForSelector('[data-chips="screen.big"]');
+    for (const q of ['big', 'across', 'visible', 'home', 'geometry', 'helps']) await st.click(`[data-chips="screen.${q}"] [data-v="true"]`);
+    await st.click('#next'); await st.waitForSelector('[data-chips="counts"]');
+    assert.ok(!(await st.$('[data-chips="repHold"]')), 'no hold row until it is a rep with a hold');
+    await st.click('[data-chips="counts"] [data-v="repHold"]'); await st.waitForSelector('[data-chips="repHold"]');
+    const d = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return { type: s.type, repHold: s.repHold, ptType: s.ptType }; });
+    assert.deepEqual(d, { type: 'reps', repHold: 2, ptType: 'H' }, 'a rep with a hold is a rep move, held 2 s, PT type H');
+    await st.click('[data-chips="repHold"] [data-v="3"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].repHold === 3; });
+    await st.click('[data-chips="weight"] [data-v="2"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].weight === 2; });
+    const entry = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; s.name = 'Held raise'; s.id = 'held_raise'; return S.specToEntry(s); });
+    assert.equal(entry.repHold, 3); assert.equal(entry.weight, 2);
+    await st.click('[data-chips="counts"] [data-v="hold"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return s.type === 'hold' && s.repHold === 0; });
+    /* a fault read as inches of the person's height: the "% of" list offers their height, and then a unit */
+    await st.click('[data-chips="counts"] [data-v="reps"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].type === 'reps'; });
+    await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; s.faults = [{ id: 'knee_in', label: 'Knee drifting in', cue: 'Knee out', tip: 'Track the knee over the foot.', severity: 2, metric: { kind: 'gap', pts: ['KNEE', 'FOOT'] }, rel: 'abs', op: '>', threshold: 10, minP: 0.3, persist: 400 }]; });
+    await st.click('#steps [data-step="faults"]'); await st.waitForSelector('[data-mpath="faults.0.metric"] select[data-mk="per"]');
+    assert.ok(!(await st.$('[data-mpath="faults.0.metric"] select[data-mk="unit"]')), 'no unit until the % is of their height');
+    await st.selectOption('[data-mpath="faults.0.metric"] select[data-mk="per"]', 'height');
+    await st.waitForSelector('[data-mpath="faults.0.metric"] select[data-mk="unit"]');
+    await st.selectOption('[data-mpath="faults.0.metric"] select[data-mk="unit"]', 'in');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; const m = S.state.moves[S.state.current].faults[0].metric; return m.per === 'height' && m.unit === 'in'; });
+    const unitShown = await st.$eval('[data-k="faults.0.threshold"] + span', (e) => e.textContent.trim());
+    assert.equal(unitShown, 'in', 'the threshold is in inches now');
+    await st.selectOption('[data-mpath="faults.0.metric"] select[data-mk="per"]', 'torso');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; const m = S.state.moves[S.state.current].faults[0].metric; return !m.per && !m.unit; });
+    /* Vetted is the author's call: it can be turned on over a failing tuning report, and the file says so */
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.selectOption('#move-select', 'seated_knee_ext'); await st.waitForSelector('#steps [data-step="export"]');
+    await st.click('#steps [data-step="export"]'); await st.waitForSelector('[data-chips="vetted"]');
+    await st.click('[data-chips="vetted"] [data-v="true"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].vetted === true; });
+    const tuned = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return { tuned: s._tuned, entry: S.regionWith(s, 'knee').entry._studio.tuned }; });
+    assert.ok(tuned.tuned && Array.isArray(tuned.tuned.override) && tuned.tuned.override.length, 'vetted over a failing report is recorded: ' + JSON.stringify(tuned.tuned));
+    assert.deepEqual(tuned.entry.override, tuned.tuned.override, 'and written into the file');
+    await st.close();
   });
 
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {

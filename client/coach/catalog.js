@@ -234,11 +234,11 @@
     regionFile: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
-      'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
+      'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'weight', 'repHold', 'minMs', 'focus',
       'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show', 'listed',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
-    metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
+    metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip', 'unit'],
     progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta', 'and', 'combine'],
     progressPart: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
@@ -252,7 +252,7 @@
     kfFront: ['preset', 'legL', 'legR', 'shinL', 'shinR', 'armL', 'armR', 'foreL', 'foreR', 'lean', 'headTilt', 'squat'],
     prop: ['kind', 'at', 'to', 'w', 'dy', 'dx', 'len', 'r', 'extend'],
     shared: ['measurements', 'faults', 'poses', 'holds'],
-    settings: ['rep', 'skeleton', 'camera', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
+    settings: ['rep', 'skeleton', 'camera', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'weight', 'score'],
   };
   const isNote = (k) => k.startsWith('_');
   const fail = (where, msg) => { const e = new Error(`${where}: ${msg}`); e.where = where; throw e; };
@@ -399,6 +399,7 @@
       };
       if (e.sided) ex.sided = e.sided;
       if (e.upperBody) ex.upperBody = true;
+      if (type === 'reps' && e.repHold) ex.repHold = e.repHold;
     } else {
       /* A counted move needs at least one thing the counter can judge; "did you reach the
          target" and "too fast" hold for any rep-based move, so they are the floor. */
@@ -408,6 +409,9 @@
         specFaults.push({ id: 'shallow', rule: 'shallow', ...SF.shallow });
         specFaults.push({ id: 'fast', rule: 'fast', ...SF.fast, minMs: e.minMs || SF.fast.minMs });
       }
+      /* a rep with a hold at the top: the hold that was cut short is a fault of its own, added
+         whenever the move does not list one, so the person is told why the rep did not count */
+      if (type === 'reps' && e.repHold && !specFaults.some((f) => f.rule === 'shortHold')) specFaults.push({ id: 'short_hold', rule: 'shortHold', ...SF.shortHold });
       /* For a timed hold the one thing any camera can watch is the held position itself: the
          first hold condition, turned around, fires the moment the person drifts out of it. */
       if (type === 'hold' && !specFaults.length) {
@@ -419,7 +423,7 @@
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, brief: e.brief, why: e.why, targets, defaultTarget, options: e.options || [],
-        progress: e.progress, hold: e.hold, faults: specFaults, guide, show: e.show, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
+        progress: e.progress, hold: e.hold, faults: specFaults, guide, show: e.show, sided: e.sided, upperBody: e.upperBody, band: e.band, weight: e.weight, repHold: e.repHold, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
       };
       ex = SPEC.compile(spec, lib.kinematics);
       ex.faults = [...ex.faults, ...docFaults(true)];

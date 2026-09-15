@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["dumbbell"],
+  "weight": "none",
   "muscles": { "primary": ["triceps"], "secondary": ["rear deltoid"] },
   "upperBody": true,
   "sided": { "limb": "arm", "by": "camera" },

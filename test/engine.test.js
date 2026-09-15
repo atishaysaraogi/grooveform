@@ -353,3 +353,23 @@ test('Settle finds the moment the body is in view and has been still for a secon
   const warm = new E.PoseSmoother(); let pts; for (let t = 0; t < 400; t += 33) pts = warm.update(body(0), t, 1);   // the smoother's confidence warms up over a few frames
   const c = E.positionCheck(pts, { view: 'front' }, 1); assert.ok(c.ok && c.view === 'front' && c.visOk && c.frameOk && c.sizeOk, JSON.stringify(c));
 });
+
+/* A rep with a hold at the top: the counter times how long p sits at or above `full`, says when
+   the hold is up, and counts the rep only if it was. */
+test('RepCounter with holdMs: the top has to be held, and says when it has been', () => {
+  const play = (holdAtTop, holdMs) => {
+    const c = new E.RepCounter({ holdMs, alpha: 1 }); c.alpha = 1; let t = 0; const evs = []; let held = 0;
+    const feed = (p, ms) => { for (let k = 0; k < ms / 50; k++) { t += 50; const ev = c.update(p, t); if (ev && ev.type === 'held') held++; else if (ev) evs.push(ev); } };
+    feed(0, 300); feed(0.5, 200); feed(1, holdAtTop); feed(0.5, 200); feed(0, 400);
+    return { evs, held, c };
+  };
+  const short = play(300, 500);
+  assert.equal(short.evs.length, 1); assert.equal(short.evs[0].full, false); assert.ok(short.evs[0].rep.shortHold, 'reached but not held');
+  assert.equal(short.held, 0); assert.equal(short.c.partials, 1);
+  const long = play(800, 500);
+  assert.equal(long.evs.length, 1); assert.equal(long.evs[0].full, true); assert.ok(!long.evs[0].rep.shortHold);
+  assert.equal(long.held, 1, 'the hold is announced once'); assert.equal(long.c.count, 1);
+  assert.ok(long.evs[0].rep.topMs >= 800 && long.evs[0].rep.topMs <= 900, 'time at the top is on the rep: ' + long.evs[0].rep.topMs);
+  const none = play(300, 0);
+  assert.equal(none.evs[0].full, true, 'without a hold the rep counts as before'); assert.ok(!none.evs[0].rep.shortHold);
+});

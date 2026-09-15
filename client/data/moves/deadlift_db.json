@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "intermediate",
   "equipment": ["dumbbells or kettlebell"],
+  "weight": "none",
   "muscles": {
     "primary": ["gluteus maximus", "hamstrings", "quadriceps"],
     "secondary": ["spinal erectors", "grip", "core"]

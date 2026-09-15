@@ -7,6 +7,7 @@
   "tracking": "none",
   "level": "beginner",
   "equipment": ["light dumbbell or tin"],
+  "weight": "none",
   "muscles": { "primary": ["wrist extensors"], "secondary": ["grip"] },
   "upperBody": true,
   "sided": { "limb": "arm", "by": "pick" },

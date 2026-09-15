@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["none", "ankle weight (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus minimus", "TFL"] },
   "sided": { "limb": "leg", "by": "camera" },
   "summary": "Lying on your side, lift the straight top leg toward the ceiling with the toes pointing forward.",

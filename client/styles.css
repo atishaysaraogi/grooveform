@@ -265,6 +265,8 @@ a.ex-card .name { color: var(--text, inherit); }
 .demo-fig { width: 100%; max-width: 460px; aspect-ratio: 4 / 3; height: auto; display: block; margin: 0 auto; }
 /* the archived anatomical figure draws to a canvas; the --fig-* palette above is already themed */
 .demo-fig.muscle { aspect-ratio: 16 / 9; }
+/* the animation-style choice sits under the figure, clear of the phone inset in the corner */
+.fig-toggle { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; } .fig-toggle .chip { min-height: 30px; padding: 3px 10px; font-size: .78rem; }
 .demo-fig .ink { stroke: var(--text); fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
 .demo-fig .ink.far { stroke: var(--muted); opacity: .45; stroke-width: 2.5; }
 .demo-fig .floor { stroke: var(--line); stroke-width: 2; }
@@ -403,6 +405,7 @@ a.ex-card .name { color: var(--text, inherit); }
 .bubbles { display: flex; flex-wrap: wrap; gap: 8px; }
 .bubble { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font-weight: 900; font-size: .92rem; line-height: 1.1; cursor: pointer; }
 .bubble .k { font-weight: 700; color: var(--ink-soft); }
+.bubble-in { width: 76px; min-height: 40px; margin-left: 6px; padding: 6px 10px; border-radius: 12px; border: 2px solid var(--accent); font-weight: 800; font-family: var(--font-mono); }
 .bubble:active { transform: translateY(1px); }
 .bubble.bump { animation: bubble-bump .18s ease-out; }
 @keyframes bubble-bump { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }

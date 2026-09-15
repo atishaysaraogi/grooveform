@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "beginner",
   "equipment": ["none", "dumbbell (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["adductors", "gluteus maximus", "quadriceps"], "secondary": ["hamstrings"] },
   "summary": "Wide stance, toes turned out, sit straight down with the knees following the toes.",
   "setup": "Face the phone with the feet wide and toes turned out about 45°. Sit straight down, knees pushing out over the toes, until the thighs are near level, then stand.",

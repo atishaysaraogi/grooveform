@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "advanced",
   "equipment": ["none", "dumbbell (optional)"],
+  "weight": "none",
   "muscles": {
     "primary": ["hamstrings", "gluteus maximus", "gluteus medius"],
     "secondary": ["core", "ankle stabilisers"]

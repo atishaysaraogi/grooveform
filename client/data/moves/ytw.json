@@ -7,6 +7,7 @@
   "tracking": "none",
   "level": "intermediate",
   "equipment": ["none", "light dumbbells (optional)"],
+  "weight": "none",
   "muscles": {
     "primary": ["lower trapezius", "middle trapezius", "rhomboids"],
     "secondary": ["rotator cuff", "posterior deltoid"]

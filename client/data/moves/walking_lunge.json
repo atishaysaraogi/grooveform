@@ -7,6 +7,7 @@
   "tracking": "none",
   "level": "intermediate",
   "equipment": ["none", "dumbbells (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["hamstrings", "core"] },
   "summary": "Lunge forward and, instead of stepping back, bring the rear foot through into the next lunge.",
   "setup": "Start at one end of the room. Lunge forward, then step the back foot through into the next lunge. Keep going for the distance.",

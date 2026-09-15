@@ -23,7 +23,7 @@
     get(k, d) { try { const v = localStorage.getItem('fyzio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('fyzio.' + k, JSON.stringify(v)); } catch { } }
   };
-  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', voiceRate: 'normal', figure: 'lines', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
+  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', voiceRate: 'normal', figure: 'lines', mirror: 'auto', fps: 'off', video: 'on', head: '', heightIn: 71 }, store.get('settings', {}));
   function saveSettings() { store.set('settings', settings); }
   function setSetting(k, val) { settings[k] = val; saveSettings(); if (k === 'smooth') applySmoothing(); if (k === 'voice') { voice.muted = val === 'off'; if (typeof applyVoiceButton === 'function') applyVoiceButton(); } if (k === 'voiceName') voiceCache = null; }
   function show() { /* screens are managed by the portal */ }
@@ -487,7 +487,7 @@
     voice.unlock();
     if (!file) levelSensor.request();   /* same tap as the voice unlock: iOS wants a gesture for both */
     show('screen-live');
-    $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant ? ' · ' + ((((ex.options || []).find((o) => o.key === 'variant') || {}).labels || {})[current.opts.variant] || current.opts.variant.toUpperCase()).split(' (')[0] : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
+    $('live-name').textContent = ex.name + (current.opts.rom ? ' · ' + current.opts.rom + '°' : '') + (current.opts.variant ? ' · ' + ((((ex.options || []).find((o) => o.key === 'variant') || {}).labels || {})[current.opts.variant] || current.opts.variant.toUpperCase()).split(' (')[0] : '') + (current.opts.band && current.opts.band !== 'none' ? ' · ' + current.opts.band + ' band' : '') + (current.opts.weight && current.opts.weight !== 'none' && current.opts.weight !== 'custom' ? ' · ' + current.opts.weight + ' kg' : '') + (current.opts.sets > 1 ? ` · set ${current.opts.set}/${current.opts.sets}` : ''); $('count').textContent = ex.type === 'reps' ? '0' : '0s'; $('count-of').textContent = ex.type === 'reps' ? '/ ' + target : '/ ' + target + ' s';
     /* The side was picked before the set, so name it on screen from the start — not only once
        calibration has run. */
     if (ex.sided && SIDE_CODE[current.opts.side]) $('live-name').textContent += ` · ${sideName(SIDE_CODE[current.opts.side])} ${limbWord(ex)}`;
@@ -499,7 +499,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -798,6 +798,9 @@
       $('rom-fill').style.height = Math.round(p / 1.2 * 100) + '%';
       $('rom-fill').style.background = p >= E.FULL ? '#b8f542' : p > E.ATTEMPT ? '#ffb830' : 'rgba(255,243,226,.5)';
       $('phase').textContent = s.counter.state === 'rest' ? 'ready' : s.counter.state === 'out' ? ((ex.display && ex.display.label) || 'lift') : 'return';
+      /* a rep with a hold: at the top the phase word counts the hold down, and a chime says it is up */
+      if (ex.repHold && r.holding !== null) { const left = ex.repHold * 1000 - r.holding; $('phase').textContent = left > 0 ? 'hold ' + (Math.ceil(left / 100) / 10).toFixed(1) + 's' : 'held ✓'; }
+      if (r.held) { voice.beep(1100, 0.1); recEvent('held', { ms: r.held.ms }); }
       if (r.repEvent) {
         const rep = r.repEvent.rep; recEvent('rep', { full: r.repEvent.full, n: rep.n, peak: +rep.peak.toFixed(3), duration: Math.round(rep.duration), faults: rep.faults });
         /* One cue per rep. A live fault (leaning) and a rep rule (too fast) can both be due at the

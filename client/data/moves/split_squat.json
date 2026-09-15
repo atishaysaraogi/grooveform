@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "intermediate",
   "equipment": ["none", "dumbbells (optional)"],
+  "weight": "none",
   "muscles": {
     "primary": ["quadriceps", "gluteus maximus"],
     "secondary": ["hamstrings", "hip flexors (rear leg)"]

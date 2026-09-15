@@ -284,7 +284,12 @@ Studio's step 7 scores it against the rule before it will call it vetted:
    clean / fault / borderline counts and a verdict. When every live fault
    passes and the takes are there, the move can be marked **vetted**; the
    entry records when, by whom and on how many takes under `_studio.tuned`.
-   Until then the move ships unvetted and lists after the vetted ones.
+   The verdict does not lock the chip: a move can be vetted while a row is
+   still red — a fault that only fires on a take the camera could not read
+   cleanly, say — and the Studio then says which faults it is being vetted
+   over and writes them under `_studio.tuned.override`, so the override is
+   on the file, not in someone's memory. Until it is vetted the move ships
+   unvetted and lists after the vetted ones.
 
 The same numbers are what the coach runs, so a move that passes here passes on
 the person's phone.

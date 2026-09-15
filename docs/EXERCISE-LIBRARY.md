@@ -87,8 +87,12 @@ A change there moves all 144 moves at once; restart the server to pick it up.
 Everything a move judges is written with the same small vocabulary, and the
 Studio, the coach and the tests all read it through one compiler
 (`coach/spec.js`). A measurement is `{ "kind", "pts" }` plus, when needed,
-`"per"` (what a percentage is of: `"torso"` or a segment `["KNEE", "ANK"]`,
-measured at calibration so it scales to the person), `"sign"` (`"outward"`
+`"per"` (what a percentage is of: `"torso"`, a segment `["KNEE", "ANK"]`, or
+`"height"` — the person's stature, estimated from their own trunk, thigh and
+shin — measured at calibration so it scales to the person), `"unit"` (`"in"`
+or `"cm"`, only with `per: "height"`: the reading and every threshold on it
+are then a real length, worked out from the height the person set in the app,
+5'11" unless they changed it), `"sign"` (`"outward"`
 from the body's midline, or `"forward"` the way the toes point), `"abs"` and
 `"flip"` (negate for an option value — external vs internal rotation).
 
@@ -152,7 +156,10 @@ Every move states honestly what the camera does with it, in `tracking`:
 | `none` | cannot measure anything useful                | shows the guide and a counter or timer; you log by hand|
 
 `vetted: true` marks the moves that have been checked rep by rep against
-recordings in the Studio — see *The tuning method* in `docs/STUDIO.md`. Every move is listed; the
+recordings in the Studio — see *The tuning method* in `docs/STUDIO.md`. The
+flag is the author's call: the Studio scores the takes and says when a fault
+still misbehaves, but it does not withhold the flag; a move vetted over a
+failing report carries the failing faults under `_studio.tuned.override`. Every move is listed; the
 vetted ones simply sort into the first group. The exercise page, the move
 list and the routine builder all name the tier in the move's meta line.
 
@@ -318,6 +325,8 @@ needs and never reaches into engine internals. Available in `k`:
 | `id` | lower-case, matches the filename; stable (it is stored in saved sessions) |
 | `order` | where it sits in lists — 10, 20, 30…, leaving gaps to insert later |
 | `type` | `reps` (counted) or `hold` (timed) |
+| `repHold` | reps only: seconds the top of each rep must be held before it counts — a rep that reaches the top and comes straight down is a partial, cued by the built-in `shortHold` rule ("Hold it there") |
+| `band` / `weight` | offer the band-colour or the kilogram bubble with that default (`"none"`, a colour or a number; `true` = offered, default none); the weight bubble's last step lets the person type their own |
 | `view` | `front` or `side` — the camera angle the rules assume |
 | `targets` / `defaultTarget` | offered rep counts or hold seconds; the default must be one of them |
 | `options` | extra per-set choices (band, range, variant); each needs `key`, `label`, `values`, `default` |

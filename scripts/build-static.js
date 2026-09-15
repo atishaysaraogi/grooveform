@@ -14,6 +14,14 @@ const ROOT = path.join(__dirname, '..'); const OUT = path.join(ROOT, 'dist');
   write('api/me', await get('/api/me')); write('api/exercises', await get('/api/exercises'));
   const pre = await get('/api/routines/prebuilt'); write('api/routines/prebuilt', pre);
   for (const r of pre.routines) write('api/routines/' + r.id, await get('/api/routines/' + r.id));
+  /* Every script and stylesheet is named with the build's stamp, so a browser that cached the
+     last build's app.js fetches the new one instead of showing a settings page it has moved on
+     from. The files keep their names; only the references change. */
+  let stamp = Date.now().toString(36); try { stamp = require('node:child_process').execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || stamp; } catch { }
+  for (const rel of ['index.html', 'figures.html', 'studio/index.html']) {
+    const f = path.join(OUT, rel); if (!fs.existsSync(f)) continue;
+    fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace(/(<(?:script|link)\b[^>]*\b(?:src|href)=")([^"?:]+\.(?:js|css))"/g, `$1$2?v=${stamp}"`));
+  }
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');   // GitHub Pages: serve files as-is
   fs.writeFileSync(path.join(OUT, '404.html'), fs.readFileSync(path.join(OUT, 'index.html')));   // deep links reload to the app
   const nEx = (await get('/api/exercises')).exercises.length; server.close(); console.log(`static build written to ${OUT} (${pre.routines.length} playlists, ${nEx} moves)`); process.exit(0);

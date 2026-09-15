@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "advanced",
   "equipment": ["bench or chair", "dumbbells (optional)"],
+  "weight": "none",
   "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["hamstrings", "adductors"] },
   "sided": { "limb": "leg", "by": "camera" },
   "summary": "Rear foot on a bench behind you, lower the front thigh to level and drive back up.",

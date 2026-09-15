@@ -7,6 +7,7 @@
   "tracking": "reps",
   "level": "beginner",
   "equipment": ["light dumbbells"],
+  "weight": "none",
   "muscles": { "primary": ["anterior deltoid"], "secondary": ["upper pectorals"] },
   "upperBody": true,
   "summary": "Dumbbells in front of the thighs, raise the straight arms forward to shoulder height, lower slowly.",

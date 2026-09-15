@@ -49,6 +49,9 @@ test('pro member: mock checkout unlocks everything; can build, copy and edit rou
   const copy = await pro('POST', `/api/routines/${pre.id}/copy`); assert.equal(copy.status, 201); assert.equal(copy.data.routine.title, 'Knee comeback (copy)');
   assert.equal((await pro('GET', '/api/routines')).data.mine.length, 2);
   const invalid = await pro('POST', '/api/routines', { title: 'bad', items: [{ exerciseId: 'hipabd', options: { rom: 99 } }] }); assert.equal(invalid.status, 400);
+  /* a weight the person typed is not one of the steps, and is kept as a number */
+  const typed = await pro('POST', '/api/routines', { title: 'weights', items: [{ exerciseId: 'goblet_squat', options: { weight: 7.5 } }] }); assert.equal(typed.status, 201, JSON.stringify(typed.data)); assert.equal(typed.data.routine.items[0].options.weight, 7.5);
+  assert.equal((await pro('POST', '/api/routines', { title: 'bad', items: [{ exerciseId: 'goblet_squat', options: { weight: 'heavy' } }] })).status, 400);
   const subId = bought.subscription.id; const canc = await pro('POST', '/api/billing/cancel', { subscriptionId: subId }); assert.equal(canc.data.user.entitlements.pro, true, 'access continues until period end'); assert.equal(canc.data.user.subscriptions[0].status, 'cancelled');
   assert.equal((await pro('POST', '/api/billing/checkout', { plan: 'curator_monthly' })).status, 400, 'members cannot buy curator plans');
 });

@@ -278,3 +278,58 @@ test('a second progress measurement is checked like the first', () => {
   const combo = JSON.parse(JSON.stringify(sideLegRaise)); combo.progress.combine = 'median';
   assert.match(SPEC.checkSpec(combo).join(' '), /combine must be min, mean or max/);
 });
+
+/* A hand weight is offered like a band: the steps come from settings.json and the last one lets
+   the person type their own. */
+test('weight offers the kilogram bubble, with a step for a typed value', () => {
+  const s = JSON.parse(JSON.stringify(sideLegRaise)); s.weight = 2;
+  const ex = SPEC.compile(s, K); const w = ex.options.find((o) => o.key === 'weight');
+  assert.ok(w && w.default === 2 && w.values.includes('custom') && w.custom === true && w.customUnit === 'kg', JSON.stringify(w));
+  s.weight = true; assert.equal(SPEC.compile(s, K).options.find((o) => o.key === 'weight').default, 'none');
+  s.weight = 'heavy'; assert.match(SPEC.checkSpec(s).join(' '), /weight must be true, "none" or a number/);
+});
+
+/* A rep with a hold at the top only counts once the top has been held for repHold seconds; a rep
+   that reaches the top and comes straight back down is a partial, and the shortHold rule says why. */
+test('repHold: the top must be held before the rep counts', () => {
+  const s = JSON.parse(JSON.stringify(sideLegRaise)); s.repHold = 0.5;
+  s.faults.push({ id: 'short_hold', rule: 'shortHold', label: 'Not held at the top', cue: 'Hold it there', tip: 'Pause at the top.', severity: 1 });
+  assert.deepEqual(SPEC.checkSpec(s), []);
+  const quick = SPEC.compile(s, K); assert.equal(quick.repHold, 0.5);
+  /* a 3 s sine rep sits at or above 85 % of the target for about a second */
+  const a = run(quick, takes(30, 3), { rom: 30 });
+  assert.equal(a.review.reps, 3, 'held for half a second: every rep counts'); assert.equal(a.review.partials, 0);
+  s.repHold = 2; const slow = SPEC.compile(s, K);
+  const b = run(slow, takes(30, 3), { rom: 30 });
+  assert.equal(b.review.reps, 0, 'a two-second hold was never made'); assert.equal(b.review.partials, 3);
+  assert.ok(b.events.every((e) => e.rep.shortHold && e.rep.topMs > 500 && e.rep.topMs < 2000), JSON.stringify(b.events.map((e) => e.rep.topMs)));
+  assert.equal((b.review.faults.short_hold || {}).n, 3, 'the shortHold rule fires on each of them');
+  const hold = JSON.parse(JSON.stringify(s)); hold.type = 'hold'; hold.hold = { conditions: [{ metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, min: 20 }] };
+  assert.match(SPEC.checkSpec(hold).join(' '), /repHold .* is for a counted move/);
+  s.repHold = 45; assert.match(SPEC.checkSpec(s).join(' '), /at most 30/);
+});
+
+/* A % of the person's height is the same on a tall body and a short one; in inches or centimetres
+   it is that share of the height they gave the app. */
+test('per: "height" reads a share of stature, and unit turns it into inches or centimetres', () => {
+  const pts = pose(0);
+  const m = { kind: 'dist', pts: ['HIP', 'KNEE'], per: 'height' };
+  const ref = SPEC.calibrateRef([m], pts, K, {});
+  const stature = SPEC.stature(pts, K);
+  assert.ok(Math.abs(stature - (0.25 + 0.2 + 0.2) / 0.779) < 1e-6, 'trunk + thigh + shin is 77.9 % of stature: ' + stature);
+  const pct = SPEC.evalMetric(m, pts, 'R', K, ref, {});
+  assert.ok(Math.abs(pct - 100 * 0.2 / stature) < 1e-6, 'thigh as % of height: ' + pct);
+  const inches = { ...m, unit: 'in' }, cm = { ...m, unit: 'cm' };
+  const at71 = SPEC.evalMetric(inches, pts, 'R', K, ref, { heightIn: 71 }), at60 = SPEC.evalMetric(inches, pts, 'R', K, ref, { heightIn: 60 });
+  assert.ok(Math.abs(at71 - pct / 100 * 71) < 1e-6 && Math.abs(at60 - pct / 100 * 60) < 1e-6, `inches follow the height: ${at71} at 5'11", ${at60} at 5'0"`);
+  assert.ok(Math.abs(SPEC.evalMetric(inches, pts, 'R', K, ref) - pct / 100 * SPEC.DEFAULT_HEIGHT_IN) < 1e-6, 'unset, 5\'11"');
+  assert.ok(Math.abs(SPEC.evalMetric(cm, pts, 'R', K, ref, { heightIn: 71 }) - at71 * 2.54) < 1e-6, 'centimetres');
+  /* legs out of frame: the trunk alone carries the estimate */
+  const upper = pts.map((p, i) => i >= 25 ? { ...p, visibility: 0.1 } : p);
+  assert.ok(Math.abs(SPEC.stature(upper, K) - 0.25 / 0.288) < 1e-6, 'trunk only');
+  assert.equal(SPEC.unitOf(inches), 'in'); assert.equal(SPEC.unitOf(m), '%');
+  const s = JSON.parse(JSON.stringify(sideLegRaise)); s.faults[0] = { ...s.faults[0], metric: { kind: 'gap', pts: ['KNEE', 'FOOT'], unit: 'in' }, threshold: 2 };
+  assert.match(SPEC.checkSpec(s).join(' '), /need per: "height"/);
+  s.faults[0].metric.per = 'height'; assert.deepEqual(SPEC.checkSpec(s), []);
+  s.faults[0].metric.unit = 'ft'; assert.match(SPEC.checkSpec(s).join(' '), /unit must be "in" or "cm"/);
+});

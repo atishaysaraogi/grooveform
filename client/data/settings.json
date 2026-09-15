@@ -13,8 +13,9 @@
       "targets": "The rep counts and hold seconds a move offers when it does not name its own: choices (what the bubble cycles through) and default. Good: 4–6 sensible steps. Bad: 30 choices.",
       "landmarks": "Body points (MediaPipe indices) that must be in frame before a set can start. always = shoulders and hips (11, 12, 23, 24). legs = knees and ankles, added unless the move says upperBody: true.",
       "cannotSee": "The sentence shown under 'what the camera cannot see' when a move does not write its own.",
-      "standardFaults": "The three faults added automatically to a tracked move that lists no live fault of its own: shallow (did not reach the target) and fast (rep quicker than minMs) for rep moves, drift (left the held position) for holds. Words only — the numbers come from the move.",
+      "standardFaults": "The faults added automatically to a tracked move that lists no live fault of its own: shallow (did not reach the target) and fast (rep quicker than minMs) for rep moves, shortHold (came down before the hold was up) for a rep move with repHold, drift (left the held position) for holds. Words only — the numbers come from the move.",
       "side": "The Left / Right / Both choice every one-sided move offers: its label, the default, and the wording of each choice. follow: when the limb that is actually moving is not the one chosen, the coach switches to it rather than asking the person to start again — margin is how much further (in the progress reading's own units) the other limb must travel, frames how many frames in a row it must do so. Good: 14 / 12 (about half a second). Bad: a small margin (it flips mid-rep on noise).",
+      "weight": "The hand-weight choices every move that offers a weight cycles through: 'none', the fixed kilogram steps, and 'custom', which opens a box for the person to type their own. unit is the word shown after the number. Good: 3–4 steps. Bad: ten steps (the bubble becomes a chore).",
       "band": "The resistance-band colour scale: the order the bubble cycles through, the name shown for each colour, and the swatch colour drawn. 'none' means bodyweight.",
       "score": "How the end-of-set score is built out of 100. faultCost × severity weight per occurrence, capped at faultCap × weight per fault; partialCost per half rep; noRepCap is the most a set with zero reps can score. Holds start at holdFloor and climb with the share of time spent in position; shortHoldPenalty is lost if the hold ends early. tips = how many things-to-fix the written summary carries. speakWeight / speakMax = which suggestions are read out at the end of a set: every fault at least this severity weight, heaviest first, up to this many (and always at least the heaviest one, so a set with only light faults still gets a word). Good: 2 and 4. Bad: speakMax 10 (a paragraph nobody listens to). headlines are read top down: the first row whose atLeast the score reaches is shown."
     }
@@ -55,6 +56,12 @@
       "severity": 1,
       "minMs": 1500
     },
+    "shortHold": {
+      "label": "Not held at the top",
+      "cue": "Hold it there",
+      "tip": "Pause at the top for the full count before coming back down — the hold is the work.",
+      "severity": 1
+    },
     "drift": {
       "label": "Drifting out of position",
       "cue": "Back into position",
@@ -91,6 +98,12 @@
       "blue": "#2f6fd6",
       "black": "#222222"
     }
+  },
+  "weight": {
+    "label": "Weight",
+    "unit": "kg",
+    "values": ["none", 1, 2, 5, "custom"],
+    "labels": { "1": "1 kg", "2": "2 kg", "5": "5 kg", "none": "No weight", "custom": "Other…" }
   },
   "score": {
     "faultCost": 3,

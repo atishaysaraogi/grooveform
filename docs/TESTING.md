@@ -87,6 +87,10 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 20. A move with a start-position fault: the overlay says what is wrong with the set-up and the count-in waits; fixing it starts the set; Start anyway appears after six seconds and the fault is listed in the review.
 21. Studio step 7 → Check against another video: a fresh video is cut into reps with the coach's verdict per rep; saying what each shows marks agree/disagree and nothing is added to the takes.
 22. Studio → Upload a video… with a phone video that starts with walking in and lying down: the analysis steps through the whole file, the take calibrates after the walk-in (the player's "calibration window" ends where the person went still), and the split finds every rep the live coach would count.
+23. A move with `repHold` (Studio step 2 → Counts → Reps with a hold): at the top the phase word counts the hold down and a chime says it is up; a rep that comes down early is a partial, cued "Hold it there"; the exercise page's meta line says how long the hold is.
+24. A dumbbell move (goblet squat): the Weight bubble cycles none → 1 kg → 2 kg → 5 kg → Other…; Other… opens a box, typing 7.5 puts "7.5 kg" on the bubble and the coach's title line; an empty box falls back to no weight.
+25. Settings → Your height defaults to 5'11" (180 cm); a fault measured "% of their height" read in inches (Studio step 5 → % of → their height → read in inches) shows inches in the Studio's threshold field and its chart, and a shorter height in Settings makes the same movement read fewer inches.
+26. Exercise page → The move: the Stick figure / Muscles toggle beside the heading swaps the animation on the spot and Settings → The move's animation follows it. Studio step 7: Vetted can be turned on while the tuning report is red; the toast names the failing faults and the export carries them under `_studio.tuned.override`.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

@@ -10,6 +10,7 @@
   "muscles": { "primary": ["hamstrings"], "secondary": ["gluteus maximus", "calves"] },
   "sided": { "limb": "leg", "by": "camera" },
   "band": true,
+  "weight": "none",
   "summary": "Standing tall, bend one knee to bring the heel toward the buttock, thigh staying still.",
   "setup": "Stand side-on to the phone, hands on a wall or chair in front, working leg nearest the phone. Keeping the thigh pointing straight down, bend the knee to lift the heel behind you, then lower with control.",
   "brief": "Hands on a wall or chair in front, working leg. Keeping the thigh pointing straight down, bend the knee to lift the heel behind you, then lower with control.",

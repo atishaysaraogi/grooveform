@@ -10,6 +10,7 @@
   "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "core"] },
   "sided": { "limb": "leg", "by": "camera" },
   "band": true,
+  "weight": "none",
   "summary": "On hands and knees, drive one heel up and back until the thigh is level with the back, then lower.",
   "setup": "Hands under the shoulders, knees under the hips, side-on to the phone at knee height, working leg nearest. Keeping the knee bent, push the heel toward the ceiling until the thigh is in line with the back. Lower without resting the knee.",
   "brief": "Hands under the shoulders, knees under the hips. Keeping the knee bent, push the working heel toward the ceiling until the thigh is in line with the back.",

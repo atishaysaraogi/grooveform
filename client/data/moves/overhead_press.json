@@ -7,6 +7,7 @@
   "tracking": "form",
   "level": "intermediate",
   "equipment": ["dumbbells"],
+  "weight": "none",
   "muscles": { "primary": ["deltoids", "triceps"], "secondary": ["upper trapezius", "core"] },
   "upperBody": true,
   "summary": "Dumbbells at the shoulders, press straight up until the arms lock out overhead, lower.",
