@@ -80,8 +80,9 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 14. Studio step 4 → the landmark list appears over the slot you tap, moves to the next empty slot, and closes on Escape or a tap outside; nothing stands open while the measurement is complete.
 15. Studio → a rep with two faults: both chips stay lit, Next rep moves on, the row reads "Fault: A + Fault: B", and the coverage panel counts it under both.
 16. Studio step 6 → Edit the poses: dragging a joint keeps every limb the length it was; the faint figure behind is the other keyframe; a note pinned to a joint is drawn on the exercise page's animation with a line to that joint, and a note tied to the end fades in at the end.
-17. Studio step 7 → Check against another video: a fresh video is cut into reps with the coach's verdict per rep; saying what each shows marks agree/disagree and nothing is added to the takes.
-18. Studio → Upload a video… with a phone video that starts with walking in and lying down: the analysis steps through the whole file, the take calibrates after the walk-in (the player's "calibration window" ends where the person went still), and the split finds every rep the live coach would count.
+17. A move with a start-position fault: the overlay says what is wrong with the set-up and the count-in waits; fixing it starts the set; Start anyway appears after six seconds and the fault is listed in the review.
+18. Studio step 7 → Check against another video: a fresh video is cut into reps with the coach's verdict per rep; saying what each shows marks agree/disagree and nothing is added to the takes.
+19. Studio → Upload a video… with a phone video that starts with walking in and lying down: the analysis steps through the whole file, the take calibrates after the walk-in (the player's "calibration window" ends where the person went still), and the split finds every rep the live coach would count.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

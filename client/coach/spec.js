@@ -159,7 +159,11 @@
 
   const faultSettings = (k) => { const s = k.settings && k.settings.fault; if (!s) throw new Error('settings.json needs a fault section'); return s; };
   const RULES = ['shallow', 'fast', 'return'];
-  const PHASES = ['moving', 'rest', 'hold', 'any'];
+  /* When a fault is watched. The first four are inside a running set; "start" is the odd one out —
+     it is checked once, on the start position, before the set begins, so a set-up error (feet too
+     far away, band already taut, knee already bent) is said while it can still be fixed rather
+     than measured against for the whole set. */
+  const PHASES = ['moving', 'rest', 'hold', 'any', 'start'];
 
   /* --- validation of the spec itself (before it becomes an exercise) --- */
   function checkSpec(spec) {
@@ -216,7 +220,11 @@
       need(f.label, w + ': label'); need(f.cue, w + ': spoken cue'); need(f.tip, w + ': written tip');
       if (f.cue) need(f.cue.trim().split(/\s+/).length <= 8, w + ': cue longer than 8 words');
       need([1, 2, 3].includes(+f.severity), w + ': severity 1–3');
-      if (f.phase !== undefined) need(PHASES.includes(f.phase), w + ': phase must be one of ' + PHASES.join(', '));
+      if (f.phase !== undefined && f.phase !== '') need(PHASES.includes(f.phase), w + ': phase must be one of ' + PHASES.join(', '));
+      if (f.phase === 'start') {
+        need(!f.rule, w + ': phase "start" needs a measurement of its own — a built-in rule judges a rep, and at the start there is no rep yet');
+        need(f.rel !== 'change', w + ': phase "start" cannot measure the change from the start position, because that is the position being judged');
+      }
       if (f.scale) { need(Number.isFinite(f.scale.times), w + ': scale needs times'); if (f.scale.metric !== 'progress') mOk(f.scale.metric, w + ' (scale)'); }
       whenOk(f.when, w);
       if (RULES.includes(f.rule)) { if (f.rule === 'fast') need(Number.isFinite(f.minMs), w + ': minimum rep time'); }
@@ -331,6 +339,15 @@
       ref.shown = v; ref.target = v;
       return v;
     }
+    /* The start position, before anything is calibrated for real: the frame is its own reference,
+       which is why a "start" fault may not measure a change from the start. Returns the faults that
+       are true of this position — the coach says them before the count-in, the Studio shows them
+       against a take, and neither has to run a set to find out. */
+    function checkStart(pts, S, opts) {
+      const start = faults.filter((f) => f.atStart); if (!start.length || !pts) return [];
+      let m; try { m = measure(pts, S, { ...calibrate(pts, S, opts || {}), opts: opts || {} }); } catch (e) { return []; }
+      return start.filter((f) => { try { return !!f.check(m); } catch (e) { return false; } });
+    }
     function measure(pts, S, ref) {
       const opts = ref.opts || {};
       let side = ref.work || S || S0 || 'L';
@@ -391,12 +408,16 @@
       if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
       if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
       const gate = f.minP == null ? 0 : f.minP;
+      const over = (m) => m.gates[f.id] && (f.op === '>' ? m['f_' + f.id] > f.threshold : m['f_' + f.id] < f.threshold);
+      /* the start position, judged once before the set: no progress gate to pass and no held
+         position to be in, because neither exists yet — only the measurement and its threshold */
+      if (f.phase === 'start') return { ...common, atStart: true, phase: 'start', persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, check: over };
       /* holds: a fault watches the held position unless it says phase "any" (it is the position itself that is missing) */
       const phase = f.phase === 'moving' || f.phase === 'rest' ? f.phase : undefined;
       const needPosition = spec.type === 'hold' && f.phase !== 'any';
       return {
         ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, phase,
-        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= gate) && m.gates[f.id] && (f.op === '>' ? m['f_' + f.id] > f.threshold : m['f_' + f.id] < f.threshold),
+        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= gate) && m.gates[f.id] && over(m),
       };
     });
 
@@ -405,7 +426,7 @@
       summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why, show: spec.show || null, showTarget,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
-      calibrate, measure, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,
+      calibrate, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,
       guide: { surface: spec.guide.surface, stop: spec.guide.stop, cannotSee: spec.guide.cannotSee, regions: spec.guide.regions.filter((r) => r.name && (r.points || []).some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) },
       display: spec.display || null, enterCue: spec.enterCue || null, metrics, iProg, holdConds,
       spec,

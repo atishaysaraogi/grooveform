@@ -100,6 +100,16 @@ Everything downstream reads the set, not one word: a rep labelled with two
 faults is evidence for both in the coverage panel and in the tuning table, and
 one labelled Not a rep is evidence for nothing.
 
+**A fault can be checked on the start position instead.** The chip row on each
+fault says when to check it: during the set, or at the start position before it
+begins. A set-up error — heels too far away, knee already bent, band already
+taut — is worth catching there, because judged mid-set it is unfixable: the
+reference was taken from that position, so every rep is measured against the
+mistake. A start check uses the same measurement and threshold; it cannot be a
+built-in rule and cannot measure the change from the start, since that is the
+position it is judging. The fire report for such a fault reads each take's start
+position rather than its spans.
+
 **Checking the finished move against a fresh video** is the last card of step
 7: upload a video the takes have never seen and the Studio cuts it into reps
 and shows, for each, whether the coach would count it and which faults it

@@ -386,7 +386,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -548,6 +548,24 @@
     return { ok, checks: out, msg };
   }
 
+  /* The move's "start" faults, checked on the position being held. They are read a few times a
+     second rather than every frame — the check calibrates a throwaway reference each time — and
+     what they find is spoken once, then repeated on the usual cooldown. */
+  const START_SKIP = [{ label: 'Start anyway', cls: 'ghost', fn: () => { if (live) { live.startSkip = true; live.startBad = []; } } }];
+  function startStep(pts, now, held) {
+    const none = { bad: [], checks: [], actions: null };
+    if (!live || live.startSkip || !live.session || !live.ex.faults.some((f) => f.atStart)) return none;
+    if (!live.startAt || now - live.startAt > 250) {
+      live.startAt = now;
+      live.startBad = live.session.startCheck(E.Camera.correctPts(pts, live.corr || cameraCorrection(pts)), wantedSide() || E.nearSide(pts));
+    }
+    const bad = live.startBad || [];
+    if (!bad.length) { live.startSince = 0; return { bad, checks: live.ex.faults.filter((f) => f.atStart).length ? [{ label: 'Start position looks right', ok: true }] : [], actions: null }; }
+    if (!live.startSince) live.startSince = now;
+    const top = bad.slice().sort((a, b) => b.weight - a.weight)[0];
+    if (now - (live.lastStartCue || 0) > 5000) { live.lastStartCue = now; voice.say(top.cue, { priority: 1 }); recEvent('startFault', { id: top.id, cue: top.cue }); }
+    return { bad: [top, ...bad.filter((f) => f !== top)], checks: bad.map((f) => ({ label: f.label, ok: false })), actions: now - live.startSince > 6000 ? START_SKIP : null };
+  }
   /* Stable array identity: overlay() diffs on the labels, so this must not be rebuilt per frame. */
   const POSITION_EXITS = [
     { label: '← Back to setup', cls: 'ghost', fn: () => exitLive() },
@@ -563,9 +581,17 @@
       const moving = live.prevHip && E.dist(hip, live.prevHip) > (live.file ? 0.03 : 0.012); live.prevHip = hip;
       if (moving) live.steadySince = now; else if (!live.steadySince) live.steadySince = now;
       const held = now - live.steadySince;
+      /* The start position itself, judged by the move's own "start" faults: heels too far away,
+         knee already bent, band already taut. Said here, where it can still be fixed, rather than
+         counted against every rep of the set. The set waits for it — but never forever: after a
+         few seconds there is a way past, because a threshold can be wrong and the person cannot
+         argue with it. */
+      const start = startStep(pts, now, held);
       const tilt = !live.file && levelSensor.seen >= 5 && levelSensor.roll != null && Math.abs(levelSensor.roll) >= 3 && Math.abs(levelSensor.roll) <= ((E.settings.camera || {}).maxRoll || 25) ? ` · phone tilted ${Math.round(Math.abs(levelSensor.roll))}°, corrected` : '';
-      overlay('Hold your start position', live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.', { checks: c.checks, progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt });
-      if (held > (live.file ? 400 : 1200)) {
+      overlay(start.bad.length ? 'Fix the start position' : 'Hold your start position',
+        start.bad.length ? start.bad[0].cue : live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.',
+        { checks: c.checks.concat(start.checks), progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt, actions: start.actions });
+      if (held > (live.file ? 400 : 1200) && !start.bad.length) {
         /* Some moves ask for the end of the range once, before the set, so the target is measured on
            this body rather than assumed (see showStep). Asked once per exercise, not once per set. */
         if (live.ex.show && !live.shownDone && !live.file && current.shownFor !== live.ex.id) { live.state = 'show'; live.showAt = now; live.showSteady = 0; live.showHip = null; live.showSpoken = false; return; }
@@ -619,6 +645,9 @@
       if (live.ex.sided && live.ex.sided.by === 'camera') live.session.opts.work = side;
       live.corr = cameraCorrection(pts); live.rec.camera = { ...live.corr };
       live.session.calibrate(E.Camera.correctPts(pts, live.corr), side);
+      /* a set-up fault the person chose to start with is still a fault of this set */
+      const startBad = live.session.startCheck(E.Camera.correctPts(pts, live.corr), side);
+      if (startBad.length) { live.session.noteStart(startBad.map((f) => f.id), now); recEvent('startFaults', { ids: startBad.map((f) => f.id) }); }
       /* the demonstrated end position, levelled the same way as the start pose, becomes the target;
          a later set of the same move reuses the one already shown */
       const shownPts = live.showPts || (current.shownFor === live.ex.id ? current.shownPts : null);

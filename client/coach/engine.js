@@ -456,6 +456,12 @@
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
     }
     calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); }
+    /* The start position, judged before the set starts (see spec.js checkStart). The coach calls
+       this while the person is holding still; what it finds is said then, not during the reps. */
+    startCheck(pts, side) { return this.ex.checkStart ? this.ex.checkStart(pts, side || this.side, this.opts) : []; }
+    /* A set-up fault that was still true when the set began belongs in the review like any other,
+       so it is counted here — once, whatever the coach had to say about it beforehand. */
+    noteStart(ids, t) { for (const id of ids || []) { this.faults.counts[id] = (this.faults.counts[id] || 0) + 1; this.startFaults = [...new Set([...(this.startFaults || []), id])]; } }
     ackCue(id, t) { this.faults.ack(id, t); }
     // returns { m, cues:[fault], repEvent, done }
     step(pts, t) {

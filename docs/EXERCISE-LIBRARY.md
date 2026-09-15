@@ -105,9 +105,10 @@ A fault is a measurement, `"op"` and `"threshold"`, with `"rel": "change"` to
 compare against the calibrated start, `"minP"` to wait until the rep is under
 way, `"persist"` before it is spoken, and — where a plain threshold is not
 enough — `"when"` (gates: an option value, another measurement's comparison,
-`"inPosition"` / `"notInPosition"`), `"phase"` (`"moving"`, `"rest"`, or
-`"any"` for a hold fault that must fire while the person is *out* of position)
-and `"scale"` (a threshold that grows with another reading). Rules that need no
+`"inPosition"` / `"notInPosition"`), `"phase"` (`"moving"`, `"rest"`,
+`"any"` for a hold fault that must fire while the person is *out* of position,
+or `"start"` — see below) and `"scale"` (a threshold that grows with another
+reading). Rules that need no
 measurement: `"shallow"`, `"fast"`, `"return"` — these judge the finished rep and
 are spoken at the rep, under the same `"cooldown"` as any other cue. Progress has `"startMin"` /
 `"startMax"` clamps and `"delta": -1` for a reading that falls during the rep;
@@ -354,9 +355,42 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `persist` | milliseconds it must hold true before it counts — stops flicker |
 | `cooldown` | milliseconds before the same cue is spoken again — rep rules obey it too, so "Slow it down" is not said on every rep |
 | `maxCues` | how many times it may be spoken in one set at all. `settings.json` caps the `fast` rule at 1; the review still counts every occurrence |
-| `phase` | limit it to `'moving'` / `'hold'` |
+| `phase` | limit it to `'moving'` / `'hold'`, or `'start'` to judge the start position before the set |
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
+
+### Checking the start position
+
+Some faults are set-up errors, not movement errors: the heels too far away for a
+bridge, the knee already bent, the band already taut. Judged during the set they
+are unfixable noise — the reference was taken from that position, so every rep is
+measured against the mistake. `"phase": "start"` moves the same detector to where
+it can still be acted on.
+
+```json
+{ "id": "bentknee", "label": "Knee already bent", "cue": "Straighten the leg",
+  "tip": "Start with the working leg straight, or the raise reads short.",
+  "severity": 2, "phase": "start",
+  "metric": { "kind": "angle", "pts": ["HIP", "KNEE", "ANK"] }, "op": "<", "threshold": 170 }
+```
+
+It is the same measurement language, with two differences. There is no rep yet,
+so a built-in rule (`shallow`, `fast`, `return`) cannot be a start check, and
+`"rel": "change"` is refused, because the position being judged *is* the start.
+`minP` does not apply.
+
+The check runs while the person holds still in the positioning step, several
+times a second, on a throwaway reference taken from that very frame
+(`MoveSpec` `checkStart`, reached through `SetSession.startCheck`). The coach
+speaks the heaviest failing cue, lists them all in the overlay's checks, and the
+count-in waits. It waits for six seconds; after that a **Start anyway** button
+appears, because a threshold can be wrong and the person cannot argue with it.
+Whatever was still failing when the set began is counted into the review like
+any other fault (`SetSession.noteStart`), and it never fires again mid-set.
+
+In the Studio the phase is a chip row on the fault ("during the set" / "at the
+start position"), and the fire report judges a start fault on each take's start
+position rather than on its spans.
 
 ### A target the person shows you
 

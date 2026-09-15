@@ -206,3 +206,37 @@ test('show: a held end position becomes the target, and an implausible one is re
   const hs = E.EXERCISES.find((e) => e.id === 'heelslide');
   assert.equal(hs.show, null, 'a move only asks when its file says to');
 });
+
+/* ---- a fault checked on the start position, before the set ---- */
+test('phase "start": the same detectors, read once on the position being held', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  /* the knee should be straight before the first raise: the hip→knee→ankle angle, judged at the start */
+  spec.faults.push({ id: 'bentknee', label: 'Knee already bent', cue: 'Straighten the leg', tip: 'Start with the working leg straight.', severity: 2, phase: 'start', metric: { kind: 'angle', pts: ['HIP', 'KNEE', 'ANK'] }, op: '<', threshold: 170 });
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  const ex = SPEC.compile(spec, K);
+  const f = ex.faults.find((x) => x.id === 'bentknee');
+  assert.equal(f.atStart, true); assert.equal(f.phase, 'start');
+  const sm = () => new E.PoseSmoother();
+  /* a straight leg at the start: nothing to say */
+  const straight = sm().update(pose(0), 0, 1);
+  assert.deepEqual(ex.checkStart(straight, 'R', {}).map((x) => x.id), []);
+  /* the same position with the knee bent: the fault is found before anything has been calibrated */
+  const bentFrame = (() => { const p = pose(0); p[26] = { x: p[24].x - 0.06, y: (p[24].y + p[28].y) / 2, z: 0, visibility: 0.95 }; return p; })();
+  const bent = sm().update(bentFrame, 0, 1);
+  assert.deepEqual(ex.checkStart(bent, 'R', {}).map((x) => x.id), ['bentknee'], 'the bent knee is caught on the start position');
+  /* and it is never raised during the set itself, however the leg moves */
+  const r = run(ex, takes(30, 3), { rom: 30 });
+  assert.ok(!r.fired.has('bentknee'), 'a start fault does not fire mid-set');
+  /* a session counts what was still wrong when the set began, so the review says it */
+  const sess = new E.SetSession(ex, { target: 10, rom: 30 });
+  assert.deepEqual(sess.startCheck(bent, 'R').map((x) => x.id), ['bentknee']);
+  sess.calibrate(bent, 'R'); sess.noteStart(['bentknee'], 0);
+  assert.ok(sess.review().faults.bentknee, 'and the review lists it');
+});
+
+test('a start check cannot be a built-in rule, nor measure the change from the start', () => {
+  const bad = (f) => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.faults.push({ id: 'x', label: 'X', cue: 'Fix it', tip: 'Fix it.', severity: 2, phase: 'start', ...f }); return SPEC.checkSpec(s).join(' '); };
+  assert.match(bad({ rule: 'fast', minMs: 1500 }), /no rep yet/);
+  assert.match(bad({ metric: { kind: 'lean', pts: [] }, rel: 'change', op: '>', threshold: 5 }), /change from the start/);
+  assert.deepEqual(SPEC.checkSpec((() => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.faults[0].phase = ''; return s; })()), [], 'an empty phase is simply no phase');
+});

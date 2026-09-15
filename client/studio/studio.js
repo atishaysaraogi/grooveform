@@ -215,14 +215,20 @@
     for (const o of ex.options || []) if (opts[o.key] === undefined) opts[o.key] = o.default;
     const session = new E.SetSession(ex, opts);
     const aspect = take.aspect || 16 / 9;
-    const out = { p: [], values: [], active: [], reps: [], faultSpans: {}, faultFrames: {}, calT: null, frames: 0, lost: 0 };
+    const out = { p: [], values: [], active: [], reps: [], faultSpans: {}, faultFrames: {}, startFired: [], calT: null, frames: 0, lost: 0 };
     const CAL_AT = take.calT ?? 1200;
     let calibrated = false; const open = {};
     for (const fr of take.frames) {
       const t = fr[0], lm = fr[1]; out.frames++;
       const pts = lm ? smoother.update(toPts(lm), t, aspect) : null;
       if (!pts) { out.lost++; continue; }
-      if (!calibrated) { if (t < CAL_AT) continue; session.calibrate(pts, take.side || 'L'); calibrated = true; out.calT = t; }
+      if (!calibrated) {
+        if (t < CAL_AT) continue;
+        session.calibrate(pts, take.side || 'L'); calibrated = true; out.calT = t;
+        /* the start position, judged before the set as the coach judges it */
+        out.startFired = session.startCheck(pts, take.side || 'L').map((f) => f.id);
+        if (out.startFired.length) session.noteStart(out.startFired, t);
+      }
       const r = session.step(pts, t);
       const m = r.m || {};
       out.p.push([t, m.p ?? 0]); out.values.push([t, m.v ?? m.value ?? (m.inPosition ? 1 : 0)]);
@@ -1138,10 +1144,11 @@
 
   /* ===================== 5 · faults ===================== */
   const wc = (t) => (t || '').trim() ? t.trim().split(/\s+/).length : 0;
+  const START_HELP = 'A start check is read once, on the position being held, and said while it can still be fixed — heels too far away, knee already bent, the band already taut. It cannot measure the change from the start, because that is the position it is judging.';
   function fireReport(f) {
-    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = shows(t, 'fault:' + f.id) ? 'this fault' : labelOf(t); const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
+    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = shows(t, 'fault:' + f.id) ? 'this fault' : labelOf(t); const fired = f.phase === 'start' ? (sim.startFired || []).includes(f.id) : f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
     const order = ['clean', 'this fault', 'borderline', 'fault', 'setup', 'other'];
-    return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}</div>`;
+    return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}${f.phase === 'start' ? '<span>judged on the start position</span>' : ''}</div>`;
   }
   /* "Only when": option values, another measurement's comparison, in / out of the held position; and a
      threshold that grows with another reading. */
@@ -1172,7 +1179,10 @@
       ${isRule ? `<p class="notice">${f.rule === 'shallow' ? 'Built-in rule: the rep did not reach the target (peak between the attempt and full thresholds). No measurement needed.' : f.rule === 'return' ? `Built-in rule: the rep ended above <input type="number" step="0.05" data-k="faults.${i}.threshold" value="${f.threshold ?? 0.25}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> of the way to the target — it did not come all the way back.` : `Built-in rule: the rep took less than <input type="number" data-k="faults.${i}.minMs" value="${f.minMs || 2000}" style="width:90px;display:inline-block;min-height:32px;padding:4px 8px"> ms.`}</p>`
         : f.listed ? '<p class="notice">Listed under “what goes wrong” for the person to watch; the camera does not check it.</p>' : `${metricEditor(`faults.${i}.metric`, f.metric)}
         <div class="row" style="gap:14px">${field('Measured as', chips(`faults.${i}.rel`, ['abs', 'change'], f.rel || 'abs', { abs: 'Absolute', change: 'Change from start' }))}${field('Fault when', `<div class="row">${chips(`faults.${i}.op`, ['>', '<'], f.op || '>', { '>': 'More than', '<': 'Less than' })}<input type="number" step="0.5" data-k="faults.${i}.threshold" value="${f.threshold ?? ''}" style="width:100px"><span class="muted">${esc((SPEC.KINDS[f.metric.kind] || {}).unit || '')}</span><button class="btn ghost small" data-suggest="${i}">Suggest</button></div>`)}</div>
-        <div class="row" style="gap:14px">${s.type === 'reps' ? field('Only once the rep is', chips(`faults.${i}.minP`, [0, 0.2, 0.3, 0.5], f.minP ?? 0.3, { 0: 'any time', 0.2: '20% under way', 0.3: '30% under way', 0.5: 'half way' })) : field('Watch it', chips(`faults.${i}.phase`, ['hold', 'any'], f.phase === 'any' ? 'any' : 'hold', { hold: 'while in position', any: 'any time — even out of position' }))}${field('Must persist', chips(`faults.${i}.persist`, [250, 400, 600, 900], f.persist || 400, { 250: '¼ s', 400: '0.4 s', 600: '0.6 s', 900: '0.9 s' }))}${field('Invalidates the rep', chips(`faults.${i}.invalidates`, [false, true], !!f.invalidates, { false: 'No', true: 'Yes' }))}</div>
+        <div class="row" style="gap:14px">${s.type === 'reps'
+          ? field('Check it', chips(`faults.${i}.phase`, ['', 'start'], f.phase === 'start' ? 'start' : '', { '': 'during the set', start: 'at the start position, before the set' }), START_HELP)
+          : field('Watch it', chips(`faults.${i}.phase`, ['hold', 'any', 'start'], f.phase === 'start' ? 'start' : f.phase === 'any' ? 'any' : 'hold', { hold: 'while in position', any: 'any time — even out of position', start: 'at the start position, before the hold' }), START_HELP)}
+        ${f.phase === 'start' || s.type !== 'reps' ? '' : field('Only once the rep is', chips(`faults.${i}.minP`, [0, 0.2, 0.3, 0.5], f.minP ?? 0.3, { 0: 'any time', 0.2: '20% under way', 0.3: '30% under way', 0.5: 'half way' }))}${field('Must persist', chips(`faults.${i}.persist`, [250, 400, 600, 900], f.persist || 400, { 250: '¼ s', 400: '0.4 s', 600: '0.6 s', 900: '0.9 s' }))}${field('Invalidates the rep', chips(`faults.${i}.invalidates`, [false, true], !!f.invalidates, { false: 'No', true: 'Yes' }))}</div>
         ${gatesEditor(s, f, i)}
         ${state.takes.length ? `<canvas class="chart" id="chart-f${i}"></canvas>` : ''}`}
       ${fireReport(f)}
