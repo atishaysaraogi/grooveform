@@ -62,11 +62,23 @@ test('the report is one self-contained page carrying the recording and the playe
   assert.match(html, /Leaning away/);
   assert.match(html, /Rep 1 at [\d.]+ s — Leaning away/);
   assert.match(html, /"exercise":"hipabd"/, 'the recording is inlined');
+  assert.ok(!/"video"/.test(html), 'but never the set\u2019s video');
   assert.match(html, /Replay\.mount\(document\.getElementById\('replay'\)/, 'and the player runs from it');
   /* the source and the JSON both ride inside script tags; neither may close a tag early */
   const body = html.slice(html.indexOf('<script id="set-data"'));
   assert.equal((body.match(/<\/script>/g) || []).length, 3, 'exactly the three script tags close');
   assert.ok(!html.includes('</script> inside a string'), 'a </script> in the source is escaped');
+});
+
+test('a set\u2019s video never reaches the report, which says so', () => {
+  const { rec } = fakeRec();
+  rec.video = { fake: 'blob' }; rec.videoMime = 'video/webm'; rec.videoOffset = 120;
+  const meta = { name: 'X', type: 'reps', target: 10, faults: {} };
+  const review = { score: 80, headline: 'x', type: 'reps', target: 10, reps: 2, partials: 1, faults: {} };
+  const html = Replay.reportHtml(rec, meta, review, 'var Replay={mount:function(){}};');
+  assert.ok(!html.includes('fake'), 'the video is stripped from the inlined recording');
+  assert.match(html, /stayed on the device/, 'and the page says why it is not here');
+  assert.equal(Replay.videoTimeOf(rec, 1000), 1.12, 'a moment of the recording maps into the video by its offset');
 });
 
 test('the bone list matches the engine so the replay draws the same skeleton', () => {

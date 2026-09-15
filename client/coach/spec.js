@@ -164,6 +164,10 @@
   /* --- validation of the spec itself (before it becomes an exercise) --- */
   function checkSpec(spec) {
     const problems = [];
+    if (spec.show) {
+      if (typeof spec.show.ask !== 'string' || !spec.show.ask.trim()) problems.push('show: needs "ask" — what to say when the pose is asked for');
+      if (spec.type !== 'reps' || !spec.progress) problems.push('show: only a counted move with a progress measure can take a demonstrated target');
+    }
     const need = (cond, msg) => { if (!cond) problems.push(msg); };
     need(spec && typeof spec === 'object', 'spec must be an object');
     if (!spec) return problems;
@@ -280,6 +284,7 @@
 
     const focusNames = (Array.isArray(spec.focus) ? spec.focus : spec.focus ? [spec.focus] : (prog ? [prog.metric.pts[prog.metric.pts.length - 1]] : holdConds.length ? [holdConds[0].metric.pts[0]] : [])).filter(Boolean);
     const autoSide = !!(spec.sided && spec.sided.auto);
+    const sideFollow = ((k.settings || {}).side || {}).follow || null;
 
     /* a gate is met when the option has that value, the hold position is (not) held, or a measurement passes its comparison */
     const gateOk = (g, m, vals, opts) => {
@@ -302,13 +307,47 @@
         ref.start = start;
         const t = typeof prog.target === 'string' ? +(opts && opts[prog.target.slice(4)]) : prog.target;
         ref.target = prog.start === 'calibrated' && prog.targetIsDelta ? start + (prog.delta || 1) * t : t;
+        ref.dataTarget = ref.target;   /* what the file says; a demonstrated pose may replace ref.target */
       }
       return ref;
+    }
+    /* ---------- a pose the person shows once, before the set ----------
+       Some targets are a number that only means anything on the body in front of the camera: "arms
+       out at shoulder height" reads as one angle on a wide-shouldered person square to the lens and
+       another on someone half-turned, and a band or dumbbell hides the landmarks that would settle
+       it. So the move can ask for the end of the range to be demonstrated once, without the
+       equipment, and that reading becomes the target. The file's own number stays as the fallback
+       and as the sanity check: a demonstration that did not really leave the start position, or that
+       overshoots wildly, is refused rather than trusted. */
+    function showTarget(pts, ref) {
+      if (iProg < 0 || !ref || !Number.isFinite(ref.dataTarget)) return null;
+      const side = ref.work || S0 || 'L';
+      let v; try { v = evalMetric(metrics[iProg], pts, side, k, ref, ref.opts || {}); } catch (e) { return null; }
+      if (!Number.isFinite(v)) return null;
+      const want = ref.dataTarget - ref.start, reach = v - ref.start;
+      if (!want) return null;
+      const frac = reach / want;
+      if (!(frac > 0.4 && frac < 2.5)) return null;
+      ref.shown = v; ref.target = v;
+      return v;
     }
     function measure(pts, S, ref) {
       const opts = ref.opts || {};
       let side = ref.work || S || S0 || 'L';
       const iSel = iProg >= 0 ? iProg : holdConds.length ? holdConds[0].i : -1;
+      /* The chosen limb is not the one moving: follow the body rather than ask them to start over.
+         Only for a counted move, where "further through the rep" says outright which limb is working,
+         and only after the other side has led by a clear margin for half a second, so one noisy frame
+         cannot flip it mid-rep. The baselines for both sides were taken at calibration, so switching
+         costs nothing but the word. */
+      if (ref.work && iSel >= 0 && iProg >= 0 && sideFollow && spec.sided && (spec.sided.by || 'pick') === 'pick') {
+        const rel = (s2) => evalMetric(metrics[iSel], pts, s2, k, ref, opts) - ref.base[s2][iSel];
+        const dir = (prog.delta || 1) * Math.sign((ref.target ?? 1) - (ref.start ?? 0)) || 1;
+        const other = ref.work === 'L' ? 'R' : 'L';
+        ref.wrongFor = (rel(other) - rel(ref.work)) * dir > sideFollow.margin ? (ref.wrongFor || 0) + 1 : 0;
+        if (ref.wrongFor >= sideFollow.frames) { ref.work = other; ref.wrongFor = 0; ref.switched = (ref.switched || 0) + 1; }
+        side = ref.work;
+      }
       if (autoSide && !ref.work && iSel >= 0) {
         /* no side chosen: the side whose selecting measurement (progress, or the first hold condition) has moved further, with hysteresis */
         const rel = (s) => evalMetric(metrics[iSel], pts, s, k, ref, opts) - ref.base[s][iSel];
@@ -363,7 +402,7 @@
 
     const ex = {
       id: spec.id, order: spec.order || 500, name: spec.name, group: spec.group, type: spec.type, view: spec.view, icon: spec.icon || 'move',
-      summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why,
+      summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why, show: spec.show || null, showTarget,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
       calibrate, measure, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted,

@@ -13,7 +13,7 @@
       "landmarks": "Body points (MediaPipe indices) that must be in frame before a set can start. always = shoulders and hips (11, 12, 23, 24). legs = knees and ankles, added unless the move says upperBody: true.",
       "cannotSee": "The sentence shown under 'what the camera cannot see' when a move does not write its own.",
       "standardFaults": "The three faults added automatically to a tracked move that lists no live fault of its own: shallow (did not reach the target) and fast (rep quicker than minMs) for rep moves, drift (left the held position) for holds. Words only — the numbers come from the move.",
-      "side": "The Left / Right / Both choice every one-sided move offers: its label, the default, and the wording of each choice.",
+      "side": "The Left / Right / Both choice every one-sided move offers: its label, the default, and the wording of each choice. follow: when the limb that is actually moving is not the one chosen, the coach switches to it rather than asking the person to start again — margin is how much further (in the progress reading's own units) the other limb must travel, frames how many frames in a row it must do so. Good: 14 / 12 (about half a second). Bad: a small margin (it flips mid-rep on noise).",
       "band": "The resistance-band colour scale: the order the bubble cycles through, the name shown for each colour, and the swatch colour drawn. 'none' means bodyweight.",
       "score": "How the end-of-set score is built out of 100. faultCost × severity weight per occurrence, capped at faultCap × weight per fault; partialCost per half rep; noRepCap is the most a set with zero reps can score. Holds start at holdFloor and climb with the share of time spent in position; shortHoldPenalty is lost if the hold ends early. tips = how many things-to-fix the review lists. headlines are read top down: the first row whose atLeast the score reaches is shown."
     }
@@ -65,6 +65,7 @@
   "side": {
     "label": "Which side",
     "default": "both",
+    "follow": { "margin": 14, "frames": 12 },
     "labels": { "left": "Left", "right": "Right", "both": "Both (one then the other)" }
   },
   "band": {

@@ -358,6 +358,38 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
 
+### A target the person shows you
+
+Some targets are a number that only means something on the body in front of the
+camera: "arms out at shoulder height" reads as one angle on a wide‑shouldered
+person square to the lens and another on someone half‑turned, and the band or
+dumbbell that makes the move hard to judge is often the very thing hiding the
+joints. Such a move can ask for the end of its range once, before the set,
+**with the equipment out of the way**:
+
+```json
+"show": { "ask": "open your arms wide, as if the band were fully stretched across your chest" }
+```
+
+The coach asks for it after the start position is held, waits for the pose to be
+still, and what it measures becomes `progress.target` for that set — asked once
+per exercise, not once per set, and skippable. `progress.target` is still
+required: it is the fallback, and the sanity check — a demonstration under 40 %
+or over 250 % of it is refused and the file's number stands. Six moves use it
+today (band pull‑apart, lateral and front raise, scaption, wall slide, band
+row); it is worth adding wherever the target is a reach-to-height rather than a
+joint angle.
+
+### Which limb is being worked
+
+On a front‑on move either limb works from the same set‑up, so the person picks
+one — but if they then work the other one, the coach follows the body rather
+than stopping them. Whichever limb is further through the rep for half a second
+(`settings.json` → `side.follow`) becomes the working one, and the coach says so.
+Both sides' baselines are taken at calibration, so the switch costs nothing. On a
+`by: "camera"` move the working limb is simply whichever one the lens can see:
+lying the other way round is no longer refused, it is reported.
+
 ### A phone that is not where the move asked
 
 Everything a move measures is 2‑D image geometry, so a phone off its ideal spot

@@ -229,6 +229,23 @@ async function runCoachedSet(page, side = 'right') {
     const html = await pro.evaluate(async () => { const src = await (await fetch('coach/replay.js')).text(); const r = window.FyzioCoach.lastRec; return window.Replay.reportHtml(r, { name: 'Shoulder abduction', type: 'reps', target: 8, faults: {} }, { score: 90, headline: 'x', type: 'reps', target: 8, reps: 8, partials: 0, faults: {} }, src).length; });
     assert.ok(html > 20000, 'the report is a full page with the recording inside: ' + html + ' bytes');
     await pro.screenshot({ path: path.join(SHOTS, 'review-replay.png') });
+    /* what the coach says at the end: the set, then the one thing to try — not a read-out of the counts */
+    const said = await pro.evaluate(() => {
+      const f = window.FyzioCoach;
+      return {
+        done: f.spokenSummary({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [{ label: 'Leaning away', cue: 'Stay tall' }] }),
+        clean: f.spokenSummary({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [] }),
+        short: f.spokenSummary({ type: 'reps', reps: 5, target: 8, partials: 1, tips: [] }),
+      };
+    });
+    assert.equal(said.done, 'Set 1 complete. Next set, try: Stay tall.', JSON.stringify(said));
+    assert.equal(said.clean, 'Set 1 complete. Nothing to fix — same again.', JSON.stringify(said));
+    assert.equal(said.short, 'Set 1 done — 5 of 8 reps. Nothing to fix — same again.', 'a set cut short still says how far it got: ' + JSON.stringify(said));
+    /* the downloadable recording is landmarks and events only, whatever is held in memory for the replay */
+    const redacted = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; r.video = new Blob(['not-really-a-video'], { type: 'video/webm' }); r.videoMime = 'video/webm'; const j = JSON.parse(window.FyzioCoach.recJson()); return { keys: Object.keys(j).filter((k) => k === 'video' || k === 'videoMime'), all: Object.keys(j).filter((k) => k.startsWith('video')), frames: j.frames.length }; });
+    assert.deepEqual(redacted.keys, [], 'no video reaches the file: ' + JSON.stringify(redacted));
+    assert.deepEqual(redacted.all, ['videoOffset'], 'only where its frames would have started, which is a number: ' + JSON.stringify(redacted));
+    assert.ok(redacted.frames > 100, 'the landmarks are still there: ' + JSON.stringify(redacted));
     assert.equal(rec.work, 'L', 'the chosen left arm is the working limb: ' + JSON.stringify(rec));
     /* the set opens by naming the side and describing the movement, before the count-in */
     assert.match(rec.opening || '', /^Left arm\./, 'the opening names the side: ' + JSON.stringify(rec.opening));

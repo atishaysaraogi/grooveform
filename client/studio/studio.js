@@ -55,7 +55,7 @@
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
       summary: '', setup: '', brief: '', why: '', band: false, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
-      calibrationPose: '',
+      calibrationPose: '', showAsk: '',
       progress: { metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false },
       hold: { conditions: [{ metric: { kind: 'angle', pts: [] }, min: null, max: null, rel: 'abs' }] },
       faults: [],
@@ -82,7 +82,7 @@
     Object.assign(s, {
       _fileCamera: grpCam ? { ...grpCam } : null,
       id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
-      camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, brief: ex.brief || '', why: ex.why, calibrationPose: r.calibrationPose || '',
+      camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, brief: ex.brief || '', why: ex.why, calibrationPose: r.calibrationPose || '', showAsk: (raw.show && raw.show.ask) || '',
       band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
       tracking: ex.tracking, level: r.level || 'beginner', equipmentText: (ex.equipment || []).join('\n'), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
       tempo: r.tempo || '', dosage: r.dosage || '', progression: r.progression || '', regression: r.regression || '', contraindications: r.contraindications || '',
@@ -138,6 +138,7 @@
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
     if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1; put('progress', p); }
+    if (s.showAsk && s.type === 'reps' && s.tracking !== 'none') put('show', { ask: s.showAsk });
     if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; if (c.when && c.when.length) o.when = c.when; return o; }); if (cs.length) { let named = null; for (const [n, v] of Object.entries(SHARED().holds)) if (same(v, cs)) named = n; put('hold', { conditions: named || cs }); } }
     put('faults', (s.faults || []).map((f) => {
       const base = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, severity: +f.severity || 2 };
@@ -438,6 +439,7 @@
         ${field('Resistance band', chips('band', [false, 'none', 'yellow', 'red', 'green'], s.band, { false: 'No band option', none: 'Optional, default none', yellow: 'Default yellow', red: 'Default red', green: 'Default green' }), 'TheraBand colours; the user picks the colour, the app never describes resistance.')}
         ${field('Rep / second choices offered', text('targetsText', (s.targets || []).join(', '), '6, 8, 10, 12, 15'), 'Default: the one marked *')}
         ${field('Default', chips('defaultTarget', s.targets, s.defaultTarget))}
+        ${s.type === 'reps' ? field('Ask them to show the end position (optional)', area('showAsk', s.showAsk, 'arms straight out to the sides, level with your shoulders, nothing in your hands', 2), 'Only when the target depends on the body or the camera angle, or the equipment hides the joints. The person holds this pose once before the set and what it reads becomes the target; the number in step 4 stays as the fallback.') : ''}
         ${field('Calibration pose (the first two seconds of every set)', area('calibrationPose', s.calibrationPose, 'Standing tall, arm hanging at the side, band slack.', 2), 'The coach reads its baselines from this still pose. Every take you record must start in it.')}
         ${field('Summary — one line on the tile', area('summary', s.summary, 'Straight-leg raise out to the side, checked for leaning and hip hiking.', 2))}
         ${field('Set-up — where the camera goes, in the user’s words', area('setup', s.setup, 'Stand facing the camera about 2.5 m away, camera at hip height, whole body in frame.', 3))}

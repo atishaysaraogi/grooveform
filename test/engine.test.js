@@ -194,6 +194,23 @@ function trap(tilt, { shoulderUp = 0, turn = 0, handUp = 0 } = {}) {
   assert(review.holdSec >= 12 && review.holdSec <= 15, 'hold counted only while tilted: ' + review.holdSec); assert(review.faults.shoulder); assert(review.faults.turn); assert(review.faults.hand);
 }
 
+/* ---- The chosen limb is not the one moving: the coach follows the body rather than asking the
+       person to start again. The fixture raises the RIGHT leg throughout; the set is started on
+       the left. ---- */
+{
+  const ha = ex('hipabd'); const frames = [];
+  for (let i = 0; i < 40; i++) frames.push(hipabd(0));
+  for (let r = 0; r < 4; r++) for (let i = 0; i < 80; i++) { const k = Math.sin(Math.PI * i / 80); frames.push(hipabd(32 * k)); }
+  for (let i = 0; i < 40; i++) frames.push(hipabd(0));
+  const right = run(ha, frames, { rom: 30, work: 'R' });
+  const wrong = run(ha, frames, { rom: 30, work: 'L' });
+  console.log('picked the wrong leg:', { started: 'L', endedOn: wrong.sess.ref.work, switches: wrong.sess.ref.switched, reps: wrong.review.reps, sameAsRight: wrong.review.reps === right.review.reps });
+  assert.strictEqual(wrong.sess.ref.work, 'R', 'it follows the leg that is actually moving');
+  assert.strictEqual(wrong.sess.ref.switched, 1, 'and switches once, not back and forth');
+  assert.strictEqual(wrong.review.reps, right.review.reps, 'so the reps count as if the right leg had been picked');
+  /* and it does not switch when the picked leg IS the one moving */
+  assert.ok(!right.sess.ref.switched, 'no switch when the pick was right');
+}
 /* ---- Camera tolerance: the same recordings through a phone that is propped crooked (rolled)
        and a person who is not square to the lens (yawed) must count and cue the same. ---- */
 {

@@ -85,12 +85,23 @@
     ctx.restore();
   }
 
-  /* one frame of the stage: skeleton, rep count, the cue that was being said, the range bar */
-  function drawStage(ctx, rec, meta, tl, t, W, H) {
+  /* where in the set's video a moment of the recording sits */
+  const videoTimeOf = (rec, t) => (t + (rec.videoOffset || 0)) / 1000;
+  /* one frame of the stage: the camera's own picture where there is one, then the skeleton over it,
+     the rep count, the cue that was being said, the range bar */
+  function drawStage(ctx, rec, meta, tl, t, W, H, videoEl) {
     ctx.fillStyle = C.stage; ctx.fillRect(0, 0, W, H);
     const f = frameAt(rec.frames, t); if (!f) return;
+    const mirror = rec.facing === 'user';
+    /* the landmarks are in the camera's own frame, so the picture is flipped with them or not at all */
+    if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth) {
+      ctx.save(); if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+      try { ctx.drawImage(videoEl, 0, 0, W, H); } catch (e) { }
+      ctx.restore();
+      ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(0, 0, W, H);   /* the skeleton has to stay readable over it */
+    }
     const hot = new Set(); for (const id of f.f || []) for (const i of ((meta.faults || {})[id] || {}).landmarks || []) hot.add(i);
-    drawSkeleton(ctx, f.lm, W, H, { hot, mirror: rec.facing === 'user', alpha: f.lm ? 1 : 0.35 });
+    drawSkeleton(ctx, f.lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35 });
     const fs = Math.max(12, Math.round(H / 18)); ctx.font = `800 ${fs}px system-ui, sans-serif`; ctx.textBaseline = 'top';
     const done = tl.reps.filter((r) => r.t1 <= t && r.full).length;
     const label = meta.type === 'hold' ? `${Math.max(0, (t - tl.t0) / 1000).toFixed(0)} s` : `${done} / ${meta.target || '–'}`;
@@ -139,6 +150,15 @@
   function mount(host, rec, meta, opts = {}) {
     const tl = timeline(rec, opts);
     const aspect = rec.aspect || 16 / 9;
+    /* the set's own video, when one was kept: an off-screen element the canvas draws from, so the
+       export and the report use exactly the same picture as the player */
+    let videoEl = null, videoUrl = null;
+    if (rec.video && typeof URL !== 'undefined' && URL.createObjectURL) {
+      try {
+        videoUrl = URL.createObjectURL(rec.video);
+        videoEl = document.createElement('video'); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.preload = 'auto';
+      } catch (e) { videoEl = null; }
+    }
     host.innerHTML = `<div class="rp">
       <canvas class="rp-stage" aria-label="Replay of the set"></canvas>
       <div class="rp-bar"><button type="button" class="btn ghost small rp-play" aria-label="Play">▶ Play</button><input type="range" class="rp-seek" min="0" max="${Math.round(tl.duration)}" value="0" step="33" aria-label="Scrub"><span class="rp-time">0.0 s</span></div>
@@ -157,7 +177,7 @@
     }
     function render() {
       const w = stage.width / (Math.min(2, root.devicePixelRatio || 1));
-      drawStage(sctx, rec, meta, tl, t, w, w / aspect);
+      drawStage(sctx, rec, meta, tl, t, w, w / aspect, videoEl);
       drawTimeline(tctx, tl, meta, t, w, 64);
       seek.value = String(Math.round(t - tl.t0)); time.textContent = ((t - tl.t0) / 1000).toFixed(1) + ' s';
     }
@@ -167,13 +187,16 @@
       if (t >= tl.t1) { t = tl.t1; pause(); render(); return; }
       render(); raf = root.requestAnimationFrame(tick);
     }
-    function start() { if (t >= tl.t1) t = tl.t0; playing = true; last = 0; play.textContent = '⏸ Pause'; raf = root.requestAnimationFrame(tick); }
-    function pause() { playing = false; root.cancelAnimationFrame(raf); play.textContent = '▶ Play'; }
+    function seekVideo() { if (!videoEl) return; try { videoEl.currentTime = Math.max(0, videoTimeOf(rec, t)); } catch (e) { } }
+    function start() { if (t >= tl.t1) t = tl.t0; playing = true; last = 0; play.textContent = '⏸ Pause'; if (videoEl) { seekVideo(); videoEl.play().catch(() => { }); } raf = root.requestAnimationFrame(tick); }
+    function pause() { playing = false; root.cancelAnimationFrame(raf); play.textContent = '▶ Play'; if (videoEl) videoEl.pause(); }
     play.onclick = () => (playing ? pause() : start());
-    seek.oninput = () => { t = tl.t0 + Number(seek.value); render(); };
-    tlc.onclick = (e) => { const r = tlc.getBoundingClientRect(); t = tl.t0 + (e.clientX - r.left) / r.width * tl.duration; render(); };
-    size(); if (root.addEventListener) root.addEventListener('resize', size);
-    return { play: start, pause, seek: (ms) => { t = tl.t0 + ms; render(); }, get t() { return t; }, timeline: tl, destroy() { pause(); if (root.removeEventListener) root.removeEventListener('resize', size); host.innerHTML = ''; } };
+    const jump = () => { pause(); seekVideo(); if (videoEl) videoEl.addEventListener('seeked', render, { once: true }); render(); };
+    seek.oninput = () => { t = tl.t0 + Number(seek.value); jump(); };
+    tlc.onclick = (e) => { const r = tlc.getBoundingClientRect(); t = tl.t0 + (e.clientX - r.left) / r.width * tl.duration; jump(); };
+    size(); if (videoEl) videoEl.addEventListener('loadeddata', render, { once: true });
+    if (root.addEventListener) root.addEventListener('resize', size);
+    return { play: start, pause, seek: (ms) => { t = tl.t0 + ms; render(); }, get t() { return t; }, timeline: tl, hasVideo: !!videoEl, destroy() { pause(); if (root.removeEventListener) root.removeEventListener('resize', size); if (videoUrl) URL.revokeObjectURL(videoUrl); host.innerHTML = ''; } };
   }
 
   /* ---------- the same playback as a video file ---------- */
@@ -190,8 +213,12 @@
       mr.onerror = (e) => reject(e.error || new Error('Recording failed'));
       mr.onstop = () => resolve(new Blob(chunks, { type: mime || 'video/webm' }));
       let t = tl.t0; const step = 1000 / fps; const t0 = tl.t0, t1 = tl.t1;
+      /* the set's own video, played in step with the render (which runs in real time anyway) */
+      let videoEl = null, videoUrl = null;
+      if (rec.video) { try { videoUrl = URL.createObjectURL(rec.video); videoEl = root.document.createElement('video'); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.currentTime = Math.max(0, videoTimeOf(rec, t)); videoEl.play().catch(() => { }); } catch (e) { videoEl = null; } }
+      const done = () => { if (videoUrl) { try { videoEl.pause(); } catch (e) { } URL.revokeObjectURL(videoUrl); } };
       const draw = () => {
-        drawStage(ctx, rec, meta, tl, t, W, SH);
+        drawStage(ctx, rec, meta, tl, t, W, SH, videoEl);
         ctx.save(); ctx.translate(0, SH); drawTimeline(ctx, tl, meta, t, W, TH); ctx.restore();
         if (stream.getVideoTracks()[0] && stream.getVideoTracks()[0].requestFrame) stream.getVideoTracks()[0].requestFrame();
       };
@@ -199,7 +226,7 @@
       /* real time: MediaRecorder stamps frames by the clock, so the file plays at the pace the set was done */
       const timer = setInterval(() => {
         t += step; draw(); onProgress(Math.min(1, (t - t0) / ((t1 - t0) || 1)));
-        if (t >= t1 + 800) { clearInterval(timer); setTimeout(() => mr.stop(), 300); }
+        if (t >= t1 + 800) { clearInterval(timer); done(); setTimeout(() => mr.stop(), 300); }
       }, step);
     });
   }
@@ -217,7 +244,8 @@
     /* the recording and the player both ride inside script tags; a "</script" in either would end
        the tag early. Inside JavaScript "<\/script" reads the same, so the escape is harmless. */
     const unclose = (txt) => String(txt).replace(/<\/script/gi, '<\\/script');
-    const data = unclose(JSON.stringify({ rec, meta, review: { ...review, faults: undefined } }));
+    const { video, videoMime, ...recNoVideo } = rec;   /* the video never leaves the device it was recorded on */
+    const data = unclose(JSON.stringify({ rec: recNoVideo, meta, review: { ...review, faults: undefined } }));
     source = unclose(source);
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -236,7 +264,7 @@
 </style></head><body><div class="wrap">
   <div class="panel head"><div class="ring" style="--c:${review.score >= 75 ? '#4f9a1e' : review.score >= 55 ? '#ffb830' : '#ff2e88'}">${esc(review.score == null ? '–' : review.score)}</div><div><h1>${esc(review.headline || meta.name)}</h1><p class="muted">${esc(meta.name)}${meta.side ? ' · ' + esc(meta.side) : ''} · ${esc(when)}</p>${cam}</div></div>
   <div class="stats">${stats.map(([v, k]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`).join('')}</div>
-  <div class="panel"><h3>Watch it back</h3><p class="muted" style="margin-bottom:8px">The skeleton the coach saw — no video was kept. Reps along the top, range through the middle, faults and cues below. Click the timeline to jump.</p><div id="replay"></div></div>
+  <div class="panel"><h3>Watch it back</h3><p class="muted" style="margin-bottom:8px">The skeleton the coach saw. ${rec.video ? 'The set&rsquo;s video stayed on the device it was recorded on, so this page carries the skeleton only.' : 'No video was kept.'} Reps along the top, range through the middle, faults and cues below. Click the timeline to jump.</p><div id="replay"></div></div>
   <div class="panel"><h3>Work on next</h3>${faults.length ? faults.map((fc) => `<div class="fault"><span class="n">×${fc.n}</span><span><span class="l">${esc(fc.fault ? fc.fault.label : fc.id)}</span><br><span class="t">${esc(fc.fault ? fc.fault.tip : '')}</span></span></div>`).join('') : '<p class="muted">No faults flagged.</p>'}</div>
   <div class="panel"><h3>Timeline</h3><p class="muted">${tl.reps.length ? tl.reps.map((r) => `${r.full ? 'Rep ' + r.n : 'Partial'} at ${((r.t1 - tl.t0) / 1000).toFixed(1)} s${r.faults.length ? ' — ' + r.faults.map((id) => (meta.faults[id] || {}).label || id).join(', ') : ''}`).join('<br>') : 'A hold: see the fault spans on the timeline.'}${tl.cues.length ? '<br><br>Cues: ' + tl.cues.map((c) => `${((c.t - tl.t0) / 1000).toFixed(1)} s “${esc(c.text)}”`).join(' · ') : ''}</p></div>
   <p class="muted" style="text-align:center">Made with jodd.io · the recording is inside this file (landmarks and events, never video)</p>
@@ -247,6 +275,6 @@
 </body></html>`;
   }
 
-  const Replay = { timeline, frameAt, drawSkeleton, drawStage, drawTimeline, mount, record, canRecord, reportHtml, BONES };
+  const Replay = { timeline, frameAt, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, BONES };
   if (typeof module !== 'undefined' && module.exports) module.exports = Replay; else root.Replay = Replay;
 })(typeof window !== 'undefined' ? window : globalThis);

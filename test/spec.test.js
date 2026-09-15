@@ -176,3 +176,33 @@ test('heel_lift / toes_lift / foot_lift read a foot leaving the floor, and heel_
   const hs = E.EXERCISES.find((e) => e.id === 'heelslide'); const hf = hs.faults.find((x) => x.id === 'heel');
   assert.ok(hf && !hf.onRep && hf.weight === 3, 'heel slide keeps its own words and severity on the shared measurement');
 });
+
+/* A demonstrated target: the person holds the end of the range once, without the band, and what it
+   reads replaces the number in the file — but only if the demonstration is plausible. */
+test('show: a held end position becomes the target, and an implausible one is refused', () => {
+  const E = require('../client/coach/engine.js');
+  const ex = E.EXERCISES.find((e) => e.id === 'pullapart');
+  assert.ok(ex.show && ex.show.ask, 'the band pull-apart asks for the end position');
+  /* arms forward, wrists a hand apart: the start. Torso 0.25, so the reading is a % of that. */
+  const wrists = (gap) => frame({ 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15], 11: [0.59, 0.30], 12: [0.41, 0.30], 13: [0.61, 0.40], 14: [0.39, 0.40], 15: [0.5 + gap / 2, 0.45], 16: [0.5 - gap / 2, 0.45], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95] });
+  const fresh = () => { const ref = ex.calibrate(wrists(0.10), 'L', {}); return ref; };
+  const ref = fresh();
+  assert.equal(Math.round(ref.dataTarget), 280, 'the file target is kept as the fallback');
+  const start = ref.start;
+  /* opened wide: about 240 % of torso, most of the way to the file's 280 */
+  const v = ex.showTarget(wrists(0.60), ref);
+  assert.ok(v !== null, 'a real demonstration is taken');
+  assert.equal(Math.round(ref.target), Math.round(v), 'and becomes the target');
+  assert.notEqual(Math.round(ref.target), 280, 'replacing the number in the file');
+  assert.equal(Math.round(ref.dataTarget), 280, 'which is still there as the fallback');
+  assert.equal(Math.round(ref.start), Math.round(start), 'the start is untouched');
+  /* barely moved: refused, and the target is left alone */
+  const r2 = fresh(); assert.equal(ex.showTarget(wrists(0.14), r2), null, 'a pose that barely left the start is refused');
+  assert.equal(Math.round(r2.target), 280, 'so the file target stands');
+  /* nonsense: refused too */
+  const r3 = fresh(); assert.equal(ex.showTarget(wrists(2.40), r3), null, 'and so is a wild reading');
+  assert.equal(Math.round(r3.target), 280);
+  /* a move that asks for nothing has nothing to show */
+  const hs = E.EXERCISES.find((e) => e.id === 'heelslide');
+  assert.equal(hs.show, null, 'a move only asks when its file says to');
+});

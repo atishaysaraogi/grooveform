@@ -227,7 +227,7 @@
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
       'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
-      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display',
+      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
@@ -235,7 +235,7 @@
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
     when: ['option', 'is', 'metric', 'rel', 'op', 'threshold'], scale: ['metric', 'rel', 'times'], display: ['label', 'unit', 'from', 'aim', 'condition'],
     guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
-    camera: ['height', 'distance', 'posture', 'tolerance'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
+    camera: ['height', 'distance', 'posture', 'tolerance'], show: ['ask'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
     option: ['key', 'label', 'values', 'unit', 'default', 'labels'],
     pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side'],
     kfSide: ['preset', 'face', 'torso', 'neck', 'thigh', 'shin', 'foot', 'uarm', 'farm', 'thighF', 'shinF', 'footF', 'uarmF', 'farmF'],
@@ -319,6 +319,7 @@
     if (e.camera) checkKeys(e.camera, 'camera', where + ' › camera');
     if (e.sided) checkKeys(e.sided, 'sided', where + ' › sided');
     if (e.display) checkKeys(e.display, 'display', where + ' › display');
+    if (e.show) checkKeys(e.show, 'show', where + ' › show');
     if (e.muscles) checkKeys(e.muscles, 'muscles', where + ' › muscles');
     (e.sources || []).forEach((s, i) => checkKeys(s, 'source', `${where} › sources[${i}]`));
     (e.options || []).forEach((o, i) => checkKeys(o, 'option', `${where} › options[${i}]`));
@@ -396,7 +397,7 @@
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, brief: e.brief, why: e.why, targets, defaultTarget, options: e.options || [],
-        progress: e.progress, hold: e.hold, faults: specFaults, guide, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
+        progress: e.progress, hold: e.hold, faults: specFaults, guide, show: e.show, sided: e.sided, upperBody: e.upperBody, band: e.band, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
       };
       ex = SPEC.compile(spec, lib.kinematics);
       ex.faults = [...ex.faults, ...docFaults(true)];

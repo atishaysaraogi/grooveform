@@ -23,7 +23,7 @@
     get(k, d) { try { const v = localStorage.getItem('fyzio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('fyzio.' + k, JSON.stringify(v)); } catch { } }
   };
-  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', mirror: 'auto', fps: 'off' }, store.get('settings', {}));
+  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', mirror: 'auto', fps: 'off', video: 'on' }, store.get('settings', {}));
   function saveSettings() { store.set('settings', settings); }
   function setSetting(k, val) { settings[k] = val; saveSettings(); if (k === 'smooth') applySmoothing(); if (k === 'voice') { voice.muted = val === 'off'; if (typeof applyVoiceButton === 'function') applyVoiceButton(); } if (k === 'voiceName') voiceCache = null; }
   function show() { /* screens are managed by the portal */ }
@@ -254,7 +254,7 @@
     streamFacing = facing; video.srcObject = stream; await video.play();
     await new Promise(r => { if (video.videoWidth) r(); else video.onloadedmetadata = () => r(); });
   }
-  function stopCamera() { streamFacing = null; if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } video.srcObject = null; if (video.src) { try { URL.revokeObjectURL(video.src); } catch { } video.removeAttribute('src'); video.load(); } }
+  function stopCamera() { stopVideoCapture(); streamFacing = null; if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } video.srcObject = null; if (video.src) { try { URL.revokeObjectURL(video.src); } catch { } video.removeAttribute('src'); video.load(); } }
   async function startFile(file) {
     stopCamera();
     video.src = URL.createObjectURL(file); video.loop = false; video.muted = true; video.playbackRate = 1;
@@ -366,7 +366,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0 };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -381,6 +381,7 @@
       return;
     }
     live.state = 'position';
+    if (!file) startVideoCapture();
     /* Spoken now rather than at "Go": it plays while they are getting into position, and the
        three-second count-in stays clear. */
     const opening = openingLine(ex, target, current.opts);
@@ -408,10 +409,41 @@
   }
 
   /* ---------- diagnostics recording ---------- */
+  /* ---------- the set's own video ----------
+     The skeleton alone is hard to read back: you cannot see the hand on the wall, the band, or the
+     face. So the camera's own frames are recorded alongside the landmarks and played under the
+     skeleton in the review. It is held in memory on this device for as long as the review is open,
+     is never uploaded and is never part of the diagnostics JSON — that stays landmarks only. A
+     video file being analysed needs none of this: it already is the video. */
+  const vid = { mr: null, chunks: [], startedAt: 0, mime: '' };
+  function startVideoCapture() {
+    stopVideoCapture();
+    if (settings.video === 'off' || !stream || typeof MediaRecorder === 'undefined') return;
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((m) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+    try {
+      vid.mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 2000000 } : undefined);
+      vid.chunks = []; vid.mime = mime || 'video/webm';
+      vid.mr.ondataavailable = (e) => { if (e.data && e.data.size) vid.chunks.push(e.data); };
+      vid.mr.start(500); vid.startedAt = performance.now();
+    } catch (e) { vid.mr = null; }
+  }
+  function stopVideoCapture() { if (vid.mr && vid.mr.state !== 'inactive') { try { vid.mr.stop(); } catch (e) { } } vid.mr = null; vid.chunks = []; }
+  /* Hand the finished video to a recording once the recorder has flushed, and refresh the review. */
+  function finishVideoCapture(rec) {
+    const mr = vid.mr; if (!mr || !rec) { stopVideoCapture(); return; }
+    vid.mr = null; const chunks = vid.chunks, mime = vid.mime; vid.chunks = [];
+    mr.onstop = () => {
+      if (!chunks.length) return;
+      rec.video = new Blob(chunks, { type: mime }); rec.videoMime = mime;
+      if (lastRec === rec && !$('screen-review').hidden && rec.review) renderReplay(rec.review);
+    };
+    try { mr.stop(); } catch (e) { }
+  }
+
   let lastRec = null;
   function record(raw, now, aspect) {
     const rec = live.rec; if (!rec) return;
-    if (!rec.t0) rec.t0 = now;
+    if (!rec.t0) { rec.t0 = now; rec.videoOffset = vid.mr ? Math.max(0, Math.round(now - vid.startedAt)) : 0; }   /* where rec time 0 sits in the video */
     const f = { t: Math.round(now - rec.t0), s: live.state, lm: raw ? raw.map(l => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null };
     if (live.state === 'active' && live.session.m) { f.p = +(live.session.m.p ?? 0).toFixed(3); if (live.session.counter) f.rs = live.session.counter.state; if (live.session.faults.active.size) f.f = [...live.session.faults.active]; }
     rec.frames.push(f); rec.aspect = aspect;
@@ -436,6 +468,7 @@
        levelled, un-squashed copy (see cameraCorrection) so a crooked or off-axis phone reads true. */
     draw(pts, aspect, W, H, lost);
     if (live.state === 'position') positionStep(pts, aspect, now, lost);
+    else if (live.state === 'show') showStep(lost ? null : pts, now, lost);
     else if (live.state === 'countdown') countdownStep(pts, now);
     else if (live.state === 'active') { if (pts && !lost) watchYaw(pts, now); activeStep(lost ? null : E.Camera.correctPts(pts, live.corr), now, lost); }
   }
@@ -482,14 +515,15 @@
     const want = ex.sided && ex.sided.by === 'camera' ? wantedSide() : null;
     const seen = want ? E.nearSide(pts) : null;
     const sideOk = !want || seen === want;
-    if (want) out.push({ label: sideOk ? `${sideName(want)} ${limbWord(ex)} nearest the camera` : `Turn: ${sideName(want)} ${limbWord(ex)} should be nearest the camera`, ok: sideOk });
-    ok = visOk && frameOk && orientOk && sizeOk && sideOk;
+    /* The working limb IS whichever one the lens can see, so lying the other way round is not a
+       mistake to correct: the set runs on that limb and the check says which. */
+    if (want) out.push({ label: sideOk ? `${sideName(want)} ${limbWord(ex)} nearest the camera` : `Working your ${sideName(seen)} ${limbWord(ex)} — the one the camera can see`, ok: true });
+    ok = visOk && frameOk && orientOk && sizeOk;
     let msg = '';
     if (!visOk) msg = 'Some joints are hidden — make sure ' + (ex.upperBody ? 'your head, both arms and your hips' : ex.view === 'side' ? 'the whole side of your body' : 'both legs and both arms') + ' can be seen.';
     else if (!frameOk) msg = 'You\'re cut off at the ' + edges.join(' and ') + '. Move the camera back or reposition.';
     else if (!orientOk) msg = ex.view === 'front' ? 'Turn so your chest faces the camera.' : 'Turn 90° so the camera sees your side.';
     else if (!sizeOk) msg = 'Move a little closer to the camera.';
-    else if (!sideOk) msg = `You picked the ${sideName(want)} ${limbWord(ex)}, but the camera is on your ${sideName(seen)}. Turn around so it can see the ${sideName(want)} ${limbWord(ex)}.`;
     return { ok, checks: out, msg };
   }
 
@@ -511,6 +545,9 @@
       const tilt = !live.file && levelSensor.seen >= 5 && levelSensor.roll != null && Math.abs(levelSensor.roll) >= 3 && Math.abs(levelSensor.roll) <= ((E.settings.camera || {}).maxRoll || 25) ? ` · phone tilted ${Math.round(Math.abs(levelSensor.roll))}°, corrected` : '';
       overlay('Hold your start position', live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.', { checks: c.checks, progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt });
       if (held > (live.file ? 400 : 1200)) {
+        /* Some moves ask for the end of the range once, before the set, so the target is measured on
+           this body rather than assumed (see showStep). Asked once per exercise, not once per set. */
+        if (live.ex.show && !live.shownDone && !live.file && current.shownFor !== live.ex.id) { live.state = 'show'; live.showAt = now; live.showSteady = 0; live.showHip = null; live.showSpoken = false; return; }
         /* The side was chosen before the set, so there is nothing to identify — start counting in. */
         live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0;
       }
@@ -520,6 +557,33 @@
       /* Always offer a way out: if the camera cannot see the whole body the set never starts,
          and without these the overlay is a dead end. */
       overlay('Get into position', c.msg, { checks: c.checks, note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on'), actions: POSITION_EXITS });
+    }
+  }
+  /* ---------- "show me what that looks like on you" ----------
+     A target written as a number — arms out at shoulder height, hands this far apart — reads
+     differently on every body and from every angle, and the band or dumbbell that makes the move
+     hard to judge is often the thing hiding the landmarks. So the move asks for the end position
+     once, held still, with the equipment slack, and measures it. What was demonstrated becomes the
+     target for the set; the file's number stays as the fallback if the pose cannot be read. */
+  const SHOW_EXITS = [
+    { label: 'Skip — use the usual target', cls: 'ghost', fn: () => { if (!live) return; live.shownDone = true; live.showPts = null; live.state = 'position'; live.steadySince = 0; } },
+    { label: '← Back to setup', cls: 'ghost', fn: () => exitLive() },
+  ];
+  function showStep(pts, now, lost) {
+    const ask = live.ex.show.ask;
+    if (!live.showSpoken) { live.showSpoken = true; voice.say(`First, show me: ${ask}. Hold it there.`, { priority: 2 }); }
+    const note = 'No band or weight for this — the coach is measuring what the end of the range looks like on you.';
+    if (lost || !pts) { live.showSteady = 0; overlay('Show me the end position', ask, { note, actions: SHOW_EXITS }); return; }
+    const hip = E.mid(pts[23], pts[24]);
+    const moving = live.showHip && E.dist(hip, live.showHip) > 0.014; live.showHip = hip;
+    if (moving) live.showSteady = 0; else if (!live.showSteady) live.showSteady = now;
+    const held = live.showSteady ? now - live.showSteady : 0, waited = now - live.showAt;
+    overlay('Show me the end position', ask, { progress: Math.min(1, waited < 2500 ? 0 : held / 1200), note, actions: SHOW_EXITS });
+    /* a couple of seconds to get there, then a moment held still */
+    if (waited > 2500 && held > 1200) {
+      live.showPts = pts.map((p) => ({ ...p })); live.shownDone = true;
+      live.state = 'position'; live.steadySince = 0; live.prevHip = null;
+      voice.say('Got it. Back to the start position.', { priority: 2 });
     }
   }
   function countdownStep(pts, now) {
@@ -533,7 +597,16 @@
       /* On a camera-side move the visible limb IS the working one, so record it for the review. */
       if (live.ex.sided && live.ex.sided.by === 'camera') live.session.opts.work = side;
       live.corr = cameraCorrection(pts); live.rec.camera = { ...live.corr };
-      live.session.calibrate(E.Camera.correctPts(pts, live.corr), side); recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref, camera: live.rec.camera });
+      live.session.calibrate(E.Camera.correctPts(pts, live.corr), side);
+      /* the demonstrated end position, levelled the same way as the start pose, becomes the target;
+         a later set of the same move reuses the one already shown */
+      const shownPts = live.showPts || (current.shownFor === live.ex.id ? current.shownPts : null);
+      if (shownPts && live.ex.showTarget) {
+        const v = live.ex.showTarget(E.Camera.correctPts(shownPts, live.corr), live.session.ref);
+        recEvent('shown', { value: v == null ? null : Math.round(v), target: Math.round(live.session.ref.target) });
+        if (v == null) { if (live.showPts) voice.say('I could not read that pose — using the usual target.', { priority: 2 }); current.shownFor = null; current.shownPts = null; }
+        else { current.shownFor = live.ex.id; current.shownPts = shownPts; }
+      } recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref, camera: live.rec.camera });
       if (live.session.opts.work) $('live-name').textContent = `${live.ex.name} · ${sideName(live.session.opts.work)} ${limbWord(live.ex)}`;
       live.state = 'active'; hideOverlay(); voice.say('Go', { priority: 2 }); voice.beep(990, 0.12);
       showCue(live.ex.type === 'reps' ? 'Go — the coach is counting' : 'Hold it — timer running', 'good');
@@ -545,6 +618,15 @@
     setStatus(lost ? 'bad' : 'ok', lost ? 'Lost you' : (settings.fps === 'on' ? fps + ' fps' : 'Tracking'));
     if (lost && now - (live.lastLostCue || 0) > 5000) { live.lastLostCue = now; showCue('Can\'t see you — step back into frame', 'info'); }
     const r = s.step(pts, now);
+    /* the engine followed the limb that was actually moving: say so, and record it, so the review
+       and the history name the limb that did the work */
+    if (s.ref && s.ref.switched && s.ref.switched !== live.sideSwitched) {
+      live.sideSwitched = s.ref.switched; s.opts.work = s.ref.work;
+      const w = `${sideName(s.ref.work)} ${limbWord(ex)}`;
+      $('live-name').textContent = `${ex.name} · ${w}`;
+      voice.say(`Following your ${w}`, { priority: 2 }); showCue(`Switched to your ${w}`, 'info');
+      recEvent('side', { work: s.ref.work });
+    }
     setFrame(lost ? 'bad' : s.faults.active.size ? 'bad' : (ex.type === 'hold' && r.m && !r.m.inPosition) ? 'bad' : 'ok');
     if (!r.m) return;
     let said = null;                       // the cue already spoken on this frame, if a rep just landed
@@ -623,7 +705,7 @@
   function finishSet(auto = false) {
     if (!live || live.state !== 'active') { if (live && live.state !== 'active') exitLive(); return; }
     const review = live.session.review();
-    live.state = 'done'; recEvent('finish', { auto }); live.rec.review = { score: review.score, reps: review.reps, partials: review.partials, holdSec: review.holdSec, faults: Object.fromEntries(Object.entries(review.faults).map(([k, v]) => [k, v.n])) }; lastRec = live.rec;
+    live.state = 'done'; recEvent('finish', { auto }); finishVideoCapture(live.rec); live.rec.review = { score: review.score, reps: review.reps, partials: review.partials, holdSec: review.holdSec, faults: Object.fromEntries(Object.entries(review.faults).map(([k, v]) => [k, v.n])) }; lastRec = live.rec;
     /* When another set follows, the camera, skeleton and the count you just posted stay on
        screen through the rest — you can see yourself reset while the coach says what to fix.
        Only the last set of the last move tears the camera down and shows the full review. */
@@ -813,6 +895,8 @@
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); if (st) st.textContent = 'Saved as ' + name + '.'; return true;
     } catch (e) { if (st) st.textContent = 'Download blocked here' + (orElse ? ' — ' + orElse : '') + '.'; return false; }
   }
+  /* the recording as a file: landmarks and events only — the set's video stays on this device */
+  const recJson = () => JSON.stringify(lastRec, (k, v) => (k === 'video' || k === 'videoMime' ? undefined : v));
   const recName = (ext) => `jodd-${lastRec.exercise}-${String(lastRec.started || '').replace(/[:.]/g, '-')}.${ext}`;
 
   /* ---------- watch it back ----------
@@ -838,6 +922,10 @@
     panel.hidden = false; if (replayer) replayer.destroy();
     const meta = replayMeta(ex, rv); const st = $('rv-replay-status'); st.textContent = '';
     replayer = Replay.mount($('rv-replay-host'), lastRec, meta);
+    const note = $('rv-replay-note');
+    if (note) note.textContent = replayer.hasVideo
+      ? 'Your camera\u2019s own video, with the skeleton over it. It stays on this device — it is not uploaded, and the downloadable report carries the skeleton only.'
+      : (lastRec.source === 'camera' && settings.video === 'off' ? 'The skeleton the coach saw. Turn on “Keep the set’s video” in Settings to watch the real thing back.' : 'The skeleton the coach saw — no video was kept.');
     $('btn-report').onclick = async () => {
       st.textContent = 'Building the report…';
       let src = ''; try { src = await (await fetch('coach/replay.js')).text(); } catch (e) { src = ''; }
@@ -857,12 +945,18 @@
     };
   }
   function fmtTempo(ms) { return ms ? (ms / 1000).toFixed(1) + ' s' : '—'; }
+  /* What is said at the end of a set. The screen already carries the counts, the score and the
+     rep-by-rep detail; spoken back they are noise. So: the set is done, and the one thing to try
+     next — the heaviest fault's cue, which is already written as what TO do. The counts are spoken
+     only when the set ended short, where the number is news rather than routine. */
   function spokenSummary(rv) {
-    let s = rv.headline + '. ';
-    if (rv.type === 'reps') s += `${rv.reps} of ${rv.target} reps counted` + (rv.partials ? `, ${rv.partials} partial. ` : '. ');
-    else s += `You held for ${Math.round(rv.holdSec)} seconds, ${Math.round(rv.goodSec)} of them in good form. `;
-    if (rv.tips.length) s += 'Main thing to work on: ' + rv.tips[0].label.toLowerCase() + '. ' + rv.tips[0].tip;
-    else s += 'Nothing to correct — same again next set.';
+    const o = current.opts || {};
+    const which = o.set ? (o.sets > 1 ? `Set ${o.set} of ${o.sets}` : `Set ${o.set}`) : 'Set';
+    const short = rv.type === 'reps' ? rv.reps < rv.target : rv.holdSec < rv.target - 1;
+    let s = short
+      ? `${which} done — ${rv.type === 'reps' ? `${rv.reps} of ${rv.target} reps` : `${Math.round(rv.holdSec)} of ${rv.target} seconds`}. `
+      : `${which} complete. `;
+    s += rv.tips.length ? `Next set, try: ${rv.tips[0].cue || rv.tips[0].label}.` : 'Nothing to fix — same again.';
     return s;
   }
   function renderReview(rv) {
@@ -892,10 +986,10 @@
     renderReplay(rv);
     const dg = $('rv-diag'); if (!dg) return; dg.hidden = !lastRec;
     if (lastRec) {
-      $('rv-diag-info').textContent = `${lastRec.frames.length} frames · ${(JSON.stringify(lastRec).length / 1024).toFixed(0)} KB · landmarks + metrics, no video`;
-      $('btn-diag-download').onclick = () => saveFile(recName('json'), JSON.stringify(lastRec), 'application/json', $('rv-diag-status'), 'use Copy JSON instead');
+      $('rv-diag-info').textContent = `${lastRec.frames.length} frames · ${(recJson().length / 1024).toFixed(0)} KB · landmarks + metrics, no video`;
+      $('btn-diag-download').onclick = () => saveFile(recName('json'), recJson(), 'application/json', $('rv-diag-status'), 'use Copy JSON instead');
       $('btn-diag-copy').onclick = async () => {
-        const txt = JSON.stringify(lastRec);
+        const txt = recJson();
         try { await navigator.clipboard.writeText(txt); $('rv-diag-status').textContent = 'Copied — paste it into a .json file or straight into the chat.'; }
         catch (e) { const ta = $('rv-diag-text'); ta.hidden = false; ta.value = txt; ta.select(); $('rv-diag-status').textContent = 'Clipboard unavailable — select the text below and copy it.'; }
       };
@@ -917,5 +1011,5 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.FyzioAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
-  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, finishSet, renderReview, spokenSummary, voice };
+  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

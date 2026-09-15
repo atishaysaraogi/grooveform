@@ -4,7 +4,7 @@ Three layers, all with no dependencies except Playwright for the browser layer.
 
 ## 1. Engine unit tests — `test/engine.test.js`
 
-Rep counting hysteresis, hold timing, fault persistence/cooldown, smoothing, and the ten vetted moves' fault rules driven by synthetic keypoint frames with known reps and known faults. These are the oracle that proved the data versions of those moves count and cue exactly as the hand-written code did. `test/spec.test.js` covers the measurement language itself: every kind on a frame built to read a known value, gates, scaled thresholds, the return rule, automatic side following. The same file runs the oracle recordings through a phone that is propped crooked (rolled 12°) and a person turned 20° off the ideal view, and requires the same reps and faults back — the proof behind the camera corrections in `FormEngine.Camera`. `test/replay.test.js` checks the replay's timeline (reps, fault spans, cues) and that the exported report is one self-contained page with the recording and the player inside it. Run: `npm test` (runs with the API tests).
+Rep counting hysteresis, hold timing, fault persistence/cooldown, smoothing, and the ten vetted moves' fault rules driven by synthetic keypoint frames with known reps and known faults. These are the oracle that proved the data versions of those moves count and cue exactly as the hand-written code did. `test/spec.test.js` covers the measurement language itself: every kind on a frame built to read a known value, gates, scaled thresholds, the return rule, automatic side following. The same file runs the oracle recordings through a phone that is propped crooked (rolled 12°) and a person turned 20° off the ideal view, and requires the same reps and faults back — the proof behind the camera corrections in `FormEngine.Camera`. `test/replay.test.js` checks the replay's timeline (reps, fault spans, cues) and that the exported report is one self-contained page with the recording and the player inside it. It also checks that a set's video never reaches that page. `test/spec.test.js` covers the demonstrated target: a plausible held pose replaces the file's number, one that barely left the start or reads wildly is refused. The oracle covers following the moving limb when the other one was picked. Run: `npm test` (runs with the API tests).
 
 ## 2. API tests — `test/api.test.js`
 
@@ -71,7 +71,9 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 5. Account: download data (JSON), request deletion, cancel deletion.
 6. Kill the network mid-set: the coach keeps running (pose is on-device); saving fails with a visible error and can be retried.
 7. Prop the phone visibly crooked (10–15°) and do a set: the positioning overlay says "phone tilted N°, corrected"; reps still count; the review's JSON has `camera.rollFrom: "sensor"`. Turn 30° away from the lens mid-set: "turn to face the camera" / "turn side-on" within a couple of seconds.
-8. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
+8. Band pull-apart on a real phone: the coach asks for the end position before the set, the target follows what was shown, and skipping it falls back to the file's number.
+9. Pick the left leg on a front-on move and work the right one: within about half a second the coach says "following your right leg" and counts from there.
+10. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI
 
