@@ -75,6 +75,8 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 9. Pick the left leg on a front-on move and work the right one: within about half a second the coach says "following your right leg" and counts from there.
 10. Review: Save / Discard (or Start set N / Stop here during a rest) sit at the top and stay there while you scroll; "Work on next" is the first panel under the score and reads as instructions ("Slow it down"), not diagnoses ("Too fast"); the voice reads every major one.
 11. Settings → Head on the skeleton: each of the five styles draws sensibly front-on and side-on, live and in the replay.
+12. Side-on (a glute bridge, a heel slide): the arm and leg on the far side of the body stay off the skeleton, or draw faint and steady, instead of flailing where the model guesses them — live, in the replay and in the Studio's player. No foot floats without its leg.
+13. Studio → Upload a video… with a phone video that starts with walking in and lying down: the analysis steps through the whole file, the take calibrates after the walk-in (the player's "calibration window" ends where the person went still), and the split finds every rep the live coach would count.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

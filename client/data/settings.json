@@ -7,7 +7,7 @@
       "fault.persist": "Milliseconds a fault has to be true, continuously, before it is spoken. Filters out one-frame wobbles. Good: 300–600. Bad: 0 (every jitter cues) or 3000 (the rep is over before the cue).",
       "fault.cooldown": "Milliseconds before the same cue may be repeated. Good: 4000–6000. Bad: 500 (the coach nags).",
       "fault.maxCues": "How many times one cue may be spoken in a single set, keyed by rule name. \"Slow it down\" only lands the first time you hear it, so fast is capped at 1; leave a rule out for no cap. A single move can override it with \"maxCues\" on the fault itself. Good: 1–2. Bad: 0 (the cue never fires — remove the fault instead).",
-      "skeleton": "How the skeleton drawn over the camera is shaped. head: \"face\" (the nose-and-ears triangle the pose model gives), \"ball\" (a filled circle and a neck), \"circle\" (the same outlined, so the video shows through), \"dot\" (one dot and a neck), \"none\" (a neck stub only). Good: ball or circle \u2014 a head-sized head is what makes the figure read as a person. Bad: face over video, where the triangle looks like a crack in the picture.",
+      "skeleton": "How the skeleton drawn over the camera is shaped. head: \"face\" (the nose-and-ears triangle the pose model gives), \"ball\" (a filled circle and a neck), \"circle\" (the same outlined, so the video shows through), \"dot\" (one dot and a neck), \"none\" (a neck stub only). Good: ball or circle \u2014 a head-sized head is what makes the figure read as a person. Bad: face over video, where the triangle looks like a crack in the picture. show: how sure (0\u20131) the pose model has to be of a joint before it is drawn at all, with a little hysteresis so a limb on the edge does not flicker; dim: sure enough to draw at full strength, fainter below. The arm and leg on the far side of a side-on body sit below these most of the time and stay off the picture instead of flailing. Good: show 0.5, dim 0.7. Bad: show under 0.35, where the model\u2019s guesses about hidden joints get drawn.",
       "camera": "How much a phone off its ideal spot is forgiven. level: auto (motion sensor when the phone has one, else the body at calibration), sensor, body or off — turns the picture so gravity is straight down before anything is measured. maxRoll: a bigger roll than this is not corrected (the phone is probably on its side on purpose). tolerance: degrees the person may turn away from the ideal view mid-set before the coach says to turn back; a move can set its own in camera.tolerance. yawPersist: ms that has to hold before it is said. widthRatio: shoulder width as a share of torso length, used to guess the turn when depth is missing (0.55 is typical). unforeshorten: measured (stretch the picture back out only when the turn was read from depth), always, or off. Good: tolerance 20–30. Bad: level off on phones propped on the floor.",
       "fault.severityWeight": "How much each severity (1, 2, 3) costs in the score and how it ranks against other cues when two fire at once.",
       "targets": "The rep counts and hold seconds a move offers when it does not name its own: choices (what the bubble cycles through) and default. Good: 4–6 sensible steps. Bad: 30 choices.",
@@ -20,7 +20,7 @@
     }
   },
   "rep": { "rest": 0.15, "attempt": 0.32, "full": 0.85 },
-  "skeleton": { "head": "ball" },
+  "skeleton": { "head": "ball", "show": 0.5, "dim": 0.7 },
   "camera": {
     "level": "auto",
     "maxRoll": 25,

@@ -195,6 +195,18 @@
   }
 
   /* ---------- simulation: run the engine over a recorded take ---------- */
+  const toPts = (lm) => lm.map((l) => ({ x: l[0], y: l[1], z: l[2], visibility: l[3] }));
+  /* Where a take calibrates: the coach's positioning step (FormEngine.Settle) run over its frames —
+     the first moment the body is seen, in the move's view and has been still for a second. A take
+     recorded here starts after a count-in, so it is still from the top; a video from a phone starts
+     wherever the phone did — walking in, lying down — and calibrating at a fixed moment there reads
+     the wrong start position, after which the whole set looks like one long rep. */
+  function settleAt(frames, aspect) {
+    let ex = null; try { ex = currentExercise(); } catch { ex = null; }
+    const settle = new E.Settle(ex || {}); const sm = new E.PoseSmoother();
+    for (const [t, lm] of frames) { const pts = lm ? sm.update(toPts(lm), t, aspect) : null; const at = settle.step(pts, t, aspect); if (at != null) return at; }
+    return null;
+  }
   function simulate(ex, take) {
     if (!ex || !take || !take.frames.length) return null;
     const smoother = new E.PoseSmoother();
@@ -203,7 +215,6 @@
     for (const o of ex.options || []) if (opts[o.key] === undefined) opts[o.key] = o.default;
     const session = new E.SetSession(ex, opts);
     const aspect = take.aspect || 16 / 9;
-    const toPts = (lm) => lm.map((l) => ({ x: l[0], y: l[1], z: l[2], visibility: l[3] }));
     const out = { p: [], values: [], active: [], reps: [], faultSpans: {}, faultFrames: {}, calT: null, frames: 0, lost: 0 };
     const CAL_AT = take.calT ?? 1200;
     let calibrated = false; const open = {};
@@ -297,10 +308,13 @@
     catch (e) { landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
     onStatus('Pose model ready');
   }
-  let mockT0 = 0;
+  let mockT0 = 0, lastTs = 0;
   function detect(video, now) {
     if (MOCK) { if (!mockT0) mockT0 = now; return window.__mockPose ? window.__mockPose(now - mockT0) : null; }
-    const res = landmarker.detectForVideo(video, now);
+    /* the model wants timestamps that only ever grow — a file is read on its own clock, and the
+       camera after it must not step back behind where that clock ended */
+    lastTs = Math.max(now, lastTs + 1);
+    const res = landmarker.detectForVideo(video, lastTs);
     return res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
   }
   /* The head, in whichever style settings.json asks for (see FormEngine.headShape). Drawn with the
@@ -317,13 +331,31 @@
     ctx.restore();
     return true;                                              // the caller skips the head links and the face joints
   }
+  /* The figure is drawn smoothed, as the coach draws it (FormEngine.PoseSmoother): the model's raw
+     landmarks jitter, and the joints it is unsure of — the far arm and leg, side-on — jump about.
+     The smoother scales x by the aspect; the drawing wants it back in 0..1. */
+  const camSmoother = new E.PoseSmoother();
+  function smoothedFor(sm, lm, t, aspect) {
+    if (!lm) return null;
+    return sm.update(lm.map((l) => ({ x: l.x, y: l.y, z: l.z, visibility: l.visibility })), t, aspect).map((p) => ({ x: p.x / aspect, y: p.y, z: p.z, v: p.v, seen: p.seen }));
+  }
+  const smoothedTakes = new WeakMap();
+  function smoothedTake(take) {
+    let out = smoothedTakes.get(take); if (out) return out;
+    const sm = new E.PoseSmoother(); const aspect = take.aspect || 16 / 9;
+    out = take.frames.map(([t, lm]) => lm ? smoothedFor(sm, toPts(lm), t, aspect) : null);
+    smoothedTakes.set(take, out); return out;
+  }
   function drawSkeleton(ctx, lm, W, H, color = '#fff3e2', focus = []) {
     if (!lm) return;
     const P = (i) => ({ x: lm[i].x * W, y: lm[i].y * H, v: lm[i].visibility ?? lm[i].v ?? 1 });
     ctx.lineWidth = Math.max(2, W / 320); ctx.strokeStyle = color; ctx.lineCap = 'round';
     const ownHead = drawHead(ctx, lm, (p) => p.x * W, (p) => p.y * H, null, (E.settings.skeleton || {}).head || 'face', color, ctx.lineWidth);
-    for (const [a, b] of E.CONNECTIONS) { if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue; const p = P(a), q = P(b); if (p.v < 0.3 || q.v < 0.3) continue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
-    for (const i of [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) { if (ownHead && (i === 0 || i === 7 || i === 8)) continue; const p = P(i); if (p.v < 0.3) continue; ctx.fillStyle = focus.includes(i) ? '#ff2e88' : color; ctx.beginPath(); ctx.arc(p.x, p.y, focus.includes(i) ? W / 90 : W / 160, 0, Math.PI * 2); ctx.fill(); }
+    /* joints the model is unsure of stay off the picture, fairly sure ones are drawn faint — the same call as the live coach (FormEngine.seen / sure) */
+    const seen = (i) => E.seen(lm, i), sure = (i) => E.sure(lm, i);
+    for (const [a, b] of E.CONNECTIONS) { if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue; if (!seen(a) || !seen(b)) continue; const p = P(a), q = P(b); ctx.globalAlpha = sure(a) && sure(b) ? 1 : 0.45; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    for (const i of [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) { if (ownHead && (i === 0 || i === 7 || i === 8)) continue; if (!seen(i)) continue; const p = P(i); ctx.fillStyle = focus.includes(i) ? '#ff2e88' : color; ctx.beginPath(); ctx.arc(p.x, p.y, focus.includes(i) ? W / 90 : W / 160, 0, Math.PI * 2); ctx.fill(); }
   }
 
   /* ---------- routing / steps ---------- */
@@ -594,7 +626,7 @@
       const video = $('cam');
       if (!MOCK) { rec.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false }); video.srcObject = rec.stream; await video.play(); }
       else { rec.stream = { getTracks: () => [] }; video.width = 640; video.height = 360; }
-      rec.fileMode = false; $('btn-cam').textContent = 'Stop camera'; $('btn-rec').disabled = false; status('Live — stand in the start position');
+      rec.fileMode = false; camSmoother.reset(); $('btn-cam').textContent = 'Stop camera'; $('btn-rec').disabled = false; status('Live — stand in the start position');
       rec.raf = requestAnimationFrame(camLoop);
     } catch (e) { status('Camera failed: ' + e.message); toast(e.message, 5000); }
   }
@@ -608,7 +640,7 @@
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     const lm = detect(video, now);
     const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, W, H);
-    drawSkeleton(ctx, lm, W, H, rec.on ? '#ff2e88' : '#fff3e2');
+    drawSkeleton(ctx, smoothedFor(camSmoother, lm, now, W / H), W, H, rec.on ? '#ff2e88' : '#fff3e2');
     if (rec.countdown > 0) { const left = Math.ceil((rec.countdown - now) / 1000); if (left <= 0) { rec.countdown = 0; beginFrames(now); } else { const el = $('cam-status'); if (el) el.textContent = `Starting in ${left}… hold the start position`; } }
     if (rec.on) { const t = Math.round(now - rec.t0); rec.frames.push([t, lm ? lm.map((l) => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null]); const tm = $('rec-timer'); if (tm) tm.textContent = (t / 1000).toFixed(1) + ' s · ' + rec.frames.length + ' frames'; }
     else if (!rec.countdown) { const el = $('cam-status'); if (el) el.textContent = lm ? 'Tracking — ' + (rec.label.startsWith('fault:') ? 'fault take: ' + rec.label.slice(6) : LABELS[rec.label]) + (rec.side ? ' · ' + (rec.side === 'L' ? 'left' : 'right') : '') : 'No person detected'; }
@@ -633,6 +665,7 @@
      rep, so it calibrates exactly as the parent did, and remembers where its rep sits in the
      parent's video. The parent is removed: its reps would otherwise be counted twice. */
   const PAD = 250;                                    // a moment either side of a rep, so nothing is clipped
+  const STILL_KEEP = 1500;   // ms of the still hold kept in front of each rep cut out of a longer take
   /* Cut one long recording into its reps. The boundaries are the engine's own: a rep ends when the
      progress reading drops back to rest, and began one duration earlier — so each take holds the
      rep and nothing else. The lead-in before the first rep and the tail after the last are not
@@ -653,17 +686,20 @@
     const sim = state.sims[t.id];
     const cut = repCuts(t, sim);
     if (!cut || cut.cuts.length < 2) { if (!quiet) toast(sim && sim.reps && sim.reps.length === 1 ? 'Only one rep found in this take' : 'No reps found yet — set the progress measure in step 4, then split'); return 0; }
-    const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT);
+    /* the still hold before the set (the last STILL_KEEP ms before calibration, not the walking-in
+       before it) goes in front of every rep, re-timed to start at 0, so each calibrates as the set did */
+    const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
     if (!still.length) { if (!quiet) toast('This take has no still start to calibrate each rep from'); return 0; }
+    const s0 = still[0][0], kidCal = calT - s0;
     const n = cut.cuts.length;
     if (!quiet && !confirm(`Split into ${n} reps? Each becomes its own take for you to describe; the ${(cut.setupMs / 1000).toFixed(1)} s of set-up before the first rep and ${(cut.tailMs / 1000).toFixed(1)} s after the last are dropped. The whole take is replaced.`)) return 0;
     const kids = cut.cuts.map((c, i) => {
       const seg = t.frames.filter((f) => f[0] >= c.t0 && f[0] <= c.t1);
-      const frames = [...still.map((f) => [f[0], f[1]]), ...seg.map((f) => [calT + (f[0] - c.t0), f[1]])];
+      const frames = [...still.map((f) => [f[0] - s0, f[1]]), ...seg.map((f) => [kidCal + (f[0] - c.t0), f[1]])];
       /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
          pretend to be clean — "not said yet" is excluded from every count until the physio says */
       const label = t.label && t.label !== 'todo' && t.origin ? t.label : (n > 1 ? 'todo' : t.label);
-      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
+      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
     }).filter((k) => k.frames.length > still.length + 4);
     if (!kids.length) { if (!quiet) toast('Could not cut the reps out of this take'); return 0; }
     for (const k of kids) await idb.put(k);
@@ -675,26 +711,38 @@
   }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
-    const take = { id: uid(), moveId: moveKey(), label: rec.label, side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: 1200 };
+    const settled = source === 'file' ? settleAt(frames, aspect) : null;
+    if (source === 'file' && settled == null) toast('No still start found in this video — calibrating 1.2 s in. Hold the start position for a second before the first rep next time.', 6000);
+    const take = { id: uid(), moveId: moveKey(), label: rec.label, side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: settled ?? 1200 };
     await idb.put(take); state.takes.push(take); resim(); toast(`Saved ${LABELS[rec.label] || rec.label} take — ${(take.durationMs / 1000).toFixed(1)} s`); render();
     return take;
   }
-  /* Run the pose model over a video file the physio recorded on a phone, at the video's own pace. */
+  /* Run the pose model over a video file the physio recorded on a phone. The file is stepped
+     through, one seek per frame, rather than played: played at its own pace, a phone that detects
+     slower than the video runs skips most of the frames, and a set that is mostly gaps calibrates
+     on the wrong moment and splits into the wrong reps. Every phone reads the same frames this way. */
+  const FILE_STEP = 40;   // ms between the frames read from a file — 25 a second, about what the live camera gets
   async function analyzeFile(file) {
     const status = (t) => { const el = $('cam-status'); if (el) el.textContent = t; };
     try {
       await loadModel(status); stopCam(); rec.fileMode = true;
-      const video = $('cam'); video.srcObject = null; video.src = URL.createObjectURL(file); video.loop = false; video.muted = true;
+      const video = $('cam'); video.srcObject = null; video.autoplay = false; video.src = URL.createObjectURL(file); video.loop = false; video.muted = true;
       await new Promise((res, rej) => { video.onloadedmetadata = res; video.onerror = () => rej(new Error('Could not decode this video (try MP4/H.264).')); });
+      video.pause();
       const canvas = $('cam-canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d');
-      const frames = []; let last = -1; const t0 = performance.now();
-      await video.play();
-      await new Promise((res) => {
-        const tick = () => { if (video.ended || video.paused && video.currentTime >= video.duration) return res(); if (video.currentTime !== last) { last = video.currentTime; const lm = MOCK ? null : detect(video, performance.now()); ctx.clearRect(0, 0, canvas.width, canvas.height); drawSkeleton(ctx, lm, canvas.width, canvas.height, '#ff2e88'); frames.push([Math.round(video.currentTime * 1000), lm ? lm.map((l) => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null]); status(`Analyzing… ${video.currentTime.toFixed(1)} / ${video.duration.toFixed(1)} s`); } requestAnimationFrame(tick); };
-        tick();
-      });
+      const frames = []; const dur = video.duration; const clock0 = Math.ceil(performance.now()); const sm = new E.PoseSmoother();
+      const seek = (t) => new Promise((res) => { if (Math.abs(video.currentTime - t) < 1e-3) return res(); const to = setTimeout(res, 1500); video.onseeked = () => { clearTimeout(to); res(); }; video.currentTime = t; });
+      for (let t = 0.001; t < dur; t += FILE_STEP / 1000) {
+        await seek(t);
+        if (!rec.fileMode) throw new Error('Analysis stopped');
+        const ms = Math.round(video.currentTime * 1000);
+        const lm = MOCK ? (window.__mockFile ? window.__mockFile(ms) : null) : detect(video, clock0 + ms);
+        ctx.clearRect(0, 0, canvas.width, canvas.height); drawSkeleton(ctx, smoothedFor(sm, lm, ms, canvas.width / canvas.height), canvas.width, canvas.height, '#ff2e88');
+        frames.push([ms, lm ? lm.map((l) => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null]);
+        status(`Analyzing… ${video.currentTime.toFixed(1)} / ${dur.toFixed(1)} s`);
+      }
       const take = await saveTake(frames, video.videoWidth / video.videoHeight, rec.keepVideo ? file : null, 'file');
-      URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load();
+      URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load(); video.autoplay = true;
       /* One long video is a set, not a rep. If the move already knows what it measures, cut it into
          its reps now; otherwise it stays whole and step 4 offers the cut once the measure is set. */
       if (take) {
@@ -702,6 +750,7 @@
         status(n ? `Analysed — ${n} reps to describe` : 'Analysed — set the progress measure in step 4, then Split into reps');
       } else status('Camera off');
     } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
+    finally { const v = $('cam'); if (v) v.autoplay = true; }
   }
 
   /* ---------- player: scrub a take with the skeleton and the live metric readout ---------- */
@@ -716,7 +765,9 @@
   $('pl-close').onclick = closePlayer; $('player').onclick = (e) => { if (e.target === $('player')) closePlayer(); };
   /* a take cut out of a longer recording keeps that recording's video: its still start is the video's
      start, and its rep sits at videoT0 */
-  const videoTime = (take, t) => { const calT = take.calT ?? 1200; return take.videoT0 == null || t < calT ? t : t - calT + take.videoT0; };
+  /* where a moment of a take sits in its video: a rep cut out of a longer video keeps the parent's
+     still hold in front of it (from videoS0) and its own frames from videoT0 */
+  const videoTime = (take, t) => { const calT = take.calT ?? 1200; return take.videoT0 == null ? t : t < calT ? t + (take.videoS0 || 0) : t - calT + take.videoT0; };
   $('pl-scrub').oninput = (e) => { pl.t = (+e.target.value / 1000) * pl.take.durationMs; pl.playing = false; const v = $('pl-video'); if (!v.hidden) { v.pause(); v.currentTime = videoTime(pl.take, pl.t) / 1000; } drawPlayerFrame(); };
   $('pl-play').onclick = () => { pl.playing = !pl.playing; $('pl-play').textContent = pl.playing ? 'Pause' : 'Play'; const v = $('pl-video'); if (pl.playing) { pl.wall = performance.now() - pl.t; if (!v.hidden) { v.currentTime = videoTime(pl.take, pl.t) / 1000; v.play().catch(() => { }); } pl.raf = requestAnimationFrame(playTick); } else { v.pause(); cancelAnimationFrame(pl.raf); } };
   function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; const calT = pl.take.calT ?? 1200; const v = $('pl-video'); if (pl.take.videoT0 != null && !v.hidden && pl.t >= calT && pl.t - 40 < calT) v.currentTime = videoTime(pl.take, pl.t) / 1000;   /* jump from the still start to the rep */ if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; v.pause(); } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
@@ -724,10 +775,10 @@
     const take = pl.take; const c = $('pl-canvas'); const aspect = take.aspect || 16 / 9; const W = 960, H = Math.round(960 / aspect); if (c.width !== W) { c.width = W; c.height = H; }
     const ctx = c.getContext('2d'); ctx.clearRect(0, 0, W, H);
     let i = 0; while (i < take.frames.length - 1 && take.frames[i + 1][0] <= pl.t) i++;
-    const lm = take.frames[i][1]; const sim = state.sims[take.id]; const ex = currentExercise();
+    const lm = smoothedTake(take)[i]; const sim = state.sims[take.id]; const ex = currentExercise();
     let focus = []; if (ex && sim && sim.session && sim.session.m && sim.session.m.focus) focus = sim.session.m.focus;
     if (!take.video) { ctx.fillStyle = '#7a3fb8'; ctx.fillRect(0, 0, W, H); }
-    drawSkeleton(ctx, lm ? lm.map((l) => ({ x: l[0], y: l[1], visibility: l[3] })) : null, W, H, '#fff3e2', focus);
+    drawSkeleton(ctx, lm, W, H, '#fff3e2', focus);
     $('pl-time').textContent = (pl.t / 1000).toFixed(1) + ' s';
     let txt = '';
     if (sim && !sim.error) { const pv = sim.values.length ? sim.values.reduce((best, x) => Math.abs(x[0] - pl.t) < Math.abs(best[0] - pl.t) ? x : best) : null; const pp = sim.p.length ? sim.p.reduce((best, x) => Math.abs(x[0] - pl.t) < Math.abs(best[0] - pl.t) ? x : best) : null; const act = sim.active.length ? sim.active.reduce((best, x) => Math.abs(x[0] - pl.t) < Math.abs(best[0] - pl.t) ? x : best) : null; txt = `${pv ? 'value ' + (+pv[1]).toFixed(1) : ''}${pp ? ' · progress ' + (100 * pp[1]).toFixed(0) + '%' : ''}${act && act[1].length ? ' · firing: ' + act[1].join(', ') : ''}${pl.t < (sim.calT ?? 1200) ? ' · (calibration window)' : ''}`; }

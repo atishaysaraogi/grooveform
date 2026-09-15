@@ -44,25 +44,34 @@
     reset() { this.x = null; this.t = null; this.dx = 0; }
   }
 
-  // Smooths all 33 landmarks; freezes low-confidence joints instead of letting them fly.
+  /* Smooths all 33 landmarks; freezes low-confidence joints instead of letting them fly.
+     A joint the model is unsure of (the arm and leg on the far side of a side-on body, mostly
+     hidden behind the near one) also gets smoothed harder the less sure it is, so where the model
+     guesses a different spot every frame the drawn joint drifts instead of flailing; and each
+     joint carries `seen`, whether it is sure enough to draw at all, with hysteresis so a limb on
+     the edge of visibility does not flicker (settings.json skeleton.show / skeleton.dim). */
+  const SHOW_DFLT = 0.5, DIM_DFLT = 0.7;
+  const skel = () => (SETTINGS && SETTINGS.skeleton) || {};
   class PoseSmoother {
     constructor(opts = {}) {
       this.minCutoff = opts.minCutoff ?? 1.0;
       this.beta = opts.beta ?? 3.0;
       this.visFloor = opts.visFloor ?? 0.35;
       this.jumpLimit = opts.jumpLimit ?? 0.28;
-      this.filters = []; this.vis = []; this.holds = []; this.prev = [];
+      this.sureAt = opts.sureAt ?? 0.8;       // fully trusted from here up; below, the smoothing tightens towards visFloor
+      this.show = opts.show ?? skel().show ?? SHOW_DFLT;
+      this.filters = []; this.vis = []; this.holds = []; this.prev = []; this.seen = [];
       this.pts = null; this.lastT = null;
       for (let i = 0; i < 33; i++) {
         this.filters.push([new OneEuro(this.minCutoff, this.beta), new OneEuro(this.minCutoff, this.beta), new OneEuro(this.minCutoff * 0.6, this.beta)]);
-        this.vis.push(0); this.holds.push(0); this.prev.push(null);
+        this.vis.push(0); this.holds.push(0); this.prev.push(null); this.seen.push(false);
       }
     }
     setSmoothing(minCutoff, beta) {
       this.minCutoff = minCutoff; this.beta = beta;
       for (const f of this.filters) { f[0].minCutoff = minCutoff; f[1].minCutoff = minCutoff; f[2].minCutoff = minCutoff * 0.6; f[0].beta = f[1].beta = f[2].beta = beta; }
     }
-    reset() { for (const f of this.filters) f.forEach(o => o.reset()); this.pts = null; this.lastT = null; this.prev.fill(null); this.holds.fill(0); }
+    reset() { for (const f of this.filters) f.forEach(o => o.reset()); this.pts = null; this.lastT = null; this.prev.fill(null); this.holds.fill(0); this.seen.fill(false); }
     // landmarks: array of {x,y,z,visibility} normalized (0..1). aspect = width/height (x is scaled to be isotropic).
     update(landmarks, t, aspect = 1) {
       if (!landmarks) { return this.pts; }
@@ -71,6 +80,8 @@
         const l = landmarks[i];
         const v = l.visibility ?? l.score ?? 1;
         this.vis[i] = 0.7 * this.vis[i] + 0.3 * v;
+        /* on once the smoothed confidence clears the line, off only once it has dropped well under it */
+        this.seen[i] = this.seen[i] ? this.vis[i] >= this.show - 0.1 : this.vis[i] >= this.show;
         const prev = this.prev[i];
         let x = l.x * aspect, y = l.y, z = l.z ?? 0;
         let useRaw = true;
@@ -81,15 +92,33 @@
           if (lowConf || outlier) { useRaw = false; this.holds[i]++; }
           else this.holds[i] = 0;
         }
-        if (!useRaw) { out[i] = { x: prev.x, y: prev.y, z: prev.z, v: this.vis[i], held: true }; continue; }
+        if (!useRaw) { out[i] = { x: prev.x, y: prev.y, z: prev.z, v: this.vis[i], held: true, seen: this.seen[i] }; continue; }
         const f = this.filters[i];
-        out[i] = { x: f[0].filter(x, t), y: f[1].filter(y, t), z: f[2].filter(z, t), v: this.vis[i], held: false };
+        /* an unsure joint is smoothed harder: lower cutoff, and speed opens the filter less */
+        const k = Math.min(1, Math.max(0.12, (this.vis[i] - this.visFloor) / Math.max(1e-3, this.sureAt - this.visFloor)));
+        const c = this.minCutoff * k * k, b = this.beta * k;
+        f[0].minCutoff = c; f[1].minCutoff = c; f[2].minCutoff = c * 0.6; f[0].beta = f[1].beta = f[2].beta = b;
+        out[i] = { x: f[0].filter(x, t), y: f[1].filter(y, t), z: f[2].filter(z, t), v: this.vis[i], held: false, seen: this.seen[i] };
         this.prev[i] = out[i];
       }
       this.pts = out; this.lastT = t;
       return out;
     }
   }
+  /* Whether a landmark is sure enough to draw: the smoother's call when it has made one (with
+     hysteresis), else its confidence against skeleton.show; and whether it is sure enough to draw
+     at full strength (skeleton.dim). Raw model landmarks ({visibility}) and smoothed ones ({v}) both work. */
+  const visOfPt = (p) => p.v ?? p.visibility ?? p.score ?? 1;
+  const seenOne = (p) => !!p && (p.seen != null ? p.seen : visOfPt(p) >= (skel().show ?? SHOW_DFLT));
+  /* a joint hangs off the one above it: a foot is only drawn under a knee that is drawn, a hand
+     under an elbow, so the far leg does not appear as a foot floating on its own */
+  const PARENT = { 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 27, 32: 28 };
+  function seen(pts, i) {
+    if (typeof i !== 'number') return seenOne(pts);                    // one point on its own
+    for (let j = i; j != null; j = PARENT[j]) if (!seenOne(pts[j])) return false;
+    return true;
+  }
+  function sure(pts, i) { const p = typeof i === 'number' ? pts[i] : pts; return !!p && visOfPt(p) >= (skel().dim ?? DIM_DFLT); }
 
   /* ---------------- Geometry ---------------- */
   const deg = r => r * 180 / Math.PI;
@@ -243,6 +272,37 @@
   function bodyHeight(pts) {
     let miny = 1, maxy = 0; for (const i of [0, 11, 12, 23, 24, 25, 26, 27, 28]) { miny = Math.min(miny, pts[i].y); maxy = Math.max(maxy, pts[i].y); }
     return maxy - miny;
+  }
+  /* The coach's positioning checks, without the words: is the body seen well enough, in frame,
+     facing the right way and big enough for this move. ex may be partial (a Studio draft): with no
+     view any orientation passes, with no required list the trunk and legs stand in. */
+  const BODY_DFLT = [0, 11, 12, 23, 24, 25, 26, 27, 28];
+  function positionCheck(pts, ex, aspect = 1) {
+    ex = ex || {};
+    const required = ex.required && ex.required.length ? ex.required : BODY_DFLT;
+    const visOk = visOf(pts, required) > 0.55;
+    const edges = framing(pts, required, aspect); const frameOk = edges.length === 0;
+    const o = orientation(pts);
+    const accept = !ex.view ? [o.view] : ex.camera && ex.camera.posture === 'sidelying' ? [ex.view, 'unclear'] : [ex.view];
+    const orientOk = accept.includes(o.view);
+    const size = ex.upperBody ? dist(pts[0], mid(pts[23], pts[24])) : bodyHeight(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22);
+    return { ok: visOk && frameOk && orientOk && sizeOk, visOk, frameOk, edges, orientOk, view: o.view, ratio: o.ratio, sizeOk };
+  }
+  /* When a recording is ready to calibrate: the body has passed positionCheck and the hips have
+     been still for holdMs — the coach's positioning step, one smoothed frame at a time. step()
+     returns the time it settled at, once; null before and after. A phone video starts wherever the
+     phone did (walking in, lying down), so a take from one calibrates here, not at a fixed moment. */
+  class Settle {
+    constructor(ex, { holdMs = 1200, moveTol = 0.012 } = {}) { this.ex = ex; this.holdMs = holdMs; this.moveTol = moveTol; this.since = 0; this.prevHip = null; this.at = null; }
+    step(pts, t, aspect = 1) {
+      if (this.at != null) return null;
+      if (!pts || !positionCheck(pts, this.ex, aspect).ok) { this.since = 0; this.prevHip = null; return null; }
+      const hip = mid(pts[23], pts[24]);
+      const moving = this.prevHip && dist(hip, this.prevHip) > this.moveTol; this.prevHip = hip;
+      if (moving || !this.since) this.since = t;
+      if (t - this.since >= this.holdMs) { this.at = t; return t; }
+      return null;
+    }
   }
 
   /* ---------------- Exercise definitions ----------------
@@ -464,7 +524,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, positionCheck, Settle, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the

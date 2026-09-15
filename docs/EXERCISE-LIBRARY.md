@@ -411,6 +411,31 @@ correction can be seen in the review's JSON. `test/engine.test.js` runs the
 oracle recordings through a 12° roll and a 20° yaw and requires the same reps
 and faults out.
 
+### The far side of the body
+
+Side-on, the arm and leg away from the lens are mostly hidden behind the near
+ones, and the pose model still returns a position for every joint — a guess,
+with a low confidence, that lands somewhere different each frame. The skeleton
+does not draw those guesses. Every joint carries how sure the model is; the
+smoother (`FormEngine.PoseSmoother`) smooths an unsure joint harder the less
+sure it is, and decides per joint whether it is **seen** — confidence over
+`settings.json` → `skeleton.show`, with hysteresis so a limb on the edge does
+not flicker — and a joint that is not seen takes everything hanging off it
+with it (no far foot floating without its leg; `FormEngine.seen`). Between
+`show` and `skeleton.dim` a joint draws faint. The live coach, the review's
+replay (which repeats the smoother so the report needs nothing from the app)
+and the Studio's player all draw by the same rule. Measuring is unchanged: a
+metric that needs a hidden joint is skipped as it always was.
+
+### Where a recording settles
+
+Before a set the coach waits for the body to be seen, in the move's view and
+still for a second (`FormEngine.positionCheck`, the checks behind the "get
+into position" overlay), then calibrates. `FormEngine.Settle` runs the same
+test over recorded frames, so a phone video dropped into the Studio calibrates
+where the person went still rather than at a fixed moment — walking in and
+lying down are not the start position.
+
 ### Is the foot on the floor?
 
 Yes — it is a `rise` reading of the heel, the toes or the whole foot since

@@ -294,3 +294,62 @@ function trap(tilt, { shoulderUp = 0, turn = 0, handUp = 0 } = {}) {
 }
 console.log('CAMERA TOLERANCE TESTS PASSED');
 console.log('ALL ENGINE TESTS PASSED');
+
+/* ---- unsure joints: the far arm and leg of a side-on body ---- */
+const test = (name, fn) => { fn(); console.log('ok -', name); };
+test('an unsure joint is smoothed harder, not drawn, and takes what hangs off it with it', () => {
+  const sm = new E.PoseSmoother();
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
+  const base = () => Array.from({ length: 33 }, (_, i) => ({ x: 0.5, y: 0.3 + i * 0.01, z: 0, visibility: 0.99 }));
+  let moveSure = 0, moveUnsure = 0, prev = null;
+  for (let t = 0; t < 3000; t += 33) {
+    const lm = base();
+    const j = [rnd() * 0.04, rnd() * 0.04];                    // the same jitter on both knees
+    lm[25] = { x: 0.5 + j[0], y: 0.55 + j[1], z: 0, visibility: 0.99 };   // near knee: sure
+    lm[26] = { x: 0.5 + j[0], y: 0.55 + j[1], z: 0, visibility: 0.42 };   // far knee: the model is guessing
+    lm[28].visibility = 0.9;                                     // the far ankle it says it can see
+    const pts = sm.update(lm, t, 16 / 9);
+    if (prev) { moveSure += Math.hypot(pts[25].x - prev[25].x, pts[25].y - prev[25].y); moveUnsure += Math.hypot(pts[26].x - prev[26].x, pts[26].y - prev[26].y); }
+    prev = pts;
+  }
+  assert.ok(moveUnsure < moveSure * 0.5, `the unsure knee moves less than half as much as the sure one (${moveUnsure.toFixed(3)} vs ${moveSure.toFixed(3)})`);
+  assert.equal(E.seen(prev, 25), true, 'the sure knee is drawn');
+  assert.equal(E.seen(prev, 26), false, 'the unsure one is not');
+  assert.equal(E.seen(prev, 28), false, 'nor is the ankle below it, however sure the model is of the ankle: no foot floats on its own');
+  assert.equal(E.seen(prev, 27), true, 'the near ankle under the near knee is');
+  assert.equal(E.sure(prev, 25), true); assert.equal(E.sure(prev, 26), false);
+});
+
+test('seen has hysteresis: a joint on the edge of visibility does not flicker', () => {
+  const sm = new E.PoseSmoother();
+  const lm = (v) => Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: v }));
+  let t = 0; for (let i = 0; i < 40; i++, t += 33) sm.update(lm(0.6), t, 1);
+  assert.equal(E.seen(sm.pts, 11), true, 'clear of the line: seen');
+  for (let i = 0; i < 40; i++, t += 33) sm.update(lm(0.45), t, 1);
+  assert.equal(E.seen(sm.pts, 11), true, 'a little under it: still seen');
+  for (let i = 0; i < 40; i++, t += 33) sm.update(lm(0.3), t, 1);
+  assert.equal(E.seen(sm.pts, 11), false, 'well under it: gone');
+  for (let i = 0; i < 40; i++, t += 33) sm.update(lm(0.45), t, 1);
+  assert.equal(E.seen(sm.pts, 11), false, 'and a little under the line does not bring it back');
+  /* raw model landmarks, with no smoother behind them, are judged on their confidence alone */
+  assert.equal(E.seen([{ visibility: 0.55 }], 0), true); assert.equal(E.seen([{ visibility: 0.45 }], 0), false);
+});
+
+/* ---- where a recording settles: the coach's positioning step over frames ---- */
+test('Settle finds the moment the body is in view and has been still for a second', () => {
+  const body = (dx) => { const pts = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: 0.99 }));
+    const m = { 0: [0.5, 0.2], 11: [0.4, 0.3], 12: [0.6, 0.3], 23: [0.42, 0.55], 24: [0.58, 0.55], 25: [0.42, 0.75], 26: [0.58, 0.75], 27: [0.42, 0.92], 28: [0.58, 0.92] };
+    for (const k in m) pts[+k] = { x: m[k][0] + dx, y: m[k][1], z: 0, visibility: 0.99 }; return pts; };
+  const run = (ex, mover) => { const s = new E.Settle(ex); const sm = new E.PoseSmoother(); for (let t = 0; t < 8000; t += 33) { const at = s.step(sm.update(mover(t), t, 1), t, 1); if (at != null) return at; } return null; };
+  /* walks in from the left for a second, then holds: settles about 1.2 s after the walk ends */
+  const at = run({ view: 'front' }, (t) => body(t < 1000 ? -0.5 * (1 - t / 1000) : 0));
+  assert.ok(at >= 2150 && at <= 2600, `settled at ${at}`);
+  /* still from the first frame: settles at the hold time */
+  const at0 = run({ view: 'front' }, () => body(0)); assert.ok(at0 >= 1200 && at0 <= 1300, `settled at ${at0}`);
+  /* the wrong way round for the move never settles */
+  assert.equal(run({ view: 'side' }, () => body(0)), null);
+  /* a draft with no view yet takes any orientation */
+  assert.ok(run({}, () => body(0)) > 0);
+  const warm = new E.PoseSmoother(); let pts; for (let t = 0; t < 400; t += 33) pts = warm.update(body(0), t, 1);   // the smoother's confidence warms up over a few frames
+  const c = E.positionCheck(pts, { view: 'front' }, 1); assert.ok(c.ok && c.view === 'front' && c.visOk && c.frameOk && c.sizeOk, JSON.stringify(c));
+});

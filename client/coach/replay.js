@@ -79,10 +79,76 @@
     return frames[lo];
   }
 
+  /* ---------- the figure the person saw ----------
+     The recording holds the model's raw landmarks; the coach drew them smoothed (FormEngine.PoseSmoother:
+     a One Euro filter per joint, unsure joints held or smoothed harder, and each joint's "seen" call
+     with hysteresis). The same filter is repeated here, deliberately, so the replay and the report draw
+     the figure the person saw without needing anything from the app. Kept in step by test/replay.test.js. */
+  function OneEuro(minCutoff, beta) { this.minCutoff = minCutoff; this.beta = beta; this.dCutoff = 1; this.x = null; this.dx = 0; this.t = null; }
+  OneEuro.alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff) / dt);
+  OneEuro.prototype.filter = function (x, t) {
+    if (this.x === null || this.t === null) { this.x = x; this.t = t; this.dx = 0; return x; }
+    let dt = (t - this.t) / 1000; if (dt <= 0) dt = 1 / 30; this.t = t;
+    const aD = OneEuro.alpha(this.dCutoff, dt); this.dx = aD * ((x - this.x) / dt) + (1 - aD) * this.dx;
+    const a = OneEuro.alpha(this.minCutoff + this.beta * Math.abs(this.dx), dt);
+    this.x = a * x + (1 - a) * this.x; return this.x;
+  };
+  const PARENT = { 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 27, 32: 28 };
+  /* frames: [{lm:[[x,y,z,v],...]|null}] in recording order → per frame, the smoothed landmarks as
+     [x, y, z, v, seen] (x back in 0..1), or null where there was no person */
+  function smoothFrames(frames, { aspect = 16 / 9, minCutoff = 1.0, beta = 3.0, visFloor = 0.35, jumpLimit = 0.28, sureAt = 0.8, show = 0.5 } = {}) {
+    const filters = [], vis = [], holds = [], prev = [], seenF = [];
+    for (let i = 0; i < 33; i++) { filters.push([new OneEuro(minCutoff, beta), new OneEuro(minCutoff, beta), new OneEuro(minCutoff * 0.6, beta)]); vis.push(0); holds.push(0); prev.push(null); seenF.push(false); }
+    const out = [];
+    for (const f of frames) {
+      if (!f.lm) { out.push(null); continue; }
+      const t = f.t, res = new Array(33);
+      for (let i = 0; i < 33; i++) {
+        const l = f.lm[i]; const v = l[3] == null ? 1 : l[3];
+        vis[i] = 0.7 * vis[i] + 0.3 * v;
+        seenF[i] = seenF[i] ? vis[i] >= show - 0.1 : vis[i] >= show;
+        const p = prev[i]; const x = l[0] * aspect, y = l[1], z = l[2] || 0;
+        let useRaw = true;
+        if (p) {
+          const jump = Math.hypot(x - p[0], y - p[1]);
+          if (v < visFloor || (jump > jumpLimit && v < 0.75 && holds[i] < 4)) { useRaw = false; holds[i]++; } else holds[i] = 0;
+        }
+        if (!useRaw) { res[i] = [p[0] / aspect, p[1], p[2], vis[i], seenF[i]]; continue; }
+        const k = Math.min(1, Math.max(0.12, (vis[i] - visFloor) / Math.max(1e-3, sureAt - visFloor)));
+        const c = minCutoff * k * k, b = beta * k; const fl = filters[i];
+        fl[0].minCutoff = c; fl[1].minCutoff = c; fl[2].minCutoff = c * 0.6; fl[0].beta = fl[1].beta = fl[2].beta = b;
+        const sx = fl[0].filter(x, t), sy = fl[1].filter(y, t), sz = fl[2].filter(z, t);
+        prev[i] = [sx, sy, sz]; res[i] = [sx / aspect, sy, sz, vis[i], seenF[i]];
+      }
+      out.push(res);
+    }
+    return out;
+  }
+  const smoothed = typeof WeakMap === 'function' ? new WeakMap() : null;
+  function smoothedOf(rec, meta) {
+    const cached = smoothed && smoothed.get(rec); if (cached) return cached;
+    const sm = (meta && meta.smooth) || {};
+    const out = smoothFrames(rec.frames || [], { aspect: rec.aspect || 16 / 9, minCutoff: sm.minCutoff, beta: sm.beta, show: meta && meta.show });
+    if (smoothed) smoothed.set(rec, out); return out;
+  }
+  function frameIndexAt(frames, t) {
+    let lo = 0, hi = frames.length - 1;
+    if (!frames.length || t <= frames[0].t) return frames.length ? 0 : -1;
+    if (t >= frames[hi].t) return hi;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (frames[m].t <= t) lo = m; else hi = m - 1; }
+    return lo;
+  }
+
   /* ---------- drawing ---------- */
-  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1, head = 'face' } = {}) {
+  /* lm: smoothed landmarks [x, y, z, v, seen] (raw [x, y, z, v] also draw, judged on v alone). A joint
+     the model is unsure of stays off the picture, and so does everything hanging off it — no far foot
+     floating without its leg; a fairly sure one draws faint (show / dim, from settings.json). */
+  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1, head = 'face', show = 0.5, dim = 0.7 } = {}) {
     if (!lm) return;
     const X = (p) => (mirror ? 1 - p[0] : p[0]) * W, Y = (p) => p[1] * H, V = (p) => (p[3] == null ? 1 : p[3]);
+    const seenOne = (p) => !!p && (p[4] != null ? !!p[4] : V(p) >= show);
+    const seen = (i) => { for (let j = i; j != null; j = PARENT[j]) if (!seenOne(lm[j])) return false; return true; };
+    const sure = (i) => !!lm[i] && V(lm[i]) >= dim;
     ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, W / 320);
     const h = head === 'face' ? null : headShape(lm);
     if (h) {
@@ -95,15 +161,15 @@
     }
     for (const [a, b] of BONES) {
       if (h && HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
-      const p = lm[a], q = lm[b]; if (!p || !q || V(p) < 0.3 || V(q) < 0.3) continue;
+      if (!seen(a) || !seen(b)) continue; const p = lm[a], q = lm[b];
       const isHot = hot.has(a) || hot.has(b);
-      ctx.strokeStyle = isHot ? C.hot : (V(p) < 0.6 || V(q) < 0.6) ? C.boneDim : C.bone;
+      ctx.strokeStyle = isHot ? C.hot : (!sure(a) || !sure(b)) ? C.boneDim : C.bone;
       ctx.beginPath(); ctx.moveTo(X(p), Y(p)); ctx.lineTo(X(q), Y(q)); ctx.stroke();
     }
     const r = Math.max(4, W / 220);
     for (const i of JOINTS) {
       if (h && i === 0) continue;
-      const p = lm[i]; if (!p || V(p) < 0.3) continue;
+      if (!seen(i)) continue; const p = lm[i];
       const isHot = hot.has(i); ctx.fillStyle = isHot ? C.hot : C.joint;
       ctx.beginPath(); ctx.arc(X(p), Y(p), isHot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
     }
@@ -116,7 +182,8 @@
      the rep count, the cue that was being said, the range bar */
   function drawStage(ctx, rec, meta, tl, t, W, H, videoEl) {
     ctx.fillStyle = C.stage; ctx.fillRect(0, 0, W, H);
-    const f = frameAt(rec.frames, t); if (!f) return;
+    const fi = frameIndexAt(rec.frames, t); const f = fi < 0 ? null : rec.frames[fi]; if (!f) return;
+    const lm = smoothedOf(rec, meta)[fi];
     const mirror = rec.facing === 'user';
     /* the landmarks are in the camera's own frame, so the picture is flipped with them or not at all */
     if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth) {
@@ -126,7 +193,7 @@
       ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(0, 0, W, H);   /* the skeleton has to stay readable over it */
     }
     const hot = new Set(); for (const id of f.f || []) for (const i of ((meta.faults || {})[id] || {}).landmarks || []) hot.add(i);
-    drawSkeleton(ctx, f.lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35, head: meta.head || 'face' });
+    drawSkeleton(ctx, lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35, head: meta.head || 'face', show: meta.show, dim: meta.dim });
     const fs = Math.max(12, Math.round(H / 18)); ctx.font = `800 ${fs}px system-ui, sans-serif`; ctx.textBaseline = 'top';
     const done = tl.reps.filter((r) => r.t1 <= t && r.full).length;
     const label = meta.type === 'hold' ? `${Math.max(0, (t - tl.t0) / 1000).toFixed(0)} s` : `${done} / ${meta.target || '–'}`;
@@ -300,6 +367,6 @@
 </body></html>`;
   }
 
-  const Replay = { timeline, frameAt, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, headShape, BONES, HEAD_LINKS };
+  const Replay = { timeline, frameAt, frameIndexAt, smoothFrames, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, headShape, BONES, HEAD_LINKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = Replay; else root.Replay = Replay;
 })(typeof window !== 'undefined' ? window : globalThis);

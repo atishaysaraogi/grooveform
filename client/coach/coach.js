@@ -504,12 +504,13 @@
   function checksFor(pts, aspect) {
     const ex = live.ex; const out = []; let ok = true;
     if (!pts) return { ok: false, checks: [{ label: 'No person detected', ok: false }], msg: 'Step into view so your whole body is in frame.' };
-    const vis = E.visOf(pts, ex.required); const visOk = vis > 0.55; out.push({ label: visOk ? (ex.upperBody ? 'Head to hips visible' : 'Body visible') : (ex.upperBody ? 'Head to hips hidden' : 'Body partly hidden'), ok: visOk });
-    const edges = E.framing(pts, ex.required, aspect); const frameOk = edges.length === 0; out.push({ label: frameOk ? 'In frame' : 'Cut off: ' + edges.join(', '), ok: frameOk });
-    const o = E.orientation(pts);
-    const accept = ex.camera && ex.camera.posture === 'sidelying' ? [ex.view, 'unclear'] : [ex.view];
-    const orientOk = accept.includes(o.view); out.push({ label: orientOk ? (ex.view === 'front' ? 'Facing camera' : 'Side-on') : (ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on'), ok: orientOk });
-    const size = ex.upperBody ? E.dist(pts[0], E.mid(pts[23], pts[24])) : E.bodyHeight(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22); out.push({ label: sizeOk ? 'Good distance' : 'Come closer', ok: sizeOk });
+    /* the checks themselves live in the engine (FormEngine.positionCheck) so the Studio can run
+       the same ones over a recording; here they get their words */
+    const { visOk, frameOk, edges, orientOk, sizeOk } = E.positionCheck(pts, ex, aspect);
+    out.push({ label: visOk ? (ex.upperBody ? 'Head to hips visible' : 'Body visible') : (ex.upperBody ? 'Head to hips hidden' : 'Body partly hidden'), ok: visOk });
+    out.push({ label: frameOk ? 'In frame' : 'Cut off: ' + edges.join(', '), ok: frameOk });
+    out.push({ label: orientOk ? (ex.view === 'front' ? 'Facing camera' : 'Side-on') : (ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on'), ok: orientOk });
+    out.push({ label: sizeOk ? 'Good distance' : 'Come closer', ok: sizeOk });
     /* On a camera-side move the working limb is whichever one the lens can see, so the person
        has to be lying or standing the right way round for the side they picked. */
     const want = ex.sided && ex.sided.by === 'camera' ? wantedSide() : null;
@@ -749,18 +750,21 @@
     const headStyle = settings.head || (E.settings.skeleton || {}).head || 'face';
     const ownHead = drawHead(ctx, pts, X, Y, null, headStyle, lost ? 'rgba(255,243,226,0.45)' : '#fff3e2', ctx.lineWidth = Math.max(3, W / 320));
     // bones
+    /* a joint the model is not sure of (the far arm or leg, side-on) is left off rather than drawn
+       where it guesses; a fairly sure one is drawn faint (settings.json skeleton.show / dim) */
     for (const [a, b] of E.CONNECTIONS) {
       if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
-      const p = pts[a], q = pts[b]; if (p.v < 0.3 || q.v < 0.3) continue;
+      if (!E.seen(pts, a) || !E.seen(pts, b)) continue;
+      const p = pts[a], q = pts[b];
       const hot = faulty && (focus.has(a) || focus.has(b));
-      ctx.strokeStyle = hot ? '#ff2e88' : (p.v < 0.6 || q.v < 0.6) ? 'rgba(255,243,226,0.45)' : '#fff3e2';
+      ctx.strokeStyle = hot ? '#ff2e88' : (!E.sure(pts, a) || !E.sure(pts, b)) ? 'rgba(255,243,226,0.45)' : '#fff3e2';
       ctx.beginPath(); ctx.moveTo(X(p), Y(p)); ctx.lineTo(X(q), Y(q)); ctx.stroke();
     }
     // joints
     const r = Math.max(4, W / 220);
     for (const i of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
       if (ownHead && i === 0) continue;
-      const p = pts[i]; if (p.v < 0.3) continue;
+      if (!E.seen(pts, i)) continue; const p = pts[i];
       const hot = faulty && focus.has(i);
       ctx.fillStyle = hot ? '#ff2e88' : '#b8f542'; ctx.beginPath(); ctx.arc(X(p), Y(p), hot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
       if (focus.has(i)) { ctx.strokeStyle = hot ? '#ff2e88' : '#b8f542'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(p), Y(p), r * 2.4, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = Math.max(3, W / 320); }
@@ -930,7 +934,8 @@
       faults[f.id] = { label: f.label, cue: f.cue, tip: f.tip, landmarks };
     }
     const side = lastRec.opts && lastRec.opts.work ? `${sideName(lastRec.opts.work)} ${limbWord(ex)}` : lastRec.opts && SIDE_CODE[lastRec.opts.side] ? `${lastRec.opts.side} ${limbWord(ex)}` : '';
-    return { name: ex.name, type: ex.type, target: rv.target, side, faults, head: settings.head || (E.settings.skeleton || {}).head || 'face' };
+    const sk = E.settings.skeleton || {}; const [minCutoff, beta] = SMOOTH[settings.smooth] || SMOOTH.med;
+    return { name: ex.name, type: ex.type, target: rv.target, side, faults, head: settings.head || sk.head || 'face', show: sk.show, dim: sk.dim, smooth: { minCutoff, beta } };
   }
   let replayer = null;
   function renderReplay(rv) {

@@ -392,6 +392,25 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('studio: one phone video becomes its reps — read frame by frame, calibrated where the body settles', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select option[value="hipabd"]', { state: 'attached' });
+    await st.selectOption('#move-select', 'hipabd'); await st.waitForSelector('#file-input', { state: 'attached' });
+    /* the video: the person walks in from the left for 1.5 s, holds the start position for 1.5 s, then does the stream's 8 reps */
+    await st.evaluate(() => { const orig = window.__mockPose; window.__mockFile = (t) => { if (t < 1500) return orig(0).map((p) => ({ ...p, x: p.x - 0.3 * (1 - t / 1500) })); if (t < 3000) return orig(0); return orig(10500 + (t - 3000)); }; });
+    await st.setInputFiles('#file-input', path.join(__dirname, 'fixtures', 'blank-36s.webm'));
+    await st.waitForFunction(() => /Analysed|Failed/.test(document.getElementById('cam-status').textContent), null, { timeout: 180000 });
+    const status = await st.textContent('#cam-status');
+    assert.match(status, /Analysed — 8 reps to describe/, status);
+    const kids = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => ({ rep: t.origin && t.origin.rep, of: t.origin && t.origin.of, label: t.label, calT: t.calT, videoT0: t.videoT0, videoS0: t.videoS0, frames: t.frames.length })));
+    assert.equal(kids.length, 8, JSON.stringify(kids));
+    assert.ok(kids.every((k) => k.of === 8 && k.label === 'todo'), JSON.stringify(kids));
+    /* walking in is not the start position: each rep carries the still hold that followed it, not a fixed first second */
+    assert.ok(kids.every((k) => k.videoS0 >= 1200 && k.videoS0 <= 1900 && k.calT >= 1000 && k.calT <= 1600), 'the still hold before the set goes in front of each rep: ' + JSON.stringify(kids));
+    assert.ok(kids[0].videoT0 >= 2700 && kids[0].videoT0 <= 4000, 'the first rep is cut from where the set began, not from the walk-in: ' + JSON.stringify(kids[0]));
+    await st.close();
+  });
+
   await step('studio: any library move opens as a copy, round-trips to the same move, and saves back into its file', async () => {
     const st = await newPage();
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2');

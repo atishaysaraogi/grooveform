@@ -85,3 +85,25 @@ test('the bone list matches the engine so the replay draws the same skeleton', (
   const E = require('../client/coach/engine.js');
   assert.deepEqual(Replay.BONES, E.CONNECTIONS);
 });
+
+test('the replay smooths the recording exactly as the coach smoothed the live picture', () => {
+  const E = require('../client/coach/engine.js');
+  let seed = 3; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
+  const frames = []; for (let t = 0; t < 2000; t += 33) {
+    if (t === 660) { frames.push({ t, lm: null }); continue; }                                   // a frame without a person
+    frames.push({ t, lm: Array.from({ length: 33 }, (_, i) => [0.3 + i * 0.01 + rnd() * 0.05, 0.4 + rnd() * 0.05, rnd() * 0.1, i % 4 === 0 ? 0.42 : i % 4 === 1 ? 0.7 : 0.99]) });
+  }
+  const aspect = 16 / 9; const sm = new E.PoseSmoother(); const want = [];
+  for (const f of frames) want.push(f.lm ? sm.update(f.lm.map((l) => ({ x: l[0], y: l[1], z: l[2], visibility: l[3] })), f.t, aspect) : null);
+  const got = Replay.smoothFrames(frames, { aspect });
+  assert.equal(got.length, want.length); assert.equal(got[20], null, 'no person, nothing drawn');
+  for (let k = 0; k < frames.length; k++) {
+    if (!want[k]) continue;
+    for (let i = 0; i < 33; i++) {
+      const w = want[k][i], g = got[k][i];
+      assert.ok(Math.abs(g[0] - w.x / aspect) < 1e-9 && Math.abs(g[1] - w.y) < 1e-9 && Math.abs(g[3] - w.v) < 1e-9, `frame ${k} joint ${i}: ${JSON.stringify(g)} vs ${JSON.stringify(w)}`);
+      assert.equal(g[4], w.seen, `frame ${k} joint ${i} seen`);
+    }
+  }
+  assert.equal(Replay.frameIndexAt(frames, 700), frames.findIndex((f) => f.t === 693));
+});

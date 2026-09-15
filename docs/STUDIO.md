@@ -57,12 +57,19 @@ recording the survivors.
 
 **One long video is the quick way in.** Rather than a recording per label, take
 one video with everything in it — a few clean reps, one deliberately showing
-each fault, a borderline one — and hit **Upload a video…**. The Studio runs the
-pose model over it and cuts it into its reps: each rep becomes a take of its
-own, trimmed to the rep itself, with the parent's still start in front of it so
-it calibrates exactly as the parent did. The lead-in before the first rep and
-the tail after the last are not reps and are dropped; the split says how much
-of each it left out.
+each fault, a borderline one — and hit **Upload a video…**. The Studio steps
+through it frame by frame with the pose model (a seek per frame, so a slow
+phone reads the same frames as a fast one), finds where the body settles —
+the first moment it is seen, in the move's view and still for a second, the
+same test the coach applies before a set — and calibrates there, not at a fixed
+moment: a phone video starts with someone walking in and lying down, and a
+start position read then makes the whole set look like one long rep. It then
+cuts the take into its reps: each rep becomes a take of its own, trimmed to the
+rep itself, with the last second and a half of that still hold in front of it
+so it calibrates exactly as the parent did. The lead-in before the first rep
+and the tail after the last are not reps and are dropped; the split says how
+much of each it left out. A video with no still hold in it calibrates 1.2 s in
+and says so — hold the start position for a second before the first rep.
 
 Each rep arrives labelled **Not said yet**, in pink, and counts for nothing
 until you use the selector on its row to say what it shows — clean, which
@@ -99,8 +106,9 @@ Keyboard, when the builder is at the laptop and the physio is in frame:
 <kbd>space</kbd> starts and stops, <kbd>1</kbd>–<kbd>4</kbd> choose the next
 take's label (clean, fault, borderline, set-up).
 
-Videos recorded on a phone can be dropped in with **Analyze a video file**; the
-Studio runs the pose model over them at the video's own pace.
+Videos recorded on a phone can be dropped in with **Upload a video…**; the
+Studio steps through them frame by frame (25 a second) and calibrates where the
+body settles, as above.
 
 ### Measure and faults — the part that needs the physio in the room
 
