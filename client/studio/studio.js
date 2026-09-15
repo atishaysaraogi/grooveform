@@ -1394,7 +1394,12 @@
   const figWord = (k) => FIG_WORDS[k] || k;
   /* Notes live with whichever shape the move keeps: a preset pose stays a preset pose. */
   function figNotes(s, make) { const home = s.pose || s.figure; if (!home) return []; if (!home.notes && make) home.notes = []; return home.notes || []; }
-  const fb = { kf: 'A', drag: null, before: null };
+  /* `stretch` decides what a drag does to the bone above the joint. Off (the default) it turns and
+     keeps its length, which is what a body does. On, the bone lengthens or shortens to follow the
+     pointer — because a figure is a drawing, not a person: a leg seen at an angle is drawn shorter,
+     a child's proportions are not an adult's, and the keyframes built from a take inherit whatever
+     length the pose model guessed. Either way everything below the joint comes with it. */
+  const fb = { kf: 'A', drag: null, before: null, stretch: false };
   /* poses: the whole builder. notes: the same sheet with the canvas put away, which is all a move
      written in preset angles needs — its notes ride on the pose and the presets stay presets. */
   function openFigBuilder(mode) {
@@ -1466,6 +1471,10 @@
     }
     $('fb-title').textContent = `Demo figure — ${fb.kf === 'A' ? 'the start position' : 'the end of the movement'}`;
     $('figbuild').querySelectorAll('[data-fbkf]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fbkf === fb.kf));
+    $('fb-stretch').setAttribute('aria-pressed', fb.stretch ? 'true' : 'false');
+    $('fb-hint').textContent = fb.stretch
+      ? 'Stretching: a joint follows the pointer exactly, so the bone above it gets longer or shorter. Everything below comes with it. Hold Shift to bend instead.'
+      : 'Bending: dragging a joint turns the bone above it and everything below comes with it, so every limb keeps its length. Drag a hip to move the whole body. Hold Shift to stretch instead.';
     $('fb-notes').innerHTML = figNotesEditor(s, view);
   }
   function figNotesEditor(s, view) {
@@ -1502,13 +1511,19 @@
       const { x, y, view, s } = at(e); const F = s.figure[fb.kf]; const P = FIG_PARENT[view] || {};
       const clamp = (p) => [Math.round(Math.max(200, Math.min(404, p[0]))), Math.round(Math.max(18, Math.min(172, p[1])))];
       const parent = P[fb.drag] && F[P[fb.drag]] ? F[P[fb.drag]] : null;
+      const kin = figKin(view, fb.drag);
       if (!parent) { const d = [x - F[fb.drag][0], y - F[fb.drag][1]]; for (const j of Object.keys(F)) if (Array.isArray(F[j])) F[j] = clamp([F[j][0] + d[0], F[j][1] + d[1]]); }
-      else {
+      else if (fb.stretch) {
+        /* the bone follows the pointer outright: it turns AND changes length, and everything below
+           is carried rigidly so only this one bone's length changes */
+        const d = [x - F[fb.drag][0], y - F[fb.drag][1]];
+        for (const j of kin) { const p = F[j]; if (!Array.isArray(p)) continue; F[j] = clamp([p[0] + d[0], p[1] + d[1]]); }
+      } else {
         /* turn the bone above this joint and carry everything below it round with the same angle,
            so every bone keeps the length it was drawn with */
         const a0 = Math.atan2(F[fb.drag][1] - parent[1], F[fb.drag][0] - parent[0]), a1 = Math.atan2(y - parent[1], x - parent[0]);
         const d = a1 - a0, co = Math.cos(d), si = Math.sin(d);
-        for (const j of figKin(view, fb.drag)) { const p = F[j]; if (!Array.isArray(p)) continue; const dx = p[0] - parent[0], dy = p[1] - parent[1]; F[j] = clamp([parent[0] + dx * co - dy * si, parent[1] + dx * si + dy * co]); }
+        for (const j of kin) { const p = F[j]; if (!Array.isArray(p)) continue; const dx = p[0] - parent[0], dy = p[1] - parent[1]; F[j] = clamp([parent[0] + dx * co - dy * si, parent[1] + dx * si + dy * co]); }
       }
       drawFigBuilder();
     };
@@ -1517,6 +1532,11 @@
     $('figbuild').onclick = (e) => { if (e.target === $('figbuild')) closeFigBuilder(); };
     $('fb-close').onclick = closeFigBuilder;
     $('figbuild').querySelectorAll('[data-fbkf]').forEach((b) => { b.onclick = () => { fb.kf = b.dataset.fbkf; drawFigBuilder(); }; });
+    $('fb-stretch').onclick = () => { fb.stretch = !fb.stretch; drawFigBuilder(); };
+    /* held down, Shift is the other mode for one drag — the usual way a drawing tool does this */
+    const shift = (e) => { if (e.key !== 'Shift') return; const on = e.type === 'keydown'; if (fb.shiftOn === on) return; fb.shiftOn = on; fb.stretch = !fb.stretch; drawFigBuilder(); };
+    window.addEventListener('keydown', (e) => { if (!$('figbuild').hidden) shift(e); });
+    window.addEventListener('keyup', (e) => { if (!$('figbuild').hidden) shift(e); });
     $('fb-copy').onclick = () => { const s = cur(); s.figure[fb.kf === 'A' ? 'B' : 'A'] = JSON.parse(JSON.stringify(s.figure[fb.kf])); saveState(); drawFigBuilder(); toast('Copied to the other keyframe'); };
     $('fb-revert').onclick = () => { const s = cur(); if (!fb.before) return; Object.assign(s.figure, JSON.parse(fb.before)); saveState(); drawFigBuilder(); toast('Back to where this was opened'); };
     $('fb-notes').onclick = (e) => {

@@ -204,6 +204,14 @@ at takes a second to fix. A hip drags the whole body; the other keyframe sits
 behind, faint, so an edit can be seen against where the body was; *Copy this
 pose onto the other* and *Undo my edits* are there for the rest.
 
+**Stretch limbs** is the other way to drag. Off (the default) a drag turns the
+bone above the joint and keeps its length, which is what a body does. On, the
+bone follows the pointer exactly and gets longer or shorter, with everything
+below carried along unchanged — because a figure is a drawing, not a person: a
+leg seen at an angle is drawn shorter, a child's proportions are not an adult's,
+and keyframes built from a take inherit whatever length the pose model guessed.
+Holding Shift swaps the two for one drag.
+
 **Notes on the animation** are the other half of the builder: a few words
 pinned to a joint — "knee drifts in over the big toe" — drawn on the exercise
 page's figure with a line to the joint, travelling with it as the figure moves.

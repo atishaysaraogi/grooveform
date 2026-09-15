@@ -51,9 +51,9 @@
 <div id="figbuild" class="st-player" hidden>
   <div class="st-player-box">
     <div class="row"><h3 id="fb-title">Demo figure</h3><span class="spacer"></span><button class="btn ghost small" id="fb-close">Close</button></div>
-    <div class="row" id="fb-kf"><button type="button" class="chip small" data-fbkf="A" aria-pressed="true">Start position</button><button type="button" class="chip small" data-fbkf="B" aria-pressed="false">End of the movement</button></div>
+    <div class="row" id="fb-kf"><button type="button" class="chip small" data-fbkf="A" aria-pressed="true">Start position</button><button type="button" class="chip small" data-fbkf="B" aria-pressed="false">End of the movement</button><span class="spacer"></span><button type="button" class="chip small" id="fb-stretch" aria-pressed="false" title="Off: a drag turns the bone and keeps its length. On: the bone gets longer or shorter to follow.">Stretch limbs</button></div>
     <div class="st-player-stage" id="fb-stage"><canvas id="fb-canvas"></canvas></div>
-    <p class="muted" id="fb-hint" style="font-size:.85rem">Drag a joint: the bone above it turns and everything below comes with it, so every limb keeps its length. Drag a hip to move the whole body. The other keyframe is behind, faint.</p>
+    <p class="muted" id="fb-hint" style="font-size:.85rem"></p>
     <div class="row" id="fb-tools"><button class="btn ghost small" id="fb-copy">Copy this pose onto the other</button><button class="btn ghost small" id="fb-revert">Undo my edits</button></div>
     <div id="fb-notes"></div>
   </div>

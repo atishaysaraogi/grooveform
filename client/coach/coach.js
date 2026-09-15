@@ -23,7 +23,7 @@
     get(k, d) { try { const v = localStorage.getItem('fyzio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('fyzio.' + k, JSON.stringify(v)); } catch { } }
   };
-  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
+  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', voiceRate: 'normal', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
   function saveSettings() { store.set('settings', settings); }
   function setSetting(k, val) { settings[k] = val; saveSettings(); if (k === 'smooth') applySmoothing(); if (k === 'voice') { voice.muted = val === 'off'; if (typeof applyVoiceButton === 'function') applyVoiceButton(); } if (k === 'voiceName') voiceCache = null; }
   function show() { /* screens are managed by the portal */ }
@@ -192,27 +192,84 @@
   const diagram = cameraDiagram;
 
   /* ---------- voice & sound ---------- */
-  /* Pick the most natural-sounding English voice the device offers. Neural/"Natural"/"Enhanced"/"Premium" voices first (Edge, iOS, macOS),
-     then Google's cloud voices (Chrome), preferring Indian English, then UK/US. The user can pin one in Settings → Voice. */
-  let voiceCache = null;
+  /* ---------- the voice ----------
+     Every device ships a different set of voices and the one the browser hands out by default is
+     usually the oldest and most robotic of them (eSpeak on Linux, the SAPI5 pair on Windows,
+     Android's "English (United Kingdom)" formant voice). Two problems follow: a coach that sounds
+     like a 1998 satnav, and a coach that sounds like a different person on every phone.
+
+     So the voice is chosen rather than accepted, in tiers, and the same tiers on every platform:
+     a modern neural voice if there is one, then the good classic voices by name, and the known-bad
+     families are pushed below everything else and only used if nothing else exists. getVoices() is
+     also asynchronous on Chrome and Android — it returns nothing on the first call — so the first
+     line of a set would be spoken by the default voice before the list arrived. It is now held
+     until the list is in. */
+  const VOICE_BAD = /espeak|compact|pico|flite|robot|Microsoft (David|Zira|Mark|Hazel|Susan)\b|eloquence/i;
+  const VOICE_GOOD = /\b(Samantha|Karen|Moira|Tessa|Serena|Daniel|Fiona|Alex|Ava|Allison|Susan|Veena|Rishi)\b/i;
+  const VOICE_NEURAL = /natural|neural|enhanced|premium|siri|wavenet|journey|studio/i;
+  /* how fast each family wants to be read: the neural voices are clear at speed, the classic
+     concatenative ones turn to mush above about 0.95 */
+  const VOICE_RATE = [[VOICE_NEURAL, 1.02], [/^Google/i, 0.96], [VOICE_GOOD, 0.98]];
+  const RATE_ADJ = { slow: -0.12, normal: 0, fast: 0.12 };
+  let voiceCache = null, voicesReady = false, voiceWaiters = [];
+  function allVoices() { try { return speechSynthesis.getVoices() || []; } catch { return []; } }
+  function voiceScore(v) {
+    const n = v.name || ''; let sc = 0;
+    if (VOICE_NEURAL.test(n)) sc += 100;                     // Edge/Windows "Natural", iOS/macOS Enhanced & Premium, Siri
+    else if (/^Google/i.test(n)) sc += 70;                   // Chrome and Android's modern set
+    else if (VOICE_GOOD.test(n)) sc += 45;                   // the good classic Apple voices
+    if (VOICE_BAD.test(n)) sc -= 500;                        // below everything: used only if it is all there is
+    const lang = (v.lang || '').replace('_', '-');
+    if (/^en-IN/i.test(lang)) sc += 14; else if (/^en-GB/i.test(lang)) sc += 10; else if (/^en-AU|^en-IE/i.test(lang)) sc += 8; else if (/^en-US/i.test(lang)) sc += 6;
+    /* a local voice keeps working on a phone with no signal, which a coach mid-set needs; among
+       voices of the same quality that decides it */
+    if (v.localService) sc += 5;
+    if (v.default) sc += 1;
+    return sc;
+  }
   function pickVoice() {
     if (!('speechSynthesis' in window)) return null;
-    const all = speechSynthesis.getVoices(); if (!all.length) return null;
-    if (settings.voiceName && settings.voiceName !== 'auto') { const v = all.find(x => x.name === settings.voiceName); if (v) return v; }
+    const all = allVoices(); if (!all.length) return null;
+    if (settings.voiceName && settings.voiceName !== 'auto') { const v = all.find((x) => x.name === settings.voiceName); if (v) return v; }
     if (voiceCache && all.includes(voiceCache)) return voiceCache;
-    const en = all.filter(v => /^en[-_]/i.test(v.lang));
-    const score = v => { const n = v.name; let sc = 0;
-      if (/natural|neural|enhanced|premium|online/i.test(n)) sc += 40;
-      if (/^Google/.test(n)) sc += 25;
-      if (/Siri|Samantha|Karen|Daniel|Moira|Tessa|Ava|Allison|Serena|Aria|Jenny|Sonia|Libby|Neerja|Prabhat|Ryan|Guy/i.test(n)) sc += 15;
-      if (/en[-_]IN/i.test(v.lang)) sc += 12; else if (/en[-_](GB|AU)/i.test(v.lang)) sc += 8; else if (/en[-_]US/i.test(v.lang)) sc += 6;
-      if (/compact|espeak|robot/i.test(n)) sc -= 30;
-      if (!v.localService) sc += 3;   // cloud voices are usually the neural ones
-      return sc; };
-    voiceCache = (en.length ? en : all).sort((a, b) => score(b) - score(a))[0] || null; return voiceCache;
+    const en = all.filter((v) => /^en[-_]/i.test(v.lang || ''));
+    voiceCache = (en.length ? en : all).slice().sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
+    return voiceCache;
   }
-  if ('speechSynthesis' in window) { try { speechSynthesis.onvoiceschanged = () => { voiceCache = null; pickVoice(); }; speechSynthesis.getVoices(); } catch { } }
-  function listVoices() { try { return speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang)).map(v => ({ name: v.name, lang: v.lang })); } catch { return []; } }
+  /* The rate this voice is clearest at, nudged by the person's own preference. */
+  function voiceRate(v) {
+    const base = (v && (VOICE_RATE.find(([re]) => re.test(v.name || '')) || [])[1]) || 0.95;
+    return Math.max(0.6, Math.min(1.6, base + (RATE_ADJ[settings.voiceRate] || 0)));
+  }
+  /* getVoices() fills in asynchronously; until it has, nothing is spoken by the default voice. */
+  function whenVoices() {
+    if (voicesReady || !('speechSynthesis' in window)) return Promise.resolve();
+    if (allVoices().length) { voicesReady = true; return Promise.resolve(); }
+    return new Promise((res) => { voiceWaiters.push(res); });
+  }
+  function voicesArrived() {
+    voiceCache = null; voicesReady = true;
+    const w = voiceWaiters; voiceWaiters = []; w.forEach((f) => f());
+  }
+  if ('speechSynthesis' in window) {
+    try {
+      speechSynthesis.onvoiceschanged = voicesArrived;
+      if (allVoices().length) voicesReady = true;
+      /* Safari never fires the event when the list is already warm, and some Android builds fire it
+         once, early, before the engine has registered its own voices — so it is also polled, briefly. */
+      let tries = 0;
+      const poll = setInterval(() => { if (voicesReady || allVoices().length) { clearInterval(poll); voicesArrived(); } else if (++tries > 20) clearInterval(poll); }, 150);
+    } catch { }
+  }
+  function listVoices() { try { return allVoices().filter((v) => /^en[-_]/i.test(v.lang || '')).map((v) => ({ name: v.name, lang: v.lang, local: !!v.localService, good: voiceScore(v) >= 45 })).sort((a, b) => Number(b.good) - Number(a.good)); } catch { return []; } }
+  /* Degrees and arrows are written for the eye; read aloud they become "degree sign" or nothing. */
+  function sayable(text) {
+    return String(text == null ? '' : text)
+      .replace(/(\d)\s*°/g, '$1 degrees').replace(/°/g, ' degrees')
+      .replace(/(\d)\s*[×x]\s*(\d)/g, '$1 by $2')
+      .replace(/\s*[—–]\s*/g, ', ').replace(/[→←↑↓]/g, ' ')
+      .replace(/\s{2,}/g, ' ').trim();
+  }
   const voice = {
     ctx: null, muted: settings.voice === 'off', lastCue: 0, speaking: false,
     unlock() { try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); } catch { } if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); } catch { } } },
@@ -223,13 +280,33 @@
       const now = performance.now();
       if (this.muted || !('speechSynthesis' in window)) return false;
       if (priority < 2 && now - this.lastCue < minGap) return false;
+      this.lastCue = now;
+      /* Before the voice list has arrived, speaking would use whatever the browser calls default —
+         the robotic one. A cue is worth nothing a second late, so a count-in number is dropped
+         rather than queued, but the opening line and the summary wait for a real voice. */
+      if (!voicesReady) { whenVoices().then(() => { if (priority >= 2 && !this.muted) this.utter(text, priority); }); return true; }
+      return this.utter(text, priority);
+    },
+    utter(text, priority) {
+      const said = sayable(text); if (!said) return false;
       try {
         if (priority >= 2 || !speechSynthesis.speaking) speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text); u.rate = 0.98; u.pitch = 1; const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-IN';
-        u.onstart = () => this.speaking = true; u.onend = () => this.speaking = false;
-        speechSynthesis.speak(u); this.lastCue = now; return true;
+        const u = new SpeechSynthesisUtterance(said);
+        const v = pickVoice();
+        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-IN';
+        u.rate = voiceRate(v); u.pitch = 1; u.volume = 1;
+        u.onstart = () => { this.speaking = true; this.lastStart = performance.now(); };
+        u.onend = u.onerror = () => { this.speaking = false; };
+        /* Chrome drops an utterance spoken in the same tick as cancel(); a tick's delay is
+           inaudible and is the difference between a coach that talks and one that does not. */
+        if (this.needsTick === undefined) this.needsTick = /Chrome|CriOS|Android/i.test(navigator.userAgent) && !/Edg|OPR/i.test(navigator.userAgent);
+        if (this.needsTick) setTimeout(() => { try { speechSynthesis.speak(u); } catch { } }, 0);
+        else speechSynthesis.speak(u);
+        return true;
       } catch { return false; }
     },
+    /* Settings plays this so the person hears the voice before a set, not during one. */
+    preview(text = 'Nice and slow. Three more to go.') { this.unlock(); voiceCache = null; return whenVoices().then(() => this.utter(text, 2)); },
     stop() { try { speechSynthesis.cancel(); } catch { } }
   };
   function applyVoiceButton() { const b = $('btn-mute'); b.textContent = voice.muted ? '🔇' : '🔊'; b.setAttribute('aria-label', voice.muted ? 'Voice off — tap to turn on' : 'Voice on — tap to turn off'); b.classList.toggle('off', voice.muted); }
@@ -1095,5 +1172,5 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
-  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

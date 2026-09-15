@@ -407,6 +407,15 @@ async function runCoachedSet(page, side = 'right') {
     const moved = await where('A', 'wrL');
     assert.ok(Math.hypot(moved.fx - wr.fx, moved.fy - wr.fy) > 4, `the wrist moved: ${JSON.stringify([wr.fx, wr.fy, moved.fx, moved.fy])}`);
     assert.ok(Math.abs(await bone('A', 'elL', 'wrL') - forearm0) < 1.5, 'and the forearm is the same length');
+    /* stretching instead: the same drag makes the bone longer rather than turning it */
+    await st.click('#fb-stretch'); assert.match(await st.textContent('#fb-hint'), /Stretching/);
+    const upper0 = await bone('A', 'shL', 'elL');
+    const el = await where('A', 'elL');
+    await st.mouse.move(el.x, el.y); await st.mouse.down(); await st.mouse.move(el.x, el.y + 70, { steps: 6 }); await st.mouse.up();
+    const upper1 = await bone('A', 'shL', 'elL');
+    assert.ok(upper1 > upper0 + 3, `the upper arm got longer: ${upper0.toFixed(1)} → ${upper1.toFixed(1)}`);
+    assert.ok(Math.abs(await bone('A', 'elL', 'wrL') - forearm0) < 1.5, 'and the forearm below it is carried along unchanged');
+    await st.click('#fb-stretch'); assert.match(await st.textContent('#fb-hint'), /Bending/);
     assert.ok(Math.abs(await bone('A', 'shL', 'elL') - (await bone('B', 'shL', 'elL'))) >= 0, 'the other keyframe is untouched by this drag');
     /* a note pinned to a joint, which the exercise page draws on the animation */
     await st.click('#fb-addnote'); await st.waitForSelector('[data-fbn="0"]');
@@ -540,6 +549,52 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(m.region, 'knee', 'the move file says which region it belongs to');
     await st.screenshot({ path: path.join(SHOTS, 'studio-edit-copy.png'), fullPage: true });
     await st.close();
+  });
+
+  await step('voice: a natural voice is chosen over the robotic default, and the same one on every device', async () => {
+    const page = await newPage();
+    /* a device offering the usual mixture: an old formant voice marked default, and better ones */
+    await page.addInitScript(() => {
+      const V = (name, lang, localService, def) => ({ name, lang, localService, default: !!def, voiceURI: name });
+      const voices = [
+        V('English (United Kingdom)', 'en-GB', true, true),     // Android's formant voice, offered first
+        V('Microsoft Zira - English (United States)', 'en-US', true),
+        V('eSpeak English', 'en-GB', true),
+        V('Google UK English Female', 'en-GB', false),
+        V('Microsoft Sonia Online (Natural) - English (United Kingdom)', 'en-GB', false),
+        V('Samantha', 'en-US', true),
+      ];
+      window.__spoken = [];
+      /* window.speechSynthesis is a read-only accessor, so it is redefined rather than assigned */
+      Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+        getVoices: () => voices, speaking: false, cancel() { }, pause() { }, resume() { },
+        speak(u) { window.__spoken.push({ text: u.text, voice: u.voice && u.voice.name, rate: u.rate }); },
+        addEventListener() { }, removeEventListener() { }, onvoiceschanged: null,
+      } });
+      Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: function (t) { this.text = t; } });
+    });
+    await page.goto(base + '/?mock=1#/');
+    await page.waitForFunction(() => window.OnTrackCoach && window.OnTrackCoach.pickVoice);
+    const pick = await page.evaluate(() => { const v = window.OnTrackCoach.pickVoice(); return { name: v && v.name, rate: window.OnTrackCoach.voiceRate(v) }; });
+    assert.equal(pick.name, 'Microsoft Sonia Online (Natural) - English (United Kingdom)', 'the neural voice wins, not the default: ' + pick.name);
+    assert.ok(pick.rate > 0.9 && pick.rate < 1.1, 'and it is read at a sensible speed: ' + pick.rate);
+    /* every device runs the same ladder, so with only the bad ones present it still never picks eSpeak over a real voice */
+    const ladder = await page.evaluate(() => {
+      const list = window.OnTrackCoach.listVoices();
+      return { first: list[0] && list[0].name, espeakLast: list[list.length - 1].name };
+    });
+    assert.match(ladder.first, /Sonia|Google|Samantha/, 'the good voices sort first: ' + ladder.first);
+    /* degrees and dashes are written for the eye; they are spoken as words */
+    /* Chrome needs the speak call on the next tick, so the stub records it just after utter returns */
+    const said = await page.evaluate(async () => {
+      const c = window.OnTrackCoach; c.voice.muted = false; c.voice.utter('Set 2 complete — 95° reached, 3 × 10', 2);
+      await new Promise((r) => setTimeout(r, 30));
+      return window.__spoken.pop();
+    });
+    assert.match(said.text, /95 degrees/, 'degrees are spoken: ' + said.text);
+    assert.ok(!/—/.test(said.text) && !/×/.test(said.text), 'and the typography is not: ' + said.text);
+    assert.equal(said.voice, 'Microsoft Sonia Online (Natural) - English (United Kingdom)');
+    await page.close();
   });
 
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
