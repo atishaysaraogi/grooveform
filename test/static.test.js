@@ -11,7 +11,11 @@ srv.listen(0, async () => {
   const openPage = async (opts) => { const pg = await browser.newPage(opts); await pg.addInitScript("try { localStorage.setItem('fyzio.seenIntro', '1'); } catch (e) {}"); return pg; };
   const page = await openPage({ viewport: { width: 400, height: 860 } }); page.on('pageerror', e => errors.push(String(e)));
   await page.goto(base); await page.waitForSelector('.ex-row', { timeout: 15000 });
-  assert.ok((await page.$$('.ex-row')).length >= 130, 'the whole library is on the static home page'); assert.ok((await page.$$('.playlist')).length >= 17, 'every playlist is on the static home page');
+  /* the home page offers the shortlist — the moves marked listed, which by default is the vetted ones */
+  const rows = await page.$$eval('.ex-row', (rs) => rs.map((r) => r.getAttribute('href').split('/').pop()));
+  assert.ok(rows.length >= 8 && rows.length <= 40, `the static home page shows the shortlist, not everything: ${rows.length}`);
+  assert.ok(rows.includes('heelslide') && rows.includes('wallsit'), 'and the vetted moves are in it');
+  assert.ok((await page.$$('.playlist')).length >= 17, 'every playlist is on the static home page');
   await page.click('.playlist'); await page.waitForSelector('.rt-item'); assert.ok((await page.$$('.rt-item')).length >= 2, 'playlist detail loaded from api/routines/<id>');
   assert.ok((await page.$$('.rt-config .bubble')).length > 0, 'every move on the playlist is configurable in place');
   assert.equal((await page.$$('.rt-start')).length, 1, 'one start button for the whole routine');
