@@ -1,0 +1,90 @@
+{
+  "region": "dance",
+  "id": "garba_do_taali",
+  "name": "Garba — do taali (two claps)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["quadriceps", "calves"], "secondary": ["gluteus maximus", "shoulders", "obliques"] },
+  "summary": "The two-clap Garba basic: step, step, clap — the circle step everyone starts with.",
+  "setup": "Face the phone about 2.5 m away, camera at hip height, whole body and both arms in frame. Step to the side, bring the other foot behind, dip slightly and clap at chest height. Keep the rhythm even and stay light on the feet.",
+  "brief": "Step to the side, bring the other foot behind, dip slightly and clap. Keep the rhythm even and stay light on the feet.",
+  "why": "The hands coming together is the clearest thing in the frame from the front, so the claps are counted. The footwork pattern and the travel around the circle are yours to watch.",
+  "calibrationPose": "Standing with the hands apart at chest height, before the first clap.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "targets": [16, 24, 32, 48],
+  "defaultTarget": 24,
+  "progress": { "metric": { "kind": "dist", "pts": ["WR", "oWR"] }, "start": "calibrated", "target": 22 },
+  "display": { "label": "clap", "unit": "%", "from": "abs" },
+  "tempo": "Start at a walking pace; speed up over the set as Garba does.",
+  "dosage": "3–5 minutes continuous, or 3 × 24 claps.",
+  "progression": "Faster tempo; deeper dip; add the tran taali (three-clap) pattern.",
+  "regression": "Slower, smaller steps, no dip.",
+  "contraindications": "Knee pain on the dip; ankle or foot pain from repeated bouncing on a hard floor.",
+  "faults": [
+    {
+      "id": "stiff",
+      "label": "Staying upright and stiff",
+      "cue": "Bend the knees — dip with the clap",
+      "tip": "Garba is a soft, bouncing step. Locked knees turn it into marching and jar the joints.",
+      "severity": 2
+    },
+    {
+      "id": "small",
+      "label": "Hands barely meeting",
+      "cue": "Clap wide and clear",
+      "tip": "Open the arms out and bring them together at chest height. Small hand flicks lose the rhythm.",
+      "severity": 1
+    },
+    {
+      "id": "flatfoot",
+      "label": "Stamping flat-footed",
+      "cue": "Land softly — ball then heel",
+      "tip": "Landing flat on a hard floor for several minutes is what makes the calves and shins sore afterwards.",
+      "severity": 2
+    },
+    {
+      "id": "hunch",
+      "label": "Rounding the shoulders",
+      "cue": "Chest open, shoulders back",
+      "tip": "Long sets tire the upper back and the shoulders creep forward. Keep the chest lifted.",
+      "severity": 1
+    },
+    {
+      "id": "uneven",
+      "label": "Rhythm drifting",
+      "cue": "Match the beat, even steps",
+      "tip": "The step is on the beat and the clap on the count. Drifting turns the circle into a shuffle.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Any floor with a little give. Barefoot or soft shoes; a hard floor for long sets is what makes feet ache.",
+    "stop": "Knee pain on the dip, or shin pain that builds.",
+    "cannotSee": "The footwork pattern, the direction of travel and the turn of the wrists.",
+    "regions": [
+      {
+        "name": "Feet",
+        "points": [
+          { "t": "Step to the side, other foot behind, soft landings.", "tracked": false },
+          { "t": "Stay light — the heel touches, it does not stamp.", "tracked": false }
+        ]
+      },
+      { "name": "Knees", "points": [{ "t": "Soft, dipping with each clap.", "tracked": false }] },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Open wide, then clap at chest height on the count.", "tracked": true },
+          { "t": "Shoulders down, chest open.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 105, "armR": 105, "foreL": 60, "foreR": 60, "legL": 6, "legR": 6 },
+    "B": { "squat": 0.3, "armL": 60, "armR": 60, "foreL": 20, "foreR": 20, "legL": 10, "legR": 10 },
+    "work": { "thigh": 0.7, "calf": 0.6, "shoulder": 0.5 }
+  }
+}

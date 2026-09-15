@@ -1,0 +1,90 @@
+{
+  "region": "gym",
+  "id": "bench_dip",
+  "name": "Bench dip",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "intermediate",
+  "equipment": ["bench or chair"],
+  "muscles": { "primary": ["triceps"], "secondary": ["anterior deltoid", "pectorals"] },
+  "upperBody": true,
+  "summary": "Hands on a bench behind you, lower the hips by bending the elbows and press back up.",
+  "setup": "Sit on the edge of a bench, hands beside the hips, then walk the feet out and lift off, side-on to the phone. Lower the hips by bending the elbows to about 90°, keeping the back close to the bench, then press up.",
+  "brief": "Sit on the edge of a bench, hands beside the hips, feet walked out. Lower the hips by bending the elbows to about 90 degrees, then press back up.",
+  "why": "From the side the elbow angle closes each rep, so reps are counted.",
+  "progress": { "metric": "elbow", "start": "calibrated", "target": 95 },
+  "tempo": "Down 2 s, up 1 s.",
+  "dosage": "3 × 10.",
+  "progression": "Feet on a second bench; weight on the lap.",
+  "regression": "Knees bent, feet close.",
+  "contraindications": "Front-of-shoulder pain — this move is hard on irritable shoulders.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "shoulder3",
+      "label": "Dropping too low",
+      "cue": "Stop at ninety degrees",
+      "tip": "Below a right angle at the elbow this move wrenches the front of the shoulder. Many shoulders should not do it at all.",
+      "severity": 3
+    },
+    {
+      "id": "deep",
+      "label": "Going too deep",
+      "cue": "Elbows to 90°",
+      "tip": "Below 90° the front of the shoulder takes the strain.",
+      "severity": 2
+    },
+    {
+      "id": "drift2",
+      "label": "Hips drifting forward",
+      "cue": "Hips brush the bench",
+      "tip": "Away from the bench the shoulder is pulled into a worse position.",
+      "severity": 2
+    },
+    {
+      "id": "drift",
+      "label": "Hips drifting forward",
+      "cue": "Back near the bench",
+      "tip": "Keep the back brushing the bench so the triceps do the work.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A bench that cannot slide.",
+    "stop": "Front-of-shoulder pain.",
+    "cannotSee": "Shoulder rounding forward.",
+    "regions": [
+      {
+        "name": "Elbows",
+        "points": [
+          { "t": "Bend to a right angle; point straight back.", "tracked": true }
+        ]
+      },
+      { "name": "Hips", "points": [{ "t": "Close to the bench.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "face": "left", "torso": 5, "thigh": 70, "shin": 10, "foot": 0, "uarm": -30, "farm": -30 },
+    "B": { "face": "left", "torso": 5, "thigh": 99, "shin": 7, "foot": 0, "uarm": -85, "farm": 10 },
+    "work": { "arm": 1, "shoulder": 0.4, "chest": 0.3 },
+    "anchor": ["ft", "wr", "wrF"],
+    "props": [{ "kind": "box", "at": "wr", "w": 40, "dy": 2 }]
+  }
+}

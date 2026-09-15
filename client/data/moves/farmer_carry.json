@@ -1,0 +1,69 @@
+{
+  "region": "gym",
+  "id": "farmer_carry",
+  "name": "Farmer carry",
+  "type": "hold",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["heavy dumbbells or kettlebells"],
+  "muscles": {
+    "primary": ["grip", "abdominals", "upper trapezius"],
+    "secondary": ["spinal erectors", "quadriceps"]
+  },
+  "upperBody": true,
+  "summary": "Heavy weights in each hand, walk tall for distance or time.",
+  "setup": "Pick up a heavy weight in each hand. Stand tall, shoulders back, and walk with short, steady steps for the distance or time.",
+  "why": "Walking takes you out of frame. Logged by hand.",
+  "targets": [20, 30, 45, 60],
+  "defaultTarget": 30,
+  "tempo": "Steady walking.",
+  "dosage": "3 × 30–60 s.",
+  "progression": "Heavier; one hand only (suitcase carry).",
+  "regression": "Lighter; shorter.",
+  "contraindications": "Lower back pain; grip injury.",
+  "faults": [
+    {
+      "id": "lean",
+      "label": "Leaning to one side",
+      "cue": "Stand tall, ribs down",
+      "tip": "Brace the sides of the trunk; the weights should not tip you.",
+      "severity": 2
+    },
+    {
+      "id": "shrug5",
+      "label": "Shoulders creeping up",
+      "cue": "Shoulders down, chest tall",
+      "tip": "Let the weight hang from a set shoulder rather than hanging off the neck.",
+      "severity": 2
+    },
+    {
+      "id": "shrug",
+      "label": "Shoulders shrugging",
+      "cue": "Let the shoulders settle down",
+      "tip": "Let the arms hang long from a packed shoulder.",
+      "severity": 1
+    },
+    {
+      "id": "rush2",
+      "label": "Walking fast",
+      "cue": "Slow, deliberate steps",
+      "tip": "Rushing wastes the bracing that makes this a core exercise.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A clear walkway.",
+    "stop": "Back pain or losing grip.",
+    "cannotSee": "You — the exercise walks out of frame.",
+    "regions": [
+      { "name": "Trunk", "points": [{ "t": "Tall, level, braced.", "tracked": false }] },
+      { "name": "Shoulders", "points": [{ "t": "Packed back and down.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 10, "armR": 10, "legL": 6, "legR": 6 },
+    "B": { "armL": 10, "armR": 10, "legL": 6, "legR": 6 },
+    "work": { "forearm": 1, "abs": 0.6, "oblique": 0.6, "back": 0.4 }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "region": "gym",
+  "id": "reverse_lunge",
+  "name": "Reverse lunge",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none", "dumbbells (optional)"],
+  "muscles": { "primary": ["gluteus maximus", "quadriceps"], "secondary": ["hamstrings"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Step back and lower until the back knee nearly touches, then drive up through the front heel.",
+  "setup": "Stand side-on to the phone, working (front) leg nearest. Step the other foot back and lower until the front thigh is level, then push through the front heel to stand.",
+  "brief": "Stand tall. Step the other foot back and lower until the front thigh is level, then push through the front heel to stand.",
+  "why": "From the side the front knee angle closes every rep, so reps are counted. The trunk lean is smaller than in a forward lunge and is listed rather than judged.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 95 },
+  "tempo": "Down 2 s, up 1 s.",
+  "dosage": "3 × 10 each leg.",
+  "progression": "Dumbbells; deficit from a low step.",
+  "regression": "Hand on a support; shallower.",
+  "contraindications": "Kneecap pain on the front leg.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "lean",
+      "label": "Trunk tipping forward",
+      "cue": "Chest up",
+      "tip": "Lower straight down; the back knee travels to the floor, the chest stays up.",
+      "severity": 2
+    },
+    {
+      "id": "push",
+      "label": "Pushing off the back foot",
+      "cue": "Front heel drives",
+      "tip": "The back foot is a kickstand; the front leg does the work.",
+      "severity": 2
+    },
+    {
+      "id": "front",
+      "label": "Front heel lifting",
+      "cue": "Front heel stays down",
+      "tip": "Weight through the front heel is what puts the work in the glute.",
+      "severity": 2
+    },
+    {
+      "id": "lean2",
+      "label": "Folding forward",
+      "cue": "Chest up, trunk tall",
+      "tip": "A little forward lean is fine; folding shifts the load to the lower back.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Enough floor behind you.",
+    "stop": "Kneecap pain.",
+    "cannotSee": "Which leg is doing the pushing.",
+    "regions": [
+      {
+        "name": "Front leg",
+        "points": [
+          { "t": "Thigh reaches level; heel stays down.", "tracked": true }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Tall.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 8, "farm": 8 },
+    "B": {
+      "face": "right",
+      "torso": 0,
+      "thigh": 85,
+      "shin": -5,
+      "thighF": -35,
+      "shinF": -95,
+      "footF": -75,
+      "uarm": 8,
+      "farm": 8
+    },
+    "work": { "glute": 1, "thigh": 0.9 },
+    "anchor": "ft"
+  }
+}

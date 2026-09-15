@@ -1,0 +1,66 @@
+{
+  "region": "elbow",
+  "id": "grip_squeeze",
+  "name": "Grip squeeze",
+  "type": "hold",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["soft ball or putty"],
+  "muscles": { "primary": ["finger flexors", "grip"], "secondary": ["wrist flexors"] },
+  "upperBody": true,
+  "sided": { "limb": "arm", "by": "pick" },
+  "summary": "Squeeze a soft ball as hard as is comfortable, hold, relax.",
+  "setup": "Hold a soft ball or putty in the palm. Squeeze, hold five seconds, relax fully.",
+  "why": "The fingers do all the work. Logged by hand.",
+  "targets": [5, 8, 10],
+  "defaultTarget": 5,
+  "tempo": "Squeeze 5 s, relax 3 s.",
+  "dosage": "10 × 5 s, 2–3 times a day.",
+  "progression": "Firmer putty; longer holds.",
+  "regression": "Lighter squeeze.",
+  "contraindications": "Pain in the fingers or a recent hand fracture without clearance.",
+  "faults": [
+    {
+      "id": "breath2",
+      "label": "Holding the breath",
+      "cue": "Breathe through the squeeze",
+      "tip": "Breath-holding spikes blood pressure during a hard grip. Keep breathing out.",
+      "severity": 2
+    },
+    {
+      "id": "wrist",
+      "label": "Wrist bending on the squeeze",
+      "cue": "Keep the wrist straight",
+      "tip": "Keep the wrist neutral so the fingers do the work.",
+      "severity": 1
+    },
+    {
+      "id": "breath",
+      "label": "Holding the breath",
+      "cue": "Breathe out as you squeeze",
+      "tip": "Count out loud.",
+      "severity": 1
+    },
+    {
+      "id": "wrist2",
+      "label": "Curling the wrist",
+      "cue": "Wrist straight",
+      "tip": "A neutral wrist puts the work in the hand rather than the forearm tendons.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Anywhere.",
+    "stop": "Finger pain.",
+    "cannotSee": "The squeeze.",
+    "regions": [
+      { "name": "Hand", "points": [{ "t": "Squeezes evenly with all fingers.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 8, "armR": 20, "foreR": 100 },
+    "B": { "armL": 8, "armR": 20, "foreR": 100 },
+    "work": { "forearm": 1 }
+  }
+}

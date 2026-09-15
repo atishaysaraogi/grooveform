@@ -1,0 +1,109 @@
+{
+  "region": "gym",
+  "id": "one_arm_row",
+  "name": "One-arm dumbbell row",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["dumbbell", "bench or chair"],
+  "muscles": { "primary": ["latissimus dorsi", "rhomboids"], "secondary": ["biceps", "rear deltoid"] },
+  "upperBody": true,
+  "sided": { "limb": "arm", "by": "camera" },
+  "summary": "One hand on a bench, row a dumbbell to the hip with the other, elbow close to the body.",
+  "setup": "Place one hand and knee on a bench, back flat, dumbbell in the free hand, working arm nearest the phone. Row the weight to the hip with the elbow driving back, then lower fully.",
+  "brief": "Place one hand and knee on a bench, back flat, dumbbell in the free hand. Row the weight to the hip with the elbow driving back, then lower fully.",
+  "why": "From the side the elbow angle closes each rep, so reps are counted. The trunk twisting to help is listed, not judged.",
+  "progress": { "metric": "elbow", "start": "calibrated", "target": 70 },
+  "tempo": "Up 1 s, squeeze 1 s, down 2 s.",
+  "dosage": "3 × 10 each arm.",
+  "progression": "Heavier.",
+  "regression": "Lighter; band row.",
+  "contraindications": "Lower back pain.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "twist",
+      "label": "Trunk twisting to lift",
+      "cue": "Shoulders square",
+      "tip": "The chest stays facing the floor; the arm does the work.",
+      "severity": 2
+    },
+    {
+      "id": "twist3",
+      "label": "Twisting the trunk to lift",
+      "cue": "Shoulders level",
+      "tip": "Rotating the body to finish the rep means the weight is too heavy.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Not reaching the hip",
+      "cue": "Elbow past the ribs",
+      "tip": "Finish with the elbow behind the body.",
+      "severity": 1
+    },
+    {
+      "id": "elbow3",
+      "label": "Elbow flaring out",
+      "cue": "Elbow past your hip",
+      "tip": "Draw the elbow back along the body rather than out to the side.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A stable bench.",
+    "stop": "Lower back pain.",
+    "cannotSee": "The trunk twisting.",
+    "regions": [
+      { "name": "Working arm", "points": [{ "t": "Elbow drives back past the ribs.", "tracked": true }] },
+      { "name": "Back", "points": [{ "t": "Flat and square.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": 82,
+      "neck": -20,
+      "thigh": -10,
+      "shin": 10,
+      "thighF": 80,
+      "shinF": -90,
+      "uarm": 175,
+      "farm": 175,
+      "uarmF": 100,
+      "farmF": 100
+    },
+    "B": {
+      "face": "right",
+      "torso": 82,
+      "neck": -20,
+      "thigh": -10,
+      "shin": 10,
+      "thighF": 80,
+      "shinF": -90,
+      "uarm": -20,
+      "farm": 100,
+      "uarmF": 100,
+      "farmF": 100
+    },
+    "work": { "back": 1, "arm": 0.6 },
+    "props": [{ "kind": "box", "at": "wrF", "w": 30, "dy": 2 }]
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "region": "shoulder",
+  "id": "shoulder_abd",
+  "name": "Shoulder abduction (band)",
+  "summary": "Straight-arm raise out to the side against a band, to shoulder height — checked for shrugging, leaning, bending the elbow and swinging too high.",
+  "setup": "Stand on the band, hold the other end at your side. Face the camera about 2.5 m away, camera at chest height, whole body in frame. Raise the arm straight out to the side, thumb slightly up, no higher than shoulder level, then lower slowly.",
+  "brief": "Stand on the band, hold the other end at your side. Raise the arm straight out to the side, thumb slightly up, no higher than shoulder level, then lower slowly.",
+  "why": "From the front the arm swings across the camera plane, so the raise angle, a bending elbow, a rising shoulder and a trunk leaning the other way are all measured directly — the same geometry that makes standing hip abduction easy to track.",
+  "targets": [6, 8, 10, 12, 15],
+  "defaultTarget": 10,
+  "guide": {
+    "surface": "Standing on the middle of the band with the foot on the working side (or both feet), holding the other end at your thigh. Firm floor, shoes on so the band cannot slip.",
+    "regions": [
+      {
+        "name": "Feet & legs",
+        "points": [
+          {
+            "t": "Feet hip-width, knees soft, weight even. The band runs from under the foot straight up to the hand.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Trunk & pelvis",
+        "points": [
+          {
+            "t": "Stand tall with the trunk still. Leaning the body away from the arm makes the arm look higher without the shoulder working — the coach measures trunk lean against your start position.",
+            "tracked": true
+          },
+          {
+            "t": "Ribs down, no arching. If you have to lean or swing, the band is too strong.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Working arm",
+        "points": [
+          {
+            "t": "Arm straight with a soft elbow — set the tiny bend before the first rep and keep it fixed. A bending elbow is flagged.",
+            "tracked": true
+          },
+          {
+            "t": "Raise straight out to the side, slightly in front of the body line (about 30° forward — the \"scapular plane\"), thumb pointing slightly up. Palm down with the thumb dropped is harder on the joint.",
+            "tracked": false
+          },
+          {
+            "t": "Stop at shoulder height (hand level with the shoulder, 90°). Higher than that the shoulder blade has to rotate and the joint is more easily pinched; the coach flags raises past ~100°.",
+            "tracked": true
+          },
+          {
+            "t": "Lead with the elbow, not the hand; think of pushing the hand toward the far wall rather than lifting it.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Shoulders & neck",
+        "points": [
+          {
+            "t": "Shoulder blade set down and back before each rep; the shoulder must not rise toward the ear as the arm goes up. This is the fault the coach watches most closely.",
+            "tracked": true
+          },
+          { "t": "Neck long, chin level, eyes forward.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Other arm",
+        "points": [
+          {
+            "t": "Hanging relaxed or hand on hip. Do not hold a chair on that side — it invites leaning.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Breathing & tempo",
+        "points": [
+          { "t": "Breathe out on the way up, in on the way down.", "tracked": false },
+          {
+            "t": "2 s up, 1 s pause at the top, 3 s down. No swinging — every rep starts from a dead stop.",
+            "tracked": true
+          }
+        ]
+      }
+    ],
+    "stop": "A sharp catch or \"painful arc\" partway up, pain on top of the shoulder that lingers after the set, or any pins and needles in the hand."
+  },
+  "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+  "sided": { "limb": "arm", "by": "pick", "auto": true },
+  "upperBody": true,
+  "icon": "🙋",
+  "order": 70,
+  "options": [
+    { "key": "rom", "label": "Raise target", "values": [45, 60, 75, 90], "unit": "°", "default": 90 }
+  ],
+  "band": "yellow",
+  "vetted": true,
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["band"],
+  "muscles": { "primary": ["supraspinatus", "middle deltoid"], "secondary": ["upper trapezius"] },
+  "tempo": "2 s up, 1 s pause, 3 s down.",
+  "dosage": "2–3 × 10–12 each arm.",
+  "progression": "Next band colour; thumb-up raise to 90°.",
+  "regression": "No band; raise to 60°.",
+  "contraindications": "Pain in the arc between 60° and 120°, or a recent shoulder dislocation.",
+  "view": "front",
+  "type": "reps",
+  "progress": {
+    "metric": { "kind": "vertical", "pts": ["SH", "EL"] },
+    "start": "calibrated",
+    "target": "opt:rom",
+    "targetIsDelta": true
+  },
+  "display": { "label": "raise", "unit": "°", "from": "start" },
+  "faults": [
+    {
+      "id": "shrug",
+      "label": "Shrugging",
+      "cue": "Shoulder down — reach, don’t lift",
+      "tip": "If the shoulder rises toward the ear the upper trapezius does the lift. Set the shoulder blade down first; think of reaching the hand toward the wall rather than lifting it.",
+      "severity": 3,
+      "metric": "shrug",
+      "rel": "change",
+      "op": "<",
+      "threshold": -9,
+      "minP": 0.3,
+      "cooldown": 4500,
+      "phase": "moving"
+    },
+    {
+      "id": "lean",
+      "label": "Leaning away",
+      "cue": "Stay tall — no leaning",
+      "tip": "Tipping the trunk the other way makes the arm look higher without the shoulder working. Keep the torso upright and accept a smaller raise.",
+      "severity": 2,
+      "metric": "lean",
+      "rel": "change",
+      "op": "<",
+      "threshold": -10,
+      "minP": 0.3,
+      "persist": 450,
+      "phase": "moving"
+    },
+    {
+      "id": "bend",
+      "label": "Elbow bending",
+      "cue": "Keep the arm straight — soft elbow",
+      "tip": "A bending elbow shortens the lever and shifts work to the biceps. Keep a small soft bend and hold it fixed for the whole rep.",
+      "severity": 2,
+      "metric": "elbow",
+      "op": "<",
+      "threshold": 150,
+      "minP": 0.3,
+      "phase": "moving"
+    },
+    {
+      "id": "high",
+      "label": "Raising above shoulder height",
+      "cue": "Stop at shoulder height",
+      "tip": "The tender range for most irritable shoulders is roughly 60–120°, so rehab usually stops with the hand level with the shoulder. Go higher later, once it is comfortable.",
+      "severity": 2,
+      "metric": { "kind": "vertical", "pts": ["SH", "EL"] },
+      "rel": "change",
+      "op": ">",
+      "threshold": 100,
+      "persist": 300,
+      "phase": "moving"
+    },
+    {
+      "id": "shallow",
+      "label": "Not reaching the target",
+      "cue": "A little higher",
+      "tip": "Aim for the raise target without shrugging or leaning; if it hurts before then, lower the target.",
+      "severity": 1,
+      "rule": "shallow"
+    },
+    {
+      "id": "fast",
+      "label": "Too fast",
+      "cue": "Slower — two up, pause, three down",
+      "tip": "Swinging the arm lets momentum lift it. Two seconds up, a one-second pause at the top, three seconds down.",
+      "severity": 1,
+      "rule": "fast",
+      "minMs": 2200
+    }
+  ],
+  "pose": {
+    "A": { "armR": 8, "armL": 8 },
+    "B": { "armR": 90, "armL": 8 },
+    "work": { "shoulder": 1 },
+    "side": "R"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "region": "core",
+  "id": "dead_bug",
+  "name": "Dead bug",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["mat"],
+  "muscles": { "primary": ["abdominals", "transversus abdominis"], "secondary": ["hip flexors", "shoulders"] },
+  "summary": "On your back with arms up and knees over the hips, lower one arm and the opposite leg, then return.",
+  "setup": "Lie on your back, side-on to the phone at floor level, arms pointing at the ceiling, hips and knees at 90°. Brace, lower one arm overhead and the opposite leg toward the floor, stop before the back arches, return. Alternate.",
+  "brief": "Lie on your back, arms pointing at the ceiling, hips and knees at 90 degrees. Brace, then lower one arm overhead and the opposite leg toward the floor, stopping before the back arches.",
+  "why": "From the side the near arm swings from vertical to overhead each rep, which counts. The lower back arching — the fault that matters — is hidden by the floor.",
+  "progress": { "metric": "arm_up", "start": "calibrated", "target": 145 },
+  "tempo": "Lower 3 s, return 2 s.",
+  "dosage": "3 × 8 each side.",
+  "progression": "Arm and leg fully straight; a light weight in the hand.",
+  "regression": "Arm only, or leg only; heel taps.",
+  "contraindications": "Back pain that increases as the limbs lower.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Lower back arching",
+      "cue": "Back flat",
+      "tip": "Lower only as far as the back can stay pressed into the floor; shorter range is fine.",
+      "severity": 3
+    },
+    {
+      "id": "breath",
+      "label": "Holding the breath",
+      "cue": "Breathe out lowering",
+      "tip": "The exhale keeps the ribs down and the brace on.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat.",
+    "stop": "Back pain during the lowering.",
+    "cannotSee": "The lower back leaving the floor.",
+    "regions": [
+      { "name": "Arm", "points": [{ "t": "Lowers overhead, straight.", "tracked": true }] },
+      {
+        "name": "Leg",
+        "points": [
+          { "t": "Opposite leg lowers, knee bent or straight.", "tracked": false }
+        ]
+      },
+      { "name": "Back", "points": [{ "t": "Pressed into the floor throughout.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 180,
+      "farm": 180,
+      "thigh": 90,
+      "shin": 0,
+      "foot": 60,
+      "thighF": 90,
+      "shinF": 0,
+      "uarmF": 180,
+      "farmF": 180
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 110,
+      "farm": 110,
+      "thigh": 110,
+      "shin": 60,
+      "foot": 90,
+      "thighF": 90,
+      "shinF": 0,
+      "uarmF": 180,
+      "farmF": 180
+    },
+    "work": { "abs": 1 }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "region": "hip",
+  "id": "sidelying_abd",
+  "name": "Side-lying hip abduction",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none", "ankle weight (optional)"],
+  "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus minimus", "TFL"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Lying on your side, lift the straight top leg toward the ceiling with the toes pointing forward.",
+  "setup": "Lie on your side facing the phone, which sits on the floor about 2 m away. Bottom knee bent for balance, top leg straight and in line with the body. Lift the top leg 30–40° with the toes pointing ahead, pause, lower slowly.",
+  "brief": "Lie on your side, bottom knee bent for balance, top leg straight and in line with the body. Lift the top leg 30 to 40 degrees with the toes pointing ahead, pause, then lower slowly.",
+  "why": "The top leg swings up in the camera plane, so its angle from the body counts the reps. The leg drifting forward and the pelvis rolling back are along the phone axis and are not judged.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "sidelying" },
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 30, "targetIsDelta": true },
+  "tempo": "Up 2 s, hold 1 s, down 3 s.",
+  "dosage": "3 × 12 each side.",
+  "progression": "Ankle weight; toes turned slightly down.",
+  "regression": "Smaller lift; bend the bottom knee more.",
+  "contraindications": "Pain on the outside of the hip that lingers after the set.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "forward",
+      "label": "Leg drifting forward",
+      "cue": "Take the leg slightly back",
+      "tip": "Lift in line with the body or a touch behind it. Forward lifting hands the work to the hip flexors.",
+      "severity": 2
+    },
+    {
+      "id": "roll",
+      "label": "Rolling the trunk back",
+      "cue": "Stay square on your side",
+      "tip": "Keep the shoulders and hips stacked; a hand on the floor in front stops the roll.",
+      "severity": 2
+    },
+    {
+      "id": "toeup",
+      "label": "Toes turning to the ceiling",
+      "cue": "Toes point straight ahead",
+      "tip": "Turning the toes up swaps the glute for the hip flexor at the front of the hip.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Lifting too high",
+      "cue": "Stop before the hip hitches",
+      "tip": "Past about 45° the pelvis tips and the waist muscles take over. Lower is better here.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat.",
+    "stop": "Outer hip pain that lingers, or pinching.",
+    "cannotSee": "The leg drifting forward, the toes turning up, the trunk rolling.",
+    "regions": [
+      {
+        "name": "Top leg",
+        "points": [
+          { "t": "Straight, lifted 30–40°, toes pointing forward.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Shoulders and hips stacked; do not roll back.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 90,
+      "farm": 90,
+      "uarmF": -20,
+      "farmF": -150,
+      "thigh": 90,
+      "shin": 90,
+      "foot": 90,
+      "thighF": 120,
+      "shinF": -60,
+      "footF": 0
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 90,
+      "farm": 90,
+      "uarmF": -20,
+      "farmF": -150,
+      "thigh": 122,
+      "shin": 122,
+      "foot": 122,
+      "thighF": 120,
+      "shinF": -60,
+      "footF": 0
+    },
+    "work": { "glute": 1, "oblique": 0.3 }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "region": "dance",
+  "id": "odissi_chauka",
+  "name": "Chauka (Odissi square stance)",
+  "type": "hold",
+  "view": "front",
+  "tracking": "form",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": {
+    "primary": ["quadriceps", "gluteus maximus", "deep hip rotators"],
+    "secondary": ["calves", "spinal erectors"]
+  },
+  "summary": "The square: feet wide and fully turned out, knees open, weight even — the masculine stance of Odissi.",
+  "setup": "Face the phone about 2.5 m away, camera at hip height. Feet a little wider than the hips and turned out, knees bent straight out over the toes, arms out to the sides at shoulder height with the elbows bent. The body makes a square. Hold.",
+  "brief": "Feet a little wider than the hips and turned out, knees bent straight out over the toes, arms out to the sides at shoulder height with the elbows bent. The body makes a square.",
+  "why": "From the front the two knee angles and the width between the knees are both direct reads, which is exactly what a chauka is judged on.",
+  "calibrationPose": "Standing tall, feet apart, before you sit into the square.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "targets": [15, 20, 30, 45],
+  "defaultTarget": 20,
+  "hold": {
+    "conditions": [
+      { "metric": "knee", "min": 95, "max": 145 },
+      { "metric": "knees_apart", "rel": "change", "min": 10 }
+    ]
+  },
+  "display": { "condition": 0, "label": "knee", "aim": "115°" },
+  "enterCue": "Sit into the square — knees wide over your toes",
+  "tempo": "Sit over 2 s, hold, rise over 2 s.",
+  "dosage": "3 holds of 20–45 s.",
+  "progression": "Longer holds; add the arm positions and head movements.",
+  "regression": "Less depth; narrower stance.",
+  "contraindications": "Knee or groin pain; hips that cannot turn out without the back arching.",
+  "faults": [
+    {
+      "id": "shallow_sq",
+      "label": "Not sitting deep enough",
+      "cue": "Sit lower into the square",
+      "tip": "The chauka is a deep, even sit. A shallow version loses the square shape entirely.",
+      "severity": 2,
+      "metric": "knee",
+      "op": ">",
+      "threshold": 145,
+      "phase": "any"
+    },
+    {
+      "id": "narrow",
+      "label": "Knees closing in",
+      "cue": "Push the knees wide",
+      "tip": "The knees travel out over the toes to hold the square. Closing them puts the load on the inside of the knee.",
+      "severity": 3,
+      "metric": "knees_apart",
+      "rel": "change",
+      "op": "<",
+      "threshold": 10
+    },
+    {
+      "id": "tilt",
+      "label": "Weight sliding to one side",
+      "cue": "Even weight on both feet",
+      "tip": "The square is symmetrical. A hip that drifts sideways means one leg is resting.",
+      "severity": 2,
+      "metric": { "kind": "pelvis", "pts": [], "abs": true },
+      "rel": "change",
+      "op": ">",
+      "threshold": 7
+    },
+    {
+      "id": "arch2",
+      "label": "Lower back arching",
+      "cue": "Tuck the tailbone under",
+      "tip": "Arching to force more turnout moves the strain to the lower back. Reduce the turnout instead.",
+      "severity": 2
+    },
+    {
+      "id": "arms2",
+      "label": "Arms dropping",
+      "cue": "Elbows up to shoulder height",
+      "tip": "The arms hold their line at shoulder height for the whole hold — that is part of the stance.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Hard floor, barefoot.",
+    "stop": "Knee or groin pain; a lower back that will not stop arching.",
+    "cannotSee": "How far the feet are turned out, and whether the weight is truly even.",
+    "regions": [
+      {
+        "name": "Legs",
+        "points": [
+          { "t": "Feet wider than the hips, turned out from the hip joints.", "tracked": false },
+          { "t": "Knees bent out over the toes, thighs opening to the sides.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Spine vertical, tailbone tucked, weight even on both feet.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Out to the sides at shoulder height, elbows bent, palms forward.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 8, "legR": 8, "armL": 90, "armR": 90, "foreL": 40, "foreR": 40 },
+    "B": { "squat": 0.65, "legL": 24, "legR": 24, "armL": 90, "armR": 90, "foreL": 40, "foreR": 40 },
+    "work": { "thigh": 1, "glute": 0.7, "calf": 0.3 }
+  }
+}

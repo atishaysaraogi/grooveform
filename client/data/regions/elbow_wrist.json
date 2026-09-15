@@ -1,0 +1,30 @@
+{
+  "region": "elbow",
+  "group": "Elbow, wrist & hand",
+  "order": 1700,
+  "camera": { "height": "chest", "distance": "1.5 m", "posture": "sitting" },
+  "sources": [
+    {
+      "name": "Physiopedia — lateral epicondylitis exercises",
+      "url": "https://www.physio-pedia.com/Lateral_Epicondylitis"
+    },
+    {
+      "name": "Tyler & Thomas — eccentric training with the FlexBar (Tyler twist)",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/20303293/"
+    },
+    { "name": "ASSH — hand and wrist exercises", "url": "https://www.assh.org/handcare/" },
+    { "name": "NHS — tennis elbow exercises", "url": "https://www.nhs.uk/conditions/tennis-elbow/" }
+  ],
+  "moves": [
+    "eccentric_wrist_ext",
+    "wrist_curl",
+    "pronation_supination",
+    "tyler_twist",
+    "grip_squeeze",
+    "tendon_glides",
+    "wrist_flexor_stretch",
+    "wrist_extensor_stretch",
+    "triceps_stretch",
+    "elbow_flex_ext"
+  ]
+}

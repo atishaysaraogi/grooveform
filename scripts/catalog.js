@@ -3,11 +3,13 @@
 /* The offline way to work on the exercise library (client/data/). No server needed.
 
      node scripts/catalog.js check              every file: parse, field names, names in shared.json, the library's own rules
-     node scripts/catalog.js list [file]        ids and names, per file
-     node scripts/catalog.js new <file> <id>    append a template move to moves/<file>.json, placeholders to replace
-     node scripts/catalog.js remove <id>        delete a move from whichever file has it
+     node scripts/catalog.js list [region]      ids and names, per region
+     node scripts/catalog.js new <region> <id>  write moves/<id>.json from a template and list it in that region
+     node scripts/catalog.js remove <id>        delete moves/<id>.json and take it off its region's list
      node scripts/catalog.js format             rewrite every data file in the shared style (short things on one line)
-     node scripts/catalog.js sync-docs [file]   copy the _about field guide from one moves file (default: the first) to all the others
+
+   One exercise to a file: moves/<id>.json. regions/<name>.json holds the defaults its moves inherit
+   and the ids it lists, in order; _about.json is the field guide, one copy for the whole library.
 
    The same checks run when the app loads and in `npm test`, so nothing here is optional — it is just
    faster to hear about a problem before pushing. */
@@ -20,28 +22,40 @@ const catalog = require(path.join(ROOT, 'client', 'coach', 'catalog.js'));
 
 const [cmd, ...args] = process.argv.slice(2);
 const write = (rel, json) => fs.writeFileSync(path.join(DATA, rel), catalog.format(json) + '\n');
-const fileRel = (name) => { const rel = name.endsWith('.json') ? name : `moves/${name}.json`; return rel.startsWith('moves/') ? rel : `moves/${rel}`; };
+const regionRel = (name) => (name.includes('/') ? name : `regions/${name.replace(/\.json$/, '')}.json`);
+const moveRel = (id) => `moves/${id}.json`;
+const readRel = (rel) => JSON.parse(fs.readFileSync(path.join(DATA, rel), 'utf8'));
 const data = () => catalog.readDataSync(DATA);
 
 function check() {
   const d = data(); let problems = [];
   const all = d.files.flatMap((f) => f.json.moves.map((m) => m.id));
+  const styled = (rel, json) => { if (fs.readFileSync(path.join(DATA, rel), 'utf8') !== catalog.format(json) + '\n') problems.push(`${rel}: not in the shared style — run: node scripts/catalog.js format`); };
   for (const f of d.files) {
     const others = d.files.filter((x) => x !== f).flatMap((x) => x.json.moves.map((m) => m.id));
     problems.push(...catalog.checkFile(f.json, f.name, d, others));
-    const text = fs.readFileSync(path.join(DATA, f.name), 'utf8');
-    if (text !== catalog.format(f.json) + '\n') problems.push(`${f.name}: not in the shared style — run: node scripts/catalog.js format`);
+    styled(f.name, readRel(f.name));
+    for (const m of f.json.moves) {
+      styled(moveRel(m.id), m);
+      /* a move file says which region it belongs to, and that has to be the region listing it */
+      if (m.region && m.region !== f.json.region) problems.push(`${moveRel(m.id)}: says region "${m.region}" but ${f.name} lists it`);
+    }
   }
-  const guides = d.files.map((f) => JSON.stringify((f.json._about || {}).fields));
-  if (new Set(guides).size > 1) problems.push('the _about field guide differs between moves files — run: node scripts/catalog.js sync-docs');
+  /* every move file is listed by exactly one region — an orphan would never load */
+  const listed = new Set(all);
+  for (const f of fs.readdirSync(path.join(DATA, 'moves')).filter((x) => x.endsWith('.json'))) {
+    const id = f.replace(/\.json$/, '');
+    if (!listed.has(id)) problems.push(`moves/${f}: no region lists it — add "${id}" to a regions/*.json, or delete the file`);
+  }
+  styled('manifest.json', d.manifest); styled(d.manifest.about, d.about);
   const tiers = {}; for (const e of engine.EXERCISES) tiers[e.tracking] = (tiers[e.tracking] || 0) + 1;
   if (problems.length) { console.error(problems.map((p) => '✗ ' + p).join('\n')); process.exit(1); }
-  console.log(`✓ ${all.length} catalogue moves in ${d.files.length} files, ${d.manifest.code.length} code moves; ${engine.EXERCISES.length} in the library (${Object.entries(tiers).map(([k, v]) => `${k} ${v}`).join(', ')})`);
+  console.log(`✓ ${all.length} catalogue moves, one file each, in ${d.files.length} regions; ${d.manifest.code.length} code moves; ${engine.EXERCISES.length} in the library (${Object.entries(tiers).map(([k, v]) => `${k} ${v}`).join(', ')})`);
 }
 function list(name) {
   const d = data();
   for (const f of d.files) {
-    if (name && f.name !== fileRel(name)) continue;
+    if (name && f.name !== regionRel(name)) continue;
     console.log(`${f.name}  —  ${f.json.group} (${f.json.moves.length})`);
     for (const m of f.json.moves) console.log(`  ${m.id.padEnd(24)} ${(m.tracking || 'none').padEnd(5)} ${m.type || 'reps'}/${m.view || 'front'}  ${m.name}`);
   }
@@ -53,6 +67,7 @@ function template(id, grp) {
     summary: 'One line for the list.',
     setup: 'Where the phone goes and how to start, in the user\'s words.',
     why: 'Why this camera angle can measure it (or why it cannot, if tracking is none).',
+    region: grp.region,
     camera: grp.camera || { height: 'hip', distance: '2 m', posture: 'standing' },
     tempo: 'Up 2 s, down 3 s.', dosage: '3 × 10.', progression: 'How to make it harder.', regression: 'How to make it easier.',
     contraindications: 'When not to do it.',
@@ -67,41 +82,36 @@ function template(id, grp) {
   };
 }
 function add(name, id) {
-  if (!name || !id) { console.error('usage: node scripts/catalog.js new <file> <id>'); process.exit(2); }
+  if (!name || !id) { console.error('usage: node scripts/catalog.js new <region> <id>'); process.exit(2); }
   if (!/^[a-z][a-z0-9_]*$/.test(id)) { console.error('id: lower-case letters, digits and underscores, e.g. seated_knee_ext'); process.exit(2); }
   if (library.get(id)) { console.error(`id "${id}" is already in use`); process.exit(1); }
-  const rel = fileRel(name), file = path.join(DATA, rel);
-  if (!fs.existsSync(file)) { console.error(`${rel} does not exist — the files are: ${data().manifest.moves.join(', ')}`); process.exit(1); }
-  const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-  json.moves.push(template(id, json));
-  write(rel, json);
-  console.log(`added ${id} to ${rel} — it is the last move in the file. Replace the placeholders, then: node scripts/catalog.js check`);
+  const rel = regionRel(name);
+  if (!fs.existsSync(path.join(DATA, rel))) { console.error(`${rel} does not exist — the regions are: ${data().manifest.regions.join(', ')}`); process.exit(1); }
+  const region = readRel(rel);
+  write(moveRel(id), template(id, region));
+  region.moves.push(id); write(rel, region);
+  console.log(`wrote ${moveRel(id)} and listed it last in ${rel}. Replace the placeholders, then: node scripts/catalog.js check`);
 }
 function remove(id) {
   if (!id) { console.error('usage: node scripts/catalog.js remove <id>'); process.exit(2); }
   const d = data();
-  for (const f of d.files) {
-    const i = f.json.moves.findIndex((m) => m.id === id);
+  for (const rel of d.manifest.regions) {
+    const region = readRel(rel); const i = (region.moves || []).indexOf(id);
     if (i < 0) continue;
-    f.json.moves.splice(i, 1); write(f.name, f.json);
-    console.log(`removed ${id} from ${f.name}`); return;
+    region.moves.splice(i, 1); write(rel, region);
+    fs.unlinkSync(path.join(DATA, moveRel(id)));
+    console.log(`deleted ${moveRel(id)} and took it off ${rel}`); return;
   }
   console.error(`no catalogue move with id "${id}"` + (library.get(id) ? ' — it is a hand-written code move under client/coach/library/' : '')); process.exit(1);
 }
 function format() {
   const d = data();
-  for (const rel of ['manifest.json', d.manifest.settings, d.manifest.shared, ...d.manifest.moves]) write(rel, JSON.parse(fs.readFileSync(path.join(DATA, rel), 'utf8')));
-  console.log('formatted every data file');
-}
-function syncDocs(name) {
-  const d = data();
-  const src = name ? d.files.find((f) => f.name === fileRel(name)) : d.files[0];
-  if (!src) { console.error('no such moves file'); process.exit(1); }
-  const fields = src.json._about.fields;
-  for (const f of d.files) { if (f === src) continue; f.json._about = { ...f.json._about, fields }; write(f.name, f.json); }
-  console.log(`field guide copied from ${src.name} to ${d.files.length - 1} files`);
+  const rels = ['manifest.json', d.manifest.settings, d.manifest.shared, d.manifest.about, ...d.manifest.regions,
+    ...d.files.flatMap((f) => f.json.moves.map((m) => moveRel(m.id)))];
+  for (const rel of rels) write(rel, readRel(rel));
+  console.log(`formatted ${rels.length} data files`);
 }
 
-const commands = { check, list, new: add, remove, format, 'sync-docs': syncDocs };
+const commands = { check, list, new: add, remove, format };
 if (!commands[cmd]) { console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 12).join('\n')); process.exit(cmd ? 2 : 0); }
 commands[cmd](...args);

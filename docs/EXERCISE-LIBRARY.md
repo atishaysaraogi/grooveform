@@ -1,11 +1,15 @@
 # The exercise library
 
 The library is **data**. Every one of the 144 moves — the ten vetted ones
-included — lives in a JSON file under `client/data/moves/`, one file per body
-region, and each file opens with a guide to every field it may contain — what
-it means, what good and bad input look like. Edit the file, reload the page, and
-the move is different. Nothing about a move is spread across other files, and
-nothing about a move is code.
+included — is its own JSON file at `client/data/moves/<id>.json`, and
+`_about.json` beside it explains every field a move may contain: what it means,
+what good and bad input look like. Edit the file, reload the page, and the move
+is different. Nothing about a move is code.
+
+One exercise to a file is deliberate: the Studio writes back exactly the move
+someone edited, a pull request that changes one exercise touches one file, and
+two people editing different exercises never touch the same bytes. What a move
+does *not* state comes from its region.
 
 ```
 client/data/
@@ -14,17 +18,20 @@ client/data/
                          band colours, scoring, the standard faults
   shared.json            named measurements ("knee"), fault templates ("lean"), pose presets
                          ("standing"), hold sets ("balance") — referred to by name from the moves
+  _about.json            the field guide: every field a move may use, with good and bad examples
+  regions/
+    knee.json            what its moves inherit (region, group, order, camera, sources) and the
+    hip.json  …          ids it holds, in the order the app shows them
   moves/
-    knee.json            one body region per file, a dozen or so moves each
-    hip.json  ankle.json  shoulder.json  spine.json  core.json  elbow_wrist.json
-    gym_lower.json  gym_upper.json  dance.json
+    wallsit.json         one exercise, one file, named by its id
+    seated_knee_ext.json  quad_set.json  …  (144 of them)
 client/coach/
   exercise-library.js    the registry: define(), validation, lookup
   engine.js              kinematics, smoothing, rep counting, set review
   spec.js                compiles a declarative move into a rep counter and fault checks
   catalog.js             reads the data files, checks every field name, builds the moves and
                          the joint-angle figures
-scripts/catalog.js       the offline tool: check · list · new · remove · format · sync-docs
+scripts/catalog.js       the offline tool: check · list · new · remove · format
 ```
 
 `engine.js` publishes a kinematics toolkit into the registry and exposes
@@ -37,28 +44,29 @@ catalogue, exercise page, routine builder, static build.
 There are three ways in, all ending in the same JSON file:
 
 **In the Studio** (`/studio/`, see `docs/STUDIO.md`). Pick any move from the
-dropdown and press *Edit a copy*, or *New move*. The seven steps edit every
-field, and step 7 either **saves the file into the project** — when the site is
-run locally with `npm run dev` — or **downloads the region file** to drop into
-`client/data/moves/`. Either way the file is checked before it is written; a
-problem is reported by file and move.
+dropdown — it opens as an editable copy — or *New move*. The seven steps edit
+every field, and step 7 either **saves the move into the project** — when the
+site is run locally with `npm run dev` — or **downloads `<id>.json`** to drop
+into `client/data/moves/`. Either way it is checked inside its region, against
+every other id in the library, before anything is written. A move the region has
+not seen before is added to that region's list; nothing else is touched.
 
-**In a text editor.** Open `client/data/moves/<region>.json`. The `_about` block
-at the top explains every field with good and bad examples. Copy a move that
-looks like the new one, change every field, give it a new id. Save; reload. A
-mistake — a missing comma, a mistyped field, a fault with a measurement but no
-threshold — is shown on screen in place of the exercise list, naming the file,
-the move and (for a field name) the nearest correct spelling.
+**In a text editor.** Open `client/data/moves/<id>.json`. `_about.json` explains
+every field with good and bad examples. Copy a move that looks like the new one,
+change every field, give it a new id and its own file, and add that id to its
+`regions/<name>.json`. Save; reload. A mistake — a missing comma, a mistyped
+field, a fault with a measurement but no threshold — is shown on screen in place
+of the exercise list, naming the file, the move and (for a field name) the
+nearest correct spelling.
 
 **From the command line**, no server needed:
 
 ```
 node scripts/catalog.js check              every file: parse, field names, names in shared.json, the library's rules
-node scripts/catalog.js list [knee]        ids and names
-node scripts/catalog.js new knee my_move   append a template with placeholder text to fill in
-node scripts/catalog.js remove my_move     delete a move from whichever file has it
+node scripts/catalog.js list [knee]        ids and names, by region
+node scripts/catalog.js new knee my_move   write moves/my_move.json from a template and list it under knee
+node scripts/catalog.js remove my_move     delete moves/my_move.json and take it off its region's list
 node scripts/catalog.js format             rewrite every file in the shared style
-node scripts/catalog.js sync-docs          copy the field guide from the first moves file to the others
 ```
 
 `npm test` runs the same checks, so nothing wrong can be pushed unnoticed.

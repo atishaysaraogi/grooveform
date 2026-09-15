@@ -1,0 +1,113 @@
+{
+  "region": "shoulder",
+  "id": "sidelying_er",
+  "name": "External rotation (side-lying)",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["light dumbbell", "towel"],
+  "upperBody": true,
+  "muscles": { "primary": ["infraspinatus", "teres minor"], "secondary": ["posterior deltoid"] },
+  "sided": { "limb": "arm", "by": "camera" },
+  "summary": "Lying on your side, elbow tucked with a towel, rotate a light weight up toward the ceiling.",
+  "setup": "Lie on your side facing the phone (on the floor, 1.5 m away), top elbow bent to 90° and pinned to the waist over a rolled towel, forearm across the stomach. Rotate the hand up toward the ceiling, pause, lower slowly.",
+  "brief": "Lie on your side, top elbow bent to 90 degrees and pinned to the waist, forearm across the stomach. Rotate the hand up toward the ceiling, pause, then lower slowly.",
+  "why": "The forearm swings up in the camera plane, so its angle counts each rep. Whether the elbow stays pinned is listed for you to feel.",
+  "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+  "progress": {
+    "metric": { "kind": "vertical", "pts": ["EL", "WR"] },
+    "start": "calibrated",
+    "target": 60,
+    "targetIsDelta": true
+  },
+  "tempo": "Up 2 s, hold 1 s, down 3 s.",
+  "dosage": "3 × 12–15 each arm.",
+  "progression": "Heavier weight; pause longer.",
+  "regression": "No weight.",
+  "contraindications": "Shoulder pain that builds through the set.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "elbow",
+      "label": "Elbow lifting off the waist",
+      "cue": "Keep the elbow on the towel",
+      "tip": "If the elbow lifts, the deltoid takes over; keep it pressed onto the towel.",
+      "severity": 3
+    },
+    {
+      "id": "roll",
+      "label": "Rolling backward",
+      "cue": "Stay square on your side",
+      "tip": "Keep the hips stacked; rolling back fakes the range.",
+      "severity": 2
+    },
+    {
+      "id": "roll2",
+      "label": "Rolling the trunk back",
+      "cue": "Chest stays facing the wall",
+      "tip": "Rolling backwards fakes extra range. The shoulder rotates; the body does not.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Rotating past vertical",
+      "cue": "Stop at vertical",
+      "tip": "The forearm rises to upright and no further; past that gravity stops resisting anyway.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor, towel under the elbow.",
+    "stop": "Pain that builds.",
+    "cannotSee": "The elbow lifting away from the waist.",
+    "regions": [
+      {
+        "name": "Working arm",
+        "points": [
+          { "t": "Elbow pinned at 90°; forearm rotates up toward the ceiling.", "tracked": true }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Hips and shoulders stacked.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 120,
+      "shin": -40,
+      "uarm": 0,
+      "farm": 100,
+      "uarmF": 100,
+      "farmF": 40
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 120,
+      "shin": -40,
+      "uarm": 0,
+      "farm": 165,
+      "uarmF": 100,
+      "farmF": 40
+    },
+    "work": { "shoulder": 1 }
+  }
+}

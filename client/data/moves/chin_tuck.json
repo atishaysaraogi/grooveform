@@ -1,0 +1,95 @@
+{
+  "region": "spine",
+  "id": "chin_tuck",
+  "name": "Chin tuck",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["deep neck flexors"], "secondary": ["suboccipitals (lengthen)"] },
+  "upperBody": true,
+  "summary": "Glide the chin straight back to make a double chin, hold, release.",
+  "setup": "Sit or stand tall, side-on to the phone at eye height. Without tipping the head, draw the chin straight back so the ears move over the shoulders. Hold two seconds, release.",
+  "brief": "Sit or stand tall. Without tipping the head, draw the chin straight back so the ears move over the shoulders.",
+  "why": "Side-on, the nose moves closer to the shoulder line with every tuck, so each rep is counted. Whether the head tipped instead of gliding is too subtle to judge.",
+  "camera": { "height": "eye", "distance": "1.5 m", "posture": "sitting" },
+  "minMs": 1000,
+  "progress": {
+    "metric": { "kind": "dist", "pts": ["NOSE", "SH"] },
+    "start": "calibrated",
+    "target": -8,
+    "targetIsDelta": true
+  },
+  "tempo": "Tuck 1 s, hold 2 s, release 1 s.",
+  "dosage": "10 reps, several times a day.",
+  "progression": "Hold 5 s; do it lying with the head just off a pillow.",
+  "regression": "Smaller glide; sit with the back supported.",
+  "contraindications": "Dizziness, or pain shooting into the arm.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "nod",
+      "label": "Nodding instead of gliding",
+      "cue": "Slide the chin straight back",
+      "tip": "The chin moves straight back like a drawer closing. If the eyes drop, you are nodding.",
+      "severity": 2
+    },
+    {
+      "id": "hold",
+      "label": "Not holding the tuck",
+      "cue": "Hold two seconds",
+      "tip": "The hold is what trains the deep neck muscles; a quick nod does nothing.",
+      "severity": 2
+    },
+    {
+      "id": "shrug",
+      "label": "Shoulders rising",
+      "cue": "Let the shoulders hang",
+      "tip": "Let the shoulders hang. The neck moves, nothing else.",
+      "severity": 1
+    },
+    {
+      "id": "jaw",
+      "label": "Clenching the jaw",
+      "cue": "Teeth apart, jaw soft",
+      "tip": "A clenched jaw usually means the neck is straining. Keep the tongue and jaw relaxed.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A chair with a back, or standing against a wall.",
+    "stop": "Dizziness, or pain or tingling down the arm.",
+    "cannotSee": "Nodding versus gliding — the difference is a centimetre.",
+    "regions": [
+      {
+        "name": "Head",
+        "points": [
+          { "t": "Ears glide back over the shoulders; eyes stay level.", "tracked": true }
+        ]
+      },
+      { "name": "Shoulders", "points": [{ "t": "Relaxed and down.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "neck": 14, "uarm": 8, "farm": 8 },
+    "B": { "preset": "standing", "neck": -4, "uarm": 8, "farm": 8 },
+    "work": { "neck": 1 }
+  }
+}

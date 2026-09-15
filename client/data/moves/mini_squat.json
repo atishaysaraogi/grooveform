@@ -1,0 +1,104 @@
+{
+  "region": "knee",
+  "id": "mini_squat",
+  "name": "Mini squat",
+  "type": "reps",
+  "view": "front",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["none", "chair for support (optional)"],
+  "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["hamstrings"] },
+  "summary": "A shallow squat to about a third of the way down, knees tracking over the toes.",
+  "setup": "Face the phone, feet hip-width, toes slightly out, hands on a chair back if needed. Bend the knees and sit the hips back a little, keeping the heels down, then stand tall.",
+  "brief": "Feet hip-width, toes slightly out, hands on a chair back if needed. Bend the knees and sit the hips back a little, keeping the heels down, then stand tall.",
+  "why": "Facing the phone shows both knees at once: the depth from each knee angle, and the classic fault — knees drifting toward each other — as the distance between them shrinking.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "progress": { "metric": "knee", "start": "calibrated", "target": 140 },
+  "tempo": "Down 2 s, up 2 s.",
+  "dosage": "3 × 12.",
+  "progression": "Deeper; hold a weight at the chest.",
+  "regression": "Shallower, or hands on the chair.",
+  "contraindications": "Pain under the kneecap at the bottom.",
+  "faults": [
+    {
+      "id": "valgus",
+      "label": "Knees caving inward",
+      "cue": "Push the knees out",
+      "tip": "Screw the feet into the floor so the knees track over the second toe. Caving loads the inside of the knee.",
+      "severity": 3,
+      "metric": "knees_apart",
+      "rel": "change",
+      "op": "<",
+      "threshold": -12,
+      "minP": 0.3,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "heels",
+      "label": "Heels lifting",
+      "cue": "Keep the heels down",
+      "tip": "Sit the hips back rather than driving the knees forward; the weight belongs in the whole foot.",
+      "severity": 2,
+      "metric": "heel_lift",
+      "op": ">",
+      "threshold": 10,
+      "minP": 0.2
+    },
+    {
+      "id": "toes",
+      "label": "Weight on the toes",
+      "cue": "Weight through mid-foot",
+      "tip": "Rocking forward loads the kneecap. Feel the pressure across the whole foot.",
+      "severity": 2
+    },
+    {
+      "id": "depth",
+      "label": "Going too deep",
+      "cue": "Small bend — a third of the way",
+      "tip": "A mini squat is a short range on purpose; depth is added later, once it is painless.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor, bare feet or flat shoes.",
+    "stop": "Kneecap pain, or the knee collapsing inward.",
+    "cannotSee": "How far the hips travel back — that is a side-view detail.",
+    "regions": [
+      {
+        "name": "Knees",
+        "points": [
+          { "t": "Track over the toes, staying apart at the bottom.", "tracked": true },
+          { "t": "Only a third of the way down — this is a mini squat.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Feet",
+        "points": [
+          { "t": "Heels stay down; weight through the whole foot.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 6, "legR": 6, "armL": 10, "armR": 10 },
+    "B": { "legL": 6, "legR": 6, "squat": 0.45, "armL": 30, "armR": 30, "foreL": 60, "foreR": 60 },
+    "work": { "thigh": 1, "glute": 0.7 }
+  }
+}

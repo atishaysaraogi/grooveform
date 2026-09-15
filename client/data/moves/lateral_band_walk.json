@@ -1,0 +1,70 @@
+{
+  "region": "hip",
+  "id": "lateral_band_walk",
+  "name": "Lateral band walk",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "intermediate",
+  "equipment": ["loop band"],
+  "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus maximus", "TFL"] },
+  "summary": "Band around the legs, step sideways in a shallow squat, leading with the heel and keeping tension on.",
+  "setup": "Loop band above the knees or at the ankles, shallow squat, feet under the hips. Step sideways with one foot, then bring the other foot partway — never all the way — so the band stays taut. Go one way, then back.",
+  "why": "Stepping across the frame changes the framing every rep and the knees are judged against a moving base, so the count is unreliable. Follow the guide; log the set.",
+  "targets": [8, 10, 12, 16, 20],
+  "defaultTarget": 10,
+  "tempo": "Controlled steps, no bouncing.",
+  "dosage": "3 × 10 steps each way.",
+  "progression": "Band at the ankles; deeper squat.",
+  "regression": "Lighter band.",
+  "contraindications": "Kneecap pain in the squat.",
+  "faults": [
+    {
+      "id": "together",
+      "label": "Feet coming together",
+      "cue": "Keep the band tight",
+      "tip": "The trailing foot follows halfway. If the band goes slack the glutes rest.",
+      "severity": 2
+    },
+    {
+      "id": "lean",
+      "label": "Leaning into the step",
+      "cue": "Keep the trunk still",
+      "tip": "Move the feet, not the shoulders; the trunk stays centred.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Standing up between steps",
+      "cue": "Stay in the half-squat",
+      "tip": "Standing tall between steps rests the glutes. Hold the athletic position the whole way.",
+      "severity": 2
+    },
+    {
+      "id": "feet",
+      "label": "Dragging the trailing foot",
+      "cue": "Lift and place each foot",
+      "tip": "Dragging lets the band do the return. Pick the foot up and set it down under control.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Clear floor, room for 4–5 steps each way.",
+    "stop": "Kneecap pain.",
+    "cannotSee": "The step count reliably, or the band tension.",
+    "regions": [
+      {
+        "name": "Knees",
+        "points": [
+          { "t": "Pushed out over the toes against the band.", "tracked": false }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Still and upright; hips stay low.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 8, "legR": 8, "squat": 0.25, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+    "B": { "legL": 8, "legR": 28, "squat": 0.28, "armL": 25, "armR": 25, "foreL": 60, "foreR": 60 },
+    "work": { "glute": 1, "thigh": 0.5 }
+  }
+}

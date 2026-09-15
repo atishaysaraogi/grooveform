@@ -1,0 +1,87 @@
+{
+  "region": "gym",
+  "id": "mountain_climber",
+  "name": "Mountain climber",
+  "type": "reps",
+  "view": "side",
+  "tracking": "none",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": { "primary": ["core", "hip flexors"], "secondary": ["shoulders", "quadriceps"] },
+  "summary": "From a high plank, drive one knee toward the chest, then switch legs fast.",
+  "setup": "High plank, hands under the shoulders. Bring one knee toward the chest, return it, then the other, keeping the hips low and steady. Continue for the count.",
+  "why": "The legs cross under the body too fast and too close together to count reliably. Logged by hand.",
+  "targets": [20, 30, 40, 60],
+  "defaultTarget": 30,
+  "tempo": "Fast but controlled.",
+  "dosage": "3 × 30 s.",
+  "progression": "Faster; slow with a pause.",
+  "regression": "Hands on a bench.",
+  "contraindications": "Wrist or shoulder pain; back pain.",
+  "faults": [
+    {
+      "id": "hips",
+      "label": "Hips rising",
+      "cue": "Keep the hips low",
+      "tip": "Keep the body in a plank line; the knee comes to the chest under it.",
+      "severity": 2
+    },
+    {
+      "id": "bounce",
+      "label": "Bouncing the hips",
+      "cue": "Stop bouncing — hips still",
+      "tip": "The legs move; the trunk does not.",
+      "severity": 1
+    },
+    {
+      "id": "hands",
+      "label": "Hands creeping back",
+      "cue": "Hands under the shoulders",
+      "tip": "As you tire the hands drift; reset them under the shoulders.",
+      "severity": 1
+    },
+    {
+      "id": "partial7",
+      "label": "Knees barely moving",
+      "cue": "Knee toward the elbow",
+      "tip": "Short, fast shuffles look busy but do nothing. Drive the knee forward.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor.",
+    "stop": "Wrist, shoulder or back pain.",
+    "cannotSee": "The legs — too fast and overlapping.",
+    "regions": [
+      { "name": "Trunk", "points": [{ "t": "Plank line, hips low and still.", "tracked": false }] },
+      { "name": "Legs", "points": [{ "t": "Alternate knees to the chest.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "left",
+      "torso": 72,
+      "neck": -15,
+      "thigh": -70,
+      "shin": -70,
+      "foot": -80,
+      "uarm": 0,
+      "farm": 0
+    },
+    "B": {
+      "face": "left",
+      "torso": 72,
+      "neck": -15,
+      "thigh": 60,
+      "shin": -40,
+      "foot": -60,
+      "thighF": -70,
+      "shinF": -70,
+      "footF": -80,
+      "uarm": 0,
+      "farm": 0
+    },
+    "work": { "abs": 1, "shoulder": 0.5, "thigh": 0.4 },
+    "anchor": ["wr", "wrF", "ftF"]
+  }
+}

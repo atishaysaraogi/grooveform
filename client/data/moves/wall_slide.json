@@ -1,0 +1,90 @@
+{
+  "region": "shoulder",
+  "id": "wall_slide",
+  "name": "Wall slide",
+  "type": "reps",
+  "view": "front",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["wall"],
+  "upperBody": true,
+  "muscles": { "primary": ["lower trapezius", "serratus anterior"], "secondary": ["rotator cuff", "deltoid"] },
+  "summary": "Back and arms against a wall in a goalpost shape, slide the arms up overhead and back down.",
+  "setup": "Stand with your back on a wall, feet a little forward, ribs down. Bend the elbows to 90° with the backs of the wrists and elbows touching the wall. Slide the arms up as far as they go without the wrists leaving the wall, then down.",
+  "brief": "Stand with your back on a wall, feet a little forward, ribs down. Bend the elbows to 90° with the backs of the wrists and elbows touching the wall.",
+  "why": "Facing the phone, the arms rise in the camera plane, so their angle counts the reps, and the shoulder hiking toward the ear shows as the ear–shoulder distance shrinking.",
+  "camera": { "height": "chest", "distance": "2 m", "posture": "standing" },
+  "progress": { "metric": "arm_up", "start": "calibrated", "target": 168 },
+  "show": { "ask": "both arms reaching as high up the wall as they go, keeping the back and wrists on it" },
+  "tempo": "Up 3 s, down 3 s.",
+  "dosage": "2–3 × 10.",
+  "progression": "Slide higher; add a light band around the wrists.",
+  "regression": "Stop where the wrists start to leave the wall.",
+  "contraindications": "Pinching at the top of the shoulder.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    { "template": "shrug" },
+    {
+      "id": "wrists",
+      "label": "Wrists leaving the wall",
+      "cue": "Keep the wrists on the wall",
+      "tip": "Go only as high as the wrists can stay in contact; the range grows over weeks.",
+      "severity": 2
+    },
+    {
+      "id": "arch",
+      "label": "Arching the back to go higher",
+      "cue": "Ribs down, smaller range",
+      "tip": "When the range runs out the back arches to fake it. Stop where the ribs stay down.",
+      "severity": 2
+    },
+    {
+      "id": "press",
+      "label": "Not pressing into the wall",
+      "cue": "Press the forearms in",
+      "tip": "Light pressure into the wall the whole way is what switches on the shoulder blade muscles.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A flat wall, no skirting to catch the heels.",
+    "stop": "Pinching or sharp pain at the top of the shoulder.",
+    "cannotSee": "The wrists and elbows losing contact with the wall.",
+    "regions": [
+      { "name": "Shoulders", "points": [{ "t": "Stay down as the arms rise.", "tracked": true }] },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Backs of the wrists and elbows on the wall throughout.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Ribs down, lower back close to the wall.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 95, "armR": 95, "foreL": 170, "foreR": 170 },
+    "B": { "armL": 160, "armR": 160, "foreL": 178, "foreR": 178 },
+    "work": { "back": 0.8, "shoulder": 0.6 }
+  }
+}

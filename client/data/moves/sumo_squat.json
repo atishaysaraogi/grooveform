@@ -1,0 +1,86 @@
+{
+  "region": "gym",
+  "id": "sumo_squat",
+  "name": "Sumo squat",
+  "type": "reps",
+  "view": "front",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["none", "dumbbell (optional)"],
+  "muscles": { "primary": ["adductors", "gluteus maximus", "quadriceps"], "secondary": ["hamstrings"] },
+  "summary": "Wide stance, toes turned out, sit straight down with the knees following the toes.",
+  "setup": "Face the phone with the feet wide and toes turned out about 45°. Sit straight down, knees pushing out over the toes, until the thighs are near level, then stand.",
+  "brief": "Stand with the feet wide and toes turned out about 45 degrees. Sit straight down, knees pushing out over the toes, until the thighs are near level, then stand.",
+  "why": "Facing the phone the knee angle gives depth and the knees drifting inward — the main fault in a wide stance — is measured as the gap between them shrinking.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 100 },
+  "tempo": "Down 2 s, up 2 s.",
+  "dosage": "3 × 12.",
+  "progression": "Hold a dumbbell between the legs.",
+  "regression": "Narrower stance; shallower.",
+  "contraindications": "Groin strain; hip pinching at depth.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    { "template": "valgus", "threshold": -14 },
+    {
+      "id": "lean",
+      "label": "Trunk tipping forward",
+      "cue": "Chest up, sit between the heels",
+      "tip": "A sumo squat is more upright than a normal squat; sit down, not back.",
+      "severity": 2
+    },
+    {
+      "id": "toes",
+      "label": "Knees not tracking the toes",
+      "cue": "Knees follow the toes out",
+      "tip": "In a wide stance the knees must travel out over the toes, not forward.",
+      "severity": 2
+    },
+    {
+      "id": "depth",
+      "label": "Bouncing at the bottom",
+      "cue": "Pause, then drive up",
+      "tip": "Bouncing out of the bottom loads the groin. Pause and push.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Flat floor.",
+    "stop": "Groin or hip pain.",
+    "cannotSee": "The trunk tipping forward — a side-view detail.",
+    "regions": [
+      {
+        "name": "Knees",
+        "points": [
+          { "t": "Follow the toes outward all the way down.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Upright; weight hangs between the legs.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 22, "legR": 22, "armL": 15, "armR": 15 },
+    "B": { "legL": 22, "legR": 22, "squat": 0.8, "armL": 18, "armR": 18 },
+    "work": { "thigh": 1, "glute": 0.8 }
+  }
+}

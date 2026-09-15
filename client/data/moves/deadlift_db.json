@@ -1,0 +1,97 @@
+{
+  "region": "gym",
+  "id": "deadlift_db",
+  "name": "Dumbbell deadlift",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "intermediate",
+  "equipment": ["dumbbells or kettlebell"],
+  "muscles": {
+    "primary": ["gluteus maximus", "hamstrings", "quadriceps"],
+    "secondary": ["spinal erectors", "grip", "core"]
+  },
+  "summary": "Weights on the floor beside the feet; hinge and bend to grip them, then stand tall by driving the floor away.",
+  "setup": "Stand side-on to the phone, weights beside the feet. Push the hips back and bend the knees to reach the weights with a flat back, then stand by driving the legs and hips together. Lower the same way.",
+  "brief": "Stand with the weights beside the feet. Push the hips back and bend the knees to reach them with a flat back, then stand by driving the legs and hips together.",
+  "why": "From the side the trunk hinges and returns each rep, and the back folding further than the hips — the sign of a rounded pull — shows as the trunk angle dropping too far.",
+  "progress": { "metric": "trunk", "start": "calibrated", "target": 40 },
+  "tempo": "Down 2 s, up 1 s.",
+  "dosage": "3 × 6–8.",
+  "progression": "Heavier; barbell.",
+  "regression": "Weights on a low step; kettlebell between the feet.",
+  "contraindications": "Lower back pain; unable to keep a flat back at the bottom.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "round",
+      "label": "Back rounding",
+      "cue": "Flat back",
+      "tip": "Brace, chest proud, and lift the weights from a higher surface if the back rounds.",
+      "severity": 3
+    },
+    {
+      "id": "round2",
+      "label": "Rounding at the bottom",
+      "cue": "Flat back — lift higher",
+      "tip": "If the back rounds to reach the floor, start from a raised surface instead.",
+      "severity": 3
+    },
+    { "template": "fold", "threshold": 22 },
+    {
+      "id": "hips",
+      "label": "Hips shooting up first",
+      "cue": "Hips and chest together",
+      "tip": "The shoulders and hips rise at the same rate; if the hips lead, the back finishes the lift.",
+      "severity": 2
+    },
+    {
+      "id": "jerk",
+      "label": "Jerking off the floor",
+      "cue": "Take the slack, then lift",
+      "tip": "Pull the tension on first, then stand. A jerk loads the back before it is braced.",
+      "severity": 2
+    },
+    { "template": "heel_up" }
+  ],
+  "guide": {
+    "surface": "Flat, non-slip floor.",
+    "stop": "Lower back pain.",
+    "cannotSee": "The back rounding under a shirt.",
+    "regions": [
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Hinges with a flat back; stands fully tall.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Legs",
+        "points": [
+          { "t": "Knees bend enough to reach the weights; heels down.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 5, "farm": 5 },
+    "B": { "face": "right", "torso": 55, "thigh": 55, "shin": -25, "uarm": 90, "farm": 90 },
+    "work": { "glute": 1, "ham": 0.9, "thigh": 0.7, "back": 0.6 }
+  }
+}

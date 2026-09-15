@@ -1,0 +1,38 @@
+{
+  "region": "dance",
+  "group": "Indian dance",
+  "order": 2000,
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "sources": [
+    {
+      "name": "Online Bharatanatyam — Ardhamandala",
+      "url": "https://onlinebharatanatyam.com/2007/10/03/ardhamandala-in-bharatanatyam/"
+    },
+    {
+      "name": "Upaj Academy — common mistakes beginners make in Kathak",
+      "url": "https://upajacademy.com/dubai/common-mistakes-beginners-make-in-kathak/"
+    },
+    {
+      "name": "Kalashri Academy — Kathak chakkars and technique",
+      "url": "https://kalashriacademy.com/explore-the-kathak-chakkars-and-technique/"
+    },
+    {
+      "name": "Foot postural deviations in female Kathak dancers",
+      "url": "https://www.researchgate.net/publication/313737425_Foot_Postural_Deviations_in_Female_Kathak_Dancers"
+    }
+  ],
+  "moves": [
+    "aramandi",
+    "tatta_adavu",
+    "natta_adavu",
+    "odissi_chauka",
+    "kathak_tatkar",
+    "kathak_chakkar",
+    "garba_do_taali",
+    "garba_tran_taali",
+    "bhangra_dhamaal",
+    "bhangra_jhummar",
+    "dance_warmup_neck",
+    "dance_cooldown_calf"
+  ]
+}

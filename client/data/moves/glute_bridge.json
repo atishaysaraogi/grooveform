@@ -1,0 +1,89 @@
+{
+  "region": "hip",
+  "id": "glute_bridge",
+  "name": "Glute bridge",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "abdominals"] },
+  "summary": "On your back with knees bent, squeeze the buttocks and lift the hips until the body is a straight line from knees to shoulders.",
+  "setup": "Lie on your back, side-on to the phone at floor level, knees bent, feet flat and hip-width. Push through the heels and squeeze the buttocks to lift the hips, pause at the top, lower slowly.",
+  "brief": "Lie on your back, knees bent, feet flat and hip-width. Push through the heels and squeeze the buttocks to lift the hips, pause at the top, lower slowly.",
+  "why": "From the side the shoulder–hip–knee angle opens from bent to straight as the hips rise, which counts each bridge. Ribs flaring and the back arching are hard to see side-on, so they are listed, not judged.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+  "progress": { "metric": "hip_open", "start": "calibrated", "target": 172 },
+  "tempo": "Up 2 s, squeeze 2 s, down 3 s.",
+  "dosage": "3 × 12.",
+  "progression": "Single-leg bridge; feet on a step; band above the knees.",
+  "regression": "Smaller lift; hands on the floor for balance.",
+  "contraindications": "Lower back pain at the top of the lift, or hamstring cramp.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Arching the lower back at the top",
+      "cue": "Squeeze the glutes, do not arch",
+      "tip": "Height should come from the buttocks, not from pushing the ribs up. Stop where the body is straight.",
+      "severity": 2
+    },
+    {
+      "id": "push",
+      "label": "Pushing through the toes",
+      "cue": "Drive through your heels",
+      "tip": "Heel pressure puts the work in the glutes; toe pressure sends it to the hamstrings and calves.",
+      "severity": 2
+    },
+    {
+      "id": "feet",
+      "label": "Feet too far away",
+      "cue": "Walk the heels closer",
+      "tip": "If the hamstrings cramp, walk the heels in until the shins are near vertical at the top.",
+      "severity": 1
+    },
+    {
+      "id": "ham",
+      "label": "Hamstrings cramping",
+      "cue": "Feet closer, squeeze the glutes",
+      "tip": "Cramp at the back of the thigh means the feet are too far away and the hamstrings are leading.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat.",
+    "stop": "Lower back pain, or cramp in the hamstrings.",
+    "cannotSee": "Whether the ribs flare or the back arches at the top.",
+    "regions": [
+      {
+        "name": "Hips",
+        "points": [
+          { "t": "Rise until knees, hips and shoulders make one line.", "tracked": true },
+          { "t": "Squeeze the buttocks at the top before lowering.", "tracked": false }
+        ]
+      },
+      { "name": "Feet", "points": [{ "t": "Flat, hip-width, heels pressing down.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "supine", "thigh": 135, "shin": -45, "foot": 0 },
+    "B": { "preset": "supine", "torso": -112, "neck": 22, "thigh": 110, "shin": -27, "foot": 0 },
+    "work": { "glute": 1, "ham": 0.5, "abs": 0.3 }
+  }
+}

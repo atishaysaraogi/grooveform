@@ -1,0 +1,69 @@
+{
+  "region": "ankle",
+  "id": "heel_toe_walk",
+  "name": "Heel walk & toe walk",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["tibialis anterior", "calves"], "secondary": ["ankle stabilisers"] },
+  "summary": "Walk a few metres on the heels with toes lifted, then back on the toes with heels lifted.",
+  "setup": "Walk 5–10 m on the heels, toes pulled up, then return on the balls of the feet, heels high. Small steps, tall posture.",
+  "why": "Walking toward and away from the phone changes the framing every step; the count and the foot position are not measurable. Follow the guide and log the set.",
+  "targets": [2, 4, 6],
+  "defaultTarget": 4,
+  "tempo": "Small, slow steps.",
+  "dosage": "2–4 lengths each way.",
+  "progression": "Longer distance; carry a light weight.",
+  "regression": "Shorter distance; hand on a wall.",
+  "contraindications": "Shin or Achilles pain that builds.",
+  "faults": [
+    {
+      "id": "drop",
+      "label": "Toes or heels dropping mid-way",
+      "cue": "Keep the toes up",
+      "tip": "Shorten the walk before the foot drops; the position is the exercise.",
+      "severity": 2
+    },
+    {
+      "id": "lean",
+      "label": "Leaning to keep balance",
+      "cue": "Stand tall as you walk",
+      "tip": "Eyes ahead, trunk upright; use small steps rather than leaning.",
+      "severity": 1
+    },
+    {
+      "id": "short",
+      "label": "Distance too short",
+      "cue": "Ten metres each way",
+      "tip": "The point is fatigue in the shin and calf. A few steps will not reach it.",
+      "severity": 1
+    },
+    {
+      "id": "knees",
+      "label": "Bending the knees to cheat",
+      "cue": "Legs long",
+      "tip": "Bending the knees lets the hips lift the foot instead of the shin.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A clear hallway.",
+    "stop": "Shin or Achilles pain.",
+    "cannotSee": "Any of it — the distance to the phone changes every step.",
+    "regions": [
+      {
+        "name": "Feet",
+        "points": [
+          { "t": "Toes up on the heel walk; heels high on the toe walk.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 4, "legR": 4, "armL": 15, "armR": 15 },
+    "B": { "legL": 6, "legR": 6, "armL": 20, "armR": 20 },
+    "work": { "calf": 1 }
+  }
+}

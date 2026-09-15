@@ -1,0 +1,92 @@
+{
+  "region": "shoulder",
+  "id": "sleeper_stretch",
+  "name": "Sleeper stretch",
+  "type": "hold",
+  "view": "side",
+  "tracking": "none",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": { "primary": ["posterior shoulder capsule", "infraspinatus"], "secondary": [] },
+  "sided": { "limb": "arm", "by": "camera" },
+  "summary": "Lying on the affected side, elbow at 90°, gently press the forearm down toward the floor.",
+  "setup": "Lie on the affected side, rolled very slightly back so you are on the outer edge of the shoulder blade — that pins it and is what keeps the stretch safe. Shoulder and elbow at 90°, forearm pointing up. With the other hand, press the forearm gently toward the floor until a stretch is felt behind the shoulder. Hold. Stop short of pinching.",
+  "why": "The rotation happens toward the phone whichever way it is placed, and the pressure is applied by hand. Follow the guide and log the hold.",
+  "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+  "targets": [20, 30, 45],
+  "defaultTarget": 30,
+  "tempo": "Ease in over 5 s, hold, release.",
+  "dosage": "3 × 30 s.",
+  "progression": "Roll slightly forward (the modified version) if the front pinches.",
+  "regression": "Lighter pressure; shorter hold.",
+  "contraindications": "Pinching at the front of the shoulder — this stretch is not for everyone; a mild stretch behind the shoulder is the only target.",
+  "faults": [
+    {
+      "id": "force",
+      "label": "Forcing the forearm down",
+      "cue": "Ease off — gentler",
+      "tip": "A mild stretch behind the shoulder; pressing hard makes the joint guard.",
+      "severity": 3
+    },
+    {
+      "id": "scap",
+      "label": "Shoulder blade not pinned",
+      "cue": "Roll onto the blade edge",
+      "tip": "Lie slightly back onto the outer edge of the shoulder blade so it cannot slide. Without that the stretch pinches the front.",
+      "severity": 3
+    },
+    {
+      "id": "pinch",
+      "label": "Feeling it at the front",
+      "cue": "Behind the shoulder only",
+      "tip": "The stretch belongs behind the shoulder. Pinching at the front means stop and ask your physio.",
+      "severity": 3
+    },
+    {
+      "id": "roll",
+      "label": "Rolling onto the back",
+      "cue": "Stay square on your side",
+      "tip": "Keep the shoulder blade pinned so the stretch stays in the capsule.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor with a pillow under the head.",
+    "stop": "Pinching at the front, or pain that lingers afterwards.",
+    "cannotSee": "The rotation and the hand pressure.",
+    "regions": [
+      {
+        "name": "Shoulder",
+        "points": [
+          {
+            "t": "Directly under you, elbow bent 90°, forearm pressed gently toward the floor.",
+            "tracked": false
+          }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 120,
+      "shin": -40,
+      "uarm": 90,
+      "farm": 0,
+      "uarmF": 100,
+      "farmF": 30
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 120,
+      "shin": -40,
+      "uarm": 90,
+      "farm": 20,
+      "uarmF": 100,
+      "farmF": 30
+    },
+    "work": { "shoulder": 0.8 }
+  }
+}

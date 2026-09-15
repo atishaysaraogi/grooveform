@@ -1,0 +1,64 @@
+{
+  "region": "gym",
+  "id": "reverse_fly",
+  "name": "Reverse fly",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["light dumbbells"],
+  "muscles": { "primary": ["rear deltoid", "rhomboids"], "secondary": ["middle trapezius"] },
+  "upperBody": true,
+  "summary": "Hinged forward, raise light dumbbells out to the sides with soft elbows, squeezing the shoulder blades.",
+  "setup": "Hinge forward until the trunk is near level, dumbbells hanging under the shoulders, soft elbows. Raise the arms out to the sides, squeezing the blades together, then lower slowly.",
+  "why": "Hinged over, the arms sweep toward and away from a front phone and the trunk hides them from the side. Logged by hand.",
+  "tempo": "Up 2 s, squeeze 1 s, down 2 s.",
+  "dosage": "3 × 12–15.",
+  "progression": "Heavier; pause at the top.",
+  "regression": "Lighter; chest supported on an incline bench.",
+  "contraindications": "Lower back pain in the hinge.",
+  "faults": [
+    {
+      "id": "stand",
+      "label": "Standing up as the arms lift",
+      "cue": "Stay hinged over",
+      "tip": "The trunk holds still; if it rises, the weight is too heavy.",
+      "severity": 2
+    },
+    {
+      "id": "bend3",
+      "label": "Bending the elbows",
+      "cue": "Arms long, soft elbows",
+      "tip": "Bending the elbows turns it into a row and takes the rear shoulder out.",
+      "severity": 2
+    },
+    {
+      "id": "shrug",
+      "label": "Shrugging",
+      "cue": "Shoulders down, blades together",
+      "tip": "Lead with the elbows out, not up.",
+      "severity": 1
+    },
+    {
+      "id": "high6",
+      "label": "Lifting above shoulder line",
+      "cue": "Stop level with the shoulders",
+      "tip": "Past shoulder height the trapezius takes the load.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Flat floor.",
+    "stop": "Lower back pain.",
+    "cannotSee": "The arm sweep.",
+    "regions": [
+      { "name": "Arms", "points": [{ "t": "Sweep out to the sides; blades squeeze.", "tracked": false }] },
+      { "name": "Trunk", "points": [{ "t": "Hinged and still.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "lean": 0, "armL": 30, "armR": 30, "foreL": 20, "foreR": 20 },
+    "B": { "armL": 88, "armR": 88, "foreL": 80, "foreR": 80 },
+    "work": { "back": 1, "shoulder": 0.7 }
+  }
+}

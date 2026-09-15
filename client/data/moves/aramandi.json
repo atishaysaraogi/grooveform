@@ -1,0 +1,137 @@
+{
+  "region": "dance",
+  "id": "aramandi",
+  "name": "Aramandi (half-sit)",
+  "clinicalName": "Ardhamandala",
+  "type": "hold",
+  "view": "front",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": {
+    "primary": ["quadriceps", "gluteus maximus"],
+    "secondary": ["deep hip rotators", "calves", "spinal erectors"]
+  },
+  "summary": "The half-sitting stance every Bharatanatyam step is built on: heels together, knees open, spine tall.",
+  "setup": "Stand facing the phone about 2.5 m away, camera at hip height, whole body in frame. Heels together, toes turned out from the hips. Bend the knees straight out over the toes until the thighs drop about halfway, spine long, shoulders down. Hold.",
+  "brief": "Heels together, toes turned out from the hips. Bend the knees straight out over the toes until the thighs drop about halfway, spine long, shoulders down.",
+  "why": "Facing the camera shows both knees at once, so the depth of the sit and the turnout — the two things that make or break an aramandi — are both measured directly. The turnout of the feet is not: check that yourself.",
+  "calibrationPose": "Standing tall, heels together, before you sit into the stance.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "targets": [15, 20, 30, 45, 60],
+  "defaultTarget": 20,
+  "hold": {
+    "conditions": [
+      { "metric": "knee", "min": 100, "max": 150 },
+      { "metric": "knees_apart", "rel": "change", "min": 8 }
+    ]
+  },
+  "display": { "condition": 0, "label": "knee", "aim": "120°" },
+  "enterCue": "Sit down into the stance — knees out over your toes",
+  "tempo": "Sit over 2 s, hold, rise over 2 s.",
+  "dosage": "3 holds of 20–60 s, daily. Class warm-up: 5 minutes.",
+  "progression": "Longer holds; then muzhumandi (full sit) once the half-sit is easy.",
+  "regression": "Less depth; heels slightly apart; a hand on a wall.",
+  "contraindications": "Knee pain at the front, or a knee that will not turn out without the arch of the foot rolling in.",
+  "faults": [
+    {
+      "id": "shallow_sit",
+      "label": "Not sitting deep enough",
+      "cue": "Sit lower — thighs halfway down",
+      "tip": "The classic aramandi drops the thighs about halfway to horizontal. Higher than that and it is a standing pose.",
+      "severity": 2,
+      "metric": "knee",
+      "op": ">",
+      "threshold": 150,
+      "phase": "any"
+    },
+    {
+      "id": "turnout",
+      "label": "Knees falling forward",
+      "cue": "Open the knees over your toes",
+      "tip": "The turnout comes from the hip, not the knee or the foot. If the knees point forward the stance loses its shape and the arches roll in.",
+      "severity": 3,
+      "metric": "knees_apart",
+      "rel": "change",
+      "op": "<",
+      "threshold": 8
+    },
+    {
+      "id": "lean_fwd",
+      "label": "Leaning forward to sit lower",
+      "cue": "Chest up — spine tall",
+      "tip": "Depth bought by tipping the chest forward is not depth. Keep the spine vertical and let the knees do the work.",
+      "severity": 2,
+      "metric": "trunk",
+      "op": "<",
+      "threshold": 74
+    },
+    {
+      "id": "arch",
+      "label": "Tailbone sticking out",
+      "cue": "Tuck the tailbone under",
+      "tip": "A duck tail arches the lower back and pushes the hips behind the heels. Draw the tailbone down so the pelvis sits under the ribs.",
+      "severity": 2
+    },
+    {
+      "id": "rollin",
+      "label": "Arches rolling inward",
+      "cue": "Weight on the outside edges",
+      "tip": "If the inner ankle collapses, the turnout is coming from the feet rather than the hips. Reduce the turnout until the arches hold.",
+      "severity": 3
+    },
+    {
+      "id": "shoulders",
+      "label": "Shoulders creeping up",
+      "cue": "Let the shoulders drop",
+      "tip": "The effort belongs in the thighs. A raised shoulder line means you are bracing with the neck.",
+      "severity": 1
+    },
+    {
+      "id": "bounce",
+      "label": "Bobbing up and down",
+      "cue": "Hold still at one height",
+      "tip": "The hold is the training. Drifting up when it burns is the moment the quadriceps would otherwise be working.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Bare floor with grip, barefoot. Not carpet — the turnout needs the foot to sit flat.",
+    "stop": "Pain at the front or inside of the knee, or an arch that will not stop rolling in.",
+    "cannotSee": "How far the feet are actually turned out, and whether the turnout is coming from the hip or from the knee.",
+    "regions": [
+      {
+        "name": "Feet",
+        "points": [
+          {
+            "t": "Heels touching, toes turned out as far as the hips allow — not as far as you can twist the feet.",
+            "tracked": false
+          },
+          { "t": "Weight even across both feet; the inner arch stays lifted.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Knees",
+        "points": [
+          {
+            "t": "Bent straight out over the middle toe, making a diamond shape with the legs.",
+            "tracked": true
+          },
+          { "t": "Thighs drop about halfway toward horizontal.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Spine long and vertical, ribs stacked over the pelvis, tailbone tucked.", "tracked": true },
+          { "t": "Shoulders down and level, chest open.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 0, "legR": 0, "armL": 70, "armR": 70, "foreL": 90, "foreR": 90 },
+    "B": { "squat": 0.55, "legL": 16, "legR": 16, "armL": 80, "armR": 80, "foreL": 95, "foreR": 95 },
+    "work": { "thigh": 1, "glute": 0.6, "calf": 0.3 }
+  }
+}

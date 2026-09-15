@@ -1,0 +1,92 @@
+{
+  "region": "gym",
+  "id": "pull_up",
+  "name": "Pull-up",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "advanced",
+  "equipment": ["pull-up bar"],
+  "muscles": { "primary": ["latissimus dorsi", "biceps"], "secondary": ["rhomboids", "rear deltoid", "core"] },
+  "upperBody": true,
+  "summary": "Hang from a bar with palms away, pull until the chin passes it, lower to straight arms.",
+  "setup": "Hang from the bar, hands just wider than the shoulders, palms away, facing the phone. Pull the elbows down to bring the chin over the bar, then lower fully.",
+  "brief": "Hang from the bar, hands just wider than the shoulders, palms away. Pull the elbows down to bring the chin over the bar, then lower fully.",
+  "why": "Facing the phone the elbow angle closes and opens each rep, so reps are counted. Kipping and the chin actually clearing the bar are not judged.",
+  "camera": { "height": "chest", "distance": "2.5 m", "posture": "standing" },
+  "progress": { "metric": "elbow", "start": "calibrated", "target": 60 },
+  "tempo": "Up 1–2 s, down 2–3 s.",
+  "dosage": "3 × as many as possible.",
+  "progression": "Weighted; slower lowering.",
+  "regression": "Band-assisted; negatives only; inverted row.",
+  "contraindications": "Shoulder or elbow pain hanging.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "kip",
+      "label": "Swinging or kicking",
+      "cue": "Dead still",
+      "tip": "Legs quiet, no swing; if you need momentum, use a band.",
+      "severity": 2
+    },
+    {
+      "id": "partial3",
+      "label": "Not reaching full hang",
+      "cue": "Arms straight at the bottom",
+      "tip": "The full hang at the bottom is the part that builds the shoulder.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Not lowering fully",
+      "cue": "Straight arms at the bottom",
+      "tip": "Each rep starts from a full hang.",
+      "severity": 1
+    },
+    {
+      "id": "shrug3",
+      "label": "Shoulders at the ears",
+      "cue": "Blades down before you pull",
+      "tip": "Set the shoulder blades down first, then pull.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A bar rated for body weight.",
+    "stop": "Shoulder or elbow pain.",
+    "cannotSee": "The chin clearing the bar.",
+    "regions": [
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Straight at the bottom; elbows drive down to the ribs.", "tracked": true }
+        ]
+      },
+      { "name": "Body", "points": [{ "t": "Still — no swing.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 165, "armR": 165, "foreL": 178, "foreR": 178, "legL": 4, "legR": 4 },
+    "B": { "armL": 120, "armR": 120, "foreL": 178, "foreR": 178, "legL": 4, "legR": 4 },
+    "work": { "back": 1, "arm": 0.8 },
+    "anchor": "wrL",
+    "raise": 16,
+    "props": [{ "kind": "bar", "at": "wrL", "to": "wrR" }]
+  }
+}

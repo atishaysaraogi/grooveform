@@ -4,7 +4,7 @@
 pose model, same move library) and runs entirely in the browser, so it works on
 GitHub Pages and on a laptop with no server. A physio and one person from the
 build side sit down with it, and a move that survives the session comes out as
-a move in `client/data/moves/<region>.json` — the same file a physio can also edit by hand.
+a move in `client/data/moves/<id>.json` — the same file a physio can also edit by hand.
 
 It is the executable version of `docs/PT-INTAKE.md`. Read that first for the
 *why*; this is the *how*.
@@ -13,7 +13,7 @@ It is the executable version of `docs/PT-INTAKE.md`. Read that first for the
 
 For each move:
 
-- **The move**, as one object in `client/data/moves/<region>.json`. It carries no
+- **The move**, as its own file `client/data/moves/<id>.json`. It carries no
   code, only fields: measurements as named landmarks, a start/target pair for
   progress, each fault as a metric, a comparison and a threshold, and the words.
   `coach/spec.js` compiles it into exactly the shape the hand-written moves have,
@@ -217,16 +217,20 @@ turning its presets into plain joint positions, and says so before it does.
 
 Step 7 lists anything missing in plain words, then what is worth fixing (no
 borderline take, a clean take that still fires a fault, no figure). Then the
-move goes into the library file it belongs to:
+move goes into the library as its own file:
 
 - **Save into the project** — shown when the site is running locally with
-  `npm run dev`. The move is written into `client/data/moves/<region>.json`
-  (a new move is appended; an edited one replaces itself), the file is checked
-  first exactly as the app would load it, and the running server re-reads the
-  library. Reload the app and it is there. Commit the file.
-- **Download `<region>.json`** — everywhere else (GitHub Pages included). The
-  same file, with this move in it; drop it over the one in
-  `client/data/moves/` and commit.
+  `npm run dev`. The move is written to `client/data/moves/<id>.json` and
+  nothing else is touched, except that a move its region has not seen before is
+  added to that region's list. It is checked first exactly as the app would load
+  it — inside its region, against every other id — and the running server
+  re-reads the library. Reload the app and it is there. Commit the file.
+- **Download `<id>.json`** — everywhere else (GitHub Pages included). The same
+  one-exercise file; drop it into `client/data/moves/` and commit (the download
+  note says when the id also has to be added to a region's list).
+
+The **Region** picker above those buttons is where the move's unstated defaults
+come from — camera, group, order, sources — and where it sits in the list.
 
 *Try it in the app* opens the app with the draft added — in this browser only —
 so the physio can run a set against the real coach before leaving. *Download

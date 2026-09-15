@@ -1,0 +1,96 @@
+{
+  "region": "dance",
+  "id": "bhangra_dhamaal",
+  "name": "Bhangra — dhamaal",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["hip flexors", "quadriceps", "shoulders"], "secondary": ["calves", "abdominals"] },
+  "sided": { "limb": "leg", "by": "pick", "auto": true },
+  "summary": "The big open Bhangra step: arms up, shoulders bouncing, one knee driving up on each beat.",
+  "setup": "Face the phone about 3 m away, camera at hip height, whole body and both raised arms in frame. Arms up with the index fingers pointing to the sky. Drive one knee up to hip height on the beat, land soft, then the other. Shoulders bounce with it.",
+  "brief": "Arms up with the index fingers pointing to the sky. Drive one knee up to hip height on the beat, land soft, then the other.",
+  "why": "From the front the knee rises across the camera plane, so the height of each lift is measured and counted directly.",
+  "calibrationPose": "Standing tall with both arms up, before the first knee lift.",
+  "camera": { "height": "hip", "distance": "3 m", "posture": "standing" },
+  "targets": [16, 24, 32, 48],
+  "defaultTarget": 24,
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 55, "targetIsDelta": true },
+  "display": { "label": "knee up", "unit": "°", "from": "start" },
+  "tempo": "One lift per beat; energetic but landed softly.",
+  "dosage": "3 × 24, or 2–3 minutes continuous.",
+  "progression": "Faster tempo; add a hop on the standing leg; longer sets.",
+  "regression": "Lower knee lift; march instead of hop; no arms overhead.",
+  "contraindications": "Knee, ankle or back pain on landing; anyone told to avoid impact; shoulder pain holding the arms overhead.",
+  "faults": [
+    {
+      "id": "low_knee",
+      "label": "Knee not coming up",
+      "cue": "Drive the knee to hip height",
+      "tip": "Dhamaal is a big step. A small knee lift makes it a march and loses the character.",
+      "severity": 2
+    },
+    {
+      "id": "arch3",
+      "label": "Arching the back under the arms",
+      "cue": "Ribs down, arms up",
+      "tip": "Holding the arms overhead for minutes tends to arch the lower back. Brace the middle.",
+      "severity": 2
+    },
+    {
+      "id": "land3",
+      "label": "Landing heavily",
+      "cue": "Land soft through the foot",
+      "tip": "Ball, then heel, with the knee bending to absorb it. Flat heavy landings are what hurt the next day.",
+      "severity": 3
+    },
+    {
+      "id": "lean4",
+      "label": "Leaning back",
+      "cue": "Chest up, weight forward",
+      "tip": "Leaning back to get the knee higher shifts the load onto the lower back.",
+      "severity": 2
+    },
+    {
+      "id": "shoulders2",
+      "label": "Shoulders locked",
+      "cue": "Let the shoulders bounce",
+      "tip": "The shoulder bounce is half of Bhangra. Stiff shoulders make it look and feel like a workout, not a dance.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Floor with give — a sprung floor, a mat, or grass. Trainers if the floor is hard.",
+    "stop": "Any pain on landing; shoulder pain with the arms up.",
+    "cannotSee": "The arm and wrist shapes, and the shoulder bounce.",
+    "regions": [
+      {
+        "name": "Legs",
+        "points": [
+          { "t": "Knee drives up toward hip height on the beat.", "tracked": true },
+          { "t": "Land through the ball of the foot with a soft knee.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Tall with the ribs down; do not arch back under the raised arms.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Up and open, index fingers to the sky, shoulders loose and bouncing.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 165, "armR": 165, "foreL": 170, "foreR": 170, "legL": 4, "legR": 4 },
+    "B": { "armL": 165, "armR": 165, "foreL": 170, "foreR": 170, "legL": 4, "legR": 72, "shinR": 8 },
+    "work": { "thigh": 0.8, "abs": 0.5, "shoulder": 0.6 },
+    "side": "R"
+  }
+}

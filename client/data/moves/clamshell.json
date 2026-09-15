@@ -1,0 +1,104 @@
+{
+  "region": "hip",
+  "id": "clamshell",
+  "name": "Clamshell",
+  "type": "reps",
+  "view": "side",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["none", "loop band (optional)"],
+  "muscles": { "primary": ["gluteus medius"], "secondary": ["gluteus minimus", "deep hip rotators"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Lying on your side with knees bent, open the top knee like a clam without rolling the pelvis back.",
+  "setup": "Lie on your side, hips and knees bent to about 90°, feet together, head on your arm. Keeping the feet touching and the pelvis still, lift the top knee, pause, lower.",
+  "why": "The knee opens toward or away from the phone, which a single camera cannot measure, and the pelvis rolling back — the fault that matters — is invisible from any one angle. Follow the guide; log the set by hand. Side-lying hip abduction works the same muscle harder, if this one has become easy.",
+  "camera": { "height": "floor", "distance": "1.5 m", "posture": "sidelying" },
+  "tempo": "Open 2 s, hold 1 s, close 2 s.",
+  "dosage": "3 × 15 each side.",
+  "progression": "Loop band above the knees; lift the feet off the floor too.",
+  "regression": "Smaller opening; hand on the top hip to feel it stay still.",
+  "contraindications": "Pinching at the front of the hip.",
+  "faults": [
+    {
+      "id": "roll",
+      "label": "Rolling the pelvis back",
+      "cue": "Stack the top hip",
+      "tip": "Keep the top hip bone directly above the bottom one. If it tips backward, the knee is opening with the back, not the hip.",
+      "severity": 3
+    },
+    {
+      "id": "feet",
+      "label": "Feet coming apart",
+      "cue": "Keep the heels together",
+      "tip": "The feet stay touching so the movement is rotation at the hip.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Opening too far",
+      "cue": "Smaller opening, hip stacked",
+      "tip": "The knee only opens as far as the pelvis stays stacked — usually less than it feels.",
+      "severity": 2
+    },
+    {
+      "id": "fast",
+      "label": "Flapping the knee",
+      "cue": "Two seconds open, two closed",
+      "tip": "A fast flap is momentum. Slow it down and the glute has to hold the position.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat; a pillow under the head.",
+    "stop": "Pinching at the front or side of the hip.",
+    "cannotSee": "The knee opening (toward the camera) and the pelvis rolling — nothing here is measurable from one phone.",
+    "regions": [
+      {
+        "name": "Pelvis",
+        "points": [
+          { "t": "Top hip stacked over the bottom hip, still through the whole rep.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Knees",
+        "points": [
+          {
+            "t": "Feet together; top knee opens as far as the pelvis allows without rolling.",
+            "tracked": false
+          }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 90,
+      "farm": 90,
+      "uarmF": -20,
+      "farmF": -150,
+      "thigh": 120,
+      "shin": -60,
+      "foot": 0,
+      "thighF": 120,
+      "shinF": -60,
+      "footF": 0
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "uarm": 90,
+      "farm": 90,
+      "uarmF": -20,
+      "farmF": -150,
+      "thigh": 150,
+      "shin": -30,
+      "foot": 0,
+      "thighF": 120,
+      "shinF": -60,
+      "footF": 0
+    },
+    "work": { "glute": 1 }
+  }
+}

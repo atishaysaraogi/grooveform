@@ -1,0 +1,71 @@
+{
+  "region": "ankle",
+  "id": "towel_curl",
+  "name": "Towel curl",
+  "type": "reps",
+  "view": "side",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["towel", "chair"],
+  "muscles": { "primary": ["foot intrinsics"], "secondary": ["toe flexors"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Sitting, scrunch a towel toward you with the toes, heel staying on the floor.",
+  "setup": "Sit with a towel flat on the floor under the foot. Keeping the heel down, curl the toes to draw the towel toward you, release, repeat until it is bunched up.",
+  "why": "The toes move a few millimetres under a towel; there is nothing a phone can count. Follow the guide and log the set.",
+  "camera": { "height": "floor", "distance": "1.5 m", "posture": "sitting" },
+  "targets": [1, 2, 3],
+  "defaultTarget": 2,
+  "tempo": "Slow scrunches.",
+  "dosage": "2–3 towel lengths, daily.",
+  "progression": "A small weight on the far end of the towel.",
+  "regression": "Shorter towel.",
+  "contraindications": "Cramp in the arch that does not ease.",
+  "faults": [
+    {
+      "id": "heel",
+      "label": "Heel lifting",
+      "cue": "Keep the heel down",
+      "tip": "The heel stays planted so the toes, not the ankle, pull the towel.",
+      "severity": 2
+    },
+    {
+      "id": "claw",
+      "label": "Clawing with the tips of the toes",
+      "cue": "Flat toes — pull with the arch",
+      "tip": "Spread the toes and pull with the whole pad, not the tips.",
+      "severity": 1
+    },
+    {
+      "id": "toes",
+      "label": "Curling with the toe tips",
+      "cue": "Grip with the whole foot",
+      "tip": "The arch should do the pulling. Clawing with the toe tips can aggravate the top of the foot.",
+      "severity": 1
+    },
+    {
+      "id": "lift",
+      "label": "Lifting the foot to reset",
+      "cue": "Heel stays down between grips",
+      "tip": "Lifting the whole foot to grab more towel uses the shin instead of the arch.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Smooth floor so the towel slides.",
+    "stop": "Arch cramp that does not settle.",
+    "cannotSee": "Any of it.",
+    "regions": [
+      {
+        "name": "Foot",
+        "points": [
+          { "t": "Heel planted; toes spread and pull the towel.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "seated", "foot": 0, "uarm": 20, "farm": 40 },
+    "B": { "preset": "seated", "foot": 6, "uarm": 20, "farm": 40 },
+    "work": { "calf": 0.3 }
+  }
+}

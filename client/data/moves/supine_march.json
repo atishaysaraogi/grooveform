@@ -1,0 +1,82 @@
+{
+  "region": "core",
+  "id": "supine_march",
+  "name": "Supine march",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["mat"],
+  "muscles": { "primary": ["transversus abdominis", "hip flexors"], "secondary": [] },
+  "summary": "Lying with knees bent, brace and lift one foot off the floor, lower, then the other.",
+  "setup": "Lie on your back, knees bent, feet flat, side-on to the phone at floor level. Brace the stomach and lift one foot until the knee is over the hip, lower with control, then the other.",
+  "brief": "Lie on your back, knees bent, feet flat. Brace the stomach and lift one foot until the knee is over the hip, lower with control, then the other.",
+  "why": "From the side the near thigh rises toward vertical on every lift, so reps are counted. The pelvis rocking is not measured.",
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 25, "targetIsDelta": true },
+  "tempo": "Lift 2 s, lower 2 s.",
+  "dosage": "3 × 10 each leg.",
+  "progression": "Hold the top; progress to dead bug.",
+  "regression": "Heel slides.",
+  "contraindications": "Back pain as the foot lifts.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "rock",
+      "label": "Pelvis rocking",
+      "cue": "Hips still",
+      "tip": "Brace before the foot lifts; if the pelvis rocks, lift the foot less.",
+      "severity": 2
+    },
+    {
+      "id": "arch",
+      "label": "Back arching as the foot lifts",
+      "cue": "Ribs down, back flat",
+      "tip": "If the back lifts, the leg is going too high or too fast. Smaller and slower.",
+      "severity": 2
+    },
+    {
+      "id": "breath",
+      "label": "Holding the breath",
+      "cue": "Breathe out to lift",
+      "tip": "Exhale on the lift and the brace stays on without straining.",
+      "severity": 1
+    },
+    {
+      "id": "rush",
+      "label": "Marching quickly",
+      "cue": "Two seconds each leg",
+      "tip": "Speed lets momentum swing the leg. Slow marching is what recruits the deep abdominals.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat.",
+    "stop": "Back pain.",
+    "cannotSee": "The pelvis rocking.",
+    "regions": [
+      { "name": "Leg", "points": [{ "t": "Knee lifts over the hip, foot relaxed.", "tracked": true }] },
+      { "name": "Pelvis", "points": [{ "t": "Still and level.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "supine", "thigh": 130, "shin": -25, "thighF": 130, "shinF": -25 },
+    "B": { "preset": "supine", "thigh": 165, "shin": -5, "thighF": 130, "shinF": -25 },
+    "work": { "abs": 1 }
+  }
+}

@@ -28,9 +28,13 @@ const catalog = require(path.join(ROOT, 'client', 'coach', 'catalog.js'));
 const data = catalog.readDataSync(DATA_DIR);
 const moveFiles = fs.readdirSync(path.join(DATA_DIR, 'moves')).filter((f) => f.endsWith('.json')).sort();
 
-test('the manifest lists every code move and every moves file, and index.html lists none of them', () => {
+test('every move file is listed by exactly one region, and index.html lists none of them', () => {
   assert.deepEqual(data.manifest.code.map((p) => p.replace(/^coach\/library\//, '')).sort(), files, 'manifest.json "code" and client/coach/library/ disagree');
-  assert.deepEqual(data.manifest.moves.map((p) => p.replace(/^moves\//, '')).sort(), moveFiles, 'manifest.json "moves" and client/data/moves/ disagree');
+  const listed = data.files.flatMap((f) => f.json.moves.map((m) => m.id));
+  assert.deepEqual([...listed].sort(), moveFiles.map((f) => f.replace(/\.json$/, '')), 'the regions and client/data/moves/ disagree');
+  assert.equal(new Set(listed).size, listed.length, 'no move is listed by two regions');
+  assert.deepEqual(data.manifest.regions.map((p) => p.replace(/^regions\//, '')).sort(), fs.readdirSync(path.join(DATA_DIR, 'regions')).filter((f) => f.endsWith('.json')).sort(), 'manifest.json "regions" and client/data/regions/ disagree');
+  for (const f of data.files) for (const m of f.json.moves) assert.ok(!m.region || m.region === f.json.region, `${m.id} says region "${m.region}" but ${f.name} lists it`);
   for (const html of ['index.html', 'studio/index.html']) {
     const src = fs.readFileSync(path.join(ROOT, 'client', html), 'utf8');
     assert.ok(!/coach\/(library|catalog)\//.test(src), html + ' must not list moves — the manifest does');
@@ -39,19 +43,16 @@ test('the manifest lists every code move and every moves file, and index.html li
   }
 });
 
-test('every data file opens with its _about guide, and the guide covers every field a move may use', () => {
-  for (const rel of ['manifest.json', 'settings.json', 'shared.json', ...data.manifest.moves]) {
+test('the field guide is one file, and it covers every field a move may use', () => {
+  for (const rel of ['manifest.json', 'settings.json', 'shared.json']) {
     const j = JSON.parse(fs.readFileSync(path.join(DATA_DIR, rel), 'utf8'));
     assert.equal(Object.keys(j)[0], '_about', rel + ' must start with _about');
   }
-  const guides = data.files.map((f) => f.json._about);
-  for (const g of guides) {
-    assert.deepEqual(g.fields, guides[0].fields, 'the field guide must read the same in every moves file (node scripts/catalog.js sync-docs)');
-    assert.ok(g.what && g.add && g.remove && g.check, 'the guide says what the file is and how to add, remove and check a move');
-  }
-  const documented = Object.keys(guides[0].fields).sort(), allowed = catalog.KEYS.entry.slice().sort();
+  const g = data.about;
+  assert.ok(g.what && g.add && g.remove && g.check, 'the guide says what a move file is and how to add, remove and check a move');
+  const documented = Object.keys(g.fields).sort(), allowed = catalog.KEYS.entry.slice().sort();
   assert.deepEqual(documented, allowed, 'every allowed move field is explained in _about.fields, and nothing else is');
-  for (const [k, v] of Object.entries(guides[0].fields)) assert.ok(v.length > 20, 'field guide for ' + k + ' is too short to help');
+  for (const [k, v] of Object.entries(g.fields)) assert.ok(v.length > 20, 'field guide for ' + k + ' is too short to help');
   const settingsDoc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'settings.json'), 'utf8'))._about.fields;
   for (const k of catalog.KEYS.settings) assert.ok(Object.keys(settingsDoc).some((d) => d === k || d.startsWith(k + '.')), 'settings.json _about.fields must explain ' + k);
   const sharedDoc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'shared.json'), 'utf8'))._about;
@@ -82,12 +83,17 @@ test('every shipped file checks clean, and a mistake is reported with the file, 
 });
 
 test('the JSON style the tools write round-trips and keeps short things on one line', () => {
-  for (const f of data.files) {
-    const text = catalog.format(f.json);
-    assert.deepEqual(JSON.parse(text), f.json, f.name + ' does not round-trip');
-    assert.equal(text + '\n', fs.readFileSync(path.join(DATA_DIR, f.name), 'utf8'), f.name + ' is not in the shared style — run: node scripts/catalog.js format');
-    assert.match(text, /"camera": \{ "height"/, 'a camera line stays on one line');
+  /* every file on disk, region and move alike, is exactly what format() writes */
+  const rels = ['manifest.json', 'settings.json', 'shared.json', data.manifest.about, ...data.manifest.regions,
+    ...data.files.flatMap((f) => f.json.moves.map((m) => 'moves/' + m.id + '.json'))];
+  for (const rel of rels) {
+    const raw = fs.readFileSync(path.join(DATA_DIR, rel), 'utf8');
+    const json = JSON.parse(raw);
+    const text = catalog.format(json);
+    assert.deepEqual(JSON.parse(text), json, rel + ' does not round-trip');
+    assert.equal(text + '\n', raw, rel + ' is not in the shared style — run: node scripts/catalog.js format');
   }
+  assert.match(fs.readFileSync(path.join(DATA_DIR, 'regions/knee.json'), 'utf8'), /"camera": \{ "height"/, 'a camera line stays on one line');
 });
 
 /* A joint the entry names as a contact — a foot on the floor, a hand on the bar — must land on the

@@ -1,0 +1,90 @@
+{
+  "region": "ankle",
+  "id": "banded_dorsiflexion",
+  "name": "Banded dorsiflexion",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["resistance band", "anchor point"],
+  "muscles": { "primary": ["tibialis anterior"], "secondary": [] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "band": "red",
+  "summary": "Band around the top of the foot anchored in front; pull the toes up toward the shin.",
+  "setup": "Sit on the floor with the leg out, side-on to the phone, band looped over the top of the foot and anchored ahead of you. Pull the toes toward you against the band, pause, release slowly.",
+  "brief": "Sit on the floor with the leg out, band looped over the top of the foot and anchored ahead of you. Pull the toes toward you against the band, release slowly.",
+  "why": "The ankle angle closing as the toes pull up counts each rep from the side; the range is small, so only the count is trusted.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "sitting" },
+  "progress": { "metric": "ankle", "start": "calibrated", "target": -20, "targetIsDelta": true },
+  "tempo": "Pull 1 s, hold 1 s, release 2 s.",
+  "dosage": "3 × 15 each side.",
+  "progression": "Heavier band.",
+  "regression": "Lighter band, or no band.",
+  "contraindications": "Shin pain that persists.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "knee",
+      "label": "Bending the knee to help",
+      "cue": "Keep the leg straight",
+      "tip": "Keep the knee straight so the shin muscle does the pulling.",
+      "severity": 2
+    },
+    {
+      "id": "snap",
+      "label": "Letting the band snap back",
+      "cue": "Let it back down slowly",
+      "tip": "The return is half the work — two seconds out.",
+      "severity": 1
+    },
+    {
+      "id": "toes",
+      "label": "Leading with the toes",
+      "cue": "Lead with the whole foot",
+      "tip": "Pull the foot up as one piece; toe-only movement misses the tibialis anterior.",
+      "severity": 1
+    },
+    {
+      "id": "roll",
+      "label": "Rolling the foot inward",
+      "cue": "Foot straight up",
+      "tip": "Rolling in swaps the target for a different muscle. Keep the little toe and big toe level.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Floor; the anchor must not move.",
+    "stop": "Sharp shin or ankle pain.",
+    "cannotSee": "The foot turning in or out as it pulls.",
+    "regions": [
+      {
+        "name": "Ankle",
+        "points": [
+          { "t": "Toes pull straight toward the shin against the band.", "tracked": true }
+        ]
+      },
+      { "name": "Knee", "points": [{ "t": "Straight, thigh resting.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "face": "right", "torso": 0, "thigh": 90, "shin": 90, "foot": 90, "uarm": 30, "farm": 90 },
+    "B": { "face": "right", "torso": 0, "thigh": 90, "shin": 90, "foot": 120, "uarm": 30, "farm": 90 },
+    "work": { "calf": 0.4 }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "region": "dance",
+  "id": "natta_adavu",
+  "name": "Natta adavu (heel strike, leg out)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": { "primary": ["quadriceps", "hip abductors"], "secondary": ["calves", "abdominals"] },
+  "sided": { "limb": "leg", "by": "pick", "auto": true },
+  "summary": "From aramandi, stretch one leg out to the side and strike the heel, then bring it back with a flat strike.",
+  "setup": "Face the phone about 3 m away, camera at hip height, whole body and both arms in frame. From aramandi, extend one leg to the side with the knee straight and tap the heel, then draw it back and strike flat. Alternate.",
+  "brief": "From aramandi, extend one leg to the side with the knee straight and tap the heel, then draw it back and strike flat. Alternate.",
+  "why": "From the front the leg swings out across the camera plane, so the reach of each stretch is measured directly and counted.",
+  "calibrationPose": "Held in aramandi, both feet under you.",
+  "camera": { "height": "hip", "distance": "3 m", "posture": "standing" },
+  "targets": [8, 16, 24],
+  "defaultTarget": 16,
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 22, "targetIsDelta": true },
+  "display": { "label": "stretch", "unit": "°", "from": "start" },
+  "tempo": "Out 1 s, back 1 s, at a beat you can hold.",
+  "dosage": "4 sets of 16, both sides.",
+  "progression": "Faster tempo; deeper aramandi; add the arm positions.",
+  "regression": "Smaller stretch; stand taller.",
+  "contraindications": "Groin or inner-thigh pain; knee pain on the standing leg.",
+  "faults": [
+    {
+      "id": "rise2",
+      "label": "Standing up as the leg goes out",
+      "cue": "Stay down in aramandi",
+      "tip": "The standing knee stays bent at the same depth the whole time. Rising is how the stretch gets longer without the work.",
+      "severity": 3
+    },
+    {
+      "id": "bend",
+      "label": "Bending the stretched knee",
+      "cue": "Straighten the reaching leg",
+      "tip": "The extended leg is straight with the heel leading; a bent knee makes the shape collapse.",
+      "severity": 2
+    },
+    {
+      "id": "lean_away",
+      "label": "Leaning away from the leg",
+      "cue": "Stay upright over the middle",
+      "tip": "Tipping the trunk the other way makes the stretch look longer without the hip doing more.",
+      "severity": 2
+    },
+    {
+      "id": "toe_lead",
+      "label": "Leading with the toes",
+      "cue": "Heel leads, toes up",
+      "tip": "Natta adavu strikes the heel. Pointing the toe turns it into a different step.",
+      "severity": 2
+    },
+    {
+      "id": "hips",
+      "label": "Hips turning with the leg",
+      "cue": "Keep both hips facing forward",
+      "tip": "The pelvis stays square to the front; the leg goes out from the hip joint.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Hard floor, barefoot.",
+    "stop": "Groin pain, or a standing knee that aches after the set.",
+    "cannotSee": "Whether the heel strike sounded, and whether the toes stayed lifted.",
+    "regions": [
+      {
+        "name": "Standing leg",
+        "points": [
+          { "t": "Stays in aramandi at one height — the depth does not change.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Reaching leg",
+        "points": [
+          { "t": "Knee straight, heel leading, toes pulled up.", "tracked": true },
+          { "t": "Out to the side in line with the body, not forward.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Upright and centred; hips square to the front.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "squat": 0.5, "legL": 16, "legR": 16, "armL": 90, "armR": 90 },
+    "B": { "squat": 0.45, "legL": 16, "legR": 42, "shinR": 42, "armL": 90, "armR": 90 },
+    "work": { "thigh": 1, "glute": 0.5 },
+    "side": "R"
+  }
+}

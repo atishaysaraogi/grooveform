@@ -1,0 +1,34 @@
+{
+  "region": "ankle",
+  "group": "Ankle, foot & balance",
+  "order": 1300,
+  "camera": { "height": "knee", "distance": "2 m", "posture": "standing" },
+  "sources": [
+    {
+      "name": "Cleveland Clinic — ankle strengthening exercises",
+      "url": "https://health.clevelandclinic.org/ankle-exercises-weak-ankles"
+    },
+    {
+      "name": "Achilles Foot & Ankle Center — ankle injury rehabilitation exercises",
+      "url": "https://achillesfootandankle.com/ankle-injury-rehabilitation-exercises/"
+    },
+    {
+      "name": "Evolve NY — foot and ankle strengthening",
+      "url": "https://evolveny.com/blogposts/exercises-to-strengthen-feet-and-ankles"
+    }
+  ],
+  "moves": [
+    "calfstretch",
+    "calf_raise",
+    "single_calf_raise",
+    "tibialis_raise",
+    "ankle_alphabet",
+    "towel_curl",
+    "banded_dorsiflexion",
+    "banded_eversion",
+    "single_leg_balance",
+    "tandem_stance",
+    "heel_toe_walk",
+    "lateral_hop"
+  ]
+}

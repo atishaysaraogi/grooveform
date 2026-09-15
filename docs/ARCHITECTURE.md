@@ -8,7 +8,7 @@ browser (client/)                       server (server/)                      SQ
 index.html + app.js  (SPA, no build)    index.js   static files, CSP, HSTS     users, curator_profiles
 coach/engine.js      pose → reps/faults  http.js    router, JSON, CSRF guard   otp_codes, sessions
 coach/coach.js       camera, voice, HUD  api.js     all routes + entitlements  consent_records, audit_log
-data/moves/*.json    every move, as data auth.js    OTP, sessions, consent     subscriptions, payments
+data/moves/<id>.json one file per exercise auth.js    OTP, sessions, consent     subscriptions, payments
 coach/catalog.js     reads and checks it  
 coach/exercise-library.js  registry      payments.js mock / Razorpay          routines, routine_items
 MediaPipe Pose (CDN, on-device)          db.js      schema + migrations        connections, routine_assignments

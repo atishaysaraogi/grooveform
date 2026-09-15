@@ -1,0 +1,115 @@
+{
+  "region": "knee",
+  "id": "split_squat",
+  "name": "Split squat",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "intermediate",
+  "equipment": ["none", "dumbbells (optional)"],
+  "muscles": {
+    "primary": ["quadriceps", "gluteus maximus"],
+    "secondary": ["hamstrings", "hip flexors (rear leg)"]
+  },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "A stationary lunge: one foot forward, one back, lower the rear knee toward the floor and stand.",
+  "setup": "Take a long stride so the front foot is flat and the rear heel is up, front leg nearest the phone. Lower straight down until the rear knee is near the floor, then drive up through the front heel.",
+  "brief": "Take a long stride so the front foot is flat and the rear heel is up. Lower straight down until the rear knee is near the floor, then drive up through the front leg.",
+  "why": "The front knee angle counts the reps cleanly from the side. The knee drifting inward — the fault that matters — needs a front view, so form is listed here rather than judged.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 95 },
+  "tempo": "Down 2 s, up 1 s.",
+  "dosage": "3 × 8–10 each leg.",
+  "progression": "Hold dumbbells; rear foot on a step.",
+  "regression": "Shorter stride, shallower, hand on a wall.",
+  "contraindications": "Kneecap pain in the front leg, or hip flexor pain in the rear leg.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "valgus",
+      "label": "Front knee caving inward",
+      "cue": "Knee over the middle toes",
+      "tip": "Point the knee where the toes point. If it falls inward, shorten the stride and go shallower.",
+      "severity": 3
+    },
+    {
+      "id": "forward",
+      "label": "Knee shooting forward",
+      "cue": "Lower straight down",
+      "tip": "Lower like an elevator, not a slide. The front shin stays near vertical.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Stride too short",
+      "cue": "Longer stride",
+      "tip": "A short stride drives the front knee far over the toes and loads the kneecap.",
+      "severity": 1
+    },
+    {
+      "id": "wobble",
+      "label": "Wobbling side to side",
+      "cue": "Feet hip-width apart",
+      "tip": "Set the feet on two rails, not a tightrope, and the balance problem disappears.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor with grip.",
+    "stop": "Kneecap pain, or losing balance.",
+    "cannotSee": "The front knee drifting inward.",
+    "regions": [
+      {
+        "name": "Front leg",
+        "points": [
+          { "t": "Foot flat, shin close to vertical at the bottom.", "tracked": true },
+          { "t": "Knee over the middle of the foot.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Rear leg",
+        "points": [
+          { "t": "Heel up, knee lowers toward the floor without touching.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": 0,
+      "thigh": 20,
+      "shin": 20,
+      "foot": 0,
+      "thighF": -15,
+      "shinF": -40,
+      "footF": -20
+    },
+    "B": {
+      "face": "right",
+      "torso": 5,
+      "thigh": 75,
+      "shin": -15,
+      "foot": 0,
+      "thighF": -30,
+      "shinF": -74,
+      "footF": -15
+    },
+    "work": { "thigh": 1, "glute": 0.8, "ham": 0.4 }
+  }
+}

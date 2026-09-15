@@ -1,0 +1,74 @@
+{
+  "region": "shoulder",
+  "id": "cross_body_stretch",
+  "name": "Cross-body stretch",
+  "type": "hold",
+  "view": "front",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "upperBody": true,
+  "muscles": { "primary": ["posterior deltoid", "posterior capsule"], "secondary": [] },
+  "sided": { "limb": "arm", "by": "pick" },
+  "summary": "Pull one straight arm across the chest with the other hand until the back of the shoulder stretches.",
+  "setup": "Face the phone, bring the working arm across the chest at shoulder height and hug it in with the other forearm. Keep the shoulder down. Hold.",
+  "brief": "Bring the working arm across the chest at shoulder height and hug it in with the other forearm. Keep that shoulder down and hold.",
+  "why": "The hand held near the opposite shoulder is visible from the front, so the timer runs while the arm is actually across the body.",
+  "targets": [20, 30, 45],
+  "defaultTarget": 30,
+  "hold": { "conditions": [{ "metric": { "kind": "dist", "pts": ["WR", "oSH"] }, "max": 32 }] },
+  "tempo": "Ease in over 5 s, hold, release.",
+  "dosage": "3 × 30 s each arm.",
+  "progression": "Pull slightly lower across the chest.",
+  "regression": "Lighter pull.",
+  "contraindications": "Pinching at the front of the shoulder.",
+  "faults": [
+    {
+      "id": "shrug",
+      "label": "Shoulder rising",
+      "cue": "Let that shoulder drop",
+      "tip": "Keep the working shoulder down and back; the stretch belongs behind it.",
+      "severity": 2
+    },
+    {
+      "id": "elbow",
+      "label": "Pulling on the elbow",
+      "cue": "Pull the upper arm across",
+      "tip": "Hooking the elbow twists the joint; hold above the elbow and draw the arm across.",
+      "severity": 2
+    },
+    {
+      "id": "twist",
+      "label": "Turning the trunk",
+      "cue": "Keep facing forward",
+      "tip": "The trunk stays square to the phone; only the arm moves.",
+      "severity": 1
+    },
+    {
+      "id": "shrug2",
+      "label": "Shoulder riding up",
+      "cue": "Both shoulders level",
+      "tip": "The stretched shoulder must stay down or the stretch goes into the neck.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Standing or sitting.",
+    "stop": "Front-of-shoulder pinching.",
+    "cannotSee": "The shoulder blade rolling forward.",
+    "regions": [
+      {
+        "name": "Working arm",
+        "points": [
+          { "t": "Straight, across the chest at shoulder height, hugged in.", "tracked": true }
+        ]
+      },
+      { "name": "Shoulder", "points": [{ "t": "Down and back.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armR": 8, "armL": 8 },
+    "B": { "armR": 88, "foreR": -70, "armL": 40, "foreL": 120 },
+    "work": { "shoulder": 0.8 }
+  }
+}

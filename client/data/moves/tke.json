@@ -1,0 +1,95 @@
+{
+  "region": "knee",
+  "id": "tke",
+  "name": "Terminal knee extension (band)",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["resistance band", "anchor point"],
+  "muscles": { "primary": ["quadriceps"], "secondary": ["gluteus maximus"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "band": "yellow",
+  "summary": "A band behind the knee pulls it forward; you press the knee back to fully straight.",
+  "setup": "Loop a band around a solid anchor in front of you at knee height and around the back of the working knee. Step back until the band is taut with a soft knee, side-on to the phone. Straighten the knee fully against the band, hold a second, soften and repeat.",
+  "brief": "Loop a band around a solid anchor in front of you and around the back of the working knee. Step back until the band is taut with a soft knee.",
+  "why": "Side-on, the hip–knee–ankle angle reads the last few degrees of straightening directly, which is exactly the range this move is for.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 178 },
+  "tempo": "Straighten 1 s, hold 1 s, release 2 s.",
+  "dosage": "3 × 15.",
+  "progression": "Heavier band; single-leg stance.",
+  "regression": "Lighter band, or hands on a support.",
+  "contraindications": "A knee that locks or gives way, or pain at the back of the knee under the band.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    { "template": "lean", "threshold": 72 },
+    {
+      "id": "hips",
+      "label": "Hips pushing back",
+      "cue": "Hips over your feet",
+      "tip": "The band should straighten the knee, not fold you at the hip. Keep the hips over the feet.",
+      "severity": 2
+    },
+    {
+      "id": "lockback",
+      "label": "Snapping the knee back",
+      "cue": "Straighten, do not lock hard",
+      "tip": "Push into straight under control. Snapping into hyperextension loads the back of the joint.",
+      "severity": 2
+    },
+    {
+      "id": "heel",
+      "label": "Heel lifting",
+      "cue": "Whole foot on the floor",
+      "tip": "The heel stays down so the quad does the work rather than the calf.",
+      "severity": 1,
+      "metric": "heel_lift",
+      "op": ">",
+      "threshold": 10,
+      "minP": 0.2
+    }
+  ],
+  "guide": {
+    "surface": "Any firm floor; the anchor must not move.",
+    "stop": "Pain behind the knee, or the knee not straightening at all.",
+    "cannotSee": "Whether the kneecap is tracking straight.",
+    "regions": [
+      {
+        "name": "Knee",
+        "points": [
+          { "t": "Straightens fully against the band each rep.", "tracked": true },
+          { "t": "Kneecap points straight ahead, not inward.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Upright — the knee moves, the body does not.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "face": "right", "torso": 0, "thigh": 12, "shin": -12 },
+    "B": { "preset": "standing" },
+    "work": { "thigh": 1, "glute": 0.3 },
+    "wall": "ahead",
+    "props": [{ "kind": "band", "at": "kn" }]
+  }
+}

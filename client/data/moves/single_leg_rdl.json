@@ -1,0 +1,94 @@
+{
+  "region": "gym",
+  "id": "single_leg_rdl",
+  "name": "Single-leg Romanian deadlift",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "advanced",
+  "equipment": ["none", "dumbbell (optional)"],
+  "muscles": {
+    "primary": ["hamstrings", "gluteus maximus", "gluteus medius"],
+    "secondary": ["core", "ankle stabilisers"]
+  },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Balancing on one leg, hinge forward as the other leg lifts behind, then return.",
+  "setup": "Stand side-on to the phone on the working leg, knee soft. Hinge at the hip, reaching the free leg straight back and the hands toward the floor, until the body is near level. Return to standing.",
+  "brief": "Stand on the working leg, knee soft. Hinge at the hip, reaching the free leg straight back and the hands toward the floor, until the body is near level.",
+  "why": "From the side the trunk hinges toward horizontal every rep, so reps are counted. Hip rotation — the main fault — is a front-view detail.",
+  "progress": { "metric": "trunk", "start": "calibrated", "target": 30 },
+  "tempo": "Down 3 s, up 2 s.",
+  "dosage": "3 × 8 each leg.",
+  "progression": "Hold a weight; slow the lowering.",
+  "regression": "Fingertips on a wall; smaller hinge.",
+  "contraindications": "Balance problems without support; hamstring strain.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "open",
+      "label": "Hip opening to the side",
+      "cue": "Hips square",
+      "tip": "Point the free toes at the floor so the pelvis stays level.",
+      "severity": 3
+    },
+    {
+      "id": "round",
+      "label": "Back rounding",
+      "cue": "Long spine",
+      "tip": "Reach the head forward and the heel back; stop before the back rounds.",
+      "severity": 2
+    },
+    {
+      "id": "fast2",
+      "label": "Rushing to stay balanced",
+      "cue": "Slower — balance comes from control",
+      "tip": "Speed hides poor balance. Three seconds down is the standard.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Flat floor; a wall in reach.",
+    "stop": "Back pain.",
+    "cannotSee": "The hip opening.",
+    "regions": [
+      { "name": "Trunk", "points": [{ "t": "Hinges toward level; back flat.", "tracked": true }] },
+      {
+        "name": "Free leg",
+        "points": [
+          { "t": "Reaches back in line with the trunk; toes down.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 5, "farm": 5 },
+    "B": {
+      "face": "right",
+      "torso": 75,
+      "thigh": -10,
+      "shin": 8,
+      "thighF": -165,
+      "shinF": -165,
+      "footF": -20,
+      "uarm": 100,
+      "farm": 100
+    },
+    "work": { "ham": 1, "glute": 1, "back": 0.4 }
+  }
+}

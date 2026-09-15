@@ -1,0 +1,85 @@
+{
+  "region": "gym",
+  "id": "overhead_press",
+  "name": "Overhead press",
+  "type": "reps",
+  "view": "front",
+  "tracking": "form",
+  "level": "intermediate",
+  "equipment": ["dumbbells"],
+  "muscles": { "primary": ["deltoids", "triceps"], "secondary": ["upper trapezius", "core"] },
+  "upperBody": true,
+  "summary": "Dumbbells at the shoulders, press straight up until the arms lock out overhead, lower.",
+  "setup": "Face the phone, dumbbells at shoulder height, elbows under the wrists. Press straight up until the arms lock out, then lower to the shoulders.",
+  "brief": "Stand with the dumbbells at shoulder height, elbows under the wrists. Press straight up until the arms lock out, then lower to the shoulders.",
+  "why": "Facing the phone the wrists travel from the shoulders to straight overhead each rep, and the shoulders hiking up to help is measured as the ear–shoulder gap closing.",
+  "progress": { "metric": "arm_up", "start": "calibrated", "target": 168 },
+  "tempo": "Up 1 s, down 2 s.",
+  "dosage": "3 × 8–10.",
+  "progression": "Heavier; single arm.",
+  "regression": "Seated with back support; lighter.",
+  "contraindications": "Shoulder pain overhead; lower back pain with the press.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Lower back arching",
+      "cue": "Ribs down",
+      "tip": "Brace the stomach and squeeze the glutes so the press does not come from leaning back.",
+      "severity": 3
+    },
+    {
+      "id": "arch4",
+      "label": "Arching the lower back",
+      "cue": "Ribs down, squeeze the glutes",
+      "tip": "Leaning back under the weight is how the lower back gets hurt. Brace and press straight up.",
+      "severity": 3
+    },
+    { "template": "shrug_lift" },
+    {
+      "id": "short",
+      "label": "Not locking out",
+      "cue": "Arms straight overhead",
+      "tip": "Finish with the biceps by the ears.",
+      "severity": 1
+    },
+    {
+      "id": "partial5",
+      "label": "Not locking out overhead",
+      "cue": "Arms straight, biceps by the ears",
+      "tip": "Finish with the arms straight and the weight over the middle of the head.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Flat floor.",
+    "stop": "Shoulder or lower back pain.",
+    "cannotSee": "The back arching — a side-view detail.",
+    "regions": [
+      { "name": "Arms", "points": [{ "t": "Press to full lockout overhead.", "tracked": true }] },
+      { "name": "Shoulders", "points": [{ "t": "Stay down; do not shrug.", "tracked": true }] },
+      { "name": "Trunk", "points": [{ "t": "Ribs down; no lean back.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 70, "armR": 70, "foreL": 170, "foreR": 170 },
+    "B": { "armL": 170, "armR": 170, "foreL": 178, "foreR": 178 },
+    "work": { "shoulder": 1, "arm": 0.7 }
+  }
+}

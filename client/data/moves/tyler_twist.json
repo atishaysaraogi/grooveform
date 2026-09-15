@@ -1,0 +1,69 @@
+{
+  "region": "elbow",
+  "id": "tyler_twist",
+  "name": "Tyler twist (FlexBar)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["FlexBar or rolled towel"],
+  "muscles": { "primary": ["wrist extensors"], "secondary": ["grip"] },
+  "upperBody": true,
+  "sided": { "limb": "arm", "by": "pick" },
+  "summary": "Twist a rubber bar with the good hand, then let the sore side untwist it slowly.",
+  "setup": "Hold the bar vertically in the sore hand, wrist bent back. Grip the top with the other hand and twist it. Bring both arms straight out in front, then slowly let the sore wrist straighten so the bar untwists.",
+  "why": "The action is inside the hands. Logged by hand.",
+  "tempo": "Untwist over 4 s.",
+  "dosage": "3 × 15, daily.",
+  "progression": "Stiffer bar.",
+  "regression": "Softer bar or a rolled towel.",
+  "contraindications": "Pain that stays after the set, or a numb hand.",
+  "faults": [
+    {
+      "id": "fast",
+      "label": "Untwisting too fast",
+      "cue": "Untwist over four seconds",
+      "tip": "The slow untwist loads the tendon; fast is wasted.",
+      "severity": 2
+    },
+    {
+      "id": "sore",
+      "label": "Expecting it to be painless",
+      "cue": "A mild ache is expected",
+      "tip": "A mild ache during and shortly after is normal and part of how this works; sharp or lasting pain is not.",
+      "severity": 2
+    },
+    {
+      "id": "elbow",
+      "label": "Elbows bending",
+      "cue": "Keep the arm straight out",
+      "tip": "Keep both elbows straight so the wrist does the work.",
+      "severity": 1
+    },
+    {
+      "id": "grip",
+      "label": "Gripping too tightly",
+      "cue": "Firm, not white-knuckled",
+      "tip": "A death grip fatigues the hand before the tendon is loaded.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Anywhere.",
+    "stop": "Pain that lingers or a numb hand.",
+    "cannotSee": "The twist.",
+    "regions": [
+      {
+        "name": "Sore wrist",
+        "points": [
+          { "t": "Straightens slowly against the bar.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 88, "foreL": 88, "armR": 88, "foreR": 88 },
+    "B": { "armL": 88, "foreL": 88, "armR": 88, "foreR": 88 },
+    "work": { "forearm": 1 }
+  }
+}

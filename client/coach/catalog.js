@@ -212,10 +212,17 @@
   /* ============================================================
      The data layer — everything below reads the files in client/data/.
 
-       manifest.json   which files to load (settings, shared, moves/*.json, the code moves)
+       manifest.json   which files to load (settings, shared, the field guide, the regions, the code moves)
        settings.json   numbers and words every move shares (rep thresholds, fault timing, band colours…)
        shared.json     named measurements, fault templates, pose presets, hold sets
-       moves/*.json    the moves themselves, one file per body region
+       _about.json     the field guide: what every field means, one copy for the whole library
+       regions/*.json  one per body region: the defaults its moves inherit (region, group, order,
+                       camera, equipment, sources) and the ids it holds, in the order they are shown
+       moves/*.json    one file per exercise, named by its id
+
+     One exercise to a file is the point: the Studio writes back exactly the move it edited, and a
+     diff of a change to one exercise touches one file. A region file is read first and its defaults
+     sit under every move it lists; a move may override any of them.
 
      A move file is data only. Names in it ("metric": "knee", "template": "lean", "preset":
      "standing") are looked up in shared.json and expanded here; every field name is checked
@@ -223,7 +230,8 @@
      field. Keys starting with "_" are notes for people and are skipped everywhere.
      ============================================================ */
   const KEYS = {
-    manifest: ['settings', 'shared', 'moves', 'code'],
+    manifest: ['settings', 'shared', 'about', 'regions', 'code'],
+    regionFile: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
       'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
@@ -430,7 +438,7 @@
       try {
         const e = resolveEntry(raw, ctx.shared, w);
         const ex = register ? lib.define(() => buildEntry(e, i, grp, ctx)) : lib.prepare(buildEntry(e, i, grp, ctx));
-        ex.file = where; ex.entry = raw;
+        ex.file = where; ex.entry = raw;   /* `file` is the region file that lists it: knee.json, gym_lower.json */
         if (e.pose) {
           const fig = poseToFigure(ex.view, e.pose, { hold: ex.type === 'hold', posture: (ex.camera || {}).posture, side: e.pose.side || (e.sided && ex.view === 'front' ? 'R' : 'both') });
           if (register) registerFigure(e.id, fig); else ex.figure = fig;
@@ -474,18 +482,33 @@
   }
   function checkShared(shared) { checkKeys(shared, 'shared', 'shared.json'); for (const k of KEYS.shared) if (!shared[k] || typeof shared[k] !== 'object') fail('shared.json', `needs a "${k}" section (an object, even if empty)`); }
   function checkSettings(s) { checkKeys(s, 'settings', 'settings.json'); for (const k of KEYS.settings) if (s[k] === undefined) fail('settings.json', `needs "${k}"`); }
-  function checkManifest(m) { checkKeys(m, 'manifest', 'manifest.json'); for (const k of ['settings', 'shared']) if (typeof m[k] !== 'string') fail('manifest.json', `"${k}" must name a file`); for (const k of ['moves', 'code']) if (!Array.isArray(m[k])) fail('manifest.json', `"${k}" must be a list of files`); }
+  function checkManifest(m) { checkKeys(m, 'manifest', 'manifest.json'); for (const k of ['settings', 'shared', 'about']) if (typeof m[k] !== 'string') fail('manifest.json', `"${k}" must name a file`); for (const k of ['regions', 'code']) if (!Array.isArray(m[k])) fail('manifest.json', `"${k}" must be a list of files`); }
 
   /* ---- reading the files: from disk (server, tests, CLI) or over HTTP (the apps) ---- */
   function parse(text, name) { try { return JSON.parse(text); } catch (e) { fail(shortName(name), `not valid JSON — ${e.message}. A missing comma or a stray one at the end of a list are the usual causes.`); } }
+  /* A region and the moves it lists, gathered back into the one-file-per-region shape the rest of
+     this file works in: defaults at the top, `moves` a list of entries. `moveRel` remembers where
+     each entry came from, because that is the file a change to it is written back to. */
+  function gather(rel, region, load) {
+    checkKeys(region, 'regionFile', shortName(rel));
+    if (!Array.isArray(region.moves)) fail(shortName(rel), '"moves" must be the list of move ids this region holds');
+    const { moves: ids, ...defaults } = region;
+    const moves = ids.map((id) => {
+      if (typeof id !== 'string' || !/^[a-z][a-z0-9_]*$/.test(id)) fail(shortName(rel), `"${id}" is not a move id — lower-case letters, digits, underscores`);
+      return load('moves/' + id + '.json', id);
+    });
+    return { name: rel, json: { ...defaults, moves }, ids };
+  }
+  const moveRel = (id) => 'moves/' + id + '.json';
   function readDataSync(dir) {
     const fs = require('node:fs'), path = require('node:path');
     const read = (rel) => parse(fs.readFileSync(path.join(dir, rel), 'utf8'), rel);
     const manifest = read('manifest.json'); checkManifest(manifest);
     const settings = read(manifest.settings); checkSettings(settings);
     const shared = read(manifest.shared); checkShared(shared);
-    const files = manifest.moves.map((rel) => ({ name: rel, json: read(rel) }));
-    return { dir, manifest, settings, shared, files };
+    const about = read(manifest.about);
+    const files = manifest.regions.map((rel) => gather(rel, read(rel), (mrel) => read(mrel)));
+    return { dir, manifest, settings, shared, about, files };
   }
   async function fetchData(base) {
     const get = async (rel) => {
@@ -494,10 +517,14 @@
       return parse(await r.text(), rel);
     };
     const manifest = await get('manifest.json'); checkManifest(manifest);
-    const [settings, shared] = await Promise.all([get(manifest.settings), get(manifest.shared)]);
+    const [settings, shared, about] = await Promise.all([get(manifest.settings), get(manifest.shared), get(manifest.about)]);
     checkSettings(settings); checkShared(shared);
-    const files = await Promise.all(manifest.moves.map(async (rel) => ({ name: rel, json: await get(rel) })));
-    return { base, manifest, settings, shared, files };
+    /* every move is its own file, so they are all asked for at once rather than region by region */
+    const regions = await Promise.all(manifest.regions.map(async (rel) => [rel, await get(rel)]));
+    const wanted = [...new Set(regions.flatMap(([, r]) => (Array.isArray(r.moves) ? r.moves : [])))];
+    const loaded = {}; await Promise.all(wanted.map(async (id) => { loaded[id] = await get(moveRel(id)); }));
+    const files = regions.map(([rel, r]) => gather(rel, r, (mrel, id) => loaded[id]));
+    return { base, manifest, settings, shared, about, files };
   }
   const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error(`${src} failed to load`)); document.head.appendChild(s); });
   /* The browser entry point: read the data, configure the engine, load the code moves the manifest

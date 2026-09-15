@@ -1,0 +1,68 @@
+{
+  "region": "spine",
+  "id": "seated_thoracic_rotation",
+  "name": "Seated thoracic rotation",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["chair"],
+  "muscles": { "primary": ["thoracic rotation (mobility)"], "secondary": ["obliques"] },
+  "upperBody": true,
+  "summary": "Arms crossed on the chest, turn the upper body as far as it goes each way, hips still.",
+  "setup": "Sit tall on a chair facing the phone, knees together, arms crossed. Turn the chest to one side as far as is comfortable, return, then the other side.",
+  "why": "Turning toward and away from the phone changes the shoulder width on screen, but not reliably enough to count. Logged by hand.",
+  "camera": { "height": "chest", "distance": "1.5 m", "posture": "sitting" },
+  "tempo": "Turn 2 s, hold 1 s, return 2 s.",
+  "dosage": "10 each way.",
+  "progression": "A stick across the shoulders; a slightly further turn.",
+  "regression": "Smaller turn.",
+  "contraindications": "Sharp pain in the mid-back during the turn.",
+  "faults": [
+    {
+      "id": "hips",
+      "label": "Hips turning too",
+      "cue": "Keep the knees pointing forward",
+      "tip": "Squeeze the knees together so the turn happens above the waist.",
+      "severity": 2
+    },
+    {
+      "id": "arms",
+      "label": "Pulling with the arms",
+      "cue": "Turn the ribs, not the arms",
+      "tip": "Yanking on the chair turns the shoulders without moving the spine underneath.",
+      "severity": 2
+    },
+    {
+      "id": "lean",
+      "label": "Leaning instead of turning",
+      "cue": "Turn tall, do not lean",
+      "tip": "Keep the head level and the trunk tall.",
+      "severity": 1
+    },
+    {
+      "id": "slump",
+      "label": "Slumping before the turn",
+      "cue": "Sit tall, then turn",
+      "tip": "Rotation needs a tall spine. From a slump, the mid-back barely moves.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A chair without arms.",
+    "stop": "Sharp mid-back pain.",
+    "cannotSee": "The turn.",
+    "regions": [
+      { "name": "Chest", "points": [{ "t": "Turns fully each way.", "tracked": false }] },
+      { "name": "Hips", "points": [{ "t": "Face the phone throughout.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 60, "foreL": 110, "armR": 60, "foreR": 110 },
+    "B": { "lean": -8, "armL": 40, "foreL": 120, "armR": 75, "foreR": 100 },
+    "work": { "back": 0.8, "oblique": 0.5 },
+    "props": [
+      { "kind": "box", "at": "hipL", "dx": 11, "w": 44, "dy": 2 }
+    ]
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "region": "dance",
+  "id": "kathak_tatkar",
+  "name": "Tatkar (Kathak footwork)",
+  "type": "hold",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["none", "ghungroo (optional)"],
+  "muscles": { "primary": ["calves", "tibialis anterior"], "secondary": ["quadriceps", "foot intrinsics"] },
+  "summary": "The flat-footed rhythmic footwork of Kathak: ta thei thei tat, at a tempo you can keep perfectly even.",
+  "setup": "Stand tall facing the phone, feet together, arms relaxed at the sides or in the classical position. Strike the floor with the flat of each foot in turn to the bol, keeping the body still above the waist. Practise at one tempo for the whole set.",
+  "why": "At speed the feet blur and the sound is the thing being judged — a phone can do neither. Set the timer, put the phone down, and log the practice.",
+  "camera": { "height": "hip", "distance": "2 m", "posture": "standing" },
+  "targets": [60, 120, 180, 300],
+  "defaultTarget": 120,
+  "tempo": "One tempo per set: vilambit (slow) before drut (fast).",
+  "dosage": "5–10 minutes daily, slow before fast.",
+  "progression": "Double then quadruple the tempo; add ghungroo; then longer compositions.",
+  "regression": "Slower tempo; shorter sets; softer floor.",
+  "contraindications": "Heel, shin or knee pain that builds — Kathak dancers are prone to foot and arch problems, so build the volume slowly.",
+  "faults": [
+    {
+      "id": "speed",
+      "label": "Going faster than you can keep even",
+      "cue": "Slow down — even beats first",
+      "tip": "Uneven fast tatkar teaches the wrong rhythm. Master the slow tempo before doubling it.",
+      "severity": 3
+    },
+    {
+      "id": "bounce2",
+      "label": "Body bouncing with the feet",
+      "cue": "Still above the waist",
+      "tip": "Everything above the hips stays quiet. A bobbing head or shoulders means the whole body is stamping.",
+      "severity": 2
+    },
+    {
+      "id": "knees3",
+      "label": "Bending the knees too much",
+      "cue": "Legs long, ankles do the work",
+      "tip": "Tatkar comes from the ankle and the flat of the foot, not from a squat.",
+      "severity": 2
+    },
+    {
+      "id": "flat",
+      "label": "Landing on the ball or heel",
+      "cue": "Whole sole, flat",
+      "tip": "The flat foot is what makes the sound. Ball-first is a different tradition and hard on the forefoot.",
+      "severity": 2
+    },
+    {
+      "id": "volume",
+      "label": "Too much, too soon",
+      "cue": "Build the minutes slowly",
+      "tip": "Foot and arch problems in Kathak come from volume added faster than the feet adapt. Warm up, and add minutes weekly.",
+      "severity": 3
+    },
+    {
+      "id": "breath",
+      "label": "Holding the breath",
+      "cue": "Keep breathing with the beat",
+      "tip": "Long footwork sets are endurance work. Breathe with the cycle rather than holding it.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Wooden floor, barefoot. Never concrete for long sets.",
+    "stop": "Pain in the heel, arch, shin or knee that lasts after practice.",
+    "cannotSee": "Everything that matters here — the sound, the evenness, the bol. The phone times the practice.",
+    "regions": [
+      {
+        "name": "Feet",
+        "points": [
+          { "t": "The whole sole strikes flat; the lift is small.", "tracked": false },
+          { "t": "Weight stays over the middle of the foot; arches stay lifted.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Body",
+        "points": [
+          { "t": "Tall and still above the waist — no bouncing.", "tracked": false },
+          { "t": "Knees soft but not bent into a squat.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Rhythm",
+        "points": [
+          { "t": "One tempo per set. Even beats matter more than fast ones.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 25, "armR": 25, "foreL": 45, "foreR": 45 },
+    "B": { "legR": 4, "shinR": 10, "armL": 25, "armR": 25, "foreL": 45, "foreR": 45 },
+    "work": { "calf": 1, "thigh": 0.3 }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "region": "hip",
+  "id": "kneeling_hf_stretch",
+  "name": "Hip flexor stretch (half-kneeling)",
+  "type": "hold",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["cushion for the knee"],
+  "muscles": { "primary": ["hip flexors", "rectus femoris"], "secondary": [] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Half-kneeling, tuck the pelvis and shift forward until the front of the kneeling hip stretches.",
+  "setup": "Kneel on one knee with the other foot forward, side-on to the phone with the kneeling leg nearest. Tuck the tailbone under, squeeze the buttock of the kneeling side, and glide forward a little until the front of that hip pulls. Stay tall. Hold.",
+  "brief": "Kneel on one knee with the other foot forward. Tuck the tailbone under, squeeze the buttock of the kneeling side, and glide forward until the front of that hip pulls.",
+  "why": "The stretch depends on staying upright: the timer runs while the shoulder–hip line stays near vertical, which is exactly when the pelvis is tucked rather than the back arching.",
+  "targets": [20, 30, 45, 60],
+  "defaultTarget": 30,
+  "hold": { "conditions": [{ "metric": "trunk", "min": 72 }] },
+  "tempo": "Ease in over 5 s, hold, ease out.",
+  "dosage": "3 × 30 s each side.",
+  "progression": "Raise the same-side arm overhead; rear foot on a step.",
+  "regression": "Less forward glide.",
+  "contraindications": "Kneecap pain on the kneeling side, or lower back pain.",
+  "faults": [
+    {
+      "id": "arch",
+      "label": "Arching instead of tucking",
+      "cue": "Tuck the tailbone under",
+      "tip": "The stretch is felt when the pelvis tucks under. Arching the back only feels like more.",
+      "severity": 3
+    },
+    {
+      "id": "lean",
+      "label": "Leaning the trunk forward",
+      "cue": "Stay tall, chest up",
+      "tip": "Glide the hips forward; keep the chest over the hips.",
+      "severity": 2
+    },
+    {
+      "id": "lunge",
+      "label": "Lunging forward from the knee",
+      "cue": "Tuck the tailbone first",
+      "tip": "Sliding the hips forward without the pelvic tuck stretches the front of the joint, not the muscle.",
+      "severity": 2
+    },
+    {
+      "id": "twist",
+      "label": "Hips turning",
+      "cue": "Both hip bones forward",
+      "tip": "The pelvis stays square; turning takes the stretch off the hip flexor.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A cushion or folded mat under the knee.",
+    "stop": "Kneecap pain or lower back pain.",
+    "cannotSee": "The pelvis tucking — it reads the trunk angle as a proxy.",
+    "regions": [
+      {
+        "name": "Pelvis",
+        "points": [
+          { "t": "Tailbone tucked, buttock squeezed on the kneeling side.", "tracked": false }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Tall and upright throughout the hold.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": 0,
+      "thigh": -8,
+      "shin": -100,
+      "thighF": 90,
+      "shinF": 0,
+      "uarm": 10,
+      "farm": 10
+    },
+    "B": {
+      "face": "right",
+      "torso": 0,
+      "thigh": -22,
+      "shin": -105,
+      "thighF": 100,
+      "shinF": 0,
+      "uarm": 10,
+      "farm": 10
+    },
+    "work": { "thigh": 0.8, "glute": 0.4 }
+  }
+}

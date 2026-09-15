@@ -1,0 +1,108 @@
+{
+  "region": "gym",
+  "id": "pike_push_up",
+  "name": "Pike push-up",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "advanced",
+  "equipment": ["none"],
+  "muscles": { "primary": ["anterior deltoid", "triceps"], "secondary": ["upper trapezius", "core"] },
+  "upperBody": true,
+  "summary": "Hips high in an inverted V, lower the head toward the floor between the hands and press up.",
+  "setup": "Hands and feet on the floor, hips pushed high so the body makes an upside-down V, side-on to the phone at floor level. Bend the elbows to lower the top of the head toward the floor, then press back up.",
+  "brief": "Hands and feet on the floor, hips pushed high so the body makes an upside-down V. Bend the elbows to lower the top of the head toward the floor, then press back up.",
+  "why": "From the side the elbow angle closes each rep, so reps are counted.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "standing" },
+  "progress": { "metric": "elbow", "start": "calibrated", "target": 95 },
+  "tempo": "Down 2 s, up 1 s.",
+  "dosage": "3 × 6–10.",
+  "progression": "Feet on a box.",
+  "regression": "Push-up; smaller range.",
+  "contraindications": "Shoulder or wrist pain; high blood pressure when the head is low.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "neck6",
+      "label": "Head landing on the floor",
+      "cue": "Crown lowers between the hands",
+      "tip": "The head goes down between the hands, and never takes weight.",
+      "severity": 3
+    },
+    {
+      "id": "hips",
+      "label": "Hips dropping",
+      "cue": "Hips high",
+      "tip": "Keep the hips stacked over the shoulders so the press is vertical.",
+      "severity": 2
+    },
+    {
+      "id": "flat",
+      "label": "Hips dropping out of the pike",
+      "cue": "Hips high, make a V",
+      "tip": "As the hips drop it becomes a normal push-up and the shoulders stop working.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Cutting depth",
+      "cue": "Head to the floor",
+      "tip": "Lower until the head nearly touches.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor.",
+    "stop": "Shoulder or wrist pain, or dizziness.",
+    "cannotSee": "The elbow flare.",
+    "regions": [
+      { "name": "Hips", "points": [{ "t": "High, over the shoulders.", "tracked": false }] },
+      {
+        "name": "Elbows",
+        "points": [
+          { "t": "Bend to lower the head; press to straight.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "left",
+      "torso": 130,
+      "neck": 40,
+      "thigh": -25,
+      "shin": -25,
+      "foot": -80,
+      "uarm": 0,
+      "farm": 0
+    },
+    "B": {
+      "face": "left",
+      "torso": 130,
+      "neck": 40,
+      "thigh": -25,
+      "shin": -25,
+      "foot": -80,
+      "uarm": -50,
+      "farm": 55
+    },
+    "work": { "shoulder": 1, "arm": 0.8 },
+    "anchor": ["ft", "wr", "wrF"]
+  }
+}

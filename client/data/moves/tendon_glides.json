@@ -1,0 +1,69 @@
+{
+  "region": "elbow",
+  "id": "tendon_glides",
+  "name": "Tendon glides",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["finger flexors (glide)"], "secondary": [] },
+  "upperBody": true,
+  "sided": { "limb": "arm", "by": "pick" },
+  "summary": "Move the fingers through straight, hook, fist, tabletop and straight fist positions.",
+  "setup": "Hold the hand up, fingers straight. Curl into a hook (fingertips to the base of the fingers), then a full fist, then a tabletop (knuckles bent, fingers straight), then a straight fist. Return to straight each time.",
+  "why": "Finger positions are below what the pose model tracks. Logged by hand.",
+  "tempo": "Hold each position 3 s.",
+  "dosage": "10 cycles, 3 times a day.",
+  "progression": "Add a light stretch at each position.",
+  "regression": "Fewer positions.",
+  "contraindications": "Sharp pain or catching in a finger.",
+  "faults": [
+    {
+      "id": "force",
+      "label": "Forcing a stiff finger",
+      "cue": "Gentle — to comfortable stiffness",
+      "tip": "Glides are about moving the tendons, not stretching. Force makes a stiff hand stiffer.",
+      "severity": 2
+    },
+    {
+      "id": "skip",
+      "label": "Skipping positions",
+      "cue": "Move through every shape",
+      "tip": "Each shape glides a different tendon; go through them all.",
+      "severity": 1
+    },
+    {
+      "id": "wrist",
+      "label": "Wrist bending",
+      "cue": "Keep the wrist still",
+      "tip": "Keep the wrist neutral so the glide is in the fingers.",
+      "severity": 1
+    },
+    {
+      "id": "hold2",
+      "label": "Not holding each shape",
+      "cue": "Hold each shape three seconds",
+      "tip": "The hold is what glides the tendon through its sheath.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Anywhere.",
+    "stop": "Sharp pain in a finger.",
+    "cannotSee": "The fingers.",
+    "regions": [
+      {
+        "name": "Fingers",
+        "points": [
+          { "t": "Straight → hook → fist → tabletop → straight fist.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 8, "armR": 20, "foreR": 150 },
+    "B": { "armL": 8, "armR": 20, "foreR": 150 },
+    "work": { "forearm": 0.8 }
+  }
+}

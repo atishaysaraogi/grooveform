@@ -1,0 +1,86 @@
+{
+  "region": "gym",
+  "id": "chin_up",
+  "name": "Chin-up",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "advanced",
+  "equipment": ["pull-up bar"],
+  "muscles": { "primary": ["biceps", "latissimus dorsi"], "secondary": ["rhomboids", "core"] },
+  "upperBody": true,
+  "summary": "Hang with palms facing you, shoulder-width, pull the chin over the bar, lower fully.",
+  "setup": "Hang from the bar, palms facing you, hands shoulder-width, facing the phone. Pull until the chin clears the bar, lower to straight arms.",
+  "brief": "Hang from the bar, palms facing you, hands shoulder-width. Pull until the chin clears the bar, lower to straight arms.",
+  "why": "Facing the phone the elbow angle closes and opens each rep, so reps are counted.",
+  "camera": { "height": "chest", "distance": "2.5 m", "posture": "standing" },
+  "progress": { "metric": "elbow", "start": "calibrated", "target": 55 },
+  "tempo": "Up 1–2 s, down 2–3 s.",
+  "dosage": "3 × as many as possible.",
+  "progression": "Weighted.",
+  "regression": "Band-assisted; negatives.",
+  "contraindications": "Elbow or wrist pain with the underhand grip.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "kip",
+      "label": "Swinging",
+      "cue": "Dead still",
+      "tip": "No momentum; use a band if needed.",
+      "severity": 2
+    },
+    {
+      "id": "kip2",
+      "label": "Kicking the legs",
+      "cue": "Legs still — pull with the arms",
+      "tip": "Swinging turns a strength exercise into a party trick.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Not lowering fully",
+      "cue": "Straight arms at the bottom",
+      "tip": "Each rep starts from a full hang.",
+      "severity": 1
+    },
+    {
+      "id": "wrist3",
+      "label": "Wrist pain in the grip",
+      "cue": "Wider grip, or use rings",
+      "tip": "A fully supinated fixed bar can bother the wrist. Rings let the hand rotate.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A bar rated for body weight.",
+    "stop": "Elbow or shoulder pain.",
+    "cannotSee": "The chin clearing the bar.",
+    "regions": [
+      { "name": "Arms", "points": [{ "t": "Straight at the bottom; full pull.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 172, "armR": 172, "foreL": 178, "foreR": 178, "legL": 4, "legR": 4 },
+    "B": { "armL": 130, "armR": 130, "foreL": 176, "foreR": 176, "legL": 4, "legR": 4 },
+    "work": { "arm": 1, "back": 0.8 },
+    "anchor": "wrL",
+    "raise": 16,
+    "props": [{ "kind": "bar", "at": "wrL", "to": "wrR" }]
+  }
+}

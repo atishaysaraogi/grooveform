@@ -1,0 +1,90 @@
+{
+  "region": "gym",
+  "id": "jump_squat",
+  "name": "Jump squat",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "advanced",
+  "equipment": ["none"],
+  "muscles": { "primary": ["quadriceps", "gluteus maximus", "calves"], "secondary": ["hamstrings", "core"] },
+  "summary": "Squat down and jump up, landing softly back into the squat.",
+  "setup": "Face the phone, feet shoulder-width. Squat to about a quarter depth, jump as high as you can, and land quietly with the knees bending to absorb it.",
+  "brief": "Stand with the feet shoulder-width. Squat to about a quarter depth, jump as high as you can, and land quietly with the knees bending to absorb it.",
+  "why": "Facing the phone the knee angle dips before each jump, so reps are counted. Landing mechanics happen too fast to judge reliably.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 120 },
+  "minMs": 500,
+  "tempo": "Explosive up, soft landing.",
+  "dosage": "3 × 8.",
+  "progression": "Deeper squat; continuous reps.",
+  "regression": "Small hops; squat with a heel raise.",
+  "contraindications": "Knee or ankle injury; anyone told to avoid impact.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "stiff",
+      "label": "Landing with stiff legs",
+      "cue": "Land soft",
+      "tip": "Bend the knees and hips on landing so it is quiet.",
+      "severity": 3
+    },
+    {
+      "id": "valgus",
+      "label": "Knees caving on landing",
+      "cue": "Knees out",
+      "tip": "Land with the knees over the toes.",
+      "severity": 3
+    },
+    {
+      "id": "land",
+      "label": "Landing stiff and loud",
+      "cue": "Land quiet, knees soft",
+      "tip": "Noise is force. Absorb the landing through the hips and knees.",
+      "severity": 3
+    },
+    {
+      "id": "valgus2",
+      "label": "Knees caving on landing",
+      "cue": "Knees out on landing",
+      "tip": "The landing is where knees collapse inward. Stop the set when they do.",
+      "severity": 3
+    }
+  ],
+  "guide": {
+    "surface": "A floor with some give; not concrete.",
+    "stop": "Knee or ankle pain.",
+    "cannotSee": "Landing mechanics — too fast.",
+    "regions": [
+      {
+        "name": "Knees",
+        "points": [
+          { "t": "Dip into a quarter squat before every jump.", "tracked": true },
+          { "t": "Bend on the landing; track over the toes.", "tracked": false }
+        ]
+      },
+      { "name": "Feet", "points": [{ "t": "Land quietly, whole foot.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "legL": 8, "legR": 8, "squat": 0.5, "armL": 40, "armR": 40 },
+    "B": { "legL": 4, "legR": 4, "armL": 170, "armR": 170 },
+    "work": { "thigh": 1, "glute": 0.9, "calf": 0.8 },
+    "lift": 14
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "region": "dance",
+  "id": "garba_tran_taali",
+  "name": "Garba — tran taali (three claps)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["calves", "obliques", "shoulders"] },
+  "summary": "The three-clap Garba: a deeper dip and a clap low, so the legs work far harder than in do taali.",
+  "setup": "Face the phone about 2.5 m away, camera at hip height. Step, step, then bend the knees and clap low near the floor before rising to clap high. Keep the back long as you fold.",
+  "brief": "Step, step, then bend the knees and clap low near the floor before rising to clap high. Keep the back long as you fold.",
+  "why": "The claps are counted from the hands meeting. The low dip is where the legs work, and that is yours to feel.",
+  "calibrationPose": "Standing with the hands apart at chest height.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "targets": [12, 16, 24, 32],
+  "defaultTarget": 16,
+  "progress": { "metric": { "kind": "dist", "pts": ["WR", "oWR"] }, "start": "calibrated", "target": 22 },
+  "display": { "label": "clap", "unit": "%", "from": "abs" },
+  "tempo": "Even and unhurried; the dip takes a beat of its own.",
+  "dosage": "3 × 16, or a few minutes continuous.",
+  "progression": "Deeper dip; faster tempo; longer continuous sets.",
+  "regression": "Shallower dip; keep both claps at chest height.",
+  "contraindications": "Knee pain in the deep dip; lower-back pain when folding.",
+  "faults": [
+    {
+      "id": "round",
+      "label": "Rounding the back to reach low",
+      "cue": "Bend the knees, keep the back long",
+      "tip": "The low clap comes from bending the knees, not from folding the spine.",
+      "severity": 3
+    },
+    {
+      "id": "shallow_dip",
+      "label": "Skipping the dip",
+      "cue": "Bend the knees on the low clap",
+      "tip": "Without the dip this is just do taali. The dip is where the legs are trained.",
+      "severity": 2
+    },
+    {
+      "id": "heels2",
+      "label": "Heels lifting in the dip",
+      "cue": "Keep the heels down",
+      "tip": "Rising heels mean the dip is going forward instead of down. Sit the hips back a little.",
+      "severity": 2
+    },
+    {
+      "id": "rush2",
+      "label": "Rushing the low clap",
+      "cue": "Give the dip a full beat",
+      "tip": "Snatching the low clap is how knees and backs get sore over a long night of Garba.",
+      "severity": 2
+    },
+    {
+      "id": "breath2",
+      "label": "Holding the breath",
+      "cue": "Breathe out as you rise",
+      "tip": "These are long, continuous sets. Breathing with the rhythm is what makes them last.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Floor with a little give; barefoot or soft shoes.",
+    "stop": "Knee pain in the dip, or lower-back pain.",
+    "cannotSee": "The depth of the dip and whether the back stayed long.",
+    "regions": [
+      {
+        "name": "Legs",
+        "points": [
+          { "t": "Knees bend for the low clap; heels stay down.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Back",
+        "points": [
+          { "t": "Long and flat as you dip — bend the knees, not the spine.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Clap low near the knees, then high — three in the cycle.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 100, "armR": 100, "foreL": 55, "foreR": 55 },
+    "B": { "squat": 0.6, "armL": 20, "armR": 20, "foreL": 10, "foreR": 10, "legL": 12, "legR": 12 },
+    "work": { "thigh": 1, "glute": 0.6, "shoulder": 0.4 }
+  }
+}

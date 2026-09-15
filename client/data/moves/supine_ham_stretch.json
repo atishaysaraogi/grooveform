@@ -1,0 +1,94 @@
+{
+  "region": "knee",
+  "id": "supine_ham_stretch",
+  "name": "Hamstring stretch (lying)",
+  "type": "hold",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["strap or towel"],
+  "muscles": { "primary": ["hamstrings"], "secondary": ["calves"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "On your back, a strap around the foot, raise the straight leg until the back of the thigh pulls.",
+  "setup": "Lie on your back, side-on to the phone at floor level, working leg nearest. Loop a strap or towel around the foot, keep the knee straight and draw the leg up toward vertical until you feel the stretch. Hold.",
+  "brief": "Lie on your back. Loop a strap or towel around the foot, keep the knee straight, and draw the leg up toward vertical until the hamstring pulls.",
+  "why": "The leg angle from the floor shows how far up it is, so the timer only runs while the leg is actually held high.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+  "targets": [20, 30, 45, 60],
+  "defaultTarget": 30,
+  "hold": { "conditions": [{ "metric": "thigh_raise", "min": 135 }] },
+  "tempo": "Ease in over 5 s, hold, ease out.",
+  "dosage": "3 × 30 s each leg.",
+  "progression": "Take the leg higher; point the toes up.",
+  "regression": "Bend the other knee; stop lower.",
+  "contraindications": "Pins and needles down the leg, or back pain during the hold.",
+  "faults": [
+    {
+      "id": "bend",
+      "label": "Knee bending to cheat the stretch",
+      "cue": "Keep the knee straight",
+      "tip": "A bent knee moves the stretch off the hamstring. Lower the leg until it can stay straight.",
+      "severity": 2
+    },
+    {
+      "id": "hiplift",
+      "label": "Hip lifting off the floor",
+      "cue": "Keep the hip down",
+      "tip": "Keep the other leg and both hips on the floor; the stretch should be in the thigh, not the back.",
+      "severity": 2
+    },
+    {
+      "id": "other",
+      "label": "Other leg lifting off the floor",
+      "cue": "Other leg flat and heavy",
+      "tip": "If the other leg rises the pelvis has tipped and the stretch is coming from the back.",
+      "severity": 2
+    },
+    {
+      "id": "bounce",
+      "label": "Bouncing into the stretch",
+      "cue": "Hold still — no bouncing",
+      "tip": "A steady hold lengthens the muscle; bouncing makes it tighten to protect itself.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat.",
+    "stop": "Nerve-like tingling, or pain in the lower back.",
+    "cannotSee": "The knee bending slightly, and the toes pointing.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Knee straight, leg held toward vertical.", "tracked": true }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Hips and shoulders flat on the floor.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 125,
+      "shin": 125,
+      "foot": 125,
+      "thighF": 90,
+      "shinF": 90,
+      "uarm": 130,
+      "farm": 150
+    },
+    "B": {
+      "face": "right",
+      "torso": -90,
+      "thigh": 155,
+      "shin": 155,
+      "foot": 155,
+      "thighF": 90,
+      "shinF": 90,
+      "uarm": 150,
+      "farm": 165
+    },
+    "work": { "ham": 1, "calf": 0.3 }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "region": "dance",
+  "id": "dance_warmup_neck",
+  "name": "Griva bhedha (neck warm-up)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["neck"], "secondary": ["upper trapezius"] },
+  "summary": "The classical neck movements — side to side and turning — done slowly as a warm-up before any dance practice.",
+  "setup": "Sit or stand tall facing the phone, about 1.5 m away, camera at chest height. Slide the head from side to side (sundari), then turn it left and right, keeping the shoulders completely still.",
+  "brief": "Sit or stand tall. Slide the head from side to side (sundari), then turn it left and right, keeping the shoulders completely still.",
+  "why": "Facing the camera, the head sliding across the shoulder line is counted. Whether the movement is a slide or a tilt is too subtle for a phone to separate.",
+  "calibrationPose": "Sitting or standing tall, head centred, shoulders level.",
+  "camera": { "height": "chest", "distance": "1.5 m", "posture": "sitting" },
+  "upperBody": true,
+  "targets": [8, 10, 16],
+  "defaultTarget": 10,
+  "progress": {
+    "metric": { "kind": "gap", "pts": ["NOSE", "mSH"], "abs": true, "per": ["SH", "oSH"] },
+    "start": "calibrated",
+    "target": 14,
+    "targetIsDelta": true
+  },
+  "display": { "label": "slide", "unit": "%", "from": "start" },
+  "tempo": "Two seconds each way; never fast.",
+  "dosage": "10 each way before every practice.",
+  "progression": "Larger range once it is comfortable; add the eye movements.",
+  "regression": "Smaller range; seated with the back supported.",
+  "contraindications": "Dizziness, pain shooting into the arm, or any neck injury not yet assessed.",
+  "faults": [
+    {
+      "id": "shoulders3",
+      "label": "Shoulders moving with the head",
+      "cue": "Shoulders still — head only",
+      "tip": "The shoulders stay square and level. If they follow the head, the movement has left the neck.",
+      "severity": 2
+    },
+    {
+      "id": "tilt2",
+      "label": "Tilting instead of sliding",
+      "cue": "Slide the head sideways",
+      "tip": "Sundari is a sideways slide, ears staying level — not a tilt of the head toward the shoulder.",
+      "severity": 2
+    },
+    {
+      "id": "fast3",
+      "label": "Moving too quickly",
+      "cue": "Slower — two seconds each way",
+      "tip": "This is a warm-up for a joint with a lot of small structures. Speed is how people strain it.",
+      "severity": 3
+    },
+    {
+      "id": "force",
+      "label": "Forcing the end of the range",
+      "cue": "Stay inside comfortable",
+      "tip": "Warm-ups move through the easy range. Pushing into the end is a stretch, and a different thing.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "Sitting tall on a stool, or standing.",
+    "stop": "Dizziness, or any pain or tingling into the arm.",
+    "cannotSee": "Whether the head is sliding or tilting, and the eye movements that go with it.",
+    "regions": [
+      {
+        "name": "Head",
+        "points": [
+          { "t": "Slides sideways with the ears staying level; then turns left and right.", "tracked": true },
+          { "t": "Chin stays level throughout — no nodding.", "tracked": false }
+        ]
+      },
+      { "name": "Shoulders", "points": [{ "t": "Square, level and completely still.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 12, "armR": 12 },
+    "B": { "headTilt": 0, "armL": 12, "armR": 12 },
+    "work": { "neck": 1 }
+  }
+}

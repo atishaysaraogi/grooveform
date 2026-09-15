@@ -1,0 +1,88 @@
+{
+  "region": "ankle",
+  "id": "tibialis_raise",
+  "name": "Tibialis raise",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["wall"],
+  "muscles": { "primary": ["tibialis anterior"], "secondary": [] },
+  "summary": "Back against a wall, feet a step out, lift the toes and forefoot off the floor with the heels down.",
+  "setup": "Lean your back on a wall with the feet 30–40 cm in front of it, side-on to the phone. Keeping the heels down, lift the toes and balls of both feet as high as you can, then lower.",
+  "brief": "Lean your back on a wall with the feet 30–40 cm in front of it. Keeping the heels down, lift the toes and balls of both feet as high as you can, then lower.",
+  "why": "The ankle angle closing as the toes rise counts each rep from the side. The movement is small, so only the count is trusted.",
+  "progress": { "metric": "ankle", "start": "calibrated", "target": -20, "targetIsDelta": true },
+  "tempo": "Up 1 s, hold 1 s, down 2 s.",
+  "dosage": "3 × 15–20.",
+  "progression": "Feet further from the wall; single leg.",
+  "regression": "Seated toe lifts.",
+  "contraindications": "Shin pain that persists after the set.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "heels",
+      "label": "Heels lifting",
+      "cue": "Keep the heels planted",
+      "tip": "The heels stay down; if they lift you are rocking, not lifting the toes.",
+      "severity": 2
+    },
+    {
+      "id": "bounce",
+      "label": "Bouncing the reps",
+      "cue": "Pause at the top",
+      "tip": "Hold the toes up for a second on every rep.",
+      "severity": 1
+    },
+    {
+      "id": "toes",
+      "label": "Curling the toes",
+      "cue": "Lift the whole foot",
+      "tip": "Curling the toes upward is a smaller muscle. Bring the whole forefoot up as a block.",
+      "severity": 1
+    },
+    {
+      "id": "lean",
+      "label": "Sliding down the wall",
+      "cue": "Back stays put",
+      "tip": "Sliding down turns it into a squat and takes the shin out of the movement.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A wall and a floor with grip.",
+    "stop": "Sharp shin pain.",
+    "cannotSee": "Whether the heels stay fully planted.",
+    "regions": [
+      { "name": "Feet", "points": [{ "t": "Toes and forefoot lift; heels stay down.", "tracked": true }] },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Back resting on the wall, body straight.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "face": "right", "torso": -8, "thigh": 12, "shin": 0, "foot": 0, "uarm": 8, "farm": 8 },
+    "B": { "face": "right", "torso": -8, "thigh": 12, "shin": 0, "foot": 28, "uarm": 8, "farm": 8 },
+    "work": { "calf": 0.3 },
+    "wall": "behind"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "region": "shoulder",
+  "id": "shrug_db",
+  "name": "Shoulder shrug",
+  "type": "reps",
+  "view": "front",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["dumbbells or bags"],
+  "upperBody": true,
+  "muscles": { "primary": ["upper trapezius"], "secondary": ["levator scapulae"] },
+  "summary": "Holding weights at the sides, lift the shoulders straight up toward the ears and lower slowly.",
+  "setup": "Face the phone with a weight in each hand, arms straight. Lift the shoulders straight up, pause, lower fully.",
+  "brief": "Stand with a weight in each hand, arms straight. Lift the shoulders straight up, pause, then lower fully.",
+  "why": "Facing the phone the shoulders rise toward the ears, so the ear–shoulder distance shrinking counts each rep.",
+  "progress": { "metric": "shrug", "start": "calibrated", "target": -15, "targetIsDelta": true },
+  "tempo": "Up 1 s, hold 1 s, down 2 s.",
+  "dosage": "3 × 12.",
+  "progression": "Heavier; pause at the top.",
+  "regression": "Lighter or no weight.",
+  "contraindications": "Neck pain during the lift.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "roll",
+      "label": "Rolling the shoulders",
+      "cue": "Straight up, straight down",
+      "tip": "Rolling adds nothing and grinds the joint; lift straight up.",
+      "severity": 2
+    },
+    {
+      "id": "circle",
+      "label": "Rolling the shoulders",
+      "cue": "Straight up, straight down",
+      "tip": "Rolling grinds the shoulder blade. Lift straight up toward the ears and lower under control.",
+      "severity": 2
+    },
+    {
+      "id": "neck",
+      "label": "Jutting the chin",
+      "cue": "Chin in, neck long",
+      "tip": "Keep the neck long and the eyes level.",
+      "severity": 1
+    },
+    {
+      "id": "hold",
+      "label": "No pause at the top",
+      "cue": "Squeeze one second at the top",
+      "tip": "A brief hold at the top is where the muscle actually shortens under load.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Standing anywhere.",
+    "stop": "Neck pain.",
+    "cannotSee": "The shoulders rolling forward or back.",
+    "regions": [
+      {
+        "name": "Shoulders",
+        "points": [
+          { "t": "Lift straight toward the ears; lower fully.", "tracked": true }
+        ]
+      },
+      { "name": "Neck", "points": [{ "t": "Long, chin in.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 6, "armR": 6 },
+    "B": { "armL": 5, "armR": 5, "lean": 0 },
+    "work": { "neck": 1, "back": 0.4 }
+  }
+}

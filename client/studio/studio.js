@@ -80,7 +80,7 @@
   function entryToSpec(ex) {
     const raw = ex.entry; const r = C.resolveEntry(raw, SHARED(), ex.id); const st = SETTINGS();
     const s = blankSpec();
-    const grpCam = (C.data.files.find((f) => f.name === 'moves/' + ex.file) || { json: {} }).json.camera;
+    const grpCam = (C.data.files.find((f) => f.name === 'regions/' + ex.file) || { json: {} }).json.camera;
     Object.assign(s, {
       _fileCamera: grpCam ? { ...grpCam } : null,
       id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
@@ -91,7 +91,7 @@
       sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
       muscles: { ...((raw.pose && raw.pose.work) || {}) }, pose: raw.pose ? JSON.parse(JSON.stringify(raw.pose)) : null, figure: raw.figure || null,
       minMs: r.minMs, focus: r.focus, order: raw.order, vetted: !!r.vetted,
-      _file: ex.file, _replaces: ex.id, _key: ex.id, created: Date.now(),
+      _file: 'moves/' + ex.id + '.json', _region: regionOf(ex.file), _replaces: ex.id, _key: ex.id, created: Date.now(),
       _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
     if (r.progress) s.progress = { targetIsDelta: false, ...r.progress };
@@ -165,22 +165,36 @@
     e._studio = { screen: s.screen || {}, ptType: s.ptType, notes: s.notes || '', edited: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, ...(s._tuned ? { tuned: s._tuned } : {}) };
     return e;
   }
-  /* the file this draft belongs in, with the draft in it (replacing the move it was opened from) */
-  const fileNames = () => (C.data ? C.data.manifest.moves : []).map((p) => p.replace(/^moves\//, '').replace(/\.json$/, ''));
-  function targetFileName(s) { if (s._file) return s._file.replace(/^moves\//, '').replace(/\.json$/, ''); const byGroup = (C.data ? C.data.files : []).find((f) => f.json.group === s.group); return byGroup ? byGroup.name.replace(/^moves\//, '').replace(/\.json$/, '') : (fileNames()[0] || 'knee'); }
-  function fileWith(s, name) {
-    const rel = 'moves/' + name + '.json';
-    const existing = C.data.files.find((f) => f.name === rel);
-    const json = existing ? JSON.parse(JSON.stringify(existing.json)) : { _about: (C.data.files[0] || { json: {} }).json._about, region: name, group: s.group || name, order: 2000 + fileNames().length * 100, camera: s.camera, sources: [], moves: [] };
+  /* One exercise, one file: moves/<id>.json. A move still belongs to a region — that is where its
+     defaults (camera, group, order, sources) come from, and which list puts it in order — so saving
+     writes one move file and, for a move the region has not seen before, adds its id to that
+     region's list. `regionWith` assembles the region as it would read with this draft in it, which
+     is what the checks run against. */
+  /* a region is named by its file — two of them (gym_lower, gym_upper) share the `region` field */
+  const regionOf = (name) => String(name || '').replace(/^regions\//, '').replace(/\.json$/, '');
+  const regionNames = () => (C.data ? C.data.files : []).map((f) => regionOf(f.name));
+  function targetRegion(s) {
+    const files = C.data ? C.data.files : [];
+    if (s._region && files.some((f) => regionOf(f.name) === s._region)) return s._region;
+    const holder = files.find((f) => f.json.moves.some((m) => m.id === (s._replaces || s.id)));
+    if (holder) return regionOf(holder.name);
+    const byGroup = files.find((f) => f.json.group === s.group);
+    return regionOf(byGroup ? byGroup.name : (files[0] ? files[0].name : 'knee'));
+  }
+  function regionWith(s, region) {
+    const files = C.data ? C.data.files : [];
+    const file = files.find((f) => regionOf(f.name) === region) || files[0];
+    const json = file ? JSON.parse(JSON.stringify(file.json)) : { region, group: s.group || region, order: 2000, camera: s.camera, sources: [], moves: [] };
     const entry = specToEntry(s);
+    if (json.region) entry.region = json.region;
     if (s.group && s.group !== json.group) entry.group = s.group;
     const i = json.moves.findIndex((m) => m.id === (s._replaces || s.id) || m.id === s.id);
     if (i >= 0) json.moves[i] = entry; else json.moves.push(entry);
-    return { rel, json, entry, isNew: !existing };
+    return { rel: 'moves/' + s.id + '.json', name: file ? file.name : 'regions/' + region + '.json', json, entry, isNew: i < 0 };
   }
-  function catalogProblems(s, name) {
+  function catalogProblems(s, region) {
     if (!C.data) return ['the library has not loaded'];
-    try { const { rel, json } = fileWith(s, name); const others = C.data.files.filter((f) => f.name !== rel).flatMap((f) => f.json.moves.map((m) => m.id)); return C.checkFile(json, rel, C.data, others); }
+    try { const { name, json } = regionWith(s, region); const others = C.data.files.filter((f) => f.name !== name).flatMap((f) => f.json.moves.map((m) => m.id)); return C.checkFile(json, name, C.data, others); }
     catch (e) { return [e.message]; }
   }
   const builtin = (id) => LIB.get(id);
@@ -399,7 +413,7 @@
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
       case 'guide': return !!(s.guide.surface && s.guide.stop && s.guide.cannotSee);
-      case 'export': return catalogProblems(s, targetFileName(s)).length === 0;
+      case 'export': return catalogProblems(s, targetRegion(s)).length === 0;
     }
     return false;
   }
@@ -409,10 +423,18 @@
     const sel = $('move-select'); const specs = Object.entries(state.moves).sort((a, b) => (a[1].created || 0) - (b[1].created || 0));
     const opt = (v, t, dis) => `<option value="${esc(v)}" ${dis ? 'disabled' : ''} ${state.current === v ? 'selected' : ''}>${esc(t)}</option>`;
     sel.innerHTML = opt('', specs.length ? 'Your moves' : '— New move to begin —', true) + specs.map(([key, s]) => opt(key, (s.name || 'Untitled') + (SPEC.checkSpec(s).length ? ' ·' : ' ✓'))).join('')
-      + opt('', 'Library moves — open one, then “Edit a copy”', true) + LIB.all().filter((e) => !state.moves[e.id]).map((e) => opt(e.id, e.name + (e.catalog ? '' : ' (code)'))).join('');
+      + opt('', 'Library moves — open one to edit a copy of it', true) + LIB.all().filter((e) => !state.moves[e.id]).map((e) => opt(e.id, e.name + (e.catalog ? '' : ' (code)'))).join('');
     sel.value = state.current || '';
   }
-  $('move-select').onchange = async (e) => { state.current = e.target.value || null; state.step = isBuiltin(state.current) ? 'record' : state.step; await loadTakes(); saveState(); render(); };
+  /* Picking a library move opens it as an editable copy. Looking without editing was the old
+     default and it cost a click every time — nothing is written anywhere until step 7 saves it, so
+     there is nothing to protect. A code move has no data to copy, so it stays read-only. */
+  $('move-select').onchange = async (e) => {
+    const id = e.target.value || null;
+    const ex = id && !state.moves[id] ? builtin(id) : null;
+    if (ex && ex.catalog) return editCopy(id);
+    state.current = id; state.step = isBuiltin(state.current) ? 'record' : state.step; await loadTakes(); saveState(); render();
+  };
   $('btn-new').onclick = async () => { const s = blankSpec(); const key = 'draft_' + uid(); s._key = key; state.moves[key] = s; state.current = key; state.step = 'screen'; state.takes = []; saveState(); render(); };
   async function loadTakes() { state.takes = state.current ? await idb.forMove(state.current) : []; resim(); }
   /* A draft's id can change while it is being named; takes stay attached through the storage key. */
@@ -569,7 +591,7 @@
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const labels = takeLabels();
     const sided = s ? !!s.sided : !!(ex && ex.sided);
-    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault named in step 2, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
+    return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>moves/${esc(ex.id)}.json</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault named in step 2, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
         <p class="muted" style="font-size:.9rem"><b>The quick way:</b> one long video — or one long recording — with everything in it: a few clean reps, one deliberately showing each fault, a borderline one. <b>Upload a video…</b> and the Studio cuts it into its reps (the set-up before the first and the tail after the last are dropped), then you say what each rep shows from the list on its row. As many examples of each as you like. A brand-new move has nothing to find reps with yet, so it stays whole until the progress measure is set in step 4 — then <b>Split into reps</b> on its row.</p>
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
@@ -612,7 +634,7 @@
   }
   function editCopy(id) {
     const ex = builtin(id); if (!ex || !ex.catalog) return;
-    try { const s = entryToSpec(ex); state.moves[s._key] = s; state.current = s._key; state.step = 'describe'; saveState(); loadTakes().then(render); toast('Editing a copy of ' + ex.name + ' — save it in step 7'); }
+    try { const s = entryToSpec(ex); state.moves[s._key] = s; state.current = s._key; state.step = 'describe'; saveState(); loadTakes().then(render); toast('Editing ' + ex.name + ' — nothing is written until step 7 saves it'); }
     catch (e) { toast('Could not open: ' + e.message, 6000); }
   }
   function wireRecord() {
@@ -1518,7 +1540,7 @@
 
   /* ===================== 7 · check & export ===================== */
   function moveFileSource(s) {
-    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', '_tuned', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
+    const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_region', '_replaces', '_inherited', '_fileCamera', '_tuned', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
     const credit = state.pt.name ? ` Authored with ${state.pt.name}.` : '';
     return `/* ${s.name} — written in OnTrack Studio.${credit}
    A declarative move: no code, only measurements and thresholds. It is compiled by
@@ -1536,8 +1558,8 @@
   let devSave = null;   // null = not asked yet, false = not available (static site), { files } = the dev server will write files
   async function probeDevSave() { if (devSave !== null) return devSave; try { const r = await fetch('../api/dev/catalog', { cache: 'no-store' }); devSave = r.ok ? await r.json() : false; } catch { devSave = false; } return devSave; }
   function exportPanel(s) {
-    const name = s._target || targetFileName(s);
-    const problems = catalogProblems(s, name);
+    const region = targetRegion(s);
+    const problems = catalogProblems(s, region);
     const warn = [];
     const todo = state.takes.filter((t) => shows(t, 'todo')).length;
     if (todo) warn.push(`${todo} rep${todo > 1 ? 's have' : ' has'} not been described yet — say what each one shows, or it counts for nothing.`);
@@ -1548,14 +1570,14 @@
     if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
     const tune = tuningReport(s);
-    let preview = ''; try { preview = C.format(fileWith(s, name).entry); } catch (e) { preview = e.message; }
+    let preview = ''; try { preview = C.format(regionWith(s, region).entry); } catch (e) { preview = e.message; }
     const ready = !problems.length;
     return `<div class="stack"><h2>7 · Check &amp; save</h2>
       <div class="st-grid"><div class="card"><h3>${ready ? 'Ready to ship' : 'Not ready'}</h3><ul class="problems" style="margin:0;padding-left:18px">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}${ready ? '<li class="ok">Checked exactly as the app loads it: every field name, every measurement, the library’s own rules.</li>' : ''}</ul>
         ${warn.length ? `<h3 style="margin-top:12px">Worth fixing</h3><ul style="margin:0;padding-left:18px;font-size:.9rem">${warn.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>
-      <div class="card"><h3>Into the library</h3><p style="font-size:.92rem">The move becomes one entry in <code>client/data/moves/&lt;file&gt;.json</code>${s._replaces ? `, replacing <b>${esc(s._replaces)}</b>` : ''}. Every move in that file is the same kind of editable data.</p>
-        <div class="fields" style="margin-top:8px">${field('File', `<select data-k="_target">${fileNames().map((f) => `<option value="${esc(f)}" ${f === name ? 'selected' : ''}>${esc(f)}.json</option>`).join('')}</select>`)}</div>
-        <div class="row" style="margin-top:10px"><button class="btn primary" id="save-project" ${ready ? '' : 'disabled'} hidden>Save into the project</button><button class="btn primary" id="dl-file" ${ready ? '' : 'disabled'}>Download ${esc(name)}.json</button><span class="muted" id="save-note" style="font-size:.85rem"></span></div>
+      <div class="card"><h3>Into the library</h3><p style="font-size:.92rem">The move is one file of its own — <code>client/data/moves/${esc(s.id || 'id')}.json</code>${s._replaces && s._replaces !== s.id ? `, replacing <b>${esc(s._replaces)}</b>` : ''}. Its region supplies the defaults it does not state (camera, group, order, sources) and puts it in order in the list; nothing else in the library is touched.</p>
+        <div class="fields" style="margin-top:8px">${field('Region', `<select data-k="_region">${regionNames().map((r) => `<option value="${esc(r)}" ${r === region ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>`, 'Where its defaults come from, and where it sits in the list.')}</div>
+        <div class="row" style="margin-top:10px"><button class="btn primary" id="save-project" ${ready ? '' : 'disabled'} hidden>Save into the project</button><button class="btn primary" id="dl-file" ${ready ? '' : 'disabled'}>Download ${esc(s.id || 'move')}.json</button><span class="muted" id="save-note" style="font-size:.85rem"></span></div>
         <div class="row" style="margin-top:10px"><button class="btn secondary" id="try">Try it in the app</button><span class="muted" style="font-size:.85rem">Opens the app with this move added, in this browser only.</span></div>
         <div class="row" style="margin-top:10px"><button class="btn ghost small" id="copy-entry">Copy the entry</button><button class="btn ghost small" id="dl-js">Download as code (.js)</button><button class="btn ghost small" id="dl-json">Download session spec</button></div></div></div>
       <div class="card"><div class="row" style="align-items:baseline"><h3>Tuning</h3><span class="spacer"></span><span class="${tune.pass ? 'ok' : 'muted'}" style="font-weight:800">${tune.pass ? 'passes — every live fault behaves on the takes' : tune.reason}</span></div>
@@ -1583,31 +1605,31 @@
     return { rows, pass, reason: !rows.length ? 'no live fault to tune' : clean.length < 2 ? 'record two clean takes' : 'not yet — see the rows in red' };
   }
   function wireExport(s) {
-    const name = s._target || targetFileName(s);
+    const region = targetRegion(s);
     wireCheck();
     bind($('main'), s, (k) => {
-      if (k === '_target') render();
+      if (k === '_region') render();
       if (k === 'vetted') { const on = document.querySelector('[data-chips="vetted"] .chip[aria-pressed="true"]').dataset.v === 'true'; const t = tuningReport(s);
         if (on && !t.pass) { s.vetted = false; toast('Vetted only once every live fault behaves on the takes', 5000); render(); return; }
         s.vetted = on; if (on) s._tuned = { date: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, takes: state.takes.length, faults: t.rows.map((r) => r.id) }; else delete s._tuned; saveState(); render(); }
     });
-    probeDevSave().then((d) => { if (d && $('save-project')) { $('save-project').hidden = false; $('save-note').textContent = 'Local server running — saving writes client/data/moves/' + name + '.json'; } });
+    probeDevSave().then((d) => { if (d && $('save-project')) { $('save-project').hidden = false; $('save-note').textContent = 'Local server running — saving writes client/data/moves/' + (s.id || 'id') + '.json'; } });
     $('save-project').onclick = async () => {
-      const { rel, json } = fileWith(s, name);
+      const { rel, name, json, entry, isNew } = regionWith(s, region);
       try {
-        const r = await fetch('../api/dev/catalog/' + name, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' }, body: JSON.stringify(json) });
+        const r = await fetch('../api/dev/catalog/' + s.id, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' }, body: JSON.stringify({ region, move: entry }) });
         const d = await r.json();
         if (!r.ok) { toast((d.problems || [d.error]).join(' · '), 8000); return; }
-        const f = C.data.files.find((x) => x.name === rel); if (f) f.json = json; else { C.data.files.push({ name: rel, json }); C.data.manifest.moves.push(rel); }
-        s._file = rel; s._replaces = s.id; saveState();
-        $('save-note').textContent = `Saved — ${d.moves} moves in ${rel}, ${d.library} in the library. Reload the app to see it; commit the file to keep it.`; toast('Saved into the project');
+        const f = C.data.files.find((x) => x.name === name); if (f) f.json = json;
+        s._file = rel; s._region = region; s._replaces = s.id; saveState();
+        $('save-note').textContent = `Saved ${rel}${isNew ? ` and listed it in ${d.region}` : ''} — ${d.library} moves in the library. Reload the app to see it; commit the file to keep it.`; toast('Saved into the project');
       } catch (e) { toast('Save failed: ' + e.message, 6000); }
     };
-    $('dl-file').onclick = () => { const { json } = fileWith(s, name); download(name + '.json', C.format(json) + '\n', 'application/json'); $('save-note').textContent = 'Drop it over client/data/moves/' + name + '.json and commit.'; };
-    $('copy-entry').onclick = async () => { try { await navigator.clipboard.writeText(C.format(fileWith(s, name).entry)); toast('Copied'); } catch { toast('Copy failed — use download'); } };
+    $('dl-file').onclick = () => { const { entry } = regionWith(s, region); download(s.id + '.json', C.format(entry) + '\n', 'application/json'); $('save-note').textContent = `Drop it in as client/data/moves/${s.id}.json${regionWith(s, region).isNew ? `, and add "${s.id}" to client/data/regions/${region}.json` : ''}, then commit.`; };
+    $('copy-entry').onclick = async () => { try { await navigator.clipboard.writeText(C.format(regionWith(s, region).entry)); toast('Copied'); } catch { toast('Copy failed — use download'); } };
     $('dl-js').onclick = () => download(`${s.id}.js`, moveFileSource(s), 'text/javascript');
     $('dl-json').onclick = () => download(`${s.id || 'move'}.spec.json`, JSON.stringify(s, null, 2), 'application/json');
-    $('try').onclick = () => { try { const drafts = JSON.parse(localStorage.getItem('grooveform.drafts') || '{}'); const { json, entry } = fileWith(s, name); const grp = {}; for (const k of Object.keys(json)) if (k !== 'moves' && !k.startsWith('_')) grp[k] = json[k]; drafts[s.id] = { entry, group: grp }; localStorage.setItem('grooveform.drafts', JSON.stringify(drafts)); window.open('../#/exercise/' + s.id, '_blank'); } catch (e) { toast(e.message); } };
+    $('try').onclick = () => { try { const drafts = JSON.parse(localStorage.getItem('grooveform.drafts') || '{}'); const { json, entry } = regionWith(s, region); const grp = {}; for (const k of Object.keys(json)) if (k !== 'moves' && !k.startsWith('_')) grp[k] = json[k]; drafts[s.id] = { entry, group: grp }; localStorage.setItem('grooveform.drafts', JSON.stringify(drafts)); window.open('../#/exercise/' + s.id, '_blank'); } catch (e) { toast(e.message); } };
     $('back').onclick = () => go('guide');
   }
 
@@ -1640,5 +1662,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, fileWith, catalogProblems, editCopy };
+  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy };
 })();

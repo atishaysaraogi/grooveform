@@ -1,0 +1,113 @@
+{
+  "region": "shoulder",
+  "id": "pushup_plus",
+  "name": "Push-up plus",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "intermediate",
+  "equipment": ["none"],
+  "muscles": { "primary": ["serratus anterior"], "secondary": ["chest", "triceps"] },
+  "summary": "At the top of a push-up (or on the knees), push the floor away further so the shoulder blades spread apart.",
+  "setup": "Hands under the shoulders, on the knees or toes, side-on to the phone. With the elbows locked, push the floor away so the upper back rounds slightly and the shoulder blades slide apart; then let them come together. That is the plus.",
+  "brief": "Hands under the shoulders, on the knees or toes. With the elbows locked, push the floor away so the upper back rounds slightly and the shoulder blades slide apart, then let them come together.",
+  "why": "From the side the shoulder rises a few centimetres away from the hand at the top of each plus, which the phone can count. It is a small movement, so only the count is trusted.",
+  "camera": { "height": "knee", "distance": "2 m", "posture": "kneeling" },
+  "progress": {
+    "metric": { "kind": "dist", "pts": ["SH", "WR"] },
+    "start": "calibrated",
+    "target": 8,
+    "targetIsDelta": true
+  },
+  "minMs": 1200,
+  "tempo": "Push out 2 s, release 2 s.",
+  "dosage": "3 × 12.",
+  "progression": "From the toes; feet on a step.",
+  "regression": "Hands on a wall (wall push-up plus).",
+  "contraindications": "Wrist pain bearing weight.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "plus",
+      "label": "Skipping the push at the top",
+      "cue": "Push the floor away at the top",
+      "tip": "The extra push that rounds the upper back is the whole exercise; a normal push-up misses it.",
+      "severity": 3
+    },
+    {
+      "id": "elbows",
+      "label": "Bending the elbows",
+      "cue": "Keep the elbows locked",
+      "tip": "The plus is at the shoulder blades, not the elbows; keep the arms straight.",
+      "severity": 2
+    },
+    {
+      "id": "sag",
+      "label": "Hips sagging",
+      "cue": "One line, head to heels",
+      "tip": "Brace the stomach so the body stays one line from head to knees.",
+      "severity": 2
+    },
+    {
+      "id": "shrug",
+      "label": "Shrugging instead of protracting",
+      "cue": "Blades apart, shoulders down",
+      "tip": "The blades slide apart around the ribs — they should not travel up toward the ears.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "Mat under the knees or hands.",
+    "stop": "Wrist or shoulder pain.",
+    "cannotSee": "The shoulder blades spreading — it reads the shoulder lifting as a proxy.",
+    "regions": [
+      {
+        "name": "Shoulders",
+        "points": [
+          { "t": "Push the floor away until the blades spread; elbows locked.", "tracked": true }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Straight from head to knees.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "left",
+      "torso": 72,
+      "neck": -15,
+      "thigh": -70,
+      "shin": -70,
+      "foot": -80,
+      "uarm": -6,
+      "farm": 10
+    },
+    "B": {
+      "face": "left",
+      "torso": 66,
+      "neck": -18,
+      "thigh": -70,
+      "shin": -70,
+      "foot": -80,
+      "uarm": -6,
+      "farm": 10
+    },
+    "work": { "shoulder": 0.6, "chest": 0.8 },
+    "anchor": ["ft", "wr", "wrF"]
+  }
+}

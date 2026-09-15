@@ -1,0 +1,78 @@
+{
+  "region": "knee",
+  "id": "quad_set",
+  "name": "Quad set",
+  "type": "hold",
+  "view": "side",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["quadriceps"], "secondary": [] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Tighten the thigh and press the back of the knee down. The first exercise after most knee surgery.",
+  "setup": "Sit or lie with the leg straight, side-on to the phone at floor level. A rolled towel under the knee is fine. Tighten the front of the thigh so the kneecap draws up, hold, relax.",
+  "why": "Almost nothing moves — the kneecap glides a centimetre. A camera cannot judge the squeeze, so this one is logged by hand.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+  "targets": [5, 8, 10],
+  "defaultTarget": 5,
+  "tempo": "Squeeze 5 s, relax 3 s.",
+  "dosage": "10 × 5 s, several times a day.",
+  "progression": "Straight leg raise once the thigh can lock the knee.",
+  "regression": "Shorter squeezes, or with the knee slightly bent over a towel.",
+  "contraindications": "Sharp pain in the joint, or a knee that will not straighten without swelling increasing.",
+  "faults": [
+    {
+      "id": "bend",
+      "label": "Knee bending instead of pressing down",
+      "cue": "Press the back of the knee down",
+      "tip": "The back of the knee should flatten toward the floor. If the heel lifts, the hip is doing the work.",
+      "severity": 2
+    },
+    {
+      "id": "short",
+      "label": "Letting go too soon",
+      "cue": "Hold the squeeze five seconds",
+      "tip": "The squeeze has to last for the muscle to learn it. Count it out loud.",
+      "severity": 2
+    },
+    {
+      "id": "breath",
+      "label": "Holding the breath",
+      "cue": "Keep breathing through the squeeze",
+      "tip": "Count out loud through the squeeze so the breath cannot stop.",
+      "severity": 1
+    },
+    {
+      "id": "toes",
+      "label": "Pointing the toes",
+      "cue": "Toes up toward you",
+      "tip": "Pulling the toes up helps the thigh switch on; pointing them lets the calf take over.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat, or a bed if getting down is hard.",
+    "stop": "Sharp pain inside the joint, or swelling that grows during the session.",
+    "cannotSee": "The squeeze itself — the phone sees a still leg. It confirms position only.",
+    "regions": [
+      {
+        "name": "Leg",
+        "points": [
+          { "t": "Leg straight, toes pointing up, heel resting on the floor.", "tracked": false },
+          { "t": "Kneecap draws up toward the hip as the thigh tightens.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Sit tall or lie flat; no bracing with the arms.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 85 },
+    "B": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 92 },
+    "work": { "thigh": 1 }
+  }
+}

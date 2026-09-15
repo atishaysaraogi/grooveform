@@ -1,6 +1,7 @@
 'use strict';
-// The Studio's "Save into the project": a dev-only route that checks a moves file the way the app loads it,
-// writes it, and re-reads the library — against a scratch copy of client/data/, never the real one.
+// The Studio's "Save into the project": a dev-only route that checks one exercise the way the app loads
+// it — inside its region, against every other id — then writes that one file and re-reads the library.
+// Against a scratch copy of client/data/, never the real one.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path');
@@ -11,46 +12,53 @@ const { start, server } = require('../server/index.js');
 const catalog = require('../client/coach/catalog.js');
 let base;
 const call = async (method, p, body) => { const r = await fetch(base + p, { method, headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, data: await r.json().catch(() => null) }; };
-const knee = () => JSON.parse(fs.readFileSync(path.join(DATA, 'moves', 'knee.json'), 'utf8'));
+const readMove = (id) => JSON.parse(fs.readFileSync(path.join(DATA, 'moves', id + '.json'), 'utf8'));
+const readRegion = (name) => JSON.parse(fs.readFileSync(path.join(DATA, 'regions', name + '.json'), 'utf8'));
 
 before(async () => { await start(); base = `http://127.0.0.1:${server.address().port}`; });
 after(() => { server.close(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
-test('the dev route is there in development and names the files', async () => {
+test('the dev route is there in development and names the regions', async () => {
   const r = await call('GET', '/api/dev/catalog');
-  assert.equal(r.status, 200); assert.ok(r.data.files.includes('moves/knee.json')); assert.equal(r.data.dir, DATA);
+  assert.equal(r.status, 200); assert.ok(r.data.regions.includes('regions/knee.json')); assert.equal(r.data.dir, DATA);
 });
 
-test('a file that checks clean is written in the shared style and the library re-reads it', async () => {
+test('one exercise that checks clean is written as its own file and the library re-reads it', async () => {
   const before = (await call('GET', '/api/exercises')).data.exercises.length;
-  const j = knee(); const copy = JSON.parse(JSON.stringify(j.moves.find((m) => m.id === 'seated_knee_ext')));
+  const copy = readMove('seated_knee_ext');
   copy.id = 'seated_knee_ext_slow'; copy.name = 'Seated knee extension (slow)'; copy.faults[0].threshold = 62; copy._note = 'saved from the test';
-  j.moves.push(copy);
-  const r = await call('PUT', '/api/dev/catalog/knee', j);
-  assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.moves, j.moves.length); assert.equal(r.data.library, before + 1);
-  assert.equal(fs.readFileSync(path.join(DATA, 'moves', 'knee.json'), 'utf8'), catalog.format(j) + '\n', 'written in the one style the tools share');
+  const r = await call('PUT', '/api/dev/catalog/seated_knee_ext_slow', { region: 'knee', move: copy });
+  assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.added, true); assert.equal(r.data.library, before + 1);
+  assert.equal(fs.readFileSync(path.join(DATA, 'moves', 'seated_knee_ext_slow.json'), 'utf8'), catalog.format(copy) + '\n', 'written in the one style the tools share');
+  assert.ok(readRegion('knee').moves.includes('seated_knee_ext_slow'), 'and listed by its region');
   const list = (await call('GET', '/api/exercises')).data.exercises;
   assert.equal(list.length, before + 1);
-  const added = list.find((e) => e.id === 'seated_knee_ext_slow'); assert.ok(added && added.tracking === 'form' && added.faults.some((f) => f.id === 'leanback' && f.tracked), 'the saved move is live in the API with its checks');
-  assert.ok(!fs.existsSync(path.join(__dirname, '..', 'client', 'data', 'moves', 'knee.json.bak')), 'nothing touched the real data folder');
-  assert.ok(!JSON.stringify(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'client', 'data', 'moves', 'knee.json'), 'utf8'))).includes('seated_knee_ext_slow'));
+  const added = list.find((e) => e.id === 'seated_knee_ext_slow'); assert.ok(added && added.tracking === 'form' && added.faults.some((f) => f.id === 'leanback' && f.tracked), 'the saved move is live in the API with its camera-checked faults');
+  /* editing it again rewrites that one file and adds nothing to the region */
+  const again = readMove('seated_knee_ext_slow'); again.name = 'Seated knee extension (slower)';
+  const r2 = await call('PUT', '/api/dev/catalog/seated_knee_ext_slow', { region: 'knee', move: again });
+  assert.equal(r2.status, 200); assert.equal(r2.data.added, false);
+  assert.equal(readRegion('knee').moves.filter((id) => id === 'seated_knee_ext_slow').length, 1);
+  assert.ok(!fs.existsSync(path.join(__dirname, '..', 'client', 'data', 'moves', 'seated_knee_ext_slow.json')), 'nothing touched the real data folder');
 });
 
-test('a file with a mistake is refused with the problems and nothing is written', async () => {
-  const before = fs.readFileSync(path.join(DATA, 'moves', 'knee.json'), 'utf8');
-  const j = knee(); j.moves[0].sumary = 'typo'; j.moves[1].faults.push({ template: 'lean' });
-  const r = await call('PUT', '/api/dev/catalog/knee', j);
-  assert.equal(r.status, 400); assert.equal(r.data.problems.length, 2, JSON.stringify(r.data));
-  assert.match(r.data.problems[0], /did you mean "summary"/); assert.match(r.data.problems[1], /template "lean" has no threshold/);
-  assert.equal(fs.readFileSync(path.join(DATA, 'moves', 'knee.json'), 'utf8'), before);
-  const bad = await call('PUT', '/api/dev/catalog/Knee File', j); assert.equal(bad.status, 400);
+test('an exercise with a mistake is refused with the problems and nothing is written', async () => {
+  const before = fs.readFileSync(path.join(DATA, 'moves', 'quad_set.json'), 'utf8');
+  const bad = readMove('quad_set'); bad.sumary = 'typo';
+  const r = await call('PUT', '/api/dev/catalog/quad_set', { region: 'knee', move: bad });
+  assert.equal(r.status, 400); assert.match(r.data.problems.join(' '), /did you mean "summary"/, JSON.stringify(r.data));
+  const bad2 = readMove('quad_set'); bad2.faults.push({ template: 'lean' });
+  const r2 = await call('PUT', '/api/dev/catalog/quad_set', { region: 'knee', move: bad2 });
+  assert.equal(r2.status, 400); assert.match(r2.data.problems.join(' '), /template "lean" has no threshold/);
+  assert.equal(fs.readFileSync(path.join(DATA, 'moves', 'quad_set.json'), 'utf8'), before);
+  assert.equal((await call('PUT', '/api/dev/catalog/Quad Set', { region: 'knee', move: bad })).status, 400, 'a bad id is refused');
+  assert.equal((await call('PUT', '/api/dev/catalog/quad_set', { region: 'knee', move: { ...readMove('quad_set'), id: 'other_id' } })).status, 400, 'a move whose id disagrees with the address is refused');
+  assert.equal((await call('PUT', '/api/dev/catalog/quad_set', { region: 'nose', move: readMove('quad_set') })).status, 400, 'an unknown region is refused');
 });
 
-test('a new region file is created and listed in the manifest', async () => {
-  const j = knee(); const file = { _about: j._about, region: 'neck_extra', group: 'Neck — extra', order: 2500, camera: j.camera, sources: [], moves: [{ ...j.moves[0], id: 'quad_set_copy', name: 'Quad set copy' }] };
-  const r = await call('PUT', '/api/dev/catalog/neck_extra', file);
-  assert.equal(r.status, 200, JSON.stringify(r.data));
-  const manifest = JSON.parse(fs.readFileSync(path.join(DATA, 'manifest.json'), 'utf8'));
-  assert.ok(manifest.moves.includes('moves/neck_extra.json'));
-  assert.ok((await call('GET', '/api/exercises')).data.exercises.some((e) => e.id === 'quad_set_copy' && e.group === 'Neck — extra'));
+test('an id another region already uses is refused', async () => {
+  const clash = { ...readMove('quad_set'), id: 'wallsit' };
+  const r = await call('PUT', '/api/dev/catalog/wallsit', { region: 'hip', move: clash });
+  assert.equal(r.status, 400, JSON.stringify(r.data));
+  assert.match(r.data.problems.join(' '), /used twice/);
 });

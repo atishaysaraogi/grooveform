@@ -1,0 +1,112 @@
+{
+  "region": "gym",
+  "id": "glute_kickback",
+  "name": "Glute kickback (quadruped)",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["none", "band or ankle weight (optional)"],
+  "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings", "core"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "band": true,
+  "summary": "On hands and knees, drive one heel up and back until the thigh is level with the back, then lower.",
+  "setup": "Hands under the shoulders, knees under the hips, side-on to the phone at knee height, working leg nearest. Keeping the knee bent, push the heel toward the ceiling until the thigh is in line with the back. Lower without resting the knee.",
+  "brief": "Hands under the shoulders, knees under the hips. Keeping the knee bent, push the working heel toward the ceiling until the thigh is in line with the back.",
+  "why": "From the side the working thigh swings from hanging to level each rep, so reps are counted. The back arching to lift higher is listed, not judged.",
+  "camera": { "height": "knee", "distance": "2 m", "posture": "kneeling" },
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 80 },
+  "tempo": "Up 1 s, squeeze 1 s, down 2 s.",
+  "dosage": "3 × 12 each leg.",
+  "progression": "Band around the foot; ankle weight.",
+  "regression": "Smaller lift.",
+  "contraindications": "Lower back pain on the lift; wrist pain.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch3",
+      "label": "Arching the lower back",
+      "cue": "Ribs down, flat back",
+      "tip": "Most of a big kickback is lower-back arch, not hip. Lift only to the line of the body.",
+      "severity": 3
+    },
+    {
+      "id": "arch",
+      "label": "Lower back arching",
+      "cue": "Thigh to level, no higher",
+      "tip": "Higher than the back means the spine is lifting, not the glute.",
+      "severity": 2
+    },
+    {
+      "id": "shift",
+      "label": "Weight shifting to one side",
+      "cue": "Hips square",
+      "tip": "Keep the weight even over both hands and the resting knee.",
+      "severity": 1
+    },
+    {
+      "id": "neck5",
+      "label": "Head lifting",
+      "cue": "Eyes on the floor",
+      "tip": "The head stays in line with the spine, not looking forward.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A mat under the knees.",
+    "stop": "Lower back or wrist pain.",
+    "cannotSee": "The hips twisting.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Thigh lifts to level with the back; knee bent.", "tracked": true }
+        ]
+      },
+      { "name": "Back", "points": [{ "t": "Flat and still.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": 63,
+      "neck": 25,
+      "thigh": 0,
+      "shin": -90,
+      "foot": 180,
+      "uarm": 0,
+      "farm": 0
+    },
+    "B": {
+      "face": "right",
+      "torso": 63,
+      "neck": 25,
+      "thigh": -75,
+      "shin": -150,
+      "foot": 180,
+      "uarm": 0,
+      "farm": 0,
+      "thighF": 0,
+      "shinF": -90,
+      "footF": 180
+    },
+    "work": { "glute": 1, "ham": 0.5 },
+    "anchor": ["knF", "wr", "wrF"]
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "region": "shoulder",
+  "id": "wall_angel",
+  "name": "Wall angel",
+  "type": "reps",
+  "view": "front",
+  "tracking": "form",
+  "level": "intermediate",
+  "equipment": ["wall"],
+  "upperBody": true,
+  "muscles": { "primary": ["lower trapezius", "rhomboids"], "secondary": ["rotator cuff", "thoracic extensors"] },
+  "summary": "Back flat on a wall, arms in a W, sweep them up to a Y and back keeping every part in contact.",
+  "setup": "Stand with the head, upper back and tailbone on a wall, feet a step out. Arms in a W with the backs of the hands and elbows on the wall. Slide up toward a Y and back down without anything leaving the wall.",
+  "brief": "Stand with the head, upper back and tailbone on a wall, feet a step out. Arms in a W with the backs of the hands and elbows on the wall.",
+  "why": "The arms sweep in the camera plane, so their angle counts the reps, and the shoulders hiking toward the ears is visible as the ear–shoulder gap shrinking.",
+  "progress": { "metric": "arm_up", "start": "calibrated", "target": 170 },
+  "tempo": "Up 3 s, down 3 s.",
+  "dosage": "2–3 × 8–10.",
+  "progression": "Slide the feet closer to the wall.",
+  "regression": "Halve the range and keep every contact point.",
+  "contraindications": "Lower back pain from arching to keep contact.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    { "template": "shrug" },
+    {
+      "id": "contact",
+      "label": "Arms peeling off the wall",
+      "cue": "Keep everything touching the wall",
+      "tip": "Cut the range in half and keep hands, wrists and elbows on the wall the whole way.",
+      "severity": 2
+    },
+    {
+      "id": "range",
+      "label": "Going higher than the contact allows",
+      "cue": "Stop where contact breaks",
+      "tip": "Your range is where the wrists, elbows and back all still touch. Going past it trains the wrong thing.",
+      "severity": 2
+    },
+    {
+      "id": "chin",
+      "label": "Chin poking forward",
+      "cue": "Back of the head on the wall",
+      "tip": "The head is part of the contact. If it lifts off, the neck is compensating.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A flat wall.",
+    "stop": "Shoulder pinching or lower back pain.",
+    "cannotSee": "The hands and elbows losing contact.",
+    "regions": [
+      {
+        "name": "Contact points",
+        "points": [
+          { "t": "Head, upper back, tailbone, elbows and backs of hands all on the wall.", "tracked": false }
+        ]
+      },
+      { "name": "Shoulders", "points": [{ "t": "Down, not shrugged.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 70, "armR": 70, "foreL": 165, "foreR": 165 },
+    "B": { "armL": 150, "armR": 150, "foreL": 176, "foreR": 176 },
+    "work": { "back": 1, "shoulder": 0.5 }
+  }
+}

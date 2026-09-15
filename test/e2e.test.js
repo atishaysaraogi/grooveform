@@ -449,7 +449,9 @@ async function runCoachedSet(page, side = 'right') {
   await step('studio: one phone video becomes its reps — read frame by frame, calibrated where the body settles', async () => {
     const st = await newPage();
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select option[value="hipabd"]', { state: 'attached' });
-    await st.selectOption('#move-select', 'hipabd'); await st.waitForSelector('#file-input', { state: 'attached' });
+    /* a library move opens as an editable copy, on step 2 — the takes live in step 3 */
+    await st.selectOption('#move-select', 'hipabd'); await st.waitForSelector('[data-k="name"]');
+    await st.click('#steps [data-step="record"]'); await st.waitForSelector('#file-input', { state: 'attached' });
     /* the video: the person walks in from the left for 1.5 s, holds the start position for 1.5 s, then does the stream's 8 reps */
     await st.evaluate(() => { const orig = window.__mockPose; window.__mockFile = (t) => { if (t < 1500) return orig(0).map((p) => ({ ...p, x: p.x - 0.3 * (1 - t / 1500) })); if (t < 3000) return orig(0); return orig(10500 + (t - 3000)); }; });
     await st.setInputFiles('#file-input', path.join(__dirname, 'fixtures', 'blank-36s.webm'));
@@ -496,8 +498,10 @@ async function runCoachedSet(page, side = 'right') {
       const canon = (v) => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v;
       const out = { checked: 0, problems: [], changed: [], rewritten: [] };
       for (const ex of LIB.all().filter((e) => e.catalog)) {
-        const s = S.entryToSpec(ex); const { rel, json, entry } = S.fileWith(s, ex.file.replace(/\.json$/, ''));
-        const p = S.catalogProblems(s, ex.file.replace(/\.json$/, '')); if (p.length) out.problems.push(ex.id + ': ' + p[0]);
+        const region = ex.file.replace(/\.json$/, '');
+        const s = S.entryToSpec(ex); const { rel, json, entry } = S.regionWith(s, region);
+        const p = S.catalogProblems(s, region); if (p.length) out.problems.push(ex.id + ': ' + p[0]);
+        if (rel !== 'moves/' + ex.id + '.json') out.problems.push(ex.id + ': writes back to ' + rel);
         const grp = {}; for (const k of Object.keys(json)) if (k !== 'moves' && !k.startsWith('_')) grp[k] = json[k];
         const rebuilt = C.buildFile({ ...grp, moves: [entry] }, rel, C.data, false)[0];
         const a = JSON.stringify(canon(strip(ex))), b = JSON.stringify(canon(strip({ ...rebuilt, order: ex.order })));
@@ -512,7 +516,8 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(rt.checked, 144, 'every move, the ten vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
     assert.deepEqual(rt.rewritten, [], 'an untouched move must be written back as the same entry');
     /* the flow a physio sees: pick a move, edit a copy, change a number, check, download */
-    await st.selectOption('#move-select', 'seated_knee_ext'); await st.waitForSelector('#edit-copy'); await st.click('#edit-copy');
+    /* picking a library move opens it as an editable copy — no second click */
+    await st.selectOption('#move-select', 'seated_knee_ext');
     await st.waitForSelector('[data-k="name"]'); assert.equal(await st.$eval('[data-k="name"]', (e) => e.value), 'Seated knee extension');
     assert.equal(await st.$eval('[data-chips="tracking"] [aria-pressed="true"]', (e) => e.dataset.v), 'form');
     await st.click('#steps [data-step="faults"]'); await st.waitForSelector('[data-k="faults.0.threshold"]');
@@ -524,13 +529,15 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(await st.$eval(`[data-chips="faults.${listedAt}.listed"] [aria-pressed="true"]`, (e) => e.dataset.v), 'true', 'a fault without a measurement is listed for the person');
     await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
     await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
-    assert.equal(await st.$eval('[data-k="_target"]', (e) => e.value), 'knee', 'saves back into the file it came from');
+    assert.equal(await st.$eval('[data-k="_region"]', (e) => e.value), 'knee', 'stays in the region it came from');
+    assert.match(await st.textContent('#dl-file'), /seated_knee_ext\.json/, 'and downloads as its own file');
     assert.ok(await st.$('#save-project[hidden]'), 'no dev server here, so no save button');
-    const saved = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.fileWith(s, 'knee'); });
+    const saved = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'knee'); });
+    assert.equal(saved.rel, 'moves/seated_knee_ext.json', 'one exercise, one file');
+    assert.equal(saved.isNew, false, 'replaces, does not add');
     const m = saved.json.moves.find((x) => x.id === 'seated_knee_ext'); assert.equal(saved.json.moves.filter((x) => x.id === 'seated_knee_ext').length, 1, 'replaces, does not duplicate');
     assert.equal(m.faults[0].threshold, 62); assert.equal(m.faults[1].metric, undefined); assert.ok(m._studio && m._studio.edited, 'the Studio leaves its provenance as a note');
-    assert.equal(m.pose.A.preset, undefined === undefined ? m.pose.A.preset : null);   // pose passes through untouched
-    assert.deepEqual(Object.keys(saved.json)[0], '_about', 'the field guide stays at the top of the file');
+    assert.equal(m.region, 'knee', 'the move file says which region it belongs to');
     await st.screenshot({ path: path.join(SHOTS, 'studio-edit-copy.png'), fullPage: true });
     await st.close();
   });

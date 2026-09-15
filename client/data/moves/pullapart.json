@@ -1,0 +1,172 @@
+{
+  "region": "shoulder",
+  "id": "pullapart",
+  "name": "Band pull-apart",
+  "summary": "Arms straight at shoulder height, pull the band to your chest — checked for bending elbows, shrugging, the band drifting up or down, and short reps.",
+  "setup": "Hold the band in front of you at shoulder height, arms straight, hands a little wider than the shoulders, light tension. Face the camera about 2.5 m away, camera at chest height, head to hips in frame. Pull the hands apart until the band touches your chest, squeeze the shoulder blades together, pause, then return slowly.",
+  "brief": "Hold the band in front of you at shoulder height, arms straight, hands a little wider than the shoulders. Pull the hands apart until the band touches the chest, then return slowly.",
+  "why": "Facing the camera the arms open into a T in the camera plane: the distance between the hands, a bending elbow, the shoulders rising, and the hands drifting above or below shoulder height are all read directly.",
+  "targets": [6, 8, 10, 12, 15, 20],
+  "defaultTarget": 12,
+  "guide": {
+    "surface": "Standing or sitting tall, facing the camera. Hold a light band in front of you at shoulder height, hands a little wider than the shoulders, palms down or thumbs up.",
+    "regions": [
+      {
+        "name": "Feet & legs",
+        "points": [
+          {
+            "t": "Feet hip-width, knees soft (or sit tall on a chair without leaning on the backrest).",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Trunk & pelvis",
+        "points": [
+          {
+            "t": "Ribs down, gentle brace, back neutral — do not lean back or flare the ribs to finish the rep; that is a sign the band is too strong.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Arms & hands",
+        "points": [
+          {
+            "t": "Arms straight with a tiny soft bend, held fixed. Bending the elbows turns it into a row and takes the rear shoulder out of it — the coach flags elbows bending as the band opens.",
+            "tracked": true
+          },
+          {
+            "t": "Keep the hands level with the shoulders the whole way. As you tire the band drifts down toward the stomach; the coach flags hands more than a hand-width above or below shoulder height.",
+            "tracked": true
+          },
+          {
+            "t": "Pull until the band touches the chest with the arms out in a T, pause, then return under control.",
+            "tracked": true
+          },
+          {
+            "t": "Wrists straight; thumbs up (palms facing each other) is the gentlest variation for irritable shoulders.",
+            "tracked": false
+          }
+        ]
+      },
+      {
+        "name": "Shoulders & neck",
+        "points": [
+          {
+            "t": "Start the rep by sliding the shoulder blades back, then let the hands follow. Squeeze the blades together at the end without shrugging.",
+            "tracked": false
+          },
+          {
+            "t": "Shoulders down and away from the ears; long neck, wide collarbones. A rising shoulder is flagged.",
+            "tracked": true
+          },
+          { "t": "Chin level, eyes on the camera; do not crane the neck forward.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Breathing & tempo",
+        "points": [
+          { "t": "Breathe out as the band opens, in as it closes.", "tracked": false },
+          { "t": "1–2 s apart, 1 s squeeze, 3 s back together.", "tracked": true }
+        ]
+      }
+    ],
+    "stop": "Pinching at the front of the shoulder, neck pain, or numbness in the hands — switch to a lighter band or a wider grip before stopping altogether."
+  },
+  "camera": { "height": "chest", "distance": "2.5 m", "posture": "standing" },
+  "upperBody": true,
+  "icon": "🏹",
+  "order": 90,
+  "band": "yellow",
+  "vetted": true,
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["band"],
+  "muscles": { "primary": ["posterior deltoid", "rhomboids", "middle trapezius"], "secondary": ["rotator cuff"] },
+  "tempo": "1–2 s apart, 1 s squeeze, 3 s back.",
+  "dosage": "2–3 × 12–20.",
+  "progression": "Next band colour; hands closer together.",
+  "regression": "Lighter band; hands wider.",
+  "contraindications": "Pain at the front of the shoulder as the band opens.",
+  "view": "front",
+  "type": "reps",
+  "progress": { "metric": { "kind": "dist", "pts": ["WR", "oWR"] }, "start": "calibrated", "target": 280 },
+  "show": { "ask": "open your arms wide, as if the band were fully stretched across your chest" },
+  "display": { "label": "apart", "unit": "%", "from": "abs" },
+  "faults": [
+    {
+      "id": "bend",
+      "label": "Elbows bending",
+      "cue": "Arms long — pull with the shoulder blades",
+      "tip": "Bending the elbows turns the pull-apart into a row and takes the rear shoulder out of it. Keep a tiny soft bend and hold it fixed.",
+      "severity": 3,
+      "metric": "elbow",
+      "op": "<",
+      "threshold": 150,
+      "minP": 0.45,
+      "cooldown": 4500,
+      "phase": "moving"
+    },
+    {
+      "id": "shrug",
+      "label": "Shrugging",
+      "cue": "Long neck — shoulders down",
+      "tip": "Pull the shoulders gently down before each rep: wide collarbones, then squeeze the blades back. If they climb toward the ears the upper trapezius takes over.",
+      "severity": 2,
+      "metric": "shrug",
+      "rel": "change",
+      "op": "<",
+      "threshold": -9,
+      "persist": 450
+    },
+    {
+      "id": "low",
+      "label": "Hands dropping below shoulder height",
+      "cue": "Keep the band at shoulder height",
+      "tip": "As you tire the band drifts down toward the stomach and the movement becomes a shoulder extension. Keep the hands level with the shoulders the whole way.",
+      "severity": 2,
+      "metric": { "kind": "height", "pts": ["SH", "WR"] },
+      "op": ">",
+      "threshold": 28,
+      "minP": 0.4,
+      "persist": 500,
+      "phase": "moving"
+    },
+    {
+      "id": "high",
+      "label": "Hands rising above shoulder height",
+      "cue": "Bring the band down to shoulder height",
+      "tip": "Pulling above the shoulders loads the neck. Hands level with the shoulders.",
+      "severity": 1,
+      "metric": { "kind": "height", "pts": ["SH", "WR"] },
+      "op": "<",
+      "threshold": -28,
+      "minP": 0.4,
+      "persist": 500,
+      "phase": "moving"
+    },
+    {
+      "id": "shallow",
+      "label": "Not pulling all the way apart",
+      "cue": "All the way — band to the chest",
+      "tip": "Finish with the band touching the chest and a one-second squeeze. If that is not possible, use a lighter band.",
+      "severity": 1,
+      "rule": "shallow"
+    },
+    {
+      "id": "fast",
+      "label": "Too fast",
+      "cue": "Slower — pause at your chest",
+      "tip": "One to two seconds apart, a one-second squeeze, three seconds back. Do not let the band snap the arms together.",
+      "severity": 1,
+      "rule": "fast",
+      "minMs": 2200
+    }
+  ],
+  "pose": {
+    "A": { "armL": 80, "armR": 80, "foreL": 70, "foreR": 70 },
+    "B": { "armL": 92, "armR": 92 },
+    "work": { "back": 1, "shoulder": 0.5 }
+  }
+}

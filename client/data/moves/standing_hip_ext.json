@@ -1,0 +1,100 @@
+{
+  "region": "hip",
+  "id": "standing_hip_ext",
+  "name": "Standing hip extension",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["wall or chair", "band (optional)"],
+  "muscles": { "primary": ["gluteus maximus"], "secondary": ["hamstrings"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "band": true,
+  "summary": "Holding a wall, take one straight leg back behind you from the hip without leaning forward.",
+  "setup": "Stand side-on to the phone, hands on a wall in front, working leg nearest the phone. Keeping the knee straight and the trunk upright, take the leg back 15–25°, squeeze the buttock, return.",
+  "brief": "Stand with the hands on a wall in front. Keeping the knee straight and the trunk upright, take the working leg back 15 to 25 degrees, squeeze the buttock, then return.",
+  "why": "The leg swings back in the camera plane, so its angle counts the reps, and the trunk tipping forward to fake the range shows as the shoulder–hip line tilting.",
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 20, "targetIsDelta": true },
+  "tempo": "Back 2 s, squeeze 1 s, return 2 s.",
+  "dosage": "3 × 12 each leg.",
+  "progression": "Band around the ankle anchored in front.",
+  "regression": "Smaller movement; lighter squeeze.",
+  "contraindications": "Lower back pain on the swing.",
+  "faults": [
+    {
+      "id": "lean",
+      "label": "Leaning forward to go further",
+      "cue": "Stand tall, no leaning",
+      "tip": "The range is small on purpose. Leaning forward moves the work to the lower back.",
+      "severity": 3,
+      "metric": "trunk",
+      "op": "<",
+      "threshold": 74,
+      "minP": 0.3,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Arching the lower back",
+      "cue": "Ribs down — smaller swing",
+      "tip": "Brace lightly so the movement comes from the hip, not from the spine extending.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Swinging the leg too far back",
+      "cue": "Small — squeeze, do not swing",
+      "tip": "Most people only have 10–15° of true hip extension; the rest comes from arching the back.",
+      "severity": 2
+    },
+    {
+      "id": "knee",
+      "label": "Bending the knee",
+      "cue": "Leg long behind you",
+      "tip": "A bent knee lets the hamstring take the movement instead of the glute.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor and a wall.",
+    "stop": "Back pain, or pinching at the back of the hip.",
+    "cannotSee": "The lower back arching.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Straight knee; travels back 15–25° only.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Upright and still; the hip moves, the spine does not.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 60, "farm": 60 },
+    "B": { "face": "right", "torso": 0, "thigh": -24, "shin": -24, "foot": -10, "uarm": 60, "farm": 60 },
+    "work": { "glute": 1, "ham": 0.5 },
+    "wall": "ahead"
+  }
+}

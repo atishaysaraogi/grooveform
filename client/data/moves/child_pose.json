@@ -1,0 +1,87 @@
+{
+  "region": "spine",
+  "id": "child_pose",
+  "name": "Child's pose",
+  "type": "hold",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["mat"],
+  "muscles": { "primary": ["lumbar flexion (mobility)", "latissimus dorsi"], "secondary": ["hips"] },
+  "summary": "From kneeling, sit the hips back onto the heels and reach the arms forward along the floor.",
+  "setup": "Kneel on a mat side-on to the phone at floor level. Sit back toward the heels and walk the hands forward until the forehead is near the floor. Breathe into the back and hold.",
+  "brief": "Kneel on a mat. Sit back toward the heels and walk the hands forward until the forehead is near the floor, then breathe into the back and hold.",
+  "why": "From the side the knee is fully folded while you sit back, so the timer runs only while the hips are actually down.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "kneeling" },
+  "targets": [20, 30, 45, 60],
+  "defaultTarget": 30,
+  "hold": { "conditions": [{ "metric": "knee", "max": 50 }] },
+  "tempo": "Ease in over a breath; hold.",
+  "dosage": "3 × 30–60 s.",
+  "progression": "Walk the hands to one side to stretch the flank.",
+  "regression": "A cushion between the calves and the hips.",
+  "contraindications": "Knee pain when folding; pregnancy after the second trimester.",
+  "faults": [
+    {
+      "id": "hips",
+      "label": "Hips coming up",
+      "cue": "Sit back toward your heels",
+      "tip": "If the hips hover, put a cushion behind the knees so you can rest rather than hold.",
+      "severity": 1
+    },
+    {
+      "id": "shrug",
+      "label": "Shoulders up around the ears",
+      "cue": "Let the shoulders soften",
+      "tip": "Let the arms be heavy; the reach comes from the hips going back.",
+      "severity": 1
+    },
+    {
+      "id": "knees",
+      "label": "Knees too close together",
+      "cue": "Knees wide, big toes touching",
+      "tip": "Widening the knees lets the chest sink between the thighs and the lower back open.",
+      "severity": 1
+    },
+    {
+      "id": "breathe",
+      "label": "Shallow breathing",
+      "cue": "Breathe into your back",
+      "tip": "Long breaths into the back ribs are what make this position release.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A mat.",
+    "stop": "Knee pain.",
+    "cannotSee": "How relaxed the back is.",
+    "regions": [
+      { "name": "Hips", "points": [{ "t": "Resting toward the heels.", "tracked": true }] },
+      { "name": "Arms", "points": [{ "t": "Long on the floor ahead.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": {
+      "face": "right",
+      "torso": 70,
+      "neck": 0,
+      "thigh": 0,
+      "shin": 90,
+      "uarm": 0,
+      "farm": 0,
+      "foot": 180
+    },
+    "B": {
+      "face": "right",
+      "torso": 140,
+      "neck": -20,
+      "thigh": -60,
+      "shin": 90,
+      "foot": 200,
+      "uarm": -165,
+      "farm": -165
+    },
+    "work": { "back": 1, "glute": 0.3 },
+    "anchor": ["kn", "wr", "wrF"]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "region": "ankle",
+  "id": "calf_raise",
+  "name": "Calf raise (both legs)",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["wall for balance"],
+  "muscles": { "primary": ["gastrocnemius", "soleus"], "secondary": ["foot intrinsics"] },
+  "summary": "Rise onto the balls of both feet, pause at the top, lower slowly with the knees straight.",
+  "setup": "Stand side-on to the phone, fingertips on a wall, feet hip-width. Push up onto the balls of the feet as high as you can, pause, then lower over three seconds.",
+  "brief": "Stand with the fingertips on a wall, feet hip-width. Push up onto the balls of the feet as high as you can, then lower over three seconds.",
+  "why": "From the side the ankle angle opens as the heel rises, which counts the reps, and a knee bending to help is visible as the hip–knee–ankle angle dropping.",
+  "progress": { "metric": "ankle", "start": "calibrated", "target": 25, "targetIsDelta": true },
+  "tempo": "Up 2 s, hold 1 s, down 3 s.",
+  "dosage": "3 × 15.",
+  "progression": "Single leg; heels off a step for extra range.",
+  "regression": "Seated calf raise; smaller rise.",
+  "contraindications": "Achilles pain that worsens through the set.",
+  "faults": [
+    {
+      "id": "kneebend",
+      "label": "Knees bending to help",
+      "cue": "Keep the knees straight",
+      "tip": "Lock the knees so the calf does the lifting; bent knees shift the work and shorten the range.",
+      "severity": 2,
+      "metric": "knee",
+      "op": "<",
+      "threshold": 165,
+      "minP": 0.2,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 2000
+    },
+    {
+      "id": "roll",
+      "label": "Rolling onto the outside of the feet",
+      "cue": "Press through the big toe",
+      "tip": "Press through the big toe joint at the top so the ankle rises straight rather than rolling out.",
+      "severity": 2
+    },
+    {
+      "id": "shallow2",
+      "label": "Not reaching full height",
+      "cue": "All the way up on your toes",
+      "tip": "The last centimetre at the top is where the calf works hardest. Rise until the heels are high.",
+      "severity": 2
+    },
+    {
+      "id": "drop",
+      "label": "Dropping the heels",
+      "cue": "Lower over three seconds",
+      "tip": "The controlled lowering is what builds and rehabilitates the Achilles.",
+      "severity": 2
+    },
+    {
+      "id": "lean",
+      "label": "Leaning on the support",
+      "cue": "Fingertips only",
+      "tip": "Pushing down through the hands takes body weight off the calves.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor; a wall or rail in front.",
+    "stop": "Achilles or arch pain that builds.",
+    "cannotSee": "The foot rolling outward — that is a front-view detail.",
+    "regions": [
+      {
+        "name": "Ankles",
+        "points": [
+          { "t": "Rise as high as possible; lower slowly.", "tracked": true },
+          { "t": "Weight over the big toe at the top.", "tracked": false }
+        ]
+      },
+      { "name": "Knees", "points": [{ "t": "Straight throughout.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "foot": 0, "uarm": 60, "farm": 60 },
+    "B": { "preset": "standing", "foot": -35, "uarm": 60, "farm": 60 },
+    "work": { "calf": 1 },
+    "wall": "ahead"
+  }
+}

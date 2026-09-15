@@ -32,8 +32,9 @@ clean; a mistake is reported with the file, the move and a suggestion (`"sumary"
 "summary"?`); the files are in the one style the tools write (`node scripts/catalog.js format`); every
 declared figure contact holds still; the tracking tier is honest. `studio-save.test.js` boots the server
 in development mode against a scratch copy of the data folder and exercises the Studio's *Save into
-the project* route: a clean file is written and the library re-read, a bad one is refused with its
-problems and nothing is written, a new region file lands in the manifest.
+the project* route: one exercise is written as its own file and listed by its region, the library is
+re-read, editing it again rewrites that file alone, and a bad move, a bad id, an unknown region and
+an id another region already uses are each refused with nothing written.
 
 Without a server: `node scripts/catalog.js check` runs the same file checks.
 

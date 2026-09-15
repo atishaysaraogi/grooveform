@@ -1,0 +1,65 @@
+{
+  "region": "elbow",
+  "id": "pronation_supination",
+  "name": "Forearm rotation (pronation / supination)",
+  "type": "reps",
+  "view": "front",
+  "tracking": "none",
+  "level": "beginner",
+  "equipment": ["hammer or light dumbbell held at one end"],
+  "muscles": { "primary": ["pronator teres", "supinator"], "secondary": ["biceps"] },
+  "upperBody": true,
+  "sided": { "limb": "arm", "by": "pick" },
+  "summary": "Elbow at 90° by the side, turn the palm up and then down with a hammer in the hand.",
+  "setup": "Sit or stand with the elbow tucked and bent to 90°, holding a hammer near the head end. Turn the palm up until the hammer points sideways, then down the other way. Slow and controlled.",
+  "why": "The forearm rotates on its own axis; the wrist barely changes position. Logged by hand.",
+  "tempo": "2 s each way.",
+  "dosage": "3 × 10 each way.",
+  "progression": "Hold the hammer lower on the handle.",
+  "regression": "No weight.",
+  "contraindications": "Sharp elbow pain on rotation.",
+  "faults": [
+    {
+      "id": "elbow",
+      "label": "Elbow drifting away from the side",
+      "cue": "Keep the elbow at your side",
+      "tip": "Tuck a towel under the arm to keep the elbow still.",
+      "severity": 2
+    },
+    {
+      "id": "shoulder",
+      "label": "Shoulder rotating",
+      "cue": "Shoulder still — forearm turns",
+      "tip": "If the elbow swings in and out, the shoulder is turning instead.",
+      "severity": 1
+    },
+    {
+      "id": "wrist",
+      "label": "Bending the wrist",
+      "cue": "Wrist straight, turn the forearm",
+      "tip": "The rotation comes from the forearm bones, not from flicking the wrist.",
+      "severity": 1
+    },
+    {
+      "id": "full",
+      "label": "Half turns",
+      "cue": "Palm fully up, fully down",
+      "tip": "Go to both ends of the turn; the stiffness usually lives at the very end.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Anywhere.",
+    "stop": "Sharp elbow pain.",
+    "cannotSee": "The rotation.",
+    "regions": [
+      { "name": "Forearm", "points": [{ "t": "Rotates fully palm up and palm down.", "tracked": false }] },
+      { "name": "Elbow", "points": [{ "t": "Tucked and still.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "armL": 8, "armR": 8, "foreR": 90 },
+    "B": { "armL": 8, "armR": 8, "foreR": 92 },
+    "work": { "forearm": 1 }
+  }
+}

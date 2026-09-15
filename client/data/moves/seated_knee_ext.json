@@ -1,0 +1,117 @@
+{
+  "region": "knee",
+  "id": "seated_knee_ext",
+  "name": "Seated knee extension",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["chair", "ankle weight (optional)"],
+  "muscles": { "primary": ["quadriceps"], "secondary": [] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Sitting, straighten one knee until the leg is level, hold, and lower.",
+  "setup": "Sit tall on a chair, side-on to the phone, working leg nearest. Straighten the knee until the leg is horizontal, pause with the thigh tight, then lower slowly.",
+  "brief": "Sit tall on a chair. Straighten the working knee until the leg is horizontal, pause with the thigh tight, then lower slowly.",
+  "why": "Side-on the knee angle runs from 90° to straight, and leaning back to help shows as the trunk line tilting away from upright.",
+  "camera": { "height": "hip", "distance": "2 m", "posture": "sitting" },
+  "progress": { "metric": "knee", "start": "calibrated", "target": 172 },
+  "tempo": "Up 2 s, hold 2 s, down 3 s.",
+  "dosage": "3 × 10–15 each leg.",
+  "progression": "Ankle weight; longer hold at the top.",
+  "regression": "Part range, or stop short of straight if it clicks.",
+  "contraindications": "Sharp pain under the kneecap near full straightening.",
+  "faults": [
+    {
+      "id": "leanback",
+      "label": "Leaning back to help",
+      "cue": "Sit tall against the back",
+      "tip": "Leaning back lets the hip flexors join in. Keep the trunk upright and the thigh on the seat.",
+      "severity": 2,
+      "metric": "trunk",
+      "op": "<",
+      "threshold": 68,
+      "minP": 0.3,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "thigh",
+      "label": "Thigh lifting off the seat",
+      "cue": "Thigh stays on the seat",
+      "tip": "A thigh that lifts turns this into a hip lift. Sit heavy and move only the shin.",
+      "severity": 2
+    },
+    {
+      "id": "drop",
+      "label": "Letting the leg drop",
+      "cue": "Lower the leg slowly",
+      "tip": "The lowering builds the muscle. Three seconds down, every rep.",
+      "severity": 1
+    },
+    {
+      "id": "hold",
+      "label": "No pause at the top",
+      "cue": "Hold two seconds at the top",
+      "tip": "The pause with the leg level is where the quad works hardest. Count it.",
+      "severity": 1
+    },
+    {
+      "id": "grip",
+      "label": "Gripping the seat",
+      "cue": "Hands resting, not pulling",
+      "tip": "Pulling on the chair braces the whole body and takes load off the thigh.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A chair high enough that the feet hang or just touch.",
+    "stop": "Kneecap pain, or the knee locking with a clunk.",
+    "cannotSee": "The thigh lifting off the seat.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Straightens fully with the thigh tight; toes pulled up.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Upright, hands resting on the seat edge, not gripping.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "seated", "foot": 0, "uarm": 20, "farm": 40 },
+    "B": {
+      "face": "right",
+      "torso": 0,
+      "thigh": 90,
+      "shin": 90,
+      "foot": 90,
+      "shinF": 0,
+      "footF": 0,
+      "uarm": 20,
+      "farm": 40
+    },
+    "work": { "thigh": 1 },
+    "props": [{ "kind": "box", "at": "hip", "w": 34, "dy": 2 }]
+  }
+}

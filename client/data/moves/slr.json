@@ -1,0 +1,115 @@
+{
+  "region": "knee",
+  "id": "slr",
+  "name": "Straight leg raise",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["none", "ankle weight (optional)"],
+  "muscles": { "primary": ["quadriceps", "hip flexors"], "secondary": ["abdominals"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Lying on your back, lock the knee straight and lift the whole leg to the height of the other knee.",
+  "setup": "Lie on your back, side-on to the phone at floor level, about 2 m away, working leg nearest the phone. Other knee bent, foot flat. Lock the working knee, lift the leg until it is level with the bent knee, pause, lower slowly.",
+  "brief": "Lie on your back, working leg straight, the other knee bent with the foot flat. Lift the straight leg to about 45 degrees, then lower it slowly.",
+  "why": "From the side the leg is one line: its angle from the floor gives the lift, and the hip–knee–ankle angle shows whether the knee stays locked — the fault almost everyone makes.",
+  "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+  "progress": { "metric": "thigh_raise", "start": "calibrated", "target": 35, "targetIsDelta": true },
+  "tempo": "Lift 2 s, hold 2 s, lower 3 s.",
+  "dosage": "2–3 × 10 each leg.",
+  "progression": "Add a light ankle weight; pause longer at the top.",
+  "regression": "Lift lower, or start with quad sets.",
+  "contraindications": "Hip flexor pain or a lower back that arches and hurts on the lift.",
+  "faults": [
+    {
+      "id": "kneebend",
+      "label": "Knee bending on the way up",
+      "cue": "Lock the knee straight",
+      "tip": "If the knee bends even a little, the hip flexors take over and the quad does nothing. Tighten the thigh before the leg leaves the floor.",
+      "severity": 3,
+      "metric": "knee",
+      "op": "<",
+      "threshold": 165,
+      "minP": 0.15,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Lower back arching",
+      "cue": "Press the back flat",
+      "tip": "Press the lower back gently toward the floor; keeping the other knee bent makes this easier.",
+      "severity": 2
+    },
+    {
+      "id": "drop",
+      "label": "Dropping the leg",
+      "cue": "Lower it slowly",
+      "tip": "The lowering is half the exercise. Three seconds down, every rep.",
+      "severity": 2
+    },
+    {
+      "id": "high",
+      "label": "Lifting too high",
+      "cue": "Stop level with the other knee",
+      "tip": "Above the other knee the hip flexors take over and the pelvis tips. Height is not the point.",
+      "severity": 1
+    },
+    {
+      "id": "other",
+      "label": "Pushing off the other leg",
+      "cue": "Other leg stays quiet",
+      "tip": "Bracing through the other foot hides how much work the lifting leg is really doing.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor or mat, not a bed.",
+    "stop": "Pain in the front of the hip, or the back arching and hurting.",
+    "cannotSee": "The back arching, and whether the foot is turning out.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Knee locked straight before it lifts and all the way through.", "tracked": true },
+          { "t": "Lift only to the height of the other knee — higher adds nothing.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Lower back stays close to the floor; other knee bent.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 90, "thighF": 135, "shinF": -45, "footF": 0 },
+    "B": {
+      "preset": "supine",
+      "thigh": 125,
+      "shin": 125,
+      "foot": 125,
+      "thighF": 135,
+      "shinF": -45,
+      "footF": 0
+    },
+    "work": { "thigh": 1, "abs": 0.4 }
+  }
+}

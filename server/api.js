@@ -70,21 +70,38 @@ router.get('/api/exercises', (req, res) => { const u = auth.currentUser(req); co
    Off unless NODE_ENV=development and the request comes from this machine. The file is checked the way the app
    would load it; nothing is written unless it checks clean, and the running server re-reads the library. */
 const devOnly = (req) => { if (config.nodeEnv !== 'development' || config.isProd) throw new HttpError(404, 'Not found'); const ip = clientIp(req); if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) throw new HttpError(403, 'Local only'); };
-router.get('/api/dev/catalog', (req, res) => { devOnly(req); const d = catalog.readDataSync(engine.DATA_DIR); send(res, 200, { files: d.manifest.moves, dir: engine.DATA_DIR }); });
-router.put('/api/dev/catalog/:file', async (req, res) => {
+router.get('/api/dev/catalog', (req, res) => { devOnly(req); const d = catalog.readDataSync(engine.DATA_DIR); send(res, 200, { regions: d.manifest.regions, dir: engine.DATA_DIR }); });
+/* One exercise, one file: the body is the move itself and `region` says which region lists it. The
+   move is checked the way the app loads it — inside its region, against every other id — and only
+   then written; a move that is new to the region is appended to that region's list. */
+router.put('/api/dev/catalog/:id', async (req, res) => {
   devOnly(req);
-  const name = req.params.file; if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new HttpError(400, 'File name: lower-case letters, digits, underscores');
-  const rel = 'moves/' + name + '.json'; const body = await readJson(req, 8_000_000);
+  const id = req.params.id; if (!/^[a-z][a-z0-9_]*$/.test(id)) throw new HttpError(400, 'Move id: lower-case letters, digits, underscores');
+  const body = await readJson(req, 8_000_000);
+  const entry = body && body.move, regionName = body && body.region;
+  if (!entry || typeof entry !== 'object') throw new HttpError(400, 'Send { region, move }');
+  if (entry.id !== id) throw new HttpError(400, `The move says id "${entry.id}" but the address says "${id}"`);
   const d = catalog.readDataSync(engine.DATA_DIR);
-  const others = d.files.filter(f => f.name !== rel).flatMap(f => f.json.moves.map(m => m.id));
-  const problems = catalog.checkFile(body, rel, d, others);
+  /* a named region has to exist — a typo must not quietly write the move into the one that holds it */
+  const regionOf = (name) => name.replace(/^regions\//, '').replace(/\.json$/, '');
+  const file = regionName ? d.files.find(f => regionOf(f.name) === regionName) : d.files.find(f => f.json.moves.some(m => m.id === id));
+  if (!file) throw new HttpError(400, regionName ? `No such region "${regionName}" — the regions are: ${d.files.map(f => regionOf(f.name)).join(', ')}` : 'Send the region for a move the library does not have yet');
+  const moves = file.json.moves.slice();
+  const i = moves.findIndex(m => m.id === id);
+  if (i >= 0) moves[i] = entry; else moves.push(entry);
+  const others = d.files.filter(f => f !== file).flatMap(f => f.json.moves.map(m => m.id));
+  const problems = catalog.checkFile({ ...file.json, moves }, file.name, d, others);
   if (problems.length) throw new HttpError(400, 'Not saved — fix these first', { problems });
-  const fs = require('node:fs');
-  fs.writeFileSync(path.join(engine.DATA_DIR, rel), catalog.format(body) + '\n');
-  if (!d.manifest.moves.includes(rel)) { d.manifest.moves.push(rel); fs.writeFileSync(path.join(engine.DATA_DIR, 'manifest.json'), catalog.format(d.manifest) + '\n'); }
+  const fs = require('node:fs'); const rel = 'moves/' + id + '.json';
+  fs.writeFileSync(path.join(engine.DATA_DIR, rel), catalog.format(entry) + '\n');
+  if (i < 0) {
+    const region = JSON.parse(fs.readFileSync(path.join(engine.DATA_DIR, file.name), 'utf8'));
+    region.moves.push(id);
+    fs.writeFileSync(path.join(engine.DATA_DIR, file.name), catalog.format(region) + '\n');
+  }
   engine.reloadCatalog(); const n = refreshExercises();
-  audit.log({ action: 'catalog.saved', targetType: 'file', targetId: rel, ip: clientIp(req), meta: { moves: body.moves.length } });
-  send(res, 200, { saved: rel, moves: body.moves.length, library: n });
+  audit.log({ action: 'catalog.saved', targetType: 'move', targetId: id, ip: clientIp(req), meta: { region: regionOf(file.name), added: i < 0 } });
+  send(res, 200, { saved: rel, region: regionOf(file.name), added: i < 0, library: n });
 });
 router.get('/api/plans', (req, res) => send(res, 200, { plans: pay.planList(), provider: config.paymentProvider }));
 router.get('/api/routines/prebuilt', (req, res) => { const u = auth.currentUser(req); send(res, 200, { routines: db.q("SELECT * FROM routines WHERE kind = 'prebuilt' AND archived = 0 ORDER BY rowid").all().map(r => routineView(r, { viewer: u })) }); });

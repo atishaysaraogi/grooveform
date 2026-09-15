@@ -1,0 +1,89 @@
+{
+  "region": "gym",
+  "id": "front_raise",
+  "name": "Front raise",
+  "type": "reps",
+  "view": "side",
+  "tracking": "reps",
+  "level": "beginner",
+  "equipment": ["light dumbbells"],
+  "muscles": { "primary": ["anterior deltoid"], "secondary": ["upper pectorals"] },
+  "upperBody": true,
+  "summary": "Dumbbells in front of the thighs, raise the straight arms forward to shoulder height, lower slowly.",
+  "setup": "Stand side-on to the phone, dumbbells in front of the thighs. Raise both arms forward, elbows nearly straight, until level with the shoulders, then lower slowly.",
+  "brief": "Stand with the dumbbells in front of the thighs. Raise both arms forward, elbows nearly straight, until level with the shoulders, then lower slowly.",
+  "why": "From the side the arms swing from hanging to horizontal each rep, so reps are counted.",
+  "progress": { "metric": "arm_up", "start": "calibrated", "target": 88 },
+  "show": { "ask": "arms straight out in front, level with your shoulders, nothing in your hands" },
+  "tempo": "Up 2 s, down 3 s.",
+  "dosage": "3 × 12.",
+  "progression": "Heavier; alternate arms.",
+  "regression": "Lighter.",
+  "contraindications": "Front-of-shoulder pain.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 2500
+    },
+    {
+      "id": "lean",
+      "label": "Leaning back",
+      "cue": "Stay tall",
+      "tip": "Leaning back cheats the lift; brace and stay upright.",
+      "severity": 2
+    },
+    {
+      "id": "lean3",
+      "label": "Leaning back to lift",
+      "cue": "Stand tall, ribs down",
+      "tip": "Rocking backwards uses the lower back to throw the weight up.",
+      "severity": 2
+    },
+    {
+      "id": "swing",
+      "label": "Swinging the weights",
+      "cue": "Slow and controlled",
+      "tip": "Lower the weight rather than swing it.",
+      "severity": 1
+    },
+    {
+      "id": "high5",
+      "label": "Going far above shoulder height",
+      "cue": "Stop at shoulder height",
+      "tip": "Above the shoulder the trapezius takes over.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Anywhere.",
+    "stop": "Front-of-shoulder pain.",
+    "cannotSee": "The shoulders shrugging — a front-view detail.",
+    "regions": [
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Rise to shoulder height, nearly straight.", "tracked": true }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Tall, no lean.", "tracked": false }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 5, "farm": 5 },
+    "B": { "preset": "standing", "uarm": 88, "farm": 88 },
+    "work": { "shoulder": 1, "chest": 0.3 }
+  }
+}

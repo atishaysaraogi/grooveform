@@ -1,0 +1,90 @@
+{
+  "region": "knee",
+  "id": "step_up",
+  "name": "Step-up",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "intermediate",
+  "equipment": ["step or stair"],
+  "muscles": { "primary": ["quadriceps", "gluteus maximus"], "secondary": ["hamstrings", "calves"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Step up onto a box with one leg and drive to standing tall on it, then lower with control.",
+  "setup": "A step or box 15–25 cm high, side-on to the phone with the working leg nearest. Whole foot on the step. Push through that foot to stand fully on the step, tap the other foot up, then lower slowly to the floor.",
+  "brief": "Stand in front of a step 15 to 25 cm high. Put the whole working foot on it, stand up through that leg, then step back down under control.",
+  "why": "The knee angle of the lead leg goes from bent to straight every rep, and a trunk that pitches forward to cheat shows up as the shoulder–hip line tilting.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 175 },
+  "tempo": "Up 1–2 s, down 3 s.",
+  "dosage": "3 × 8–12 each leg.",
+  "progression": "Higher step; hold a weight; slow the lowering.",
+  "regression": "Lower step, hand on a rail.",
+  "contraindications": "Pain under the kneecap on the way down; poor balance without a rail.",
+  "faults": [
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    { "template": "lean", "threshold": 65, "minP": 0.3 },
+    {
+      "id": "push",
+      "label": "Pushing off the back foot",
+      "cue": "Push through the top foot",
+      "tip": "The floor foot should be almost weightless. If you bounce off it, the lead leg is not lifting you.",
+      "severity": 2
+    },
+    {
+      "id": "drop",
+      "label": "Dropping down the step",
+      "cue": "Lower under control",
+      "tip": "Coming down slowly is where the strength is built and the knee is protected.",
+      "severity": 2
+    },
+    {
+      "id": "height",
+      "label": "Step too high",
+      "cue": "Lower step, better control",
+      "tip": "If the knee passes much beyond the toes or the trunk folds, the step is too tall.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "A stable step that cannot tip; a wall or rail within reach.",
+    "stop": "Sharp kneecap pain, or the knee collapsing inward.",
+    "cannotSee": "The knee drifting inward — that needs a front view.",
+    "regions": [
+      {
+        "name": "Lead leg",
+        "points": [
+          { "t": "Whole foot on the step; knee finishes straight at the top.", "tracked": true },
+          { "t": "Knee tracks over the middle toes, not inward.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          { "t": "Tall through the lift; a little forward lean is fine, folding is not.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "face": "right", "torso": 8, "thigh": 80, "shin": 0, "thighF": 0, "shinF": 0 },
+    "B": { "preset": "standing", "thighF": 0, "shinF": 0 },
+    "work": { "thigh": 1, "glute": 0.8, "calf": 0.4 },
+    "anchor": "an",
+    "props": [{ "kind": "box", "at": "an", "w": 44, "dy": 4 }]
+  }
+}

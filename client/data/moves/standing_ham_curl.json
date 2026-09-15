@@ -1,0 +1,106 @@
+{
+  "region": "knee",
+  "id": "standing_ham_curl",
+  "name": "Standing hamstring curl",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "level": "beginner",
+  "equipment": ["none", "ankle weight or band (optional)"],
+  "muscles": { "primary": ["hamstrings"], "secondary": ["gluteus maximus", "calves"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "band": true,
+  "summary": "Standing tall, bend one knee to bring the heel toward the buttock, thigh staying still.",
+  "setup": "Stand side-on to the phone, hands on a wall or chair in front, working leg nearest the phone. Keeping the thigh pointing straight down, bend the knee to lift the heel behind you, then lower with control.",
+  "brief": "Hands on a wall or chair in front, working leg. Keeping the thigh pointing straight down, bend the knee to lift the heel behind you, then lower with control.",
+  "why": "From the side the knee angle gives the curl, and the thigh swinging forward — the way people cheat — shows as the hip–knee line leaving vertical.",
+  "progress": { "metric": "knee", "start": "calibrated", "target": 90 },
+  "tempo": "Up 2 s, down 3 s.",
+  "dosage": "3 × 12 each leg.",
+  "progression": "Ankle weight or band around the ankles.",
+  "regression": "Smaller bend, or lying on your front.",
+  "contraindications": "Cramp or sharp pain at the back of the thigh.",
+  "faults": [
+    {
+      "id": "swing",
+      "label": "Thigh swinging forward",
+      "cue": "Keep the thigh still",
+      "tip": "The hip should not move — only the knee bends. Squeeze the buttock to keep the thigh pointing down.",
+      "severity": 3,
+      "metric": "thigh",
+      "op": "<",
+      "threshold": 70,
+      "minP": 0.3,
+      "persist": 300
+    },
+    {
+      "id": "shallow",
+      "rule": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1
+    },
+    {
+      "id": "fast",
+      "rule": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; momentum takes the work away from the muscle.",
+      "severity": 1,
+      "minMs": 1500
+    },
+    {
+      "id": "arch",
+      "label": "Arching the lower back",
+      "cue": "Ribs down, no arching",
+      "tip": "Brace the stomach lightly so the back does not sway as the heel rises.",
+      "severity": 2
+    },
+    {
+      "id": "hipflex",
+      "label": "Thigh drifting forward",
+      "cue": "Knees side by side",
+      "tip": "If the thigh comes forward the hip is helping. Keep both knees level with each other.",
+      "severity": 2
+    },
+    {
+      "id": "partial",
+      "label": "Short of a right angle",
+      "cue": "Heel to your backside",
+      "tip": "Bend until the knee is at least ninety; short curls miss the range that matters.",
+      "severity": 1
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor; something solid to hold in front.",
+    "stop": "Hamstring cramp or a sharp pull.",
+    "cannotSee": "The back arching, and the foot turning in or out.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Thigh vertical and still; only the knee bends.", "tracked": true },
+          { "t": "Heel travels toward the buttock, not out to the side.", "tracked": false }
+        ]
+      },
+      { "name": "Trunk", "points": [{ "t": "Tall, light hands on the support.", "tracked": true }] }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 60, "farm": 60 },
+    "B": {
+      "preset": "standing",
+      "uarm": 60,
+      "farm": 60,
+      "thigh": 0,
+      "shin": -90,
+      "foot": 90,
+      "thighF": 0,
+      "shinF": 0,
+      "footF": 0
+    },
+    "work": { "ham": 1, "glute": 0.4, "calf": 0.3 },
+    "wall": "ahead"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "region": "gym",
+  "id": "box_jump",
+  "name": "Box jump",
+  "type": "reps",
+  "view": "side",
+  "tracking": "none",
+  "level": "advanced",
+  "equipment": ["sturdy box"],
+  "muscles": { "primary": ["quadriceps", "gluteus maximus", "calves"], "secondary": ["hamstrings"] },
+  "summary": "Jump onto a box with both feet and land softly in a quarter squat; step down.",
+  "setup": "Stand a short distance from a stable box. Swing the arms, jump and land with the whole foot on the box, knees soft. Stand tall, then step down.",
+  "why": "The person changes height and position between the floor and the box, which confuses the calibrated counter. Logged by hand.",
+  "tempo": "Explosive; step down.",
+  "dosage": "3 × 5.",
+  "progression": "Higher box.",
+  "regression": "Lower box; step-ups.",
+  "contraindications": "Knee, ankle or Achilles injury; anyone told to avoid impact.",
+  "faults": [
+    {
+      "id": "down",
+      "label": "Jumping back down",
+      "cue": "Step down, always",
+      "tip": "Jumping down is where box-jump injuries happen and it adds nothing.",
+      "severity": 3
+    },
+    {
+      "id": "deep",
+      "label": "Landing in a deep squat",
+      "cue": "Stand tall on the box",
+      "tip": "A deep landing means the box is too high; the hips should land above the knees.",
+      "severity": 2
+    },
+    {
+      "id": "jumpdown",
+      "label": "Jumping down",
+      "cue": "Step down, do not jump",
+      "tip": "The jump down loads the tendons more than the jump up. Step.",
+      "severity": 2
+    },
+    {
+      "id": "tuck",
+      "label": "Tucking the knees to reach",
+      "cue": "Lower box, stand up tall",
+      "tip": "If you have to tuck to land, the box is too high. You should finish standing straight.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "A box that cannot tip.",
+    "stop": "Knee or Achilles pain.",
+    "cannotSee": "The landing.",
+    "regions": [
+      {
+        "name": "Landing",
+        "points": [
+          { "t": "Whole foot on the box; knees soft; hips above the knees.", "tracked": false }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "face": "right", "torso": 20, "thigh": 50, "shin": -20, "uarm": -40, "farm": -40 },
+    "B": { "face": "right", "torso": 5, "thigh": 30, "shin": -10, "uarm": 60, "farm": 60 },
+    "work": { "thigh": 1, "glute": 1, "calf": 0.8 },
+    "anchor": "an",
+    "lift": 30,
+    "props": [{ "kind": "box", "at": "B.an", "w": 44, "dy": 4 }]
+  }
+}
