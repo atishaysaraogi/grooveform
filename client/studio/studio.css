@@ -49,6 +49,9 @@ label.field .hint { font-size: .8rem; color: var(--muted); }
 .take .lbl.clean { background: var(--lime); color: var(--grape); }
 .take .lbl.fault { background: var(--pink); color: var(--grape); }
 .take .lbl.borderline { background: var(--tangerine); color: var(--grape); }
+.take .lbl.notrep { background: var(--surface-2); color: var(--muted); text-decoration: line-through; }
+#pl-classify { flex-wrap: wrap; gap: 6px; }
+.tune.check td select { width: auto; }
 .take .meta { font-size: .85rem; color: var(--muted); }
 .take .sim { font-size: .85rem; }
 .take .sim b { color: var(--text); }

@@ -368,7 +368,7 @@
     switch (step) {
       case 'screen': return Object.keys(s.screen || {}).length >= 6;
       case 'describe': return !!(s.id && s.name && s.group && s.summary && s.setup && s.why && s.faults.some((f) => f.label));
-      case 'record': return state.takes.some((t) => t.label !== 'todo');
+      case 'record': return state.takes.some((t) => t.label !== 'todo' && usable(t));
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
       case 'guide': return !!(s.guide.surface && s.guide.stop && s.guide.cannotSee);
@@ -526,13 +526,16 @@
   }
 
   /* ===================== 3 · record ===================== */
-  const LABELS = { clean: 'Clean', borderline: 'Borderline', setup: 'Awkward set-up', other: 'Other', todo: 'Not said yet' };
+  const LABELS = { clean: 'Clean', borderline: 'Borderline', notrep: 'Not a rep', setup: 'Awkward set-up', other: 'Other', todo: 'Not said yet' };
+  /* a take that is not a rep at all — dead time between reps, a shuffle, a rest — is kept so the
+     physio's call is on record, and counts for nothing: no chart, no threshold, no coverage */
+  const usable = (t) => t.label !== 'notrep';
   const rec = { on: false, frames: [], t0: 0, raf: 0, stream: null, label: 'clean', side: 'L', mirror: true, keepVideo: true, mr: null, chunks: [], countdown: 0, lastVideoT: -1, fileMode: false };
   /* what a take can be: clean, one of the move's faults, borderline, an awkward set-up, other */
   function takeLabels() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
-    return [['todo', 'Not said yet'], ['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
+    return [['todo', 'Not said yet'], ['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['notrep', 'Not a rep'], ['setup', 'Awkward set-up'], ['other', 'Other']];
   }
   function recordPanel() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
@@ -543,7 +546,7 @@
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file" title="One long video with several reps in it — the Studio cuts it into reps for you to describe">Upload a video…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
-        <div class="card"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><div class="takes" id="takes">${takesList()}</div></div>
+        <div class="card"><div class="row" style="align-items:baseline"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><span class="spacer"></span>${state.takes.some((t) => t.label === 'todo') ? `<button class="btn secondary small" id="describe-reps" title="Plays each undescribed rep and waits for you to say what it shows">Play and describe ${state.takes.filter((t) => t.label === 'todo').length} reps</button>` : ''}</div><div class="takes" id="takes">${takesList()}</div></div>
         <div class="card"><h3>Coverage</h3>${coverage()}</div>
       </div>
       <div class="stack"><div class="card"><div class="fields">
@@ -598,6 +601,7 @@
     $('btn-rec').onclick = () => (rec.on ? stopRec() : startRec());
     $('btn-file').onclick = () => $('file-input').click();
     $('file-input').onchange = () => { const f = $('file-input').files[0]; $('file-input').value = ''; if (f) analyzeFile(f); };
+    if ($('describe-reps')) $('describe-reps').onclick = () => reviewReps(state.takes.filter((t) => t.label === 'todo'));
     $('takes').onclick = async (e) => {
       const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.closest('.take').dataset.id; const t = state.takes.find((x) => x.id === id);
       if (b.dataset.act === 'del') { if (!confirm('Delete this take?')) return; await idb.del(id); state.takes = state.takes.filter((x) => x.id !== id); resim(); render(); }
@@ -613,7 +617,13 @@
     if (rec.stream || MOCK) restoreCam();
   }
   document.addEventListener('keydown', (e) => {
-    if (state.step !== 'record' || e.target.matches('input,textarea,select')) return;
+    if (e.target.matches('input,textarea,select')) return;
+    if (!$('player').hidden) {   /* in the player: space plays, 1–9 say what the rep shows, S skips it */
+      if (e.code === 'Space') { e.preventDefault(); playerPlay(!pl.playing); return; }
+      if (pl.queue) { const btns = [...document.querySelectorAll('#pl-classify button[data-say]')]; const n = /^Digit([1-9])$/.exec(e.code); const b = n ? btns[+n[1] - 1] : e.code === 'KeyS' ? btns[btns.length - 1] : null; if (b) { e.preventDefault(); b.click(); } }
+      return;
+    }
+    if (state.step !== 'record') return;
     if (e.code === 'Space') { e.preventDefault(); if ($('btn-rec') && !$('btn-rec').disabled) $('btn-rec').click(); }
     const map = { Digit1: 'clean', Digit2: 'fault', Digit3: 'borderline', Digit4: 'setup' };
     if (map[e.code]) { const want = map[e.code]; const btn = [...document.querySelectorAll('#take-label .chip')].find((c) => c.dataset.v === want || (want === 'fault' && c.dataset.v.startsWith('fault:'))); if (btn) btn.click(); }
@@ -690,17 +700,9 @@
        before it) goes in front of every rep, re-timed to start at 0, so each calibrates as the set did */
     const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
     if (!still.length) { if (!quiet) toast('This take has no still start to calibrate each rep from'); return 0; }
-    const s0 = still[0][0], kidCal = calT - s0;
     const n = cut.cuts.length;
     if (!quiet && !confirm(`Split into ${n} reps? Each becomes its own take for you to describe; the ${(cut.setupMs / 1000).toFixed(1)} s of set-up before the first rep and ${(cut.tailMs / 1000).toFixed(1)} s after the last are dropped. The whole take is replaced.`)) return 0;
-    const kids = cut.cuts.map((c, i) => {
-      const seg = t.frames.filter((f) => f[0] >= c.t0 && f[0] <= c.t1);
-      const frames = [...still.map((f) => [f[0] - s0, f[1]]), ...seg.map((f) => [kidCal + (f[0] - c.t0), f[1]])];
-      /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
-         pretend to be clean — "not said yet" is excluded from every count until the physio says */
-      const label = t.label && t.label !== 'todo' && t.origin ? t.label : (n > 1 ? 'todo' : t.label);
-      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
-    }).filter((k) => k.frames.length > still.length + 4);
+    const kids = cutKids(t, cut.cuts, still);
     if (!kids.length) { if (!quiet) toast('Could not cut the reps out of this take'); return 0; }
     for (const k of kids) await idb.put(k);
     await idb.del(t.id);
@@ -708,6 +710,19 @@
     resim(); render();
     toast(`${kids.length} reps — now say what each one shows`, 4000);
     return kids.length;
+  }
+  /* one take per cut: the still hold, then the rep, re-timed to start at 0 and remembering where it
+     sits in the parent's video */
+  function cutKids(t, cuts, still) {
+    const calT = t.calT ?? 1200, s0 = still[0][0], kidCal = calT - s0, n = cuts.length;
+    return cuts.map((c, i) => {
+      const seg = t.frames.filter((f) => f[0] >= c.t0 && f[0] <= c.t1);
+      const frames = [...still.map((f) => [f[0] - s0, f[1]]), ...seg.map((f) => [kidCal + (f[0] - c.t0), f[1]])];
+      /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
+         pretend to be clean — "not said yet" is excluded from every count until the physio says */
+      const label = t.label && t.label !== 'todo' && t.origin ? t.label : (n > 1 ? 'todo' : t.label);
+      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
+    }).filter((k) => k.frames.length > still.length + 4);
   }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
@@ -722,54 +737,143 @@
      slower than the video runs skips most of the frames, and a set that is mostly gaps calibrates
      on the wrong moment and splits into the wrong reps. Every phone reads the same frames this way. */
   const FILE_STEP = 40;   // ms between the frames read from a file — 25 a second, about what the live camera gets
-  async function analyzeFile(file) {
-    const status = (t) => { const el = $('cam-status'); if (el) el.textContent = t; };
+  /* Step through a video file with the pose model: one seek per frame, waited for, so every phone
+     reads the same frames. preview: a canvas to draw the skeleton on as it goes; stop: asked each
+     frame, true ends the read. Resolves to { frames, aspect } in the take format. */
+  async function readVideoFrames(file, { status = () => { }, preview = null, stop = () => false } = {}) {
+    await loadModel(status);
+    const video = document.createElement('video'); video.muted = true; video.playsInline = true; video.preload = 'auto';
+    video.src = URL.createObjectURL(file);
     try {
-      await loadModel(status); stopCam(); rec.fileMode = true;
-      const video = $('cam'); video.srcObject = null; video.autoplay = false; video.src = URL.createObjectURL(file); video.loop = false; video.muted = true;
       await new Promise((res, rej) => { video.onloadedmetadata = res; video.onerror = () => rej(new Error('Could not decode this video (try MP4/H.264).')); });
-      video.pause();
-      const canvas = $('cam-canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d');
+      const W = video.videoWidth, H = video.videoHeight; if (preview) { preview.width = W; preview.height = H; }
+      const ctx = preview ? preview.getContext('2d') : null;
       const frames = []; const dur = video.duration; const clock0 = Math.ceil(performance.now()); const sm = new E.PoseSmoother();
       const seek = (t) => new Promise((res) => { if (Math.abs(video.currentTime - t) < 1e-3) return res(); const to = setTimeout(res, 1500); video.onseeked = () => { clearTimeout(to); res(); }; video.currentTime = t; });
       for (let t = 0.001; t < dur; t += FILE_STEP / 1000) {
         await seek(t);
-        if (!rec.fileMode) throw new Error('Analysis stopped');
+        if (stop()) throw new Error('Analysis stopped');
         const ms = Math.round(video.currentTime * 1000);
         const lm = MOCK ? (window.__mockFile ? window.__mockFile(ms) : null) : detect(video, clock0 + ms);
-        ctx.clearRect(0, 0, canvas.width, canvas.height); drawSkeleton(ctx, smoothedFor(sm, lm, ms, canvas.width / canvas.height), canvas.width, canvas.height, '#ff2e88');
+        if (ctx) { ctx.clearRect(0, 0, W, H); drawSkeleton(ctx, smoothedFor(sm, lm, ms, W / H), W, H, '#ff2e88'); }
         frames.push([ms, lm ? lm.map((l) => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null]);
         status(`Analyzing… ${video.currentTime.toFixed(1)} / ${dur.toFixed(1)} s`);
       }
-      const take = await saveTake(frames, video.videoWidth / video.videoHeight, rec.keepVideo ? file : null, 'file');
-      URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load(); video.autoplay = true;
-      /* One long video is a set, not a rep. If the move already knows what it measures, cut it into
-         its reps now; otherwise it stays whole and step 4 offers the cut once the measure is set. */
-      if (take) {
-        const n = await splitTake(take, { quiet: true });
-        status(n ? `Analysed — ${n} reps to describe` : 'Analysed — set the progress measure in step 4, then Split into reps');
-      } else status('Camera off');
+      return { frames, aspect: W / H };
+    } finally { URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load(); }
+  }
+  /* A video the physio recorded on a phone becomes takes: one long video is a set, not a rep, so if
+     the move already knows what it measures it is cut into its reps and each is played for the
+     physio to say what it shows; otherwise it stays whole and step 4 offers the cut once the
+     measure is set. */
+  async function analyzeFile(file) {
+    const status = (t) => { const el = $('cam-status'); if (el) el.textContent = t; };
+    try {
+      stopCam(); rec.fileMode = true;
+      const { frames, aspect } = await readVideoFrames(file, { status, preview: $('cam-canvas'), stop: () => !rec.fileMode });
+      const take = await saveTake(frames, aspect, rec.keepVideo ? file : null, 'file');
+      if (!take) { status('Camera off'); return; }
+      const n = await splitTake(take, { quiet: true });
+      status(n ? `Analysed — ${n} reps to describe` : 'Analysed — set the progress measure in step 4, then Split into reps');
+      if (n > 1) reviewReps(state.takes.filter((t) => t.origin && t.origin.take === take.id && t.label === 'todo'));
     } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
-    finally { const v = $('cam'); if (v) v.autoplay = true; }
+  }
+
+  /* ---------- check: a video the takes have never seen, and what the coach would say about it ---------- */
+  /* Nothing here is saved: the reps and their verdicts live in memory for this session, so a
+     physio can throw a fresh video at the finished move and see whether the coach agrees with them. */
+  const check = { name: '', whole: null, reps: [], busy: false, status: '' };
+  const firedOf = (sim) => !sim || sim.error ? [] : [...new Set(Object.keys(sim.faultSpans || {}).filter((id) => sim.faultSpans[id].length).concat(Object.keys(sim.repFaults || {}).filter((id) => sim.repFaults[id] > 0)))];
+  async function checkFile(file) {
+    const status = (t) => { check.status = t; const el = $('check-status'); if (el) el.textContent = t; };
+    const ex = currentExercise(); if (!ex) { toast('The move does not compile yet — fix the problems above first'); return; }
+    try {
+      check.busy = true; check.name = file.name; check.whole = null; check.reps = []; render();
+      const { frames, aspect } = await readVideoFrames(file, { status });
+      const settled = settleAt(frames, aspect);
+      const whole = { id: 'check_' + uid(), moveId: moveKey(), label: 'check', side: rec.side, note: '', aspect, frames, video: file, source: 'check', created: Date.now(), durationMs: frames[frames.length - 1][0], calT: settled ?? 1200 };
+      const sim = simulate(ex, whole);
+      const cut = repCuts(whole, sim); const calT = whole.calT;
+      const still = frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
+      const kids = cut && still.length ? cutKids(whole, cut.cuts, still) : [];
+      check.whole = { take: whole, sim, settled: settled != null };
+      check.reps = kids.map((k) => ({ take: k, sim: simulate(ex, k), said: '' }));
+      status(kids.length ? `${kids.length} reps found` : sim && sim.reps && sim.reps.length === 1 ? 'One rep found' : 'No reps found');
+    } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
+    finally { check.busy = false; render(); }
+  }
+  function checkPanel(s) {
+    const faults = (s && s.faults) || []; const fl = (id) => { const f = faults.find((x) => x.id === id); return f ? f.label : id; };
+    const labels = takeLabels().filter(([v]) => v !== 'todo');
+    let body = '';
+    if (check.whole) {
+      const w = check.whole, sim = w.sim, rv = sim && sim.review;
+      const agree = (r) => { if (!r.said) return null; const fired = firedOf(r.sim); if (r.said === 'clean') return fired.length === 0; if (r.said.startsWith('fault:')) return fired.includes(r.said.slice(6)); if (r.said === 'notrep') return false; return null; };
+      const judged = check.reps.filter((r) => agree(r) != null), agreed = judged.filter((r) => agree(r));
+      body = `<p style="font-size:.92rem"><b>${esc(check.name)}</b> as one set: ${sim && !sim.error ? `<b>${sim.full}</b> rep${sim.full === 1 ? '' : 's'} counted${sim.partial ? `, ${sim.partial} partial` : ''}${rv ? ` · score ${rv.score} — ${esc(rv.headline)}` : ''}${rv && rv.faults && Object.keys(rv.faults).length ? ` · would cue: ${Object.values(rv.faults).map((f) => esc(f.fault.cue || f.fault.label)).join(', ')}` : ''}` : `<span class="muted">rule error: ${esc((sim && sim.error) || 'no simulation')}</span>`}${w.settled ? '' : ' · <span class="warn">no still start found — calibrated 1.2 s in</span>'}</p>
+        ${check.reps.length ? `<table class="tune check"><thead><tr><th>rep</th><th>counted</th><th>the coach says</th><th>you say</th><th></th><th></th></tr></thead><tbody>${check.reps.map((r, i) => { const fired = firedOf(r.sim); const a = agree(r); return `<tr class="${a == null ? '' : a ? 'ok' : 'bad'}"><td>${i + 1}</td><td>${r.sim && !r.sim.error ? (r.sim.full ? 'full' : r.sim.partial ? 'partial' : '—') : '—'}</td><td>${fired.length ? fired.map(fl).map(esc).join(', ') : 'clean'}</td><td><select data-check="${i}">${[['', '—'], ...labels].map(([v, txt]) => `<option value="${esc(v)}" ${r.said === v ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select></td><td>${a == null ? '' : a ? '✓ agree' : r.said === 'notrep' ? '✗ counted a non-rep' : '✗ disagree'}</td><td><button class="btn ghost small" data-check-play="${i}">Play</button></td></tr>`; }).join('')}</tbody></table>
+        <p class="muted" style="font-size:.85rem">${judged.length ? `${agreed.length} of ${judged.length} agree with you.` : 'Say what each rep shows to see where the coach agrees with you.'} Nothing here is saved.</p>` : ''}`;
+    }
+    return `<div class="card"><h3>Check against another video</h3><p style="font-size:.92rem">Upload a video of the move the takes above have never seen — the Studio cuts it into reps and shows what the coach would say about each. Nothing is added to the takes.</p>
+      <div class="row"><button class="btn secondary" id="check-btn" ${check.busy ? 'disabled' : ''}>Upload a video…</button><input type="file" id="check-file" accept="video/*" hidden><span class="muted" id="check-status" style="font-size:.9rem">${esc(check.status)}</span></div>
+      <div id="check-out">${body}</div></div>`;
+  }
+  function wireCheck() {
+    if (!$('check-btn')) return;
+    $('check-btn').onclick = () => $('check-file').click();
+    $('check-file').onchange = () => { const f = $('check-file').files[0]; $('check-file').value = ''; if (f) checkFile(f); };
+    $('check-out').onchange = (e) => { const sel = e.target.closest('select[data-check]'); if (!sel) return; check.reps[+sel.dataset.check].said = sel.value; render(); };
+    $('check-out').onclick = (e) => { const b = e.target.closest('button[data-check-play]'); if (!b) return; const r = check.reps[+b.dataset.checkPlay]; state.sims[r.take.id] = r.sim; openPlayer(r.take, { play: true }); };
   }
 
   /* ---------- player: scrub a take with the skeleton and the live metric readout ---------- */
-  const pl = { take: null, raf: 0, playing: false, t: 0, url: null };
-  function openPlayer(take) {
-    pl.take = take; pl.t = 0; pl.playing = false; $('player').hidden = false; $('pl-title').textContent = `${take.label.startsWith('fault:') ? 'Fault: ' + take.label.slice(6) : LABELS[take.label] || take.label} · ${(take.durationMs / 1000).toFixed(1)} s`;
+  const pl = { take: null, raf: 0, playing: false, t: 0, url: null, queue: null, done: 0, total: 0 };
+  function openPlayer(take, { play = false } = {}) {
+    pl.take = take; pl.t = 0; pl.playing = false; $('player').hidden = false;
+    const what = take.label.startsWith('fault:') ? 'Fault: ' + take.label.slice(6) : LABELS[take.label] || take.label;
+    $('pl-title').textContent = pl.queue ? `Rep ${take.origin ? take.origin.rep : pl.done + 1} of ${take.origin ? take.origin.of : pl.total} — what does it show?` : `${what} · ${(take.durationMs / 1000).toFixed(1)} s`;
     const v = $('pl-video'); if (pl.url) { URL.revokeObjectURL(pl.url); pl.url = null; }
     if (take.video) { pl.url = URL.createObjectURL(take.video); v.src = pl.url; v.hidden = false; } else { v.hidden = true; v.removeAttribute('src'); }
-    $('pl-scrub').value = 0; drawPlayerFrame();
+    $('pl-scrub').value = 0; $('pl-play').textContent = 'Play'; classifyBar(); drawPlayerFrame();
+    if (play) playerPlay(true);
   }
-  function closePlayer() { $('player').hidden = true; pl.playing = false; cancelAnimationFrame(pl.raf); const v = $('pl-video'); v.pause(); }
+  function closePlayer() { $('player').hidden = true; pl.playing = false; pl.queue = null; cancelAnimationFrame(pl.raf); const v = $('pl-video'); v.pause(); $('pl-classify').hidden = true; }
   $('pl-close').onclick = closePlayer; $('player').onclick = (e) => { if (e.target === $('player')) closePlayer(); };
+  /* Describing reps one by one: each undescribed rep plays once and waits, paused on its last
+     frame, until the physio says what it shows or skips it; then the next one plays. */
+  function reviewReps(takes) {
+    const todo = takes.filter((t) => t.label === 'todo'); if (!todo.length) { toast('Every rep has been described'); return; }
+    pl.queue = todo.map((t) => t.id); pl.done = 0; pl.total = todo.length; nextInQueue();
+  }
+  function nextInQueue() {
+    while (pl.queue && pl.queue.length) { const id = pl.queue.shift(); const t = state.takes.find((x) => x.id === id); if (t) { openPlayer(t, { play: true }); return; } }
+    const left = state.takes.filter((t) => t.label === 'todo').length;
+    closePlayer(); toast(left ? `${left} rep${left > 1 ? 's' : ''} still not said — Play and describe when you are ready` : 'Every rep described', 4000);
+  }
+  function classifyBar() {
+    const bar = $('pl-classify'); if (!pl.queue) { bar.hidden = true; bar.innerHTML = ''; return; }
+    const labels = takeLabels().filter(([v]) => v !== 'todo');
+    bar.innerHTML = labels.map(([v, txt], i) => `<button class="btn small ${v === 'clean' ? 'primary' : v.startsWith('fault:') ? 'secondary' : 'ghost'}" data-say="${esc(v)}" title="key ${i + 1}">${esc(txt)}</button>`).join('') + `<span class="spacer"></span><button class="btn ghost small" data-say="" title="key S">Skip</button>`;
+    bar.hidden = false;
+  }
+  $('pl-classify').onclick = async (e) => {
+    const b = e.target.closest('button[data-say]'); if (!b || !pl.take) return;
+    if (b.dataset.say) { const t = state.takes.find((x) => x.id === pl.take.id); if (t) { t.label = b.dataset.say; await idb.put(t); pl.done++; render(); } }
+    nextInQueue();
+  };
+  function playerPlay(on) {
+    if (on === pl.playing) return;
+    pl.playing = on; $('pl-play').textContent = on ? 'Pause' : 'Play'; const v = $('pl-video');
+    if (on) { if (pl.t >= pl.take.durationMs) pl.t = 0; pl.wall = performance.now() - pl.t; if (!v.hidden) { v.currentTime = videoTime(pl.take, pl.t) / 1000; v.play().catch(() => { }); } pl.raf = requestAnimationFrame(playTick); }
+    else { v.pause(); cancelAnimationFrame(pl.raf); }
+  }
   /* a take cut out of a longer recording keeps that recording's video: its still start is the video's
      start, and its rep sits at videoT0 */
   /* where a moment of a take sits in its video: a rep cut out of a longer video keeps the parent's
      still hold in front of it (from videoS0) and its own frames from videoT0 */
   const videoTime = (take, t) => { const calT = take.calT ?? 1200; return take.videoT0 == null ? t : t < calT ? t + (take.videoS0 || 0) : t - calT + take.videoT0; };
   $('pl-scrub').oninput = (e) => { pl.t = (+e.target.value / 1000) * pl.take.durationMs; pl.playing = false; const v = $('pl-video'); if (!v.hidden) { v.pause(); v.currentTime = videoTime(pl.take, pl.t) / 1000; } drawPlayerFrame(); };
-  $('pl-play').onclick = () => { pl.playing = !pl.playing; $('pl-play').textContent = pl.playing ? 'Pause' : 'Play'; const v = $('pl-video'); if (pl.playing) { pl.wall = performance.now() - pl.t; if (!v.hidden) { v.currentTime = videoTime(pl.take, pl.t) / 1000; v.play().catch(() => { }); } pl.raf = requestAnimationFrame(playTick); } else { v.pause(); cancelAnimationFrame(pl.raf); } };
+  $('pl-play').onclick = () => playerPlay(!pl.playing);
   function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; const calT = pl.take.calT ?? 1200; const v = $('pl-video'); if (pl.take.videoT0 != null && !v.hidden && pl.t >= calT && pl.t - 40 < calT) v.currentTime = videoTime(pl.take, pl.t) / 1000;   /* jump from the still start to the rep */ if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; v.pause(); } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
   function drawPlayerFrame() {
     const take = pl.take; const c = $('pl-canvas'); const aspect = take.aspect || 16 / 9; const W = 960, H = Math.round(960 / aspect); if (c.width !== W) { c.width = W; c.height = H; }
@@ -828,7 +932,7 @@
     });
   }
   function takeSeries(metric, rel) {
-    return state.takes.map((t) => { let d = trace(metric, t, t.side); if (rel === 'change') { const c = d.find((x) => x[0] >= (t.calT ?? 1200)); const base = c ? c[1] : 0; d = d.map(([tt, v]) => [tt, v - base]); } return { take: t, data: d, color: COLORS[labelOf(t)] || COLORS.other, alpha: labelOf(t) === 'clean' ? 1 : 0.75 }; });
+    return state.takes.filter(usable).map((t) => { let d = trace(metric, t, t.side); if (rel === 'change') { const c = d.find((x) => x[0] >= (t.calT ?? 1200)); const base = c ? c[1] : 0; d = d.map(([tt, v]) => [tt, v - base]); } return { take: t, data: d, color: COLORS[labelOf(t)] || COLORS.other, alpha: labelOf(t) === 'clean' ? 1 : 0.75 }; });
   }
   const legend = () => `<div class="legend"><span><i style="background:${COLORS.clean}"></i>clean</span><span><i style="background:${COLORS.fault}"></i>fault takes</span><span><i style="background:${COLORS.borderline}"></i>borderline</span><span><i style="background:${COLORS.setup}"></i>awkward set-up</span></div>`;
 
@@ -842,7 +946,7 @@
         <div class="st-grid wide-left"><div class="stack">
           <div class="card"><h3>Measurement</h3>${metricEditor('progress.metric', pr.metric)}</div>
           <div class="card"><h3>Across the takes</h3>${noTakes ? '<p class="muted">Record a take first and the metric appears here.</p>' : `<canvas class="chart" id="chart-metric"></canvas>${legend()}`}</div>
-          <div class="card"><h3>Reps the coach would count</h3>${noTakes ? '<p class="muted">—</p>' : `<canvas class="chart" id="chart-p"></canvas><p class="muted" style="font-size:.85rem;margin-top:6px">Progress 0 = start, 1 = target. A rep counts when it passes 0.85 and returns below 0.15. Dots mark counted reps.</p><div class="fires" style="margin-top:8px">${state.takes.map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.full >= 3 ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? sim.full + (sim.partial ? ` (+${sim.partial} partial)` : '') : '—'}</span>`; }).join('')}</div>`}</div>
+          <div class="card"><h3>Reps the coach would count</h3>${noTakes ? '<p class="muted">—</p>' : `<canvas class="chart" id="chart-p"></canvas><p class="muted" style="font-size:.85rem;margin-top:6px">Progress 0 = start, 1 = target. A rep counts when it passes 0.85 and returns below 0.15. Dots mark counted reps.</p><div class="fires" style="margin-top:8px">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.full >= 3 ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? sim.full + (sim.partial ? ` (+${sim.partial} partial)` : '') : '—'}</span>`; }).join('')}</div>`}</div>
         </div><div class="stack">
           <div class="card"><div class="fields">
             ${field('Start value', `<div class="row">${chips('progress.startMode', ['calibrated', 'fixed'], pr.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed number' })}${pr.start === 'calibrated' ? '' : `<input type="number" step="1" data-k="progress.start" value="${esc(pr.start)}" style="width:110px">`}</div>`, 'Calibrated = whatever the metric reads while the person holds the start pose. Use it unless the start pose varies between people in a way that matters.')}
@@ -867,7 +971,7 @@
         ${(s.options || []).some((o) => Array.isArray(o.values) && o.values.length) ? field('Only for', `<select data-cw="${i}"><option value="">every option value</option>${(s.options || []).filter((o) => Array.isArray(o.values) && o.values.length).flatMap((o) => o.values.map((v) => `<option value="${esc(o.key + '=' + v)}" ${c.when && c.when[0] && c.when[0].option === o.key && String(c.when[0].is) === String(v) ? 'selected' : ''}>${esc(o.label)} = ${esc((o.labels || {})[v] || v)}</option>`)).join('')}</select>`, 'A condition that applies only for one option value — a straight knee for the calf stretch, a bent one for the soleus.') : ''}
         ${state.takes.length ? `<canvas class="chart" id="chart-c${i}" style="margin-top:10px"></canvas>` : ''}</div>`).join('')}
         <button class="btn ghost" id="addc">Add a condition</button></div>
-        <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
+        <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
         <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'First point of the first condition' })}</div>
         <div class="card"><div class="fields">${field('Live readout', `<div class="row"><select data-k="display.condition">${conds.map((c, i) => `<option value="${i}" ${((s.display || {}).condition || 0) === i ? 'selected' : ''}>condition ${i + 1}</option>`).join('')}</select><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="knee" style="width:110px"><input type="text" data-k="display.aim" value="${esc((s.display || {}).aim || '')}" placeholder="90°" style="width:80px"></div>`, 'What the person sees: “97° knee · aim 90°”.')}
           ${field('When out of position, the coach says', text('enterCue', s.enterCue || '', 'Slide down the wall until your knees are at ninety'), 'Spoken after a few seconds out of position, instead of silence.')}</div></div></div></div>
@@ -913,7 +1017,7 @@
       const first = state.sims[state.takes[0].id]; const ref = first && first.session ? first.session.ref : null;
       if (ref) { lines.push({ y: ref.start, label: 'start', color: '#7a3fb8' }, { y: ref.target, label: 'target', color: '#ff2e88' }); }
       if ($('chart-metric')) drawChart($('chart-metric'), series, { lines, yLabel: (SPEC.KINDS[pr.metric.kind] || {}).unit });
-      if ($('chart-p')) drawChart($('chart-p'), state.takes.map((t) => ({ data: (state.sims[t.id] && state.sims[t.id].p) || [], color: COLORS[labelOf(t)] || COLORS.other })), { lines: [{ y: E.FULL, label: 'full', color: '#4f9a1e' }, { y: E.ATTEMPT, label: 'attempt', color: '#ffb830' }, { y: E.REST, label: 'rest', color: '#7a3fb8' }], y0: 0, y1: 1, marks: state.takes.flatMap((t) => ((state.sims[t.id] && state.sims[t.id].reps) || []).map((r) => ({ t: r.t, y: r.full ? 1 : 0.5, color: r.full ? '#4f9a1e' : '#ffb830' }))) });
+      if ($('chart-p')) drawChart($('chart-p'), state.takes.filter(usable).map((t) => ({ data: (state.sims[t.id] && state.sims[t.id].p) || [], color: COLORS[labelOf(t)] || COLORS.other })), { lines: [{ y: E.FULL, label: 'full', color: '#4f9a1e' }, { y: E.ATTEMPT, label: 'attempt', color: '#ffb830' }, { y: E.REST, label: 'rest', color: '#7a3fb8' }], y0: 0, y1: 1, marks: state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].reps) || []).map((r) => ({ t: r.t, y: r.full ? 1 : 0.5, color: r.full ? '#4f9a1e' : '#ffb830' }))) });
     } else {
       s.hold.conditions.forEach((c, i) => { const n = (SPEC.KINDS[c.metric.kind] || {}).n; if (c.metric.pts.length < n || !$('chart-c' + i)) return; drawChart($('chart-c' + i), takeSeries(c.metric, c.rel), { lines: [{ y: c.min, label: 'min', color: '#7a3fb8' }, { y: c.max, label: 'max', color: '#ff2e88' }], yLabel: (SPEC.KINDS[c.metric.kind] || {}).unit }); });
     }
@@ -922,7 +1026,7 @@
   /* ===================== 5 · faults ===================== */
   const wc = (t) => (t || '').trim() ? t.trim().split(/\s+/).length : 0;
   function fireReport(f) {
-    const groups = {}; for (const t of state.takes) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = t.label === 'fault:' + f.id ? 'this fault' : labelOf(t); const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
+    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = t.label === 'fault:' + f.id ? 'this fault' : labelOf(t); const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
     const order = ['clean', 'this fault', 'borderline', 'fault', 'setup', 'other'];
     return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}</div>`;
   }
@@ -1000,7 +1104,7 @@
   function drawFaultCharts(s) {
     s.faults.forEach((f, i) => {
       const c = $('chart-f' + i); if (!c || f.rule) return; const n = (SPEC.KINDS[f.metric.kind] || {}).n; if (f.metric.pts.length < n) return;
-      const spans = state.takes.flatMap((t) => ((state.sims[t.id] && state.sims[t.id].faultSpans[f.id]) || []).map(([t0, t1]) => ({ t0, t1, color: t.label === 'fault:' + f.id ? 'rgba(255,46,136,.22)' : labelOf(t) === 'clean' ? 'rgba(209,32,107,.35)' : 'rgba(255,184,48,.25)' })));
+      const spans = state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].faultSpans[f.id]) || []).map(([t0, t1]) => ({ t0, t1, color: t.label === 'fault:' + f.id ? 'rgba(255,46,136,.22)' : labelOf(t) === 'clean' ? 'rgba(209,32,107,.35)' : 'rgba(255,184,48,.25)' })));
       drawChart(c, takeSeries(f.metric, f.rel), { lines: [{ y: f.threshold, label: 'threshold', color: '#ff2e88' }], spans, yLabel: (SPEC.KINDS[f.metric.kind] || {}).unit });
     });
   }
@@ -1154,6 +1258,7 @@
         <table class="tune"><thead><tr><th>fault</th><th>clean</th><th>its own takes</th><th>borderline</th><th></th></tr></thead><tbody>${tune.rows.map((r) => `<tr class="${r.ok ? 'ok' : 'bad'}"><td>${esc(r.label)}</td><td>${r.clean}</td><td>${r.own}</td><td>${r.border}</td><td>${r.ok ? '✓' : esc(r.why)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">no live faults</td></tr>'}</tbody></table>
         <div class="row" style="margin-top:10px;align-items:center;gap:10px">${field('Vetted', chips('vetted', [false, true], !!s.vetted, { false: 'Not yet', true: 'Yes — checked against these takes' }))}${s._tuned ? `<span class="muted" style="font-size:.85rem">tuned ${esc(s._tuned.date)}${s._tuned.by ? ' by ' + esc(s._tuned.by) : ''} on ${s._tuned.takes} takes</span>` : ''}</div>
         ${!tune.pass ? '<p class="muted" style="font-size:.85rem">Vetted can only be set once the rule passes.</p>' : ''}</div>
+      ${checkPanel(s)}
       <div class="card"><h3>The entry, as it will be written</h3><pre class="code">${esc(preview)}</pre></div>
       <div class="row"><button class="btn ghost" id="back">← Guide</button></div></div>`;
   }
@@ -1174,6 +1279,7 @@
   }
   function wireExport(s) {
     const name = s._target || targetFileName(s);
+    wireCheck();
     bind($('main'), s, (k) => {
       if (k === '_target') render();
       if (k === 'vetted') { const on = document.querySelector('[data-chips="vetted"] .chip[aria-pressed="true"]').dataset.v === 'true'; const t = tuningReport(s);

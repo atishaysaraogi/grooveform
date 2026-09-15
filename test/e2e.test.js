@@ -376,6 +376,15 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#next');
     // 7 · export: complete, accepted, and the emitted move compiles in Node too
     await st.waitForSelector('#dl-js'); await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
+    /* a fresh video, checked against the finished move: the coach's verdict per rep, and whether it agrees with the physio */
+    await st.evaluate(() => { const orig = window.__mockPose; window.__mockFile = (t) => (t < 1500 ? orig(0) : orig(5500 + (t - 1500))); });
+    await st.setInputFiles('#check-file', path.join(__dirname, 'fixtures', 'blank-36s.webm'));
+    await st.waitForFunction(() => document.querySelectorAll('#check-out tbody tr').length >= 3, null, { timeout: 180000 });
+    const verdicts = await st.$$eval('#check-out tbody tr', (rows) => rows.map((r) => r.children[2].textContent));
+    assert.ok(verdicts.length >= 3 && verdicts[0] === 'clean' && /Leaning/.test(verdicts[1]), 'the coach calls the second rep the lean, the first clean: ' + JSON.stringify(verdicts));
+    await st.selectOption('#check-out select[data-check="0"]', 'clean'); await st.selectOption('#check-out select[data-check="1"]', 'fault:leaning_away');
+    await st.waitForFunction(() => /2 of 2 agree/.test(document.getElementById('check-out').textContent));
+    assert.ok(!(await st.evaluate(() => window.OnTrackStudio.state.takes.some((t) => t.label === 'check' || t.source === 'check'))), 'nothing from the check joins the takes');
     const spec = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.moves[s.current]; });
     const SPEC = require('../client/coach/spec.js'); const LIB = require('../client/coach/exercise-library.js');
     assert.doesNotThrow(() => LIB.validate(SPEC.compile(spec, LIB.kinematics)), 'the exported spec compiles on the build side');
@@ -408,6 +417,19 @@ async function runCoachedSet(page, side = 'right') {
     /* walking in is not the start position: each rep carries the still hold that followed it, not a fixed first second */
     assert.ok(kids.every((k) => k.videoS0 >= 1200 && k.videoS0 <= 1900 && k.calT >= 1000 && k.calT <= 1600), 'the still hold before the set goes in front of each rep: ' + JSON.stringify(kids));
     assert.ok(kids[0].videoT0 >= 2700 && kids[0].videoT0 <= 4000, 'the first rep is cut from where the set began, not from the walk-in: ' + JSON.stringify(kids[0]));
+    /* the first rep is already playing for the physio to say what it shows; each answer plays the next */
+    await st.waitForFunction(() => !document.getElementById('player').hidden && !document.getElementById('pl-classify').hidden);
+    assert.match(await st.textContent('#pl-title'), /Rep 1 of 8/);
+    assert.ok(await st.$('#pl-classify [data-say="clean"]') && await st.$('#pl-classify [data-say="notrep"]') && await st.$('#pl-classify [data-say=""]'), 'clean, not-a-rep and skip are offered');
+    await st.click('#pl-classify [data-say="clean"]'); await st.waitForFunction(() => /Rep 2 of 8/.test(document.getElementById('pl-title').textContent));
+    await st.click('#pl-classify [data-say="notrep"]'); await st.waitForFunction(() => /Rep 3 of 8/.test(document.getElementById('pl-title').textContent));
+    await st.keyboard.press('KeyS'); await st.waitForFunction(() => /Rep 4 of 8/.test(document.getElementById('pl-title').textContent));
+    await st.keyboard.press('Digit1'); await st.waitForFunction(() => /Rep 5 of 8/.test(document.getElementById('pl-title').textContent));
+    await st.click('#pl-close');
+    const said = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => t.label));
+    assert.deepEqual(said, ['clean', 'notrep', 'todo', 'clean', 'todo', 'todo', 'todo', 'todo'], 'said, not a rep, skipped, said by key; the rest wait');
+    assert.match(await st.textContent('#describe-reps'), /Play and describe 5 reps/, 'the skipped ones can be picked up again');
+    const drawn = await st.evaluate(() => document.querySelectorAll('#takes .take').length); assert.equal(drawn, 8, 'a not-a-rep take stays listed, struck through');
     await st.close();
   });
 

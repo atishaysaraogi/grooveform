@@ -72,12 +72,32 @@ much of each it left out. A video with no still hold in it calibrates 1.2 s in
 and says so — hold the start position for a second before the first rep.
 
 Each rep arrives labelled **Not said yet**, in pink, and counts for nothing
-until you use the selector on its row to say what it shows — clean, which
-fault, borderline. That is deliberate: a rep silently assumed clean would poison
-every threshold derived from it, so step 3 is not done and the check will not
-pass while any remain. There is no limit on how many examples of a label you
-give; the coverage panel's numbers are a floor, and a row past its target reads
-`Clean 5 ✓` rather than a fraction.
+until you say what it shows — clean, which fault, borderline, or **Not a rep**
+for the dead time the cut caught (a shuffle, a rest, a half-hearted extra).
+That is deliberate: a rep silently assumed clean would poison every threshold
+derived from it, so step 3 is not done and the check will not pass while any
+remain. A "Not a rep" take is kept so the call is on record, and is left out of
+every chart, threshold and count. There is no limit on how many examples of a
+label you give; the coverage panel's numbers are a floor, and a row past its
+target reads `Clean 5 ✓` rather than a fraction.
+
+The describing is done in the player, one rep at a time: as soon as a video
+has been cut up, the first rep plays with its skeleton and readout and then
+waits, paused on its last frame, with a button for each thing it could show —
+Clean, each fault, Borderline, Not a rep, Awkward set-up, Other — and Skip.
+Press one (keys 1–9, or S to skip; space replays it) and the next rep plays.
+Skipped reps stay "Not said yet"; **Play and describe N reps** above the takes
+list picks them up again, and the selector on each row still works for
+one-offs.
+
+**Checking the finished move against a fresh video** is the last card of step
+7: upload a video the takes have never seen and the Studio cuts it into reps
+and shows, for each, whether the coach would count it and which faults it
+would call — with the whole video's verdict as one set above (reps counted,
+score, what it would cue). Say what each rep really shows and the row turns
+green or red, with a running "n of m agree" underneath. Nothing from a check is
+saved or added to the takes; it is there to catch a threshold that fires on
+someone else's clean rep, or misses a fault, before the move ships.
 
 A brand-new move has nothing to find reps with yet — the progress measure is
 step 4 — so its video stays whole until you set it, then **Split into N reps**
