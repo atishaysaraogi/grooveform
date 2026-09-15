@@ -85,10 +85,20 @@ The describing is done in the player, one rep at a time: as soon as a video
 has been cut up, the first rep plays with its skeleton and readout and then
 waits, paused on its last frame, with a button for each thing it could show —
 Clean, each fault, Borderline, Not a rep, Awkward set-up, Other — and Skip.
-Press one (keys 1–9, or S to skip; space replays it) and the next rep plays.
+
+**A rep can show more than one thing.** Those buttons are toggles, so a rep
+that leans *and* rushes says both, and a threshold tuned for either is tuned
+against the whole truth about that rep. Clean and Not a rep are the exception:
+nothing stacks on them, so they answer and move on in a single tap. Anything
+else waits for **Next rep** (or Enter), which is what leaves room for the
+second fault. Keys 1–9 are the buttons in order, S skips, space replays.
 Skipped reps stay "Not said yet"; **Play and describe N reps** above the takes
-list picks them up again, and the selector on each row still works for
-one-offs.
+list picks them up again, and the label on each row opens the same set of
+toggles for a quick correction without re-watching.
+
+Everything downstream reads the set, not one word: a rep labelled with two
+faults is evidence for both in the coverage panel and in the tuning table, and
+one labelled Not a rep is evidence for nothing.
 
 **Checking the finished move against a fresh video** is the last card of step
 7: upload a video the takes have never seen and the Studio cuts it into reps
@@ -134,7 +144,10 @@ body settles, as above.
 
 **The progress number.** Pick the measurement kind (angle at a joint, segment
 from vertical, segment from horizontal, distance as % of torso, a point's offset
-from a line, trunk lean, pelvis tilt) and the landmarks. The chart under it shows
+from a line, trunk lean, pelvis tilt), then tap each empty slot and say which
+point goes in it. The list of landmarks appears over the slot being filled and
+walks itself on to the next empty one, so a three-point angle is three taps and
+the page is not carrying a wall of joint names it does not need. The chart under it shows
 the metric across every take, coloured by label. Press *Suggest* and the start
 and target come from the clean takes. Two rules that cost a rebuild each to
 learn:
@@ -171,7 +184,24 @@ time; how long it must persist before it counts (0.4 s is the usual answer).
 Surface, what the camera **cannot** see (required — it is shown to the user so
 they know what to check themselves), when to stop, and form points by region,
 each marked *camera* or *you*. Dosage, harder, easier. Muscles for the figure.
-Then *Build from the best clean take* makes the demo figure.
+
+**The demo figure** is two keyframes: the start position and the end of the
+movement. *Build from the best clean take* lifts them out of a recording.
+*Edit the poses* opens the builder, where dragging a joint turns the bone above
+it and carries everything below round with it, so every limb keeps the length
+it was drawn with — a foot through the floor or an arm the pose model guessed
+at takes a second to fix. A hip drags the whole body; the other keyframe sits
+behind, faint, so an edit can be seen against where the body was; *Copy this
+pose onto the other* and *Undo my edits* are there for the rest.
+
+**Notes on the animation** are the other half of the builder: a few words
+pinned to a joint — "knee drifts in over the big toe" — drawn on the exercise
+page's figure with a line to the joint, travelling with it as the figure moves.
+A note can be tied to one keyframe, and then it fades in as the figure reaches
+it, which is how a fault that only shows at the top gets said at the top. Notes
+ride on a move written in preset angles as well, so any library move can be
+annotated without being converted; *Edit these poses by hand* does convert one,
+turning its presets into plain joint positions, and says so before it does.
 
 ### Check & export
 

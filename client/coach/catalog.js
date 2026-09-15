@@ -201,7 +201,7 @@
     /* `face` is the way the front of the body points, so the figure's muscles follow it. */
     const flip = view === 'side' ? (rawA.dir || 1) < 0 : false;
     const props = resolveProps(pose.props, A, B, wall);
-    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props, anchors };
+    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props, anchors, notes: pose.notes || [] };
   }
 
   function registerFigure(id, fig) {
@@ -237,7 +237,8 @@
     guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
     camera: ['height', 'distance', 'posture', 'tolerance'], show: ['ask'], sided: ['limb', 'by', 'auto'], muscles: ['primary', 'secondary'], source: ['name', 'url'],
     option: ['key', 'label', 'values', 'unit', 'default', 'labels'],
-    pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side'],
+    pose: ['A', 'B', 'work', 'wall', 'anchor', 'lift', 'raise', 'props', 'side', 'notes'],
+    note: ['at', 'kf', 'text'],
     kfSide: ['preset', 'face', 'torso', 'neck', 'thigh', 'shin', 'foot', 'uarm', 'farm', 'thighF', 'shinF', 'footF', 'uarmF', 'farmF'],
     kfFront: ['preset', 'legL', 'legR', 'shinL', 'shinR', 'armL', 'armR', 'foreL', 'foreR', 'lean', 'headTilt', 'squat'],
     prop: ['kind', 'at', 'to', 'w', 'dy', 'dx', 'len', 'r', 'extend'],
@@ -344,6 +345,13 @@
       e.pose.A = resolveKeyframe(e.pose.A, shared, e.view || 'front', where + ' › pose.A');
       e.pose.B = resolveKeyframe(e.pose.B, shared, e.view || 'front', where + ' › pose.B');
       (e.pose.props || []).forEach((p, i) => checkKeys(p, 'prop', `${where} › pose.props[${i}]`));
+      (e.pose.notes || []).forEach((n, i) => {
+        const w = `${where} › pose.notes[${i}]`;
+        checkKeys(n, 'note', w);
+        if (!n.at || typeof n.at !== 'string') fail(w, '"at" must name the joint the note points at');
+        if (!n.text || typeof n.text !== 'string') fail(w, '"text" must say what to look at');
+        if (n.kf !== undefined && n.kf !== 'A' && n.kf !== 'B') fail(w, '"kf" is "A" (the start), "B" (the end) or left out (both)');
+      });
     }
     return e;
   }

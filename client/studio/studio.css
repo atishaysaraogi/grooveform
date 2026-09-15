@@ -50,7 +50,12 @@ label.field .hint { font-size: .8rem; color: var(--muted); }
 .take .lbl.fault { background: var(--pink); color: var(--grape); }
 .take .lbl.borderline { background: var(--tangerine); color: var(--grape); }
 .take .lbl.notrep { background: var(--surface-2); color: var(--muted); text-decoration: line-through; }
-#pl-classify { flex-wrap: wrap; gap: 6px; }
+.take .lbl { border: 2px solid transparent; text-align: left; }
+.take .lbl:hover { border-color: var(--grape); }
+.say-chips { flex-wrap: wrap; gap: 6px; }
+.say-chips { row-gap: 6px; }
+#pl-classify { flex-wrap: wrap; gap: 6px; align-items: center; }
+#pl-said { font-size: .85rem; }
 .tune.check td select { width: auto; }
 .take .meta { font-size: .85rem; color: var(--muted); }
 .take .sim { font-size: .85rem; }
@@ -69,6 +74,8 @@ canvas.chart { width: 100%; height: 220px; display: block; border-radius: 12px; 
 .metric .slot.filled { border-style: solid; background: var(--surface); }
 .metric .slot[aria-pressed="true"] { border-color: var(--pink); }
 .metric .help { font-size: .8rem; color: var(--muted); }
+.lm-pop { position: fixed; z-index: 30; width: min(380px, calc(100vw - 16px)); background: var(--surface); border: 3px solid var(--grape); border-radius: 14px; padding: 10px; box-shadow: 0 12px 30px rgba(43,21,70,.28); }
+.lm-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .lm-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 10px; font-size: .82rem; }
 .lm-pick .col-h { font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; }
 .lm-pick button { text-align: left; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-size: .82rem; }
@@ -102,7 +109,9 @@ pre.code { background: var(--surface-2); border-radius: 12px; padding: 12px; fon
 
 /* player */
 .st-player { position: fixed; inset: 0; background: rgba(43,21,70,.6); display: grid; place-items: center; z-index: 20; padding: 16px; }
-.st-player-box { background: var(--surface); border: 3px solid var(--grape); border-radius: 18px; padding: 14px; width: min(900px, 100%); display: grid; gap: 10px; }
+.st-player-box { background: var(--surface); border: 3px solid var(--grape); border-radius: 18px; padding: 14px; width: min(900px, 100%); display: grid; gap: 10px; align-content: start; max-height: calc(100vh - 32px); overflow: auto; }
+#fb-stage { aspect-ratio: 212 / 160; max-height: 46vh; justify-self: center; width: 100%; background: var(--surface-2); touch-action: none; cursor: grab; }
+#fb-notes .fb-note select { width: auto; }
 .st-player-stage { position: relative; aspect-ratio: 16/9; background: var(--video-bg); border-radius: 12px; overflow: hidden; }
 .st-player-stage video, .st-player-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 

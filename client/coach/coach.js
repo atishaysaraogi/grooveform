@@ -57,11 +57,31 @@
     : p.kind === 'bar' ? `<line class="floor" x1="${p.x1}" y1="${p.y}" x2="${p.x2}" y2="${p.y}" stroke-width="4"/>`
     : p.kind === 'disc' ? `<circle class="prop" cx="${p.x}" cy="${p.y}" r="${p.r}"/>`
     : p.kind === 'band' ? `<line class="band" x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}"/>` : '';
+  /* Notes the physio pinned to a joint: { at: 'kn', kf: 'A'|'B'|undefined, text }. A line from the
+     joint to a few words — "the knee drifts in here" — so what to look at is on the picture rather
+     than only in the prose below it. The label travels with its joint, and a note tied to one
+     keyframe fades in as the figure reaches it: "at the top, the back arches" appears at the top. */
+  const NOTE_CHAR = 4.3, NOTE_GAP = 12;
+  function noteAt(r, n, kf) { const K = kf === 'B' ? (r.B || r.A) : r.A; return K && K[n.at] ? K[n.at] : null; }
+  function noteSide(r, n) { const p = noteAt(r, n, 'A'); const hips = r.view === 'front' ? [r.A.hipL, r.A.hipR] : [r.A.hip]; const cx = hips.filter(Boolean).reduce((a, h) => a + h[0], 0) / Math.max(1, hips.filter(Boolean).length); return p && p[0] < cx ? -1 : 1; }
+  function noteSvg(r) {
+    return (r.notes || []).filter((n) => n && n.text && noteAt(r, n, 'A')).map((n) => {
+      const a = noteAt(r, n, 'A'), b = noteAt(r, n, 'B') || a, dir = noteSide(r, n);
+      const lx = a[0] + dir * NOTE_GAP, ly = a[1] - 9;
+      const move = (!r.B || reduceMotion || (a[0] === b[0] && a[1] === b[1])) ? ''
+        : `<animateTransform attributeName="transform" type="translate" values="0 0;${b[0] - a[0]} ${b[1] - a[1]};0 0" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" keyTimes="0;0.5;1"/>`;
+      const fade = !n.kf || reduceMotion ? '' : `<animate attributeName="opacity" values="${n.kf === 'A' ? '1;0;1' : '0;1;0'}" dur="3.2s" repeatCount="indefinite" keyTimes="0;0.5;1"/>`;
+      return `<g class="note" opacity="${n.kf === 'B' && !reduceMotion ? 0 : 1}">${fade}${move}<line class="note-l" x1="${a[0]}" y1="${a[1]}" x2="${lx}" y2="${ly}"/><circle class="note-d" cx="${a[0]}" cy="${a[1]}" r="2.6"/>
+        <text class="note-t" x="${lx + dir * 3}" y="${ly}" text-anchor="${dir < 0 ? 'end' : 'start'}">${escT(n.text)}</text></g>`;
+    }).join('');
+  }
   /* The drawing's extent: the two keyframes and any equipment, floor always in view. */
   function figureBox(r) {
     const pts = [...Object.values(r.A), ...Object.values(r.B || {})];
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     (r.props || []).forEach((p) => { if (p.kind === 'box') { xs.push(p.x, p.x + p.w); ys.push(p.y); } else if (p.kind === 'bar') { xs.push(p.x1, p.x2); ys.push(p.y); } else if (p.kind === 'disc') ys.push(p.y - p.r); });
+    /* a note's words stick out past the body, and a clipped note is worse than none */
+    (r.notes || []).forEach((n) => { const a = noteAt(r, n, 'A'); if (!a || !n.text) return; const dir = noteSide(r, n), w = NOTE_GAP + 6 + n.text.length * NOTE_CHAR; xs.push(a[0] + dir * w); ys.push(a[1] - 16); });
     if (r.wall) xs.push(r.wall);
     const x0 = Math.min(210, Math.min(...xs) - 14), x1 = Math.max(400, Math.max(...xs) + 14), y0 = Math.min(...ys) - 20;
     return { x0, y0, w: x1 - x0, h: 168 - y0 };
@@ -77,7 +97,7 @@
       if (r.A.knF || r.A.elF) figure += animPath(farPath(r.A), r.B && farPath(r.B), 'ink far');
       figure += animPath(profilePath(r.A), r.B && profilePath(r.B)) + animHead(r.A.h, r.B && r.B.h);
     }
-    return figure;
+    return figure + noteSvg(r);
   }
   function demo(ex) {
     if (typeof ex === 'string') ex = E.EXERCISES.find((x) => x.id === ex) || { id: ex, name: ex, type: (REGISTERED[ex] && REGISTERED[ex].hold) ? 'hold' : 'reps' };
@@ -1045,6 +1065,6 @@
   function endRest() { if (live && live.state === 'rest') { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); } }
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
-  window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
+  window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
   window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

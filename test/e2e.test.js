@@ -325,7 +325,14 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#next');
     // 4 · measure: thigh from vertical, hip → knee; suggest the target from the take
     await st.waitForSelector('[data-mpath="progress.metric"]'); await st.selectOption('[data-mpath="progress.metric"] [data-mkind]', 'vertical');
-    await st.waitForSelector('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="KNEE"]');
+    /* the landmarks are asked for when a slot is tapped, and the picker walks itself to the next empty slot */
+    assert.equal(await st.$eval('#lm-pop', (e) => e.hidden), true, 'the picker is not standing open');
+    await st.click('[data-mpath="progress.metric"] .slot[data-slot="0"]');
+    await st.waitForSelector('#lm-pop [data-lm="HIP"]'); assert.match(await st.textContent('.lm-pop-head'), /Which point 1\?/);
+    await st.click('#lm-pop [data-lm="HIP"]');
+    await st.waitForFunction(() => /Which point 2\?/.test(document.querySelector('.lm-pop-head').textContent));
+    await st.click('#lm-pop [data-lm="KNEE"]');
+    await st.waitForFunction(() => document.getElementById('lm-pop').hidden, null, { timeout: 5000 });
     await st.waitForSelector('#suggest:not([disabled])'); await st.click('#suggest');
     await st.waitForFunction(() => { const s = window.OnTrackStudio.state; const m = s.moves[s.current]; return typeof m.progress.target === 'number' && m.progress.target >= 20 && m.progress.target <= 40; });
     const counted = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.sims[s.takes[0].id].full; });
@@ -347,8 +354,19 @@ async function runCoachedSet(page, side = 'right') {
     const coverage = await st.$eval('.fires', (e) => e.textContent);
     assert.match(coverage, /3 reps not described yet/, 'the coverage panel says so: ' + coverage);
     /* describe each one: the middle rep is the one that leaned */
-    for (const [i, label] of [[1, 'clean'], [2, 'fault:leaning_away'], [3, 'clean']]) await st.selectOption(`#takes .take:nth-child(${i}) select[data-relabel]`, label);
+    for (const [i, label] of [[1, 'clean'], [2, 'fault:leaning_away'], [3, 'clean']]) {
+      await st.click(`#takes .take:nth-child(${i}) [data-act="say"]`);
+      await st.waitForSelector(`#say-pop [data-say-v="${label}"]`); await st.click(`#say-pop [data-say-v="${label}"]`);
+    }
     await st.waitForFunction(() => window.OnTrackStudio.state.takes.map((t) => t.label).join() === 'clean,fault:leaning_away,clean');
+    /* a rep can show two things at once: the middle one also rushed — then said not to have */
+    await st.click('#takes .take:nth-child(2) [data-act="say"]'); await st.waitForSelector('#say-pop [data-say-v="borderline"]');
+    await st.click('#say-pop [data-say-v="borderline"]');
+    await st.waitForFunction(() => /Fault: Leaning away \+ Borderline/.test(document.querySelector('#takes .take:nth-child(2) [data-act="say"]').textContent));
+    assert.deepEqual(await st.evaluate(() => window.OnTrackStudio.state.takes[1].labels), ['fault:leaning_away', 'borderline']);
+    await st.click('#say-pop [data-say-v="borderline"]');
+    await st.waitForFunction(() => window.OnTrackStudio.state.takes[1].labels.join() === 'fault:leaning_away');
+    await st.click('#say-pop [data-say-close]');
     /* more examples than the target is fine, and reads as a count rather than a fraction */
     const after = await st.$eval('.fires', (e) => e.textContent);
     assert.ok(!/not described yet/.test(after) && /Clean 2 ✓/.test(after), 'coverage counts up and stops fussing: ' + after);
@@ -373,6 +391,32 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#build-fig'); await st.waitForSelector('svg.demo-fig');
     const fig = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.moves[s.current].figure; });
     assert.equal(fig.view, 'front'); assert.ok(fig.A.hipR && fig.B.knR && fig.A.hipR[1] < 161 && fig.B.anR[1] <= 161, JSON.stringify(fig.B));
+    /* the figure is editable by hand: drag the left wrist and the forearm turns with it, keeping its length */
+    await st.click('#edit-fig'); await st.waitForSelector('#fb-canvas');
+    const where = async (kf, joint) => st.evaluate(([kf, joint]) => {
+      const s = window.OnTrackStudio.state, F = s.moves[s.current].figure[kf], p = F[joint];
+      const c = document.getElementById('fb-canvas'), r = c.getBoundingClientRect(), ar = c.width / c.height;
+      let dw = r.width, dh = r.width / ar; if (dh > r.height) { dh = r.height; dw = r.height * ar; }
+      const V = { x: 196, y: 14, w: 212, h: 160 };
+      return { fx: p[0], fy: p[1], x: r.left + (r.width - dw) / 2 + (p[0] - V.x) / V.w * dw, y: r.top + (r.height - dh) / 2 + (p[1] - V.y) / V.h * dh };
+    }, [kf, joint]);
+    const bone = async (kf, a, b) => st.evaluate(([kf, a, b]) => { const F = window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].figure[kf]; return Math.hypot(F[a][0] - F[b][0], F[a][1] - F[b][1]); }, [kf, a, b]);
+    const forearm0 = await bone('A', 'elL', 'wrL');
+    const wr = await where('A', 'wrL');
+    await st.mouse.move(wr.x, wr.y); await st.mouse.down(); await st.mouse.move(wr.x - 60, wr.y - 40, { steps: 6 }); await st.mouse.up();
+    const moved = await where('A', 'wrL');
+    assert.ok(Math.hypot(moved.fx - wr.fx, moved.fy - wr.fy) > 4, `the wrist moved: ${JSON.stringify([wr.fx, wr.fy, moved.fx, moved.fy])}`);
+    assert.ok(Math.abs(await bone('A', 'elL', 'wrL') - forearm0) < 1.5, 'and the forearm is the same length');
+    assert.ok(Math.abs(await bone('A', 'shL', 'elL') - (await bone('B', 'shL', 'elL'))) >= 0, 'the other keyframe is untouched by this drag');
+    /* a note pinned to a joint, which the exercise page draws on the animation */
+    await st.click('#fb-addnote'); await st.waitForSelector('[data-fbn="0"]');
+    await st.fill('[data-fbn="0"]', 'Knee drifts in over the big toe');
+    await st.selectOption('[data-fbat="0"]', 'knR'); await st.selectOption('[data-fbkfn="0"]', 'B');
+    await st.click('#fb-close'); await st.waitForFunction(() => document.getElementById('figbuild').hidden);
+    const notes = await st.evaluate(() => window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].figure.notes);
+    assert.deepEqual(notes, [{ at: 'knR', text: 'Knee drifts in over the big toe', kf: 'B' }]);
+    await st.waitForFunction(() => /Knee drifts in/.test(document.querySelector('svg.demo-fig').textContent), null, { timeout: 5000 });
+    await st.screenshot({ path: path.join(SHOTS, 'studio-figure.png'), fullPage: true });
     await st.click('#next');
     // 7 · export: complete, accepted, and the emitted move compiles in Node too
     await st.waitForSelector('#dl-js'); await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
@@ -382,7 +426,8 @@ async function runCoachedSet(page, side = 'right') {
     await st.waitForFunction(() => document.querySelectorAll('#check-out tbody tr').length >= 3, null, { timeout: 180000 });
     const verdicts = await st.$$eval('#check-out tbody tr', (rows) => rows.map((r) => r.children[2].textContent));
     assert.ok(verdicts.length >= 3 && verdicts[0] === 'clean' && /Leaning/.test(verdicts[1]), 'the coach calls the second rep the lean, the first clean: ' + JSON.stringify(verdicts));
-    await st.selectOption('#check-out select[data-check="0"]', 'clean'); await st.selectOption('#check-out select[data-check="1"]', 'fault:leaning_away');
+    await st.click('#check-out [data-check-say="0"]'); await st.click('#say-pop [data-say-v="clean"]'); await st.click('#say-pop [data-say-close]');
+    await st.click('#check-out [data-check-say="1"]'); await st.click('#say-pop [data-say-v="fault:leaning_away"]'); await st.click('#say-pop [data-say-close]');
     await st.waitForFunction(() => /2 of 2 agree/.test(document.getElementById('check-out').textContent));
     assert.ok(!(await st.evaluate(() => window.OnTrackStudio.state.takes.some((t) => t.label === 'check' || t.source === 'check'))), 'nothing from the check joins the takes');
     const spec = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.moves[s.current]; });
@@ -420,15 +465,23 @@ async function runCoachedSet(page, side = 'right') {
     /* the first rep is already playing for the physio to say what it shows; each answer plays the next */
     await st.waitForFunction(() => !document.getElementById('player').hidden && !document.getElementById('pl-classify').hidden);
     assert.match(await st.textContent('#pl-title'), /Rep 1 of 8/);
-    assert.ok(await st.$('#pl-classify [data-say="clean"]') && await st.$('#pl-classify [data-say="notrep"]') && await st.$('#pl-classify [data-say=""]'), 'clean, not-a-rep and skip are offered');
+    assert.ok(await st.$('#pl-classify [data-say="clean"]') && await st.$('#pl-classify [data-say="notrep"]') && await st.$('#pl-classify [data-say-skip]') && await st.$('#pl-classify [data-next]'), 'clean, not-a-rep, next and skip are offered');
+    /* clean and not-a-rep stand alone, so they answer and move on in one tap */
     await st.click('#pl-classify [data-say="clean"]'); await st.waitForFunction(() => /Rep 2 of 8/.test(document.getElementById('pl-title').textContent));
     await st.click('#pl-classify [data-say="notrep"]'); await st.waitForFunction(() => /Rep 3 of 8/.test(document.getElementById('pl-title').textContent));
     await st.keyboard.press('KeyS'); await st.waitForFunction(() => /Rep 4 of 8/.test(document.getElementById('pl-title').textContent));
     await st.keyboard.press('Digit1'); await st.waitForFunction(() => /Rep 5 of 8/.test(document.getElementById('pl-title').textContent));
+    /* a rep that shows two things: both chips stay on, and Next moves along */
+    await st.click('#pl-classify [data-say^="fault:"]');
+    await st.click('#pl-classify [data-say="borderline"]');
+    assert.match(await st.textContent('#pl-said'), / \+ /, 'the bar lists both');
+    assert.match(await st.textContent('#pl-title'), /Rep 5 of 8/, 'and stays on the rep until Next');
+    await st.keyboard.press('Enter'); await st.waitForFunction(() => /Rep 6 of 8/.test(document.getElementById('pl-title').textContent));
     await st.click('#pl-close');
-    const said = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => t.label));
-    assert.deepEqual(said, ['clean', 'notrep', 'todo', 'clean', 'todo', 'todo', 'todo', 'todo'], 'said, not a rep, skipped, said by key; the rest wait');
-    assert.match(await st.textContent('#describe-reps'), /Play and describe 5 reps/, 'the skipped ones can be picked up again');
+    const said = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => t.labels.join('+')));
+    assert.deepEqual(said.filter((_, i) => i !== 4), ['clean', 'notrep', 'todo', 'clean', 'todo', 'todo', 'todo'], 'said, not a rep, skipped, said by key; the rest wait: ' + JSON.stringify(said));
+    assert.match(said[4], /^fault:\w+\+borderline$/, 'and one rep says two things at once: ' + said[4]);
+    assert.match(await st.textContent('#describe-reps'), /Play and describe 4 reps/, 'the skipped ones can be picked up again');
     const drawn = await st.evaluate(() => document.querySelectorAll('#takes .take').length); assert.equal(drawn, 8, 'a not-a-rep take stays listed, struck through');
     await st.close();
   });

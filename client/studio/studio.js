@@ -259,7 +259,28 @@
   }
   function resim() { const ex = currentExercise(); state.sims = {}; if (!ex) return; for (const t of state.takes) { try { state.sims[t.id] = simulate(ex, t); } catch (e) { state.sims[t.id] = { error: e.message }; } } }
   const pct = (arr, q) => { if (!arr.length) return NaN; const a = arr.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * (a.length - 1)))]; };
-  const labelOf = (t) => t.label.startsWith('fault:') ? 'fault' : t.label;
+  /* What a take shows is a set, not one word: a rep can lean AND rush, and a threshold tuned as if
+     it only leaned is tuned against the wrong evidence. `labels` is the set; `label` stays as its
+     first entry so a session saved before this, and every count that only cares about one, still
+     read. Clean, Not a rep and Not said yet are exclusive — nothing stacks on them. */
+  const EXCLUSIVE = ['todo', 'clean', 'notrep'];
+  const labelsOf = (t) => (Array.isArray(t.labels) && t.labels.length ? t.labels : [t.label]);
+  const shows = (t, v) => labelsOf(t).includes(v);
+  function setLabels(t, list) {
+    let out = [...new Set(list.filter(Boolean))];
+    const ex = out.filter((v) => EXCLUSIVE.includes(v));
+    if (ex.length) out = [ex[ex.length - 1]];
+    if (!out.length) out = ['todo'];
+    const order = takeLabels().map(([v]) => v);
+    out.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+    t.labels = out; t.label = out[0];
+    return out;
+  }
+  /* on: add it (dropping clean / not-a-rep / not-said, which cannot share a rep); off: take it away */
+  const toggleLabel = (t, v) => setLabels(t, EXCLUSIVE.includes(v) ? [v] : shows(t, v) ? labelsOf(t).filter((x) => x !== v) : [...labelsOf(t).filter((x) => !EXCLUSIVE.includes(x)), v]);
+  const labelText = (v) => (v.startsWith('fault:') ? 'Fault: ' + faultLabel(v.slice(6)) : LABELS[v] || v);
+  const saidText = (t) => labelsOf(t).map(labelText).join(' + ');
+  const labelOf = (t) => (shows(t, 'clean') ? 'clean' : labelsOf(t).some((v) => v.startsWith('fault:')) ? 'fault' : labelsOf(t)[0]);
   const median = (a) => pct(a, 0.5);
 
   /* ---------- charts ---------- */
@@ -368,7 +389,7 @@
     switch (step) {
       case 'screen': return Object.keys(s.screen || {}).length >= 6;
       case 'describe': return !!(s.id && s.name && s.group && s.summary && s.setup && s.why && s.faults.some((f) => f.label));
-      case 'record': return state.takes.some((t) => t.label !== 'todo' && usable(t));
+      case 'record': return state.takes.some((t) => !shows(t, 'todo') && usable(t));
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
       case 'guide': return !!(s.guide.surface && s.guide.stop && s.guide.cannotSee);
@@ -529,9 +550,10 @@
   const LABELS = { clean: 'Clean', borderline: 'Borderline', notrep: 'Not a rep', setup: 'Awkward set-up', other: 'Other', todo: 'Not said yet' };
   /* a take that is not a rep at all — dead time between reps, a shuffle, a rest — is kept so the
      physio's call is on record, and counts for nothing: no chart, no threshold, no coverage */
-  const usable = (t) => t.label !== 'notrep';
+  const usable = (t) => !shows(t, 'notrep');
   const rec = { on: false, frames: [], t0: 0, raf: 0, stream: null, label: 'clean', side: 'L', mirror: true, keepVideo: true, mr: null, chunks: [], countdown: 0, lastVideoT: -1, fileMode: false };
   /* what a take can be: clean, one of the move's faults, borderline, an awkward set-up, other */
+  function faultLabel(id) { const s = cur(); const ex = s ? null : (state.current ? builtin(state.current) : null); const f = ((s ? s.faults : (ex ? ex.faults : [])) || []).find((x) => x.id === id); return f ? f.label : id; }
   function takeLabels() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
@@ -546,7 +568,7 @@
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file" title="One long video with several reps in it — the Studio cuts it into reps for you to describe">Upload a video…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
-        <div class="card"><div class="row" style="align-items:baseline"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><span class="spacer"></span>${state.takes.some((t) => t.label === 'todo') ? `<button class="btn secondary small" id="describe-reps" title="Plays each undescribed rep and waits for you to say what it shows">Play and describe ${state.takes.filter((t) => t.label === 'todo').length} reps</button>` : ''}</div><div class="takes" id="takes">${takesList()}</div></div>
+        <div class="card"><div class="row" style="align-items:baseline"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><span class="spacer"></span>${state.takes.some((t) => shows(t, 'todo')) ? `<button class="btn secondary small" id="describe-reps" title="Plays each undescribed rep and waits for you to say what it shows">Play and describe ${state.takes.filter((t) => shows(t, 'todo')).length} reps</button>` : ''}</div><div class="takes" id="takes">${takesList()}</div></div>
         <div class="card"><h3>Coverage</h3>${coverage()}</div>
       </div>
       <div class="stack"><div class="card"><div class="fields">
@@ -564,9 +586,8 @@
       if (sim && !sim.error && ex) simText = ex.type === 'reps' ? `<b>${sim.full}</b> reps${sim.partial ? ` · ${sim.partial} partial` : ''}` : `<b>${(sim.holdMs / 1000).toFixed(1)} s</b> in position`;
       else if (sim && sim.error) simText = `<span class="muted">rule error: ${esc(sim.error)}</span>`;
       const fired = sim && !sim.error ? Object.keys(sim.faultSpans).concat(Object.keys(sim.repFaults || {})) : [];
-      const labels = takeLabels(); if (!labels.some(([v]) => v === t.label)) labels.push([t.label, t.label]);
       const canSplit = ex && ex.type === 'reps' && sim && !sim.error && sim.reps.length >= 2 && !t.origin;
-      return `<div class="take" data-id="${t.id}"><select class="lbl ${labelOf(t)}" data-relabel aria-label="What this take shows">${labels.map(([v, txt]) => `<option value="${esc(v)}" ${t.label === v ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select>
+      return `<div class="take" data-id="${t.id}"><button type="button" class="lbl ${labelOf(t)}" data-act="say" aria-label="What this take shows — tap to change">${esc(saidText(t))}</button>
         <div><div class="meta">${t.origin ? `rep ${t.origin.rep} of ${t.origin.of}${t.origin.full === false ? ' (partial)' : ''} · ` : ''}${t.side ? (t.side === 'L' ? 'left' : 'right') + ' · ' : ''}${(t.durationMs / 1000).toFixed(1)} s · ${t.frames.length} frames${t.video ? ' · video' : ''}${t.note ? ' · ' + esc(t.note) : ''}</div><div class="sim">${simText}${fired.length ? ` · fired: ${fired.map(esc).join(', ')}` : sim && !sim.error ? ' · no faults' : ''}</div></div>
         <div class="acts">${canSplit ? `<button class="btn secondary small" data-act="split" title="One take per rep, each labelled on its own">Split into ${sim.reps.length} reps</button>` : ''}<button class="btn ghost small" data-act="play">Play</button><button class="btn ghost small" data-act="note">Note</button><button class="btn ghost small" data-act="del">✕</button></div></div>`;
     }).join('');
@@ -576,9 +597,9 @@
      counting against anything. */
   function coverage() {
     const s = cur(); const ex = currentExercise(); const n = (fn) => state.takes.filter(fn).length;
-    const todo = n((t) => t.label === 'todo');
-    const rows = [['Clean', n((t) => t.label === 'clean'), 2], ['Borderline', n((t) => t.label === 'borderline'), 2], ['Awkward set-up', n((t) => t.label === 'setup'), 1]];
-    for (const f of (s ? s.faults : (ex ? ex.faults : []))) rows.push(['Fault: ' + f.label, n((t) => t.label === 'fault:' + f.id), 1]);
+    const todo = n((t) => shows(t, 'todo'));
+    const rows = [['Clean', n((t) => shows(t, 'clean')), 2], ['Borderline', n((t) => shows(t, 'borderline')), 2], ['Awkward set-up', n((t) => shows(t, 'setup')), 1]];
+    for (const f of (s ? s.faults : (ex ? ex.faults : []))) rows.push(['Fault: ' + f.label, n((t) => shows(t, 'fault:' + f.id)), 1]);
     if ((s && s.sided) || (ex && ex.sided)) rows.push(['Left', n((t) => t.side === 'L'), 1], ['Right', n((t) => t.side === 'R'), 1]);
     const cell = ([l, c, want]) => `<span class="${c >= want ? 'ok' : c ? 'warn' : ''}">${esc(l)} ${c >= want ? `${c} ✓` : `${c} of ${want}`}</span>`;
     return `<div class="fires">${todo ? `<span class="bad">${todo} rep${todo > 1 ? 's' : ''} not described yet</span>` : ''}${rows.map(cell).join('')}</div>`;
@@ -601,26 +622,27 @@
     $('btn-rec').onclick = () => (rec.on ? stopRec() : startRec());
     $('btn-file').onclick = () => $('file-input').click();
     $('file-input').onchange = () => { const f = $('file-input').files[0]; $('file-input').value = ''; if (f) analyzeFile(f); };
-    if ($('describe-reps')) $('describe-reps').onclick = () => reviewReps(state.takes.filter((t) => t.label === 'todo'));
+    if ($('describe-reps')) $('describe-reps').onclick = () => reviewReps(state.takes.filter((t) => shows(t, 'todo')));
     $('takes').onclick = async (e) => {
       const b = e.target.closest('button[data-act]'); if (!b) return; const id = b.closest('.take').dataset.id; const t = state.takes.find((x) => x.id === id);
       if (b.dataset.act === 'del') { if (!confirm('Delete this take?')) return; await idb.del(id); state.takes = state.takes.filter((x) => x.id !== id); resim(); render(); }
       if (b.dataset.act === 'note') { const n = prompt('Note for this take (what was different, what to look for):', t.note || ''); if (n !== null) { t.note = n; await idb.put(t); render(); } }
       if (b.dataset.act === 'play') openPlayer(t);
+      if (b.dataset.act === 'say') sayOnTake(b, t);
       if (b.dataset.act === 'split') await splitTake(t);
     };
-    $('takes').onchange = async (e) => {
-      const sel = e.target.closest('select[data-relabel]'); if (!sel) return;
-      const t = state.takes.find((x) => x.id === sel.closest('.take').dataset.id); if (!t) return;
-      t.label = sel.value; await idb.put(t); render();
-    };
+
     if (rec.stream || MOCK) restoreCam();
   }
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input,textarea,select')) return;
     if (!$('player').hidden) {   /* in the player: space plays, 1–9 say what the rep shows, S skips it */
       if (e.code === 'Space') { e.preventDefault(); playerPlay(!pl.playing); return; }
-      if (pl.queue) { const btns = [...document.querySelectorAll('#pl-classify button[data-say]')]; const n = /^Digit([1-9])$/.exec(e.code); const b = n ? btns[+n[1] - 1] : e.code === 'KeyS' ? btns[btns.length - 1] : null; if (b) { e.preventDefault(); b.click(); } }
+      if (pl.queue) {
+        const btns = [...document.querySelectorAll('#pl-classify button[data-say]')]; const n = /^Digit([1-9])$/.exec(e.code);
+        const b = n ? btns[+n[1] - 1] : e.code === 'KeyS' ? document.querySelector('#pl-classify [data-say-skip]') : e.code === 'Enter' ? document.querySelector('#pl-classify [data-next]') : null;
+        if (b) { e.preventDefault(); b.click(); }
+      }
       return;
     }
     if (state.step !== 'record') return;
@@ -720,15 +742,15 @@
       const frames = [...still.map((f) => [f[0] - s0, f[1]]), ...seg.map((f) => [kidCal + (f[0] - c.t0), f[1]])];
       /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
          pretend to be clean — "not said yet" is excluded from every count until the physio says */
-      const label = t.label && t.label !== 'todo' && t.origin ? t.label : (n > 1 ? 'todo' : t.label);
-      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
+      const labels = !shows(t, 'todo') && t.origin ? labelsOf(t) : (n > 1 ? ['todo'] : labelsOf(t));
+      return { id: uid(), moveId: t.moveId, label: labels[0], labels, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
     }).filter((k) => k.frames.length > still.length + 4);
   }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
     const settled = source === 'file' ? settleAt(frames, aspect) : null;
     if (source === 'file' && settled == null) toast('No still start found in this video — calibrating 1.2 s in. Hold the start position for a second before the first rep next time.', 6000);
-    const take = { id: uid(), moveId: moveKey(), label: rec.label, side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: settled ?? 1200 };
+    const take = { id: uid(), moveId: moveKey(), label: rec.label, labels: [rec.label], side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: settled ?? 1200 };
     await idb.put(take); state.takes.push(take); resim(); toast(`Saved ${LABELS[rec.label] || rec.label} take — ${(take.durationMs / 1000).toFixed(1)} s`); render();
     return take;
   }
@@ -775,7 +797,7 @@
       if (!take) { status('Camera off'); return; }
       const n = await splitTake(take, { quiet: true });
       status(n ? `Analysed — ${n} reps to describe` : 'Analysed — set the progress measure in step 4, then Split into reps');
-      if (n > 1) reviewReps(state.takes.filter((t) => t.origin && t.origin.take === take.id && t.label === 'todo'));
+      if (n > 1) reviewReps(state.takes.filter((t) => t.origin && t.origin.take === take.id && shows(t, 'todo')));
     } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
   }
 
@@ -797,21 +819,29 @@
       const still = frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
       const kids = cut && still.length ? cutKids(whole, cut.cuts, still) : [];
       check.whole = { take: whole, sim, settled: settled != null };
-      check.reps = kids.map((k) => ({ take: k, sim: simulate(ex, k), said: '' }));
+      check.reps = kids.map((k) => ({ take: k, sim: simulate(ex, k), say: { label: '', labels: [] } }));
       status(kids.length ? `${kids.length} reps found` : sim && sim.reps && sim.reps.length === 1 ? 'One rep found' : 'No reps found');
     } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
     finally { check.busy = false; render(); }
   }
   function checkPanel(s) {
     const faults = (s && s.faults) || []; const fl = (id) => { const f = faults.find((x) => x.id === id); return f ? f.label : id; };
-    const labels = takeLabels().filter(([v]) => v !== 'todo');
     let body = '';
     if (check.whole) {
       const w = check.whole, sim = w.sim, rv = sim && sim.review;
-      const agree = (r) => { if (!r.said) return null; const fired = firedOf(r.sim); if (r.said === 'clean') return fired.length === 0; if (r.said.startsWith('fault:')) return fired.includes(r.said.slice(6)); if (r.said === 'notrep') return false; return null; };
+      /* the coach agrees when it called every fault the physio named and nothing they did not:
+         a rep said to lean and rush has to fire both, a clean one none, a non-rep should not count */
+      const agree = (r) => {
+        const said = labelsOf(r.say).filter(Boolean); if (!said.length) return null;
+        const fired = firedOf(r.sim), want = said.filter((v) => v.startsWith('fault:')).map((v) => v.slice(6));
+        if (said.includes('notrep')) return !(r.sim && r.sim.full);
+        if (said.includes('clean')) return fired.length === 0;
+        if (!want.length) return null;
+        return want.every((id) => fired.includes(id)) && fired.every((id) => want.includes(id));
+      };
       const judged = check.reps.filter((r) => agree(r) != null), agreed = judged.filter((r) => agree(r));
       body = `<p style="font-size:.92rem"><b>${esc(check.name)}</b> as one set: ${sim && !sim.error ? `<b>${sim.full}</b> rep${sim.full === 1 ? '' : 's'} counted${sim.partial ? `, ${sim.partial} partial` : ''}${rv ? ` · score ${rv.score} — ${esc(rv.headline)}` : ''}${rv && rv.faults && Object.keys(rv.faults).length ? ` · would cue: ${Object.values(rv.faults).map((f) => esc(f.fault.cue || f.fault.label)).join(', ')}` : ''}` : `<span class="muted">rule error: ${esc((sim && sim.error) || 'no simulation')}</span>`}${w.settled ? '' : ' · <span class="warn">no still start found — calibrated 1.2 s in</span>'}</p>
-        ${check.reps.length ? `<table class="tune check"><thead><tr><th>rep</th><th>counted</th><th>the coach says</th><th>you say</th><th></th><th></th></tr></thead><tbody>${check.reps.map((r, i) => { const fired = firedOf(r.sim); const a = agree(r); return `<tr class="${a == null ? '' : a ? 'ok' : 'bad'}"><td>${i + 1}</td><td>${r.sim && !r.sim.error ? (r.sim.full ? 'full' : r.sim.partial ? 'partial' : '—') : '—'}</td><td>${fired.length ? fired.map(fl).map(esc).join(', ') : 'clean'}</td><td><select data-check="${i}">${[['', '—'], ...labels].map(([v, txt]) => `<option value="${esc(v)}" ${r.said === v ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select></td><td>${a == null ? '' : a ? '✓ agree' : r.said === 'notrep' ? '✗ counted a non-rep' : '✗ disagree'}</td><td><button class="btn ghost small" data-check-play="${i}">Play</button></td></tr>`; }).join('')}</tbody></table>
+        ${check.reps.length ? `<table class="tune check"><thead><tr><th>rep</th><th>counted</th><th>the coach says</th><th>you say</th><th></th><th></th></tr></thead><tbody>${check.reps.map((r, i) => { const fired = firedOf(r.sim); const a = agree(r); return `<tr class="${a == null ? '' : a ? 'ok' : 'bad'}"><td>${i + 1}</td><td>${r.sim && !r.sim.error ? (r.sim.full ? 'full' : r.sim.partial ? 'partial' : '—') : '—'}</td><td>${fired.length ? fired.map(fl).map(esc).join(', ') : 'clean'}</td><td><button type="button" class="btn ghost small" data-check-say="${i}">${esc(labelsOf(r.say).filter(Boolean).map(labelText).join(' + ') || 'say…')}</button></td><td>${a == null ? '' : a ? '✓ agree' : labelsOf(r.say).includes('notrep') ? '✗ counted a non-rep' : '✗ disagree'}</td><td><button class="btn ghost small" data-check-play="${i}">Play</button></td></tr>`; }).join('')}</tbody></table>
         <p class="muted" style="font-size:.85rem">${judged.length ? `${agreed.length} of ${judged.length} agree with you.` : 'Say what each rep shows to see where the coach agrees with you.'} Nothing here is saved.</p>` : ''}`;
     }
     return `<div class="card"><h3>Check against another video</h3><p style="font-size:.92rem">Upload a video of the move the takes above have never seen — the Studio cuts it into reps and shows what the coach would say about each. Nothing is added to the takes.</p>
@@ -822,16 +852,48 @@
     if (!$('check-btn')) return;
     $('check-btn').onclick = () => $('check-file').click();
     $('check-file').onchange = () => { const f = $('check-file').files[0]; $('check-file').value = ''; if (f) checkFile(f); };
-    $('check-out').onchange = (e) => { const sel = e.target.closest('select[data-check]'); if (!sel) return; check.reps[+sel.dataset.check].said = sel.value; render(); };
-    $('check-out').onclick = (e) => { const b = e.target.closest('button[data-check-play]'); if (!b) return; const r = check.reps[+b.dataset.checkPlay]; state.sims[r.take.id] = r.sim; openPlayer(r.take, { play: true }); };
+    $('check-out').onclick = (e) => {
+      const say = e.target.closest('button[data-check-say]');
+      if (say) { const r = check.reps[+say.dataset.checkSay]; return openSayPop(say, r.say, (v) => { toggleLabel(r.say, v); if (r.say.label === 'todo') { r.say.label = ''; r.say.labels = []; } render(); }); }
+      const b = e.target.closest('button[data-check-play]'); if (!b) return; const r = check.reps[+b.dataset.checkPlay]; state.sims[r.take.id] = r.sim; openPlayer(r.take, { play: true });
+    };
   }
+
+  /* What a rep shows, asked wherever it is listed: the same chips as the player's bar, as toggles,
+     so a rep that leans AND rushes can say both. Clean, Not a rep and Not said yet clear the rest. */
+  let sayPop = null;
+  function closeSayPop() { sayPop = null; const el = $('say-pop'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+  function openSayPop(anchor, target, onChange) {
+    const el = $('say-pop'); if (!el) return;
+    sayPop = { target, onChange, anchorId: anchor.id || null };
+    drawSayPop();
+    const r = anchor.getBoundingClientRect(), w = el.offsetWidth || 320, h = el.offsetHeight || 200;
+    el.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.left))) + 'px';
+    el.style.top = Math.round(r.bottom + 6 + h > window.innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+  }
+  function drawSayPop() {
+    const el = $('say-pop'); if (!el || !sayPop) return;
+    const t = sayPop.target;
+    el.innerHTML = `<div class="lm-pop-head"><b>What does this rep show?</b><button type="button" class="btn ghost small" data-say-close>Done</button></div>
+      <div class="row say-chips">${takeLabels().map(([v, txt]) => `<button type="button" class="chip small ${v.startsWith('fault:') ? 'fault' : v}" data-say-v="${esc(v)}" aria-pressed="${shows(t, v)}">${esc(txt)}</button>`).join('')}</div>
+      <p class="muted" style="font-size:.8rem;margin:6px 0 0">More than one fault is fine. Clean, Not a rep and Not said yet stand alone.</p>`;
+    el.hidden = false;
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sayPop) { e.preventDefault(); closeSayPop(); } });
+  document.addEventListener('pointerdown', (e) => { if (sayPop && !e.target.closest('#say-pop') && !e.target.closest('[data-act="say"]') && !e.target.closest('[data-check-say]')) closeSayPop(); });
+  document.addEventListener('click', (e) => {
+    if (!sayPop) return;
+    if (e.target.closest('[data-say-close]')) return closeSayPop();
+    const b = e.target.closest('#say-pop [data-say-v]'); if (!b) return;
+    sayPop.onChange(b.dataset.sayV); drawSayPop();
+  });
+  const sayOnTake = (btn, t) => openSayPop(btn, t, async (v) => { toggleLabel(t, v); await idb.put(t); render(); });
 
   /* ---------- player: scrub a take with the skeleton and the live metric readout ---------- */
   const pl = { take: null, raf: 0, playing: false, t: 0, url: null, queue: null, done: 0, total: 0 };
   function openPlayer(take, { play = false } = {}) {
     pl.take = take; pl.t = 0; pl.playing = false; $('player').hidden = false;
-    const what = take.label.startsWith('fault:') ? 'Fault: ' + take.label.slice(6) : LABELS[take.label] || take.label;
-    $('pl-title').textContent = pl.queue ? `Rep ${take.origin ? take.origin.rep : pl.done + 1} of ${take.origin ? take.origin.of : pl.total} — what does it show?` : `${what} · ${(take.durationMs / 1000).toFixed(1)} s`;
+    $('pl-title').textContent = pl.queue ? `Rep ${take.origin ? take.origin.rep : pl.done + 1} of ${take.origin ? take.origin.of : pl.total} — what does it show?` : `${saidText(take)} · ${(take.durationMs / 1000).toFixed(1)} s`;
     const v = $('pl-video'); if (pl.url) { URL.revokeObjectURL(pl.url); pl.url = null; }
     if (take.video) { pl.url = URL.createObjectURL(take.video); v.src = pl.url; v.hidden = false; } else { v.hidden = true; v.removeAttribute('src'); }
     $('pl-scrub').value = 0; $('pl-play').textContent = 'Play'; classifyBar(); drawPlayerFrame();
@@ -842,25 +904,46 @@
   /* Describing reps one by one: each undescribed rep plays once and waits, paused on its last
      frame, until the physio says what it shows or skips it; then the next one plays. */
   function reviewReps(takes) {
-    const todo = takes.filter((t) => t.label === 'todo'); if (!todo.length) { toast('Every rep has been described'); return; }
+    const todo = takes.filter((t) => shows(t, 'todo')); if (!todo.length) { toast('Every rep has been described'); return; }
     pl.queue = todo.map((t) => t.id); pl.done = 0; pl.total = todo.length; nextInQueue();
   }
   function nextInQueue() {
     while (pl.queue && pl.queue.length) { const id = pl.queue.shift(); const t = state.takes.find((x) => x.id === id); if (t) { openPlayer(t, { play: true }); return; } }
-    const left = state.takes.filter((t) => t.label === 'todo').length;
+    const left = state.takes.filter((t) => shows(t, 'todo')).length;
     closePlayer(); toast(left ? `${left} rep${left > 1 ? 's' : ''} still not said — Play and describe when you are ready` : 'Every rep described', 4000);
   }
+  /* The bar under the paused rep. Every label is a toggle, because one rep can lean and rush at
+     once; Clean and Not a rep stand alone, so they answer and move on in a single tap. Anything
+     else waits for "Next rep" (or Enter), which is what makes a second fault possible. */
   function classifyBar() {
     const bar = $('pl-classify'); if (!pl.queue) { bar.hidden = true; bar.innerHTML = ''; return; }
+    const t = state.takes.find((x) => x.id === pl.take.id) || pl.take;
     const labels = takeLabels().filter(([v]) => v !== 'todo');
-    bar.innerHTML = labels.map(([v, txt], i) => `<button class="btn small ${v === 'clean' ? 'primary' : v.startsWith('fault:') ? 'secondary' : 'ghost'}" data-say="${esc(v)}" title="key ${i + 1}">${esc(txt)}</button>`).join('') + `<span class="spacer"></span><button class="btn ghost small" data-say="" title="key S">Skip</button>`;
+    const said = labelsOf(t).filter((v) => v !== 'todo');
+    bar.innerHTML = labels.map(([v, txt], i) => `<button class="chip small ${v.startsWith('fault:') ? 'fault' : v}" data-say="${esc(v)}" aria-pressed="${said.includes(v)}" title="key ${i + 1}">${esc(txt)}</button>`).join('')
+      + `<span class="spacer"></span><span class="muted" id="pl-said">${said.length ? esc(said.map(labelText).join(' + ')) : 'nothing said yet'}</span>`
+      + `<button class="btn ${said.length ? 'primary' : 'ghost'} small" data-next title="Enter">Next rep →</button><button class="btn ghost small" data-say-skip title="key S">Skip</button>`;
     bar.hidden = false;
   }
   $('pl-classify').onclick = async (e) => {
-    const b = e.target.closest('button[data-say]'); if (!b || !pl.take) return;
-    if (b.dataset.say) { const t = state.takes.find((x) => x.id === pl.take.id); if (t) { t.label = b.dataset.say; await idb.put(t); pl.done++; render(); } }
-    nextInQueue();
+    if (!pl.take) return;
+    if (e.target.closest('[data-say-skip]')) return nextInQueue();
+    if (e.target.closest('[data-next]')) { const t = state.takes.find((x) => x.id === pl.take.id); if (t && !shows(t, 'todo')) pl.done++; return nextInQueue(); }
+    const b = e.target.closest('button[data-say]'); if (!b) return;
+    const t = state.takes.find((x) => x.id === pl.take.id); if (!t) return;
+    const v = b.dataset.say; toggleLabel(t, v);
+    /* the chips are updated in place rather than rebuilt: a bar that replaces itself between two
+       taps swallows the second one, which is the whole point of letting a rep say two things */
+    refreshSayBar(t); await idb.put(t); render();
+    if (EXCLUSIVE.includes(v)) { pl.done++; nextInQueue(); }   /* nothing shares a rep with these two */
   };
+  function refreshSayBar(t) {
+    const bar = $('pl-classify'); if (!bar || bar.hidden) return;
+    const said = labelsOf(t).filter((v) => v !== 'todo');
+    bar.querySelectorAll('button[data-say]').forEach((c) => c.setAttribute('aria-pressed', said.includes(c.dataset.say)));
+    const txt = $('pl-said'); if (txt) txt.textContent = said.length ? said.map(labelText).join(' + ') : 'nothing said yet';
+    const next = bar.querySelector('[data-next]'); if (next) { next.classList.toggle('primary', !!said.length); next.classList.toggle('ghost', !said.length); }
+  }
   function playerPlay(on) {
     if (on === pl.playing) return;
     pl.playing = on; $('pl-play').textContent = on ? 'Pause' : 'Play'; const v = $('pl-video');
@@ -897,12 +980,30 @@
     const kind = SPEC.KINDS[m.kind] || SPEC.KINDS.angle; const n = kind.n;
     return `<div class="metric" data-mpath="${path}">
       <div class="row"><select data-mkind style="width:auto">${Object.entries(SPEC.KINDS).map(([k, v]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
-      <div class="lms">${Array.from({ length: n }, (_, i) => `<button type="button" class="slot ${m.pts[i] ? 'filled' : ''}" data-slot="${i}" aria-pressed="${i === (m.pts.length < n ? m.pts.length : -1)}">${m.pts[i] ? esc(lmWord(m.pts[i])) : (m.kind === 'offset' && i === 2 ? 'point' : m.kind === 'angle' && i === 1 ? 'joint' : 'pick…')}</button>`).join('')}</div></div>
+      <div class="lms">${Array.from({ length: n }, (_, i) => { const what = m.kind === 'offset' && i === 2 ? 'point' : m.kind === 'angle' && i === 1 ? 'joint' : 'point ' + (i + 1); return `<button type="button" class="slot ${m.pts[i] ? 'filled' : ''}" data-slot="${i}" data-what="Which ${esc(what)}?" aria-pressed="false">${m.pts[i] ? esc(lmWord(m.pts[i])) : esc(m.kind === 'offset' && i === 2 ? 'point' : m.kind === 'angle' && i === 1 ? 'joint' : 'pick…')}</button>`; }).join('')}</div></div>
       <div class="help">${esc(kind.help)}</div>
       ${metricExtras(m)}
-      ${n ? `<div class="lm-pick">${LM_GROUPS.map(([h, names]) => `<div><div class="col-h">${h}</div>${names.map((nm) => `<button type="button" data-lm="${nm}">${esc(lmWord(nm))}</button>`).join('')}</div>`).join('')}</div>` : ''}
     </div>`;
   }
+  /* Which joint goes in a slot is asked for when the slot is clicked, not before: the list of
+     every landmark standing open under a measurement that is already filled in is noise, and on a
+     phone it pushes the chart off the screen. One popover, moved to whichever slot is being
+     filled, and it walks itself on to the next empty slot so a three-point angle is three taps. */
+  const lmPop = { path: null, slot: 0 };
+  function closeLmPop() { lmPop.path = null; const el = $('lm-pop'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+  function openLmPop(box, slotBtn) {
+    const el = $('lm-pop'); if (!el) return;
+    lmPop.path = box.dataset.mpath; lmPop.slot = +slotBtn.dataset.slot;
+    el.innerHTML = `<div class="lm-pop-head"><b>${esc(slotBtn.dataset.what || 'Which point?')}</b><button type="button" class="btn ghost small" data-lm-close>Close</button></div>
+      <div class="lm-pick">${LM_GROUPS.map(([h, names]) => `<div><div class="col-h">${h}</div>${names.map((nm) => `<button type="button" data-lm="${nm}">${esc(lmWord(nm))}</button>`).join('')}</div>`).join('')}</div>`;
+    el.hidden = false;
+    const r = slotBtn.getBoundingClientRect(), w = el.offsetWidth || 320, h = el.offsetHeight || 260;
+    el.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.left))) + 'px';
+    el.style.top = Math.round(r.bottom + 6 + h > window.innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+    box.querySelectorAll('.slot').forEach((c) => c.setAttribute('aria-pressed', c === slotBtn));
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lmPop.path) { e.preventDefault(); closeLmPop(); } });
+  document.addEventListener('pointerdown', (e) => { if (lmPop.path && !e.target.closest('#lm-pop') && !e.target.closest('.slot')) closeLmPop(); });
   const SEGMENTS = [['torso', 'torso'], ['SH-EL', 'upper arm'], ['EL-WR', 'forearm'], ['HIP-KNEE', 'thigh'], ['KNEE-ANK', 'shin'], ['SH-oSH', 'shoulder width'], ['HIP-oHIP', 'hip width'], ['EAR-oEAR', 'ear to ear'], ['SH-HIP', 'trunk']];
   const PCT = ['dist', 'rise', 'height', 'ratio', 'gap', 'rotation', 'near'];
   /* the measurement's extras: what a % is of, which way is +, ignore the sign, negate for an option value */
@@ -925,11 +1026,23 @@
         if (k === 'abs') { if (el.checked) m.abs = true; else delete m.abs; }
         if (k === 'flip') { if (!el.value) delete m.flip; else { const [option, when] = el.value.split('='); const o = (s.options || []).find((x) => x.key === option); const v = o && o.values.find((x) => String(x) === when); m.flip = { option, when: v === undefined ? when : v }; } }
         saveState(); after(); }; });
-      let slot = [...box.querySelectorAll('.slot')].findIndex((b) => b.getAttribute('aria-pressed') === 'true'); if (slot < 0) slot = 0;
-      box.querySelector('[data-mkind]').onchange = (e) => { const m = get(); m.kind = e.target.value; m.pts = m.pts.slice(0, SPEC.KINDS[m.kind].n); saveState(); after(); };
-      box.querySelectorAll('.slot').forEach((b) => { b.onclick = () => { slot = +b.dataset.slot; box.querySelectorAll('.slot').forEach((c) => c.setAttribute('aria-pressed', c === b)); }; });
-      box.querySelectorAll('[data-lm]').forEach((b) => { b.onclick = () => { const m = get(); const n = SPEC.KINDS[m.kind].n; m.pts[slot] = b.dataset.lm; m.pts = m.pts.slice(0, n); slot = Math.min(n - 1, slot + 1); saveState(); after(); }; });
+      box.querySelector('[data-mkind]').onchange = (e) => { const m = get(); m.kind = e.target.value; m.pts = m.pts.slice(0, SPEC.KINDS[m.kind].n); closeLmPop(); saveState(); after(); };
+      box.querySelectorAll('.slot').forEach((b) => { b.onclick = () => (lmPop.path === box.dataset.mpath && lmPop.slot === +b.dataset.slot ? closeLmPop() : openLmPop(box, b)); });
+      /* the picker is one element outside the panel, so it survives the re-render a pick causes */
+      if (lmPop.path === box.dataset.mpath) { const b = box.querySelector(`.slot[data-slot="${lmPop.slot}"]`); if (b) openLmPop(box, b); else closeLmPop(); }
     });
+    const pop = $('lm-pop'); if (!pop) return;
+    pop.onclick = (e) => {
+      if (e.target.closest('[data-lm-close]')) return closeLmPop();
+      const b = e.target.closest('[data-lm]'); if (!b || !lmPop.path) return;
+      const box = root.querySelector(`[data-mpath="${lmPop.path}"]`); if (!box) return closeLmPop();
+      const m = lmPop.path.split('.').reduce((o, k) => o[k], s); const n = SPEC.KINDS[m.kind].n;
+      m.pts[lmPop.slot] = b.dataset.lm; m.pts = m.pts.slice(0, n);
+      /* on to the next point that still needs one; when they are all filled the picker is done */
+      let next = -1; for (let i = 0; i < n; i++) { const j = (lmPop.slot + 1 + i) % n; if (!m.pts[j]) { next = j; break; } }
+      if (next < 0) closeLmPop(); else lmPop.slot = next;
+      saveState(); after();
+    };
   }
   function takeSeries(metric, rel) {
     return state.takes.filter(usable).map((t) => { let d = trace(metric, t, t.side); if (rel === 'change') { const c = d.find((x) => x[0] >= (t.calT ?? 1200)); const base = c ? c[1] : 0; d = d.map(([tt, v]) => [tt, v - base]); } return { take: t, data: d, color: COLORS[labelOf(t)] || COLORS.other, alpha: labelOf(t) === 'clean' ? 1 : 0.75 }; });
@@ -946,7 +1059,7 @@
         <div class="st-grid wide-left"><div class="stack">
           <div class="card"><h3>Measurement</h3>${metricEditor('progress.metric', pr.metric)}</div>
           <div class="card"><h3>Across the takes</h3>${noTakes ? '<p class="muted">Record a take first and the metric appears here.</p>' : `<canvas class="chart" id="chart-metric"></canvas>${legend()}`}</div>
-          <div class="card"><h3>Reps the coach would count</h3>${noTakes ? '<p class="muted">—</p>' : `<canvas class="chart" id="chart-p"></canvas><p class="muted" style="font-size:.85rem;margin-top:6px">Progress 0 = start, 1 = target. A rep counts when it passes 0.85 and returns below 0.15. Dots mark counted reps.</p><div class="fires" style="margin-top:8px">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.full >= 3 ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? sim.full + (sim.partial ? ` (+${sim.partial} partial)` : '') : '—'}</span>`; }).join('')}</div>`}</div>
+          <div class="card"><h3>Reps the coach would count</h3>${noTakes ? '<p class="muted">—</p>' : `<canvas class="chart" id="chart-p"></canvas><p class="muted" style="font-size:.85rem;margin-top:6px">Progress 0 = start, 1 = target. A rep counts when it passes 0.85 and returns below 0.15. Dots mark counted reps.</p><div class="fires" style="margin-top:8px">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.full >= 3 ? 'ok' : 'warn') : '')}">${esc(saidText(t))}: ${sim && !sim.error ? sim.full + (sim.partial ? ` (+${sim.partial} partial)` : '') : '—'}</span>`; }).join('')}</div>`}</div>
         </div><div class="stack">
           <div class="card"><div class="fields">
             ${field('Start value', `<div class="row">${chips('progress.startMode', ['calibrated', 'fixed'], pr.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed number' })}${pr.start === 'calibrated' ? '' : `<input type="number" step="1" data-k="progress.start" value="${esc(pr.start)}" style="width:110px">`}</div>`, 'Calibrated = whatever the metric reads while the person holds the start pose. Use it unless the start pose varies between people in a way that matters.')}
@@ -971,7 +1084,7 @@
         ${(s.options || []).some((o) => Array.isArray(o.values) && o.values.length) ? field('Only for', `<select data-cw="${i}"><option value="">every option value</option>${(s.options || []).filter((o) => Array.isArray(o.values) && o.values.length).flatMap((o) => o.values.map((v) => `<option value="${esc(o.key + '=' + v)}" ${c.when && c.when[0] && c.when[0].option === o.key && String(c.when[0].is) === String(v) ? 'selected' : ''}>${esc(o.label)} = ${esc((o.labels || {})[v] || v)}</option>`)).join('')}</select>`, 'A condition that applies only for one option value — a straight knee for the calf stretch, a bent one for the soleus.') : ''}
         ${state.takes.length ? `<canvas class="chart" id="chart-c${i}" style="margin-top:10px"></canvas>` : ''}</div>`).join('')}
         <button class="btn ghost" id="addc">Add a condition</button></div>
-        <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
+        <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(saidText(t))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
         <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'First point of the first condition' })}</div>
         <div class="card"><div class="fields">${field('Live readout', `<div class="row"><select data-k="display.condition">${conds.map((c, i) => `<option value="${i}" ${((s.display || {}).condition || 0) === i ? 'selected' : ''}>condition ${i + 1}</option>`).join('')}</select><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="knee" style="width:110px"><input type="text" data-k="display.aim" value="${esc((s.display || {}).aim || '')}" placeholder="90°" style="width:80px"></div>`, 'What the person sees: “97° knee · aim 90°”.')}
           ${field('When out of position, the coach says', text('enterCue', s.enterCue || '', 'Slide down the wall until your knees are at ninety'), 'Spoken after a few seconds out of position, instead of silence.')}</div></div></div></div>
@@ -992,7 +1105,7 @@
     });
     wireMetricEditors(root, s, rerender);
     if ($('suggest')) $('suggest').onclick = () => {
-      const clean = state.takes.filter((t) => t.label === 'clean'); if (!clean.length) return toast('Record a clean take first');
+      const clean = state.takes.filter((t) => shows(t, 'clean')); if (!clean.length) return toast('Record a clean take first');
       const vals = clean.flatMap((t) => trace(s.progress.metric, t, t.side).filter((x) => x[0] >= (t.calT ?? 1200)).map((x) => x[1]));
       const lo = pct(vals, 0.08), hi = pct(vals, 0.92); const cal = clean.map((t) => { const d = trace(s.progress.metric, t, t.side); const c = d.find((x) => x[0] >= (t.calT ?? 1200)); return c ? c[1] : NaN; }).filter(Number.isFinite);
       const startV = median(cal); const goesUp = Math.abs(hi - startV) >= Math.abs(lo - startV); const target = goesUp ? hi : lo;
@@ -1026,7 +1139,7 @@
   /* ===================== 5 · faults ===================== */
   const wc = (t) => (t || '').trim() ? t.trim().split(/\s+/).length : 0;
   function fireReport(f) {
-    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = t.label === 'fault:' + f.id ? 'this fault' : labelOf(t); const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
+    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = shows(t, 'fault:' + f.id) ? 'this fault' : labelOf(t); const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
     const order = ['clean', 'this fault', 'borderline', 'fault', 'setup', 'other'];
     return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}</div>`;
   }
@@ -1104,13 +1217,13 @@
   function drawFaultCharts(s) {
     s.faults.forEach((f, i) => {
       const c = $('chart-f' + i); if (!c || f.rule) return; const n = (SPEC.KINDS[f.metric.kind] || {}).n; if (f.metric.pts.length < n) return;
-      const spans = state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].faultSpans[f.id]) || []).map(([t0, t1]) => ({ t0, t1, color: t.label === 'fault:' + f.id ? 'rgba(255,46,136,.22)' : labelOf(t) === 'clean' ? 'rgba(209,32,107,.35)' : 'rgba(255,184,48,.25)' })));
+      const spans = state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].faultSpans[f.id]) || []).map(([t0, t1]) => ({ t0, t1, color: shows(t, 'fault:' + f.id) ? 'rgba(255,46,136,.22)' : labelOf(t) === 'clean' ? 'rgba(209,32,107,.35)' : 'rgba(255,184,48,.25)' })));
       drawChart(c, takeSeries(f.metric, f.rel), { lines: [{ y: f.threshold, label: 'threshold', color: '#ff2e88' }], spans, yLabel: (SPEC.KINDS[f.metric.kind] || {}).unit });
     });
   }
   function suggestThreshold(s, f) {
     const n = (SPEC.KINDS[f.metric.kind] || {}).n; if (f.metric.pts.length < n) return toast('Pick the landmarks first');
-    const clean = state.takes.filter((t) => t.label === 'clean'), bad = state.takes.filter((t) => t.label === 'fault:' + f.id);
+    const clean = state.takes.filter((t) => shows(t, 'clean')), bad = state.takes.filter((t) => shows(t, 'fault:' + f.id));
     if (!clean.length) return toast('Record a clean take first');
     const vals = (takes) => takeSeries(f.metric, f.rel).filter((x) => takes.includes(x.take)).flatMap((x) => x.data.filter((p) => p[0] >= (x.take.calT ?? 1200)).map((p) => p[1]));
     const cv = vals(clean), bv = bad.length ? vals(bad) : null;
@@ -1123,7 +1236,7 @@
     const ex = builtin(state.current);
     return `<div class="stack"><h2>${esc(ex.name)} — how its rules fire on your takes</h2><p class="lead">This move is defined in code, so its rules cannot be edited here. Record takes, and this shows which faults fire on which. Send the session file to the build side with what should change.</p>
       <div class="stack">${ex.faults.map((f) => `<div class="fault-card"><div class="head"><b>${esc(f.label)}</b><span class="muted" style="font-size:.85rem">“${esc(f.cue)}”</span><span class="spacer"></span><span class="muted" style="font-size:.8rem">weight ${f.weight}${f.onRep ? ' · per rep' : ''}</span></div>${fireReport(f)}</div>`).join('')}</div>
-      <div class="card"><h3>Reps / seconds counted</h3><div class="fires">${state.takes.map((t) => { const sim = state.sims[t.id]; return `<span>${esc(LABELS[t.label] || t.label.replace('fault:', 'fault: '))}: ${sim && !sim.error ? (ex.type === 'reps' ? sim.full + ' reps' : (sim.holdMs / 1000).toFixed(1) + ' s') : (sim && sim.error ? esc(sim.error) : '—')}</span>`; }).join('') || '<span>no takes</span>'}</div></div>
+      <div class="card"><h3>Reps / seconds counted</h3><div class="fires">${state.takes.map((t) => { const sim = state.sims[t.id]; return `<span>${esc(saidText(t))}: ${sim && !sim.error ? (ex.type === 'reps' ? sim.full + ' reps' : (sim.holdMs / 1000).toFixed(1) + ' s') : (sim && sim.error ? esc(sim.error) : '—')}</span>`; }).join('') || '<span>no takes</span>'}</div></div>
       <div class="row"><button class="btn ghost" id="back">← Record</button></div></div>`;
   }
 
@@ -1153,9 +1266,12 @@
           ${field('Sources', area('sourcesText', s.sourcesText, 'E3 Rehab — knee pain | https://…', 2), 'One per line: name | url. Added to the file’s own sources.')}
         </div></div>
         <div class="card"><h3>Muscles the figure should light up</h3><p class="muted" style="font-size:.85rem;margin-bottom:8px">Tap to cycle: off → some → most.</p><div class="muscles">${ANAT.regions.map((r) => `<button type="button" class="chip small" data-mus="${r}" aria-pressed="${(s.muscles[r] || 0) > 0}">${r}${s.muscles[r] ? ' · ' + (s.muscles[r] >= 1 ? 'most' : 'some') : ''}</button>`).join('')}</div></div>
-        <div class="card"><h3>Demo figure</h3><p class="muted" style="font-size:.85rem">Built from a clean take: the start pose and the peak of the best rep become the two keyframes.</p>
-          <div class="row" style="margin:8px 0"><button class="btn secondary small" id="build-fig" ${state.takes.some((t) => t.label === 'clean') ? '' : 'disabled'}>Build from the best clean take</button>${s.figure ? '<span class="muted" style="font-size:.85rem">built ✓</span>' : ''}</div>
-          ${s.figure ? (ANAT.register(s.id || 'draft', s.figure), ANAT.demo(s.id || 'draft')) : ''}</div>
+        <div class="card"><h3>Demo figure</h3><p class="muted" style="font-size:.85rem">Two keyframes — the start position and the end of the movement. Built from a clean take, written from preset angles, or dragged into shape by hand.</p>
+          <div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn secondary small" id="build-fig" ${state.takes.some((t) => shows(t, 'clean')) ? '' : 'disabled'}>${s.figure ? 'Rebuild' : 'Build'} from the best clean take</button>
+            ${s.figure ? '<button class="btn secondary small" id="edit-fig">Edit the poses</button>' : s.pose ? '<button class="btn ghost small" id="pose-to-fig" title="The preset angles become plain joint positions you can drag — the move stops being preset-driven">Edit these poses by hand…</button>' : ''}
+            ${s.figure || s.pose ? '<button class="btn ghost small" id="note-fig">Notes on the animation</button>' : ''}${s.figure && s.figure.from ? '<span class="muted" style="font-size:.85rem">built from a take ✓</span>' : s.figure ? '<span class="muted" style="font-size:.85rem">edited by hand</span>' : ''}</div>
+          ${figNotes(s).length ? `<p class="muted" style="font-size:.85rem;margin:0 0 6px">${figNotes(s).length} note${figNotes(s).length > 1 ? 's' : ''}: ${esc(figNotes(s).map((n) => n.text).filter(Boolean).join(' · '))}</p>` : ''}
+          ${s.figure ? (ANAT.register(s.id || 'draft', s.figure), ANAT.demo(s.id || 'draft')) : s.pose ? (function () { try { ANAT.register(s.id || 'draft', figureFromPose(s)); return ANAT.demo(s.id || 'draft'); } catch (e) { return ''; } })() : ''}</div>
       </div></div>
       <div class="row"><button class="btn ghost" id="back">← Faults</button><span class="spacer"></span><button class="btn primary" id="next">Check &amp; export →</button></div></div>`;
   }
@@ -1169,13 +1285,21 @@
     root.querySelectorAll('[data-delr]').forEach((b) => { b.onclick = () => { s.guide.regions.splice(+b.dataset.delr, 1); saveState(); render(); }; });
     $('addr').onclick = () => { s.guide.regions.push({ name: '', points: [] }); saveState(); render(); };
     root.querySelectorAll('[data-mus]').forEach((b) => { b.onclick = () => { const r = b.dataset.mus; const v = s.muscles[r] || 0; s.muscles[r] = v === 0 ? 0.5 : v < 1 ? 1 : 0; if (!s.muscles[r]) delete s.muscles[r]; if (s.figure) s.figure.w = { ...s.muscles }; saveState(); render(); }; });
-    $('build-fig').onclick = () => { try { s.figure = buildFigure(s); saveState(); toast('Figure built'); render(); } catch (e) { toast('Could not build: ' + e.message, 5000); } };
+    $('build-fig').onclick = () => { try { const notes = figNotes(s); s.figure = buildFigure(s); if (notes.length) s.figure.notes = notes; s.pose = null; saveState(); toast('Figure built'); render(); } catch (e) { toast('Could not build: ' + e.message, 5000); } };
+    if ($('edit-fig')) $('edit-fig').onclick = () => openFigBuilder();
+    if ($('pose-to-fig')) $('pose-to-fig').onclick = () => {
+      if (!confirm('Turn the preset angles into joint positions you can drag? The move keeps the same two poses, but stops being written in presets.')) return;
+      try { s.figure = figureFromPose(s); s.pose = null; saveState(); render(); openFigBuilder(); } catch (e) { toast('Could not convert: ' + e.message, 5000); }
+    };
+    /* a move written in presets is annotated without being converted: its notes ride on the pose */
+    if ($('note-fig')) $('note-fig').onclick = () => openFigBuilder(s.figure ? 'poses' : 'notes');
     if (s.figure) { ANAT.register(s.id || 'draft', s.figure); ANAT.mountAll(root); }
+    else if (s.pose) { try { ANAT.register(s.id || 'draft', figureFromPose(s)); ANAT.mountAll(root); } catch (e) { } }
     $('back').onclick = () => go('faults'); $('next').onclick = () => go('export');
   }
   /* Two keyframes for the anatomical figure, lifted straight out of a clean take. */
   function buildFigure(s) {
-    const clean = state.takes.filter((t) => t.label === 'clean' && state.sims[t.id] && !state.sims[t.id].error);
+    const clean = state.takes.filter((t) => shows(t, 'clean') && state.sims[t.id] && !state.sims[t.id].error);
     if (!clean.length) throw new Error('no clean take');
     const take = clean.sort((a, b) => (state.sims[b.id].full || 0) - (state.sims[a.id].full || 0))[0]; const sim = state.sims[take.id];
     const aspect = take.aspect || 16 / 9;
@@ -1211,6 +1335,177 @@
     return { view: s.view, A: fA, B: fB, hold: s.type === 'hold', side: 'both', flip, w: { ...s.muscles }, from: { take: take.id, tA, tB } };
   }
 
+
+  /* ===================== the figure builder =====================
+     The demo figure is two keyframes. Built from a clean take it is usually right in outline and
+     wrong in a detail — a foot through the floor, an arm the model guessed at — and a move written
+     from presets may want a hand-made variation. Here the physio drags a joint: the bone above it
+     turns, keeping its length, and everything below comes with it, so the figure stays a body.
+     Notes pinned to a joint are the other half — "the knee drifts in here" — and they ride on the
+     move, preset poses included, to be drawn on the animation the person sees. */
+  const FIG_VIEW = { x: 196, y: 14, w: 212, h: 160 };          // the slice of the 400×175 diagram space the builder shows
+  const FIG_PARENT = {
+    side: { sh: 'hip', h: 'sh', el: 'sh', wr: 'el', elF: 'sh', wrF: 'elF', kn: 'hip', an: 'kn', ft: 'an', knF: 'hip', anF: 'knF', ftF: 'anF' },
+    front: { shL: 'hipL', shR: 'hipR', h: 'shL', elL: 'shL', wrL: 'elL', elR: 'shR', wrR: 'elR', knL: 'hipL', anL: 'knL', knR: 'hipR', anR: 'knR' },
+  };
+  const FIG_WORDS = { h: 'head', sh: 'shoulder', hip: 'hip', el: 'elbow', wr: 'wrist', kn: 'knee', an: 'ankle', ft: 'toes', elF: 'far elbow', wrF: 'far wrist', knF: 'far knee', anF: 'far ankle', ftF: 'far toes', shL: 'left shoulder', shR: 'right shoulder', elL: 'left elbow', elR: 'right elbow', wrL: 'left wrist', wrR: 'right wrist', hipL: 'left hip', hipR: 'right hip', knL: 'left knee', knR: 'right knee', anL: 'left ankle', anR: 'right ankle' };
+  const FIG_JOINTS = {
+    side: ['h', 'sh', 'hip', 'el', 'wr', 'kn', 'an', 'ft', 'elF', 'wrF', 'knF', 'anF', 'ftF'],
+    front: ['h', 'shL', 'shR', 'elL', 'elR', 'wrL', 'wrR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR'],
+  };
+  /* the same lines the exercise page draws (coach.js profilePath / frontPath2), as bone pairs */
+  const FIG_BONES = {
+    side: { near: [['sh', 'hip'], ['hip', 'kn'], ['kn', 'an'], ['an', 'ft'], ['sh', 'el'], ['el', 'wr']], far: [['hip', 'knF'], ['knF', 'anF'], ['anF', 'ftF'], ['sh', 'elF'], ['elF', 'wrF']] },
+    front: { near: [['shL', 'shR'], ['shL', 'hipL'], ['hipL', 'hipR'], ['hipR', 'shR'], ['hipL', 'knL'], ['knL', 'anL'], ['hipR', 'knR'], ['knR', 'anR'], ['shL', 'elL'], ['elL', 'wrL'], ['shR', 'elR'], ['elR', 'wrR']], far: [] },
+  };
+  const figJoints = (view) => FIG_JOINTS[view] || FIG_JOINTS.side;
+  const figWord = (k) => FIG_WORDS[k] || k;
+  /* Notes live with whichever shape the move keeps: a preset pose stays a preset pose. */
+  function figNotes(s, make) { const home = s.pose || s.figure; if (!home) return []; if (!home.notes && make) home.notes = []; return home.notes || []; }
+  const fb = { kf: 'A', drag: null, before: null };
+  /* poses: the whole builder. notes: the same sheet with the canvas put away, which is all a move
+     written in preset angles needs — its notes ride on the pose and the presets stay presets. */
+  function openFigBuilder(mode) {
+    const s = cur(); if (!s) return;
+    const poses = mode !== 'notes' && !!s.figure;
+    $('fb-stage').hidden = !poses; $('fb-kf').hidden = !poses; $('fb-tools').hidden = !poses;
+    $('fb-hint').hidden = !poses;
+    if (poses) { fb.kf = 'A'; fb.before = JSON.stringify({ A: s.figure.A, B: s.figure.B }); }
+    $('figbuild').hidden = false;
+    wireFigBuilder();
+    if (poses) drawFigBuilder();
+    else { $('fb-title').textContent = 'Notes on the animation'; $('fb-notes').innerHTML = figNotesEditor(s, s.view); }
+  }
+  function closeFigBuilder() { $('figbuild').hidden = true; fb.drag = null; render(); }
+  const figPose = (s, kf) => s.figure[kf] || s.figure.A;
+  /* every joint that hangs off this one, itself included */
+  function figKin(view, k) {
+    const P = FIG_PARENT[view] || {}; const out = [k];
+    for (const j of figJoints(view)) { for (let n = P[j]; n; n = P[n]) if (n === k) { out.push(j); break; } }
+    return [...new Set(out)];
+  }
+  function drawFigBuilder() {
+    const s = cur(); if (!s || !s.figure) return;
+    const view = (s.figure.view || s.view) === 'front' ? 'front' : 'side';
+    const c = $('fb-canvas'); const W = 900, H = Math.round(900 * FIG_VIEW.h / FIG_VIEW.w);
+    if (c.width !== W) { c.width = W; c.height = H; }
+    const ctx = c.getContext('2d'); const k = W / FIG_VIEW.w;
+    const X = (x) => (x - FIG_VIEW.x) * k, Y = (y) => (y - FIG_VIEW.y) * k;
+    const cs = getComputedStyle(document.body), v = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
+    const ink = v('--text', '#2b1546'), faint = v('--muted', '#5a3f78'), line = v('--line', '#e9d6bf'), hot = v('--pink', '#ff2e88'), paper = v('--surface', '#fffaf2');
+    ctx.clearRect(0, 0, W, H); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(164)); ctx.lineTo(W, Y(164)); ctx.stroke();
+    /* the same stick figure the exercise page animates, one keyframe at a time */
+    const stick = (F, colour, width, alpha) => {
+      ctx.strokeStyle = colour; ctx.lineWidth = width;
+      for (const set of ['far', 'near']) for (const [a, b] of FIG_BONES[view][set]) {
+        const p = F[a], q = F[b]; if (!p || !q) continue;
+        ctx.globalAlpha = alpha * (set === 'far' ? 0.45 : 1);
+        ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[1])); ctx.lineTo(X(q[0]), Y(q[1])); ctx.stroke();
+      }
+      ctx.globalAlpha = alpha;
+      const neck = view === 'front' ? (F.shL && F.shR ? [(F.shL[0] + F.shR[0]) / 2, F.shL[1]] : null) : F.sh;
+      if (F.h && neck) { ctx.beginPath(); ctx.moveTo(X(neck[0]), Y(neck[1])); ctx.lineTo(X(F.h[0]), Y(F.h[1])); ctx.stroke(); }
+      if (F.h) { ctx.beginPath(); ctx.arc(X(F.h[0]), Y(F.h[1]), 10 * k, 0, 7); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    };
+    const other = fb.kf === 'A' ? 'B' : 'A';
+    if (s.figure[other]) stick(s.figure[other], faint, 2.5 * k, 0.3);   /* where the body was, behind */
+    const F = figPose(s, fb.kf);
+    stick(F, ink, 3.5 * k, 1);
+    for (const n of figNotes(s)) {
+      if (!n.text || (n.kf && n.kf !== fb.kf)) continue;
+      const p = F[n.at]; if (!p) continue;
+      const hipX = view === 'front' ? ((F.hipL || [306])[0] + (F.hipR || [306])[0]) / 2 : (F.hip || [306])[0];
+      const dir = p[0] < hipX ? -1 : 1;
+      ctx.font = `700 ${Math.round(10 * k)}px system-ui, sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = dir < 0 ? 'right' : 'left';
+      const lx = X(p[0] + dir * 12), ly = Y(p[1] - 9);
+      ctx.strokeStyle = hot; ctx.lineWidth = 1.4 * k; ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[1])); ctx.lineTo(lx, ly); ctx.stroke();
+      ctx.fillStyle = hot; ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 2.6 * k, 0, 7); ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = paper; ctx.strokeText(n.text, lx + dir * 3 * k, ly);
+      ctx.fillStyle = ink; ctx.fillText(n.text, lx + dir * 3 * k, ly);
+    }
+    ctx.textAlign = 'left';
+    for (const j of figJoints(view)) {
+      const p = F[j]; if (!p) continue;
+      const on = fb.drag === j;
+      ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), on ? 11 : 8, 0, 7);
+      ctx.fillStyle = on ? hot : paper; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = hot; ctx.stroke();
+    }
+    $('fb-title').textContent = `Demo figure — ${fb.kf === 'A' ? 'the start position' : 'the end of the movement'}`;
+    $('figbuild').querySelectorAll('[data-fbkf]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fbkf === fb.kf));
+    $('fb-notes').innerHTML = figNotesEditor(s, view);
+  }
+  function figNotesEditor(s, view) {
+    const notes = figNotes(s);
+    return `<h4 style="margin:10px 0 6px">Notes on the animation</h4>
+      <p class="muted" style="font-size:.85rem;margin:0 0 6px">Pinned to a joint and shown on the exercise page — what to look at, or what a fault looks like here.</p>
+      ${notes.map((n, i) => `<div class="row fb-note" style="gap:6px;margin-bottom:6px"><input type="text" data-fbn="${i}" value="${esc(n.text)}" placeholder="Knee drifts in over the big toe" style="flex:1">
+        <select data-fbat="${i}" aria-label="Pinned to">${figJoints(view).map((j) => `<option value="${j}" ${n.at === j ? 'selected' : ''}>${esc(figWord(j))}</option>`).join('')}</select>
+        <select data-fbkfn="${i}" aria-label="When"><option value="" ${!n.kf ? 'selected' : ''}>throughout</option><option value="A" ${n.kf === 'A' ? 'selected' : ''}>at the start</option><option value="B" ${n.kf === 'B' ? 'selected' : ''}>at the end</option></select>
+        <button class="btn ghost small" data-fbdel="${i}">✕</button></div>`).join('')}
+      <button class="btn ghost small" id="fb-addnote">Add a note</button>`;
+  }
+  function wireFigBuilder() {
+    const c = $('fb-canvas'); if (!c || c.dataset.wired) return; c.dataset.wired = '1';
+    const redraw = () => { const s = cur(); if (s && s.figure && !$('fb-stage').hidden) drawFigBuilder(); else $('fb-notes').innerHTML = figNotesEditor(s, (s.figure && s.figure.view) || s.view); };
+    /* the canvas is drawn with object-fit: contain, so a pointer maps through the letterboxed
+       picture rather than the element box — otherwise every joint sits a little left of the grab */
+    const at = (e) => {
+      const s = cur(), view = ((s.figure || {}).view || s.view) === 'front' ? 'front' : 'side';
+      const r = c.getBoundingClientRect(), ar = c.width / c.height;
+      let dw = r.width, dh = r.width / ar; if (dh > r.height) { dh = r.height; dw = r.height * ar; }
+      const k = FIG_VIEW.w / dw;
+      return { x: FIG_VIEW.x + (e.clientX - r.left - (r.width - dw) / 2) * k, y: FIG_VIEW.y + (e.clientY - r.top - (r.height - dh) / 2) * k, view, s };
+    };
+    c.onpointerdown = (e) => {
+      const { x, y, view, s } = at(e); if (!s || !s.figure) return;
+      const F = figPose(s, fb.kf); let best = null, bd = 9;
+      for (const j of figJoints(view)) { const p = F[j]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = j; } }
+      if (!best) return;
+      fb.drag = best; c.setPointerCapture(e.pointerId); drawFigBuilder();
+    };
+    c.onpointermove = (e) => {
+      if (!fb.drag) return;
+      const { x, y, view, s } = at(e); const F = s.figure[fb.kf]; const P = FIG_PARENT[view] || {};
+      const clamp = (p) => [Math.round(Math.max(200, Math.min(404, p[0]))), Math.round(Math.max(18, Math.min(172, p[1])))];
+      const parent = P[fb.drag] && F[P[fb.drag]] ? F[P[fb.drag]] : null;
+      if (!parent) { const d = [x - F[fb.drag][0], y - F[fb.drag][1]]; for (const j of Object.keys(F)) if (Array.isArray(F[j])) F[j] = clamp([F[j][0] + d[0], F[j][1] + d[1]]); }
+      else {
+        /* turn the bone above this joint and carry everything below it round with the same angle,
+           so every bone keeps the length it was drawn with */
+        const a0 = Math.atan2(F[fb.drag][1] - parent[1], F[fb.drag][0] - parent[0]), a1 = Math.atan2(y - parent[1], x - parent[0]);
+        const d = a1 - a0, co = Math.cos(d), si = Math.sin(d);
+        for (const j of figKin(view, fb.drag)) { const p = F[j]; if (!Array.isArray(p)) continue; const dx = p[0] - parent[0], dy = p[1] - parent[1]; F[j] = clamp([parent[0] + dx * co - dy * si, parent[1] + dx * si + dy * co]); }
+      }
+      drawFigBuilder();
+    };
+    const drop = () => { if (!fb.drag) return; fb.drag = null; delete cur().figure.from; saveState(); drawFigBuilder(); };
+    c.onpointerup = drop; c.onpointercancel = drop;
+    $('figbuild').onclick = (e) => { if (e.target === $('figbuild')) closeFigBuilder(); };
+    $('fb-close').onclick = closeFigBuilder;
+    $('figbuild').querySelectorAll('[data-fbkf]').forEach((b) => { b.onclick = () => { fb.kf = b.dataset.fbkf; drawFigBuilder(); }; });
+    $('fb-copy').onclick = () => { const s = cur(); s.figure[fb.kf === 'A' ? 'B' : 'A'] = JSON.parse(JSON.stringify(s.figure[fb.kf])); saveState(); drawFigBuilder(); toast('Copied to the other keyframe'); };
+    $('fb-revert').onclick = () => { const s = cur(); if (!fb.before) return; Object.assign(s.figure, JSON.parse(fb.before)); saveState(); drawFigBuilder(); toast('Back to where this was opened'); };
+    $('fb-notes').onclick = (e) => {
+      const s = cur();
+      if (e.target.id === 'fb-addnote') { const view = (s.figure && s.figure.view) || s.view; figNotes(s, true).push({ at: figJoints(view)[0], text: '' }); saveState(); return redraw(); }
+      const d = e.target.closest('[data-fbdel]'); if (d) { figNotes(s).splice(+d.dataset.fbdel, 1); saveState(); redraw(); }
+    };
+    $('fb-notes').oninput = (e) => { const i = e.target.dataset.fbn; if (i === undefined) return; figNotes(cur())[+i].text = e.target.value; saveState(); };
+    $('fb-notes').onchange = (e) => {
+      const s = cur(), notes = figNotes(s);
+      if (e.target.dataset.fbat !== undefined) { notes[+e.target.dataset.fbat].at = e.target.value; saveState(); redraw(); }
+      if (e.target.dataset.fbkfn !== undefined) { const n = notes[+e.target.dataset.fbkfn]; if (e.target.value) n.kf = e.target.value; else delete n.kf; saveState(); redraw(); }
+    };
+  }
+  /* A move written from preset angles has no points to drag. Converting gives the physio the same
+     two keyframes as explicit joints — and the move stops being preset-driven, which is the trade. */
+  function figureFromPose(s) {
+    const fig = C.poseToFigure(s.view, JSON.parse(JSON.stringify(s.pose)), { hold: s.type === 'hold', posture: (s.camera || {}).posture, side: s.pose.side || 'both' });
+    return { view: fig.view, A: fig.A, B: fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: { ...s.muscles }, wall: s.pose.wall || undefined, notes: (s.pose.notes || []).map((n) => ({ ...n })) };
+  }
+
   /* ===================== 7 · check & export ===================== */
   function moveFileSource(s) {
     const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', '_tuned', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
@@ -1234,12 +1529,12 @@
     const name = s._target || targetFileName(s);
     const problems = catalogProblems(s, name);
     const warn = [];
-    const todo = state.takes.filter((t) => t.label === 'todo').length;
+    const todo = state.takes.filter((t) => shows(t, 'todo')).length;
     if (todo) warn.push(`${todo} rep${todo > 1 ? 's have' : ' has'} not been described yet — say what each one shows, or it counts for nothing.`);
-    if (!state.takes.some((t) => t.label === 'clean')) warn.push('No clean take recorded — thresholds are guesses.');
-    for (const f of s.faults) if (!f.rule && !f.listed && !state.takes.some((t) => t.label === 'fault:' + f.id)) warn.push(`No take showing “${f.label}” — its threshold has not been checked against a real fault.`);
-    for (const t of state.takes.filter((t) => t.label === 'clean')) { const sim = state.sims[t.id]; if (sim && !sim.error) { const fired = Object.keys(sim.faultSpans); if (fired.length) warn.push(`A clean take still fires: ${fired.join(', ')}.`); if (s.type === 'reps' && s.tracking !== 'none' && sim.full < 2) warn.push('A clean take counts fewer than 2 reps — check the start/target or the calibration window.'); } }
-    if (!state.takes.some((t) => t.label === 'borderline')) warn.push('No borderline take — the most valuable kind.');
+    if (!state.takes.some((t) => shows(t, 'clean'))) warn.push('No clean take recorded — thresholds are guesses.');
+    for (const f of s.faults) if (!f.rule && !f.listed && !state.takes.some((t) => shows(t, 'fault:' + f.id))) warn.push(`No take showing “${f.label}” — its threshold has not been checked against a real fault.`);
+    for (const t of state.takes.filter((t) => shows(t, 'clean'))) { const sim = state.sims[t.id]; if (sim && !sim.error) { const fired = Object.keys(sim.faultSpans); if (fired.length) warn.push(`A clean take still fires: ${fired.join(', ')}.`); if (s.type === 'reps' && s.tracking !== 'none' && sim.full < 2) warn.push('A clean take counts fewer than 2 reps — check the start/target or the calibration window.'); } }
+    if (!state.takes.some((t) => shows(t, 'borderline'))) warn.push('No borderline take — the most valuable kind.');
     if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
     const tune = tuningReport(s);
@@ -1265,11 +1560,11 @@
   function download(name, content, type = 'application/octet-stream') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
   /* Every live fault against the takes: quiet on clean, firing on its own — the same rule for every move. */
   function tuningReport(s) {
-    const clean = state.takes.filter((t) => t.label === 'clean'), rows = [];
+    const clean = state.takes.filter((t) => shows(t, 'clean')), rows = [];
     const live = (s.faults || []).filter((f) => !f.rule && !f.listed && f.metric && f.metric.pts.length);
     const count = (f, takes) => { let n = 0; for (const t of takes) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const fired = f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); if (fired) n++; } return n; };
     for (const f of live) {
-      const own = state.takes.filter((t) => t.label === 'fault:' + f.id), border = state.takes.filter((t) => t.label === 'borderline');
+      const own = state.takes.filter((t) => shows(t, 'fault:' + f.id)), border = state.takes.filter((t) => shows(t, 'borderline'));
       const c = count(f, clean), o = count(f, own), b = count(f, border);
       const ok = clean.length >= 2 && own.length >= 1 && c === 0 && o === own.length;
       rows.push({ id: f.id, label: f.label, clean: `${c}/${clean.length}`, own: `${o}/${own.length}`, border: `${b}/${border.length}`, ok, why: clean.length < 2 ? 'needs 2 clean takes' : !own.length ? 'no take of this fault' : c ? 'fires on a clean take' : 'misses its own take' });

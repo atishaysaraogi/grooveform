@@ -411,6 +411,24 @@ correction can be seen in the review's JSON. `test/engine.test.js` runs the
 oracle recordings through a 12° roll and a 20° yaw and requires the same reps
 and faults out.
 
+### Notes on the demo figure
+
+A move's `pose` (or `figure`) may carry `notes`: a few words pinned to a joint,
+drawn on the animated figure with a line to that joint.
+
+```json
+"notes": [{ "at": "kn", "text": "Knee drifts in over the big toe", "kf": "B" }]
+```
+
+`at` is a joint of the figure in that view (side: `h sh hip el wr kn an ft`
+and the far-side `elF wrF knF anF ftF`; front: `h shL shR elL elR wrL wrR hipL
+hipR knL knR anL anR`). `text` is what to look at. `kf` is optional: `"A"` shows
+the note at the start position, `"B"` at the end of the movement, and leaving it
+out shows it throughout. A note travels with its joint as the figure moves, and
+a keyframe-tied one fades in as the figure reaches that keyframe — which is how
+a fault that only appears at the top is said at the top. Written in the Studio's
+figure builder (step 6), and drawn by `coach.js` `noteSvg`.
+
 ### The far side of the body
 
 Side-on, the arm and leg away from the lens are mostly hidden behind the near

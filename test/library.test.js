@@ -203,3 +203,26 @@ test('the fast rule is capped at one cue a set, and the cap reaches the compiled
   assert.ok(rushed.length > 10, 'most rep moves carry the fast rule, got ' + rushed.length);
   for (const e of rushed) assert.equal(e.faults.find((f) => f.id === 'fast').maxCues, 1, e.id);
 });
+
+/* ---- notes pinned to the demo figure ---- */
+const sideFile = data.files.find((f) => f.json.moves.some((m) => m.pose && m.pose.A)) || data.files[0];
+const poseMove = sideFile.json.moves.find((m) => m.pose && m.pose.A);
+const withNotes = (notes) => ({ ...sideFile.json, moves: [{ ...poseMove, pose: { ...poseMove.pose, notes } }] });
+const otherIds = data.files.filter((f) => f.name !== sideFile.name).flatMap((f) => f.json.moves.map((m) => m.id));
+
+test('a pose may carry notes pinned to a joint, and they reach the figure', () => {
+  const joint = poseMove.view === 'front' ? 'knL' : 'kn';
+  const one = withNotes([{ at: joint, text: 'Knee drifts in here', kf: 'B' }]);
+  assert.deepEqual(catalog.checkFile(one, sideFile.name, data, otherIds), [], 'a note is a legal part of a pose');
+  const e = catalog.resolveEntry(one.moves[0], data.shared, 'notes.json');
+  const fig = catalog.poseToFigure(e.view || 'side', e.pose, { hold: e.type === 'hold', posture: (e.camera || {}).posture, side: 'both' });
+  assert.deepEqual(fig.notes, [{ at: joint, text: 'Knee drifts in here', kf: 'B' }], 'the note travels into the drawn figure');
+});
+
+test('a note that says nothing, points nowhere, or names a keyframe that is not A or B is refused', () => {
+  for (const [bad, why] of [[{ at: 'kn' }, /text/], [{ text: 'x' }, /at/], [{ at: 'kn', text: 'x', kf: 'C' }, /kf/], [{ at: 'kn', text: 'x', when: 'top' }, /when/]]) {
+    const out = catalog.checkFile(withNotes([bad]), sideFile.name, data, otherIds);
+    assert.ok(out.length, 'refused: ' + JSON.stringify(bad));
+    assert.match(out.join(' '), why, JSON.stringify(out));
+  }
+});

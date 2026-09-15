@@ -267,6 +267,9 @@ a.ex-card .name { color: var(--text, inherit); }
 .demo-fig .ink.far { stroke: var(--muted); opacity: .45; stroke-width: 2.5; }
 .demo-fig .floor { stroke: var(--line); stroke-width: 2; }
 .demo-fig .lbl, .cam-diagram .lbl { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.demo-fig .note-l { stroke: var(--accent); stroke-width: 1.4; }
+.demo-fig .note-d { fill: var(--accent); }
+.demo-fig .note-t { font-family: var(--font-mono); font-size: 10px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
 .cam-diagram .lbl.muted { opacity: .7; }
 .cam-diagram .dim { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .cam-diagram .wedge { fill: var(--accent); opacity: .18; }
