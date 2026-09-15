@@ -245,15 +245,18 @@
       if (key === 'rest') return `${vv} s`;
       if (key === 'sets') return String(vv);
       if (o.swatches) return optLabel(o, vv);   // a coloured circle says the band; the name is in its title
+      /* the bubble is one fixed size, so a long label keeps only its first words ("Bent knee (soleus)"
+         → "Bent knee"); the full text is the tooltip */
       const lab = (o.labels && o.labels[vv]) || (vv + (o.unit || ''));
-      return esc(key === 'side' && vv === 'both' ? 'Both' : lab);
+      return esc(key === 'side' && vv === 'both' ? 'Both' : String(lab).split(' (')[0]);
     });
   }
   const bubbleLabel = (cat, key, o) => key === 'target' ? (cat.type === 'hold' ? 'Hold' : 'Reps') : key === 'sets' ? 'Sets' : key === 'rest' ? 'Rest' : key === 'side' ? 'Side' : o.label;
   function bubble(cat, opts, key, values, o = {}) {
     const texts = bubbleTexts(cat, key, values, o); let i = values.indexOf(opts[key]); if (i < 0) i = 0;
     const label = bubbleLabel(cat, key, o);
-    return `<span class="knob"><span class="k">${esc(label)}</span><button type="button" class="bubble" data-optkey="${key}" data-i="${i}" data-value="${esc(values[i])}" data-values='${esc(JSON.stringify(values))}' data-texts='${esc(JSON.stringify(texts))}' aria-label="${esc(label)}, tap to change" title="${esc(key === 'side' && values[i] === 'both' ? 'Both — one side, then the other' : '')}">${texts[i]}</button></span>`;
+    const titles = values.map(vv => key === 'side' && vv === 'both' ? 'Both — one side, then the other' : o.labels && o.labels[vv] ? String(o.labels[vv]) : '');
+    return `<span class="knob"><span class="k">${esc(label)}</span><button type="button" class="bubble" data-optkey="${key}" data-i="${i}" data-value="${esc(values[i])}" data-values='${esc(JSON.stringify(values))}' data-texts='${esc(JSON.stringify(texts))}' data-titles='${esc(JSON.stringify(titles))}' aria-label="${esc(label)}, tap to change" title="${esc(titles[i])}">${texts[i]}</button></span>`;
   }
   /* Every knob for one exercise: reps/hold, sets, rest, plus whatever that move defines (band, side, range…). */
   function configBlock(cat, opts) {
@@ -268,7 +271,7 @@
       b.onclick = () => {
         const values = JSON.parse(b.dataset.values), texts = JSON.parse(b.dataset.texts);
         const i = (Number(b.dataset.i) + 1) % values.length; const vv = values[i];
-        bag[b.dataset.optkey] = vv; b.dataset.i = i; b.dataset.value = vv; b.innerHTML = texts[i];
+        bag[b.dataset.optkey] = vv; b.dataset.i = i; b.dataset.value = vv; b.innerHTML = texts[i]; b.title = (JSON.parse(b.dataset.titles || '[]')[i]) || '';
         b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
         if (onChange) onChange(host, bag);
       };

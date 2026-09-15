@@ -453,7 +453,10 @@ a.ex-card .name { color: var(--text, inherit); }
 /* ---- settings: name beside the bubble, only the value inside ---- */
 .knob { display: inline-flex; align-items: center; gap: 6px; }
 .knob .k { font-size: .82rem; font-weight: 800; color: var(--ink-soft); }
-.bubble { min-width: 44px; justify-content: center; }
+/* one size for every value — Left, Right, Both, 120 s, a band swatch — so nothing shifts when a value changes;
+   a label too long for it is cut with an ellipsis and read in full from the tooltip */
+.bubble { width: 100px; min-width: 100px; max-width: 100px; padding: 8px 8px; display: inline-block; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 22px; font-size: .88rem; }
+.bubble .swatch { vertical-align: middle; }
 
 /* ---- nav search ---- */
 .nav-search { flex: 1 1 120px; max-width: 260px; min-height: 36px; padding: 4px 12px; font-size: .9rem; }

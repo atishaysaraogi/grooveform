@@ -115,3 +115,8 @@ table.tune th { text-align: left; font-weight: 800; padding: 4px 6px; border-bot
 table.tune td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
 table.tune tr.ok td:last-child { color: var(--good); font-weight: 800; }
 table.tune tr.bad td:last-child { color: var(--bad); }
+/* the label on a take's row is a selector: what this take shows can be changed after the fact,
+   which is how the reps cut out of one long take get their own labels */
+.take select.lbl { font: inherit; font-weight: 900; font-size: .85rem; border: 2px solid transparent; cursor: pointer; max-width: 160px; text-overflow: ellipsis; }
+.take select.lbl:focus { outline: none; border-color: var(--grape); }
+.take .acts .btn.secondary { white-space: nowrap; }

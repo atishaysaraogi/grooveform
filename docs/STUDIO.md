@@ -55,6 +55,17 @@ recording the survivors.
 | 8 | 4 · Measure, 5 · Faults | builder drives; physio decides — see below |
 | 4 | 6 · Guide | physio dictates the form points, marks which the camera checks; builds the figure |
 
+**Or one long take, split by rep.** Instead of one take per label, record — or
+analyze a file of — a single take with every rep in it: a few clean ones, one
+deliberately showing each fault, a borderline one. Once the progress measure is
+set (step 4) the Studio can find the reps, and **Split into N reps** on that
+take's row turns each rep into its own take, still start included, so each
+calibrates exactly as the parent did. Then use the label selector on each row
+to say what that rep shows (clean, which fault, borderline). Everything
+downstream — threshold suggestions, the fires strip, the tuning report — counts
+those reps as separate takes. A rep cut from a kept video still plays from the
+right place in it.
+
 **Recording order, every move:**
 
 1. Two **clean** takes — five or six reps each, the way it should be done.

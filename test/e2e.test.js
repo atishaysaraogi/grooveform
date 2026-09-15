@@ -251,8 +251,10 @@ async function runCoachedSet(page, side = 'right') {
   });
   await step('studio: a physio builds a move from a recording — screen, describe, record, measure, faults, guide, export, try', async () => {
     const st = await newPage();
-    /* The app's stream, time-warped: still for 1.5 s (calibration) instead of 10.5, then the same 2.6 s reps — the second one leans. */
-    await st.addInitScript(`const __orig = window.__mockPose; window.__mockPose = (t) => (t < 1500 ? __orig(0) : __orig(10500 + (t - 1500)));`);
+    /* The app's stream, time-warped: the mock clock starts with the camera preview and the Studio counts down ~3.4 s
+       before it records, so the stream stays still until 5.5 s — about two still seconds at the start of the take, which
+       is what calibration needs — then the same 2.6 s reps: the second one leans. */
+    await st.addInitScript(`const __orig = window.__mockPose; window.__mockPose = (t) => (t < 5500 ? __orig(0) : __orig(10500 + (t - 5500)));`);
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2'); await st.click('#btn-new2');
     // 1 · screen: six yeses
     await st.waitForSelector('[data-chips="screen.big"]');
@@ -287,6 +289,19 @@ async function runCoachedSet(page, side = 'right') {
     const counted = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.sims[s.takes[0].id].full; });
     assert.ok(counted >= 3, 'clean take counts reps: ' + counted);
     await st.screenshot({ path: path.join(SHOTS, 'studio-measure.png'), fullPage: true });
+    /* one long take, split by rep: each rep becomes a take of its own, and the leaning one (rep 2) is labelled as that fault */
+    await st.click('#back'); await st.waitForSelector('#takes [data-act="split"]');
+    st.once('dialog', (d) => d.accept());
+    const reps = await st.$eval('#takes [data-act="split"]', (b) => Number(b.textContent.match(/\d+/)[0]));
+    await st.click('#takes [data-act="split"]');
+    await st.waitForFunction((n) => window.GrooveformStudio.state.takes.length === n, reps, { timeout: 5000 });
+    const kids = await st.evaluate(() => window.GrooveformStudio.state.takes.map((t) => ({ rep: t.origin && t.origin.rep, of: t.origin && t.origin.of, label: t.label, frames: t.frames.length, still: t.frames.filter((f) => f[0] < t.calT).length })));
+    assert.deepEqual(kids.map((k) => k.rep), kids.map((_, i) => i + 1), 'one take per rep, in order: ' + JSON.stringify(kids));
+    assert.ok(kids.every((k) => k.of === reps && k.label === 'clean' && k.still > 10 && k.frames > k.still + 20), 'each keeps the still start and its rep: ' + JSON.stringify(kids));
+    await st.selectOption('#takes .take:nth-child(2) select[data-relabel]', 'fault:leaning_away');
+    await st.waitForFunction(() => window.GrooveformStudio.state.takes[1].label === 'fault:leaning_away');
+    await st.screenshot({ path: path.join(SHOTS, 'studio-split.png'), fullPage: true });
+    await st.click('#next'); await st.waitForSelector('[data-mpath="progress.metric"]');
     await st.click('#next');
     // 5 · faults: a leaning fault on the trunk-lean metric, then see it fire on the leaning rep only
     await st.waitForSelector('[data-fi="0"]');
@@ -294,7 +309,8 @@ async function runCoachedSet(page, side = 'right') {
     await st.fill('[data-k="faults.0.tip"]', 'Do not tip the trunk to lift the leg higher.');
     await st.selectOption('[data-mpath="faults.0.metric"] [data-mkind]', 'lean'); await st.waitForSelector('[data-fi="0"] [data-chips="faults.0.op"]');
     await st.click('[data-chips="faults.0.op"] [data-v="<"]'); await st.fill('[data-k="faults.0.threshold"]', '-8'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
-    try { await st.waitForFunction(() => /fires on 1\/1 clean/.test(document.querySelector('[data-fi="0"] .fires').textContent), null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.GrooveformStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }
+    /* the rule fires on the rep labelled as this fault and on none of the clean reps — the split is what makes that visible */
+    try { await st.waitForFunction(() => { const t = document.querySelector('[data-fi="0"] .fires').textContent; return /fires on 0\/\d+ clean/.test(t) && /fires on 1\/1 this fault/.test(t); }, null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.GrooveformStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }
     await st.click('#add-fast'); await st.waitForSelector('[data-fi="1"]');
     await st.screenshot({ path: path.join(SHOTS, 'studio-faults.png'), fullPage: true });
     await st.click('#next');

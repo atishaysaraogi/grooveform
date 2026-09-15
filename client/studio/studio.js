@@ -477,12 +477,18 @@
   /* ===================== 3 · record ===================== */
   const LABELS = { clean: 'Clean', borderline: 'Borderline', setup: 'Awkward set-up', other: 'Other' };
   const rec = { on: false, frames: [], t0: 0, raf: 0, stream: null, label: 'clean', side: 'L', mirror: true, keepVideo: true, mr: null, chunks: [], countdown: 0, lastVideoT: -1, fileMode: false };
-  function recordPanel() {
+  /* what a take can be: clean, one of the move's faults, borderline, an awkward set-up, other */
+  function takeLabels() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
-    const labels = [['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
+    return [['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
+  }
+  function recordPanel() {
+    const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
+    const labels = takeLabels();
     const sided = s ? !!s.sided : !!(ex && ex.sided);
     return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault named in step 2, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
+        <p class="muted" style="font-size:.9rem">Or do it all in one go: record (or analyze a file of) one long take with every rep in it — clean ones, each fault, a borderline one — and once the progress measure is set in step 4, <b>Split into reps</b> on that take turns each rep into its own take. Then set what each one shows from the list on its row.</p>
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
         <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file">Analyze a video file…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
@@ -504,9 +510,11 @@
       if (sim && !sim.error && ex) simText = ex.type === 'reps' ? `<b>${sim.full}</b> reps${sim.partial ? ` · ${sim.partial} partial` : ''}` : `<b>${(sim.holdMs / 1000).toFixed(1)} s</b> in position`;
       else if (sim && sim.error) simText = `<span class="muted">rule error: ${esc(sim.error)}</span>`;
       const fired = sim && !sim.error ? Object.keys(sim.faultSpans).concat(Object.keys(sim.repFaults || {})) : [];
-      return `<div class="take" data-id="${t.id}"><span class="lbl ${labelOf(t)}">${esc(t.label.startsWith('fault:') ? 'Fault: ' + t.label.slice(6) : LABELS[t.label] || t.label)}</span>
-        <div><div class="meta">${t.side ? (t.side === 'L' ? 'left' : 'right') + ' · ' : ''}${(t.durationMs / 1000).toFixed(1)} s · ${t.frames.length} frames${t.video ? ' · video' : ''}${t.note ? ' · ' + esc(t.note) : ''}</div><div class="sim">${simText}${fired.length ? ` · fired: ${fired.map(esc).join(', ')}` : sim && !sim.error ? ' · no faults' : ''}</div></div>
-        <div class="acts"><button class="btn ghost small" data-act="play">Play</button><button class="btn ghost small" data-act="note">Note</button><button class="btn ghost small" data-act="del">✕</button></div></div>`;
+      const labels = takeLabels(); if (!labels.some(([v]) => v === t.label)) labels.push([t.label, t.label]);
+      const canSplit = ex && ex.type === 'reps' && sim && !sim.error && sim.reps.length >= 2 && !t.origin;
+      return `<div class="take" data-id="${t.id}"><select class="lbl ${labelOf(t)}" data-relabel aria-label="What this take shows">${labels.map(([v, txt]) => `<option value="${esc(v)}" ${t.label === v ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select>
+        <div><div class="meta">${t.origin ? `rep ${t.origin.rep} of ${t.origin.of}${t.origin.full === false ? ' (partial)' : ''} · ` : ''}${t.side ? (t.side === 'L' ? 'left' : 'right') + ' · ' : ''}${(t.durationMs / 1000).toFixed(1)} s · ${t.frames.length} frames${t.video ? ' · video' : ''}${t.note ? ' · ' + esc(t.note) : ''}</div><div class="sim">${simText}${fired.length ? ` · fired: ${fired.map(esc).join(', ')}` : sim && !sim.error ? ' · no faults' : ''}</div></div>
+        <div class="acts">${canSplit ? `<button class="btn secondary small" data-act="split" title="One take per rep, each labelled on its own">Split into ${sim.reps.length} reps</button>` : ''}<button class="btn ghost small" data-act="play">Play</button><button class="btn ghost small" data-act="note">Note</button><button class="btn ghost small" data-act="del">✕</button></div></div>`;
     }).join('');
   }
   function coverage() {
@@ -539,6 +547,12 @@
       if (b.dataset.act === 'del') { if (!confirm('Delete this take?')) return; await idb.del(id); state.takes = state.takes.filter((x) => x.id !== id); resim(); render(); }
       if (b.dataset.act === 'note') { const n = prompt('Note for this take (what was different, what to look for):', t.note || ''); if (n !== null) { t.note = n; await idb.put(t); render(); } }
       if (b.dataset.act === 'play') openPlayer(t);
+      if (b.dataset.act === 'split') await splitTake(t);
+    };
+    $('takes').onchange = async (e) => {
+      const sel = e.target.closest('select[data-relabel]'); if (!sel) return;
+      const t = state.takes.find((x) => x.id === sel.closest('.take').dataset.id); if (!t) return;
+      t.label = sel.value; await idb.put(t); render();
     };
     if (rec.stream || MOCK) restoreCam();
   }
@@ -589,6 +603,31 @@
     const v = $('cam'); const aspect = MOCK ? 640 / 360 : (v.videoWidth / v.videoHeight) || 16 / 9;
     await saveTake(rec.frames, aspect, video);
   }
+  /* One long take with every rep in it → one take per rep. The rep boundaries are the ones the
+     engine found (a rep ends when the progress reading drops back to rest), so this needs the
+     progress measure from step 4. Each new take keeps the parent's still start in front of its
+     rep, so it calibrates exactly as the parent did, and remembers where its rep sits in the
+     parent's video. The parent is removed: its reps would otherwise be counted twice. */
+  async function splitTake(t) {
+    const sim = state.sims[t.id];
+    if (!sim || sim.error || !sim.reps || sim.reps.length < 2) return toast('Nothing to split yet — set the progress measure in step 4 so the reps can be found');
+    const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT);
+    if (!still.length) return toast('This take has no still start to calibrate each rep from');
+    const n = sim.reps.length; const kids = []; let from = sim.calT ?? calT;
+    sim.reps.forEach((r, i) => {
+      const seg = t.frames.filter((f) => f[0] > from && f[0] <= r.t); from = r.t;
+      if (seg.length < 5) return;
+      const t0 = seg[0][0];
+      const frames = [...still.map((f) => [f[0], f[1]]), ...seg.map((f) => [calT + (f[0] - t0), f[1]])];
+      kids.push({ id: uid(), moveId: t.moveId, label: t.label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: t0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT, origin: { take: t.id, rep: i + 1, of: n, full: !!r.full } });
+    });
+    if (!kids.length) return toast('Could not find the rep boundaries in this take');
+    if (!confirm(`Split this take into ${kids.length} reps? Each rep becomes its own take, labelled "${LABELS[t.label] || t.label.replace('fault:', 'fault: ')}" for now — change any of them from its row. The original take is removed.`)) return;
+    for (const k of kids) await idb.put(k);
+    await idb.del(t.id);
+    state.takes = state.takes.filter((x) => x.id !== t.id).concat(kids).sort((a, b) => a.created - b.created);
+    resim(); render(); toast(`Split into ${kids.length} reps — now say what each one shows`);
+  }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
     const take = { id: uid(), moveId: moveKey(), label: rec.label, side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: 1200 };
@@ -623,9 +662,12 @@
   }
   function closePlayer() { $('player').hidden = true; pl.playing = false; cancelAnimationFrame(pl.raf); const v = $('pl-video'); v.pause(); }
   $('pl-close').onclick = closePlayer; $('player').onclick = (e) => { if (e.target === $('player')) closePlayer(); };
-  $('pl-scrub').oninput = (e) => { pl.t = (+e.target.value / 1000) * pl.take.durationMs; pl.playing = false; const v = $('pl-video'); if (!v.hidden) { v.pause(); v.currentTime = pl.t / 1000; } drawPlayerFrame(); };
-  $('pl-play').onclick = () => { pl.playing = !pl.playing; $('pl-play').textContent = pl.playing ? 'Pause' : 'Play'; const v = $('pl-video'); if (pl.playing) { pl.wall = performance.now() - pl.t; if (!v.hidden) { v.currentTime = pl.t / 1000; v.play().catch(() => { }); } pl.raf = requestAnimationFrame(playTick); } else { v.pause(); cancelAnimationFrame(pl.raf); } };
-  function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
+  /* a take cut out of a longer recording keeps that recording's video: its still start is the video's
+     start, and its rep sits at videoT0 */
+  const videoTime = (take, t) => { const calT = take.calT ?? 1200; return take.videoT0 == null || t < calT ? t : t - calT + take.videoT0; };
+  $('pl-scrub').oninput = (e) => { pl.t = (+e.target.value / 1000) * pl.take.durationMs; pl.playing = false; const v = $('pl-video'); if (!v.hidden) { v.pause(); v.currentTime = videoTime(pl.take, pl.t) / 1000; } drawPlayerFrame(); };
+  $('pl-play').onclick = () => { pl.playing = !pl.playing; $('pl-play').textContent = pl.playing ? 'Pause' : 'Play'; const v = $('pl-video'); if (pl.playing) { pl.wall = performance.now() - pl.t; if (!v.hidden) { v.currentTime = videoTime(pl.take, pl.t) / 1000; v.play().catch(() => { }); } pl.raf = requestAnimationFrame(playTick); } else { v.pause(); cancelAnimationFrame(pl.raf); } };
+  function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; const calT = pl.take.calT ?? 1200; const v = $('pl-video'); if (pl.take.videoT0 != null && !v.hidden && pl.t >= calT && pl.t - 40 < calT) v.currentTime = videoTime(pl.take, pl.t) / 1000;   /* jump from the still start to the rep */ if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; v.pause(); } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
   function drawPlayerFrame() {
     const take = pl.take; const c = $('pl-canvas'); const aspect = take.aspect || 16 / 9; const W = 960, H = Math.round(960 / aspect); if (c.width !== W) { c.width = W; c.height = H; }
     const ctx = c.getContext('2d'); ctx.clearRect(0, 0, W, H);
