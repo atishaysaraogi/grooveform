@@ -263,6 +263,8 @@ a.ex-card .name { color: var(--text, inherit); }
 .hud .btn.icon.off { opacity: .55; text-decoration: line-through; }
 /* demo figure + camera placement (split) */
 .demo-fig { width: 100%; max-width: 460px; aspect-ratio: 4 / 3; height: auto; display: block; margin: 0 auto; }
+/* the archived anatomical figure draws to a canvas; the --fig-* palette above is already themed */
+.demo-fig.muscle { aspect-ratio: 16 / 9; }
 .demo-fig .ink { stroke: var(--text); fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
 .demo-fig .ink.far { stroke: var(--muted); opacity: .45; stroke-width: 2.5; }
 .demo-fig .floor { stroke: var(--line); stroke-width: 2; }

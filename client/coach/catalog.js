@@ -235,7 +235,7 @@
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
       'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'minMs', 'focus',
-      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show',
+      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show', 'listed',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
@@ -425,7 +425,11 @@
       ex.faults = [...ex.faults, ...docFaults(true)];
       ex.spec = spec;
     }
-    Object.assign(ex, physio, { tracking, vetted: !!e.vetted, catalog: true });
+    /* Whether the move is offered for browsing. Unstated it follows `vetted`, so a library that
+       grows faster than anyone can check it does not bury the ten moves that were checked; set it
+       outright to show or hide one. Hiding is about the lists only — a routine that names the move,
+       or a link straight to it, still works. */
+    Object.assign(ex, physio, { tracking, vetted: !!e.vetted, listed: e.listed === undefined ? !!e.vetted : !!e.listed, catalog: true });
     return ex;
   }
 

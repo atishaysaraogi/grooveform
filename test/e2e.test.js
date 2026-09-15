@@ -66,17 +66,21 @@ async function runCoachedSet(page, side = 'right') {
   await step('visitor: home shows free vs pro exercises, no account needed', async () => {
     await visitor.goto(base + '/?mock=1#/'); await visitor.waitForSelector('.hero'); const t = await text(visitor);
     assert.ok(t.includes('Moves') && t.includes('Playlists') && (await visitor.$$('.ex-row')).length >= 10 && (await visitor.$$('.playlist')).length >= 6, 'moves grid and playlist rows'); const badges = await visitor.$$eval('.tiles .tile .badge', bs => bs.map(b => b.textContent.trim().toLowerCase())); const lastFree = badges.lastIndexOf('free'), firstPro = badges.indexOf('pass') >= 0 ? badges.indexOf('pass') : badges.indexOf('pro'); assert.ok(firstPro === -1 || lastFree < firstPro, 'free moves listed first: ' + badges.join(',')); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-home.png'), fullPage: true });
-    /* the filter says what the camera can do with each move, and narrowing to one tier sticks */
-    await visitor.goto(base + '/?mock=1#/exercises'); await visitor.waitForSelector('#ex-filter');
-    const all = await visitor.$$eval('.ex-row:not([hidden])', (e) => e.length);
-    await visitor.click('#ex-filter [data-track="form"]');
-    await visitor.waitForFunction(() => [...document.querySelectorAll('.ex-row:not([hidden])')].every((r) => r.dataset.track === 'form'));
-    const formOnly = await visitor.$$eval('.ex-row:not([hidden])', (e) => e.length);
-    assert.ok(formOnly > 20 && formOnly < all, `form-only narrows the list: ${formOnly} of ${all}`);
-    assert.equal(formOnly, Number(await visitor.$eval('#ex-filter [data-track="form"] .n', (e) => e.textContent)), 'and the count on the button matches');
-    await visitor.reload(); await visitor.waitForSelector('#ex-filter');
-    await visitor.waitForFunction(() => document.querySelector('#ex-filter [aria-pressed="true"]').dataset.track === 'form');
-    await visitor.click('#ex-filter [data-track="all"]');
+    /* browsing offers the shortlist, not the whole library: a move is listed when it says so, and
+       unstated that follows "vetted" */
+    await visitor.goto(base + '/?mock=1#/exercises'); await visitor.waitForSelector('.ex-row');
+    const shown = await visitor.$$eval('.ex-row', (rows) => rows.map((r) => r.getAttribute('href').split('/').pop()));
+    const lib = await visitor.evaluate(async () => (await (await fetch('/api/exercises')).json()).exercises);
+    assert.deepEqual(shown.slice().sort(), lib.filter((e) => e.listed).map((e) => e.id).sort(), 'the list is exactly the listed moves');
+    assert.ok(shown.length < lib.length, `and that is a shortlist: ${shown.length} of ${lib.length}`);
+    assert.ok(lib.filter((e) => e.vetted).every((e) => e.listed), 'every vetted move is listed by default');
+    /* the tier filter appears only when the shortlist spans more than one tier; today's does not */
+    const tiers = new Set(shown.map((id) => lib.find((e) => e.id === id).tracking || 'form'));
+    assert.equal(await visitor.$$eval('#ex-filter', (e) => e.length), tiers.size > 1 ? 1 : 0, 'the filter shows only when there is something to filter');
+    /* a move that is not listed is still reachable — hiding is about the lists, not about access */
+    const hidden = lib.find((e) => !e.listed);
+    await visitor.goto(base + `/?mock=1#/exercise/${hidden.id}`); await visitor.waitForSelector('.ex-head');
+    assert.match(await text(visitor), new RegExp(hidden.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'a hidden move still opens by link');
   });
   await step('visitor: pro exercise is locked, free exercise can start', async () => {
     await visitor.goto(base + '/?mock=1#/exercise/heelslide'); await visitor.waitForSelector('.card.upgrade'); assert.equal(await visitor.$('#do-start'), null, 'locked exercise has no start button');
@@ -525,6 +529,14 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(rt.checked, 144, 'every move, the ten vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
     assert.deepEqual(rt.rewritten, [], 'an untouched move must be written back as the same entry');
     /* the flow a physio sees: pick a move, edit a copy, change a number, check, download */
+    /* the list is alphabetical and the search box narrows it */
+    const names = await st.$$eval('#move-select option:not([disabled])', (os) => os.map((o) => o.textContent.replace(/ [·✓]$/, '')));
+    assert.deepEqual(names, names.slice().sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), 'moves are in alphabetical order');
+    await st.fill('#move-search', 'knee');
+    await st.waitForFunction(() => [...document.querySelectorAll('#move-select option:not([disabled])')].every((o) => /knee/i.test(o.textContent)));
+    const few = await st.$$eval('#move-select option:not([disabled])', (o) => o.length);
+    assert.ok(few > 0 && few < names.length, `the search narrows the list: ${few} of ${names.length}`);
+    await st.fill('#move-search', '');
     /* picking a library move opens it as an editable copy — no second click */
     await st.selectOption('#move-select', 'seated_knee_ext');
     await st.waitForSelector('[data-k="name"]'); assert.equal(await st.$eval('[data-k="name"]', (e) => e.value), 'Seated knee extension');
@@ -539,6 +551,16 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
     await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
     assert.equal(await st.$eval('[data-k="_region"]', (e) => e.value), 'knee', 'stays in the region it came from');
+    /* whether the move is offered for browsing, and that a choice is only written when it differs from vetted */
+    assert.equal(await st.$eval('[data-chips="listed"] .chip[aria-pressed="true"]', (e) => e.dataset.v), 'auto');
+    await st.click('[data-chips="listed"] [data-v="yes"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].listed === true; });
+    const withFlag = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'knee').entry.listed; });
+    assert.equal(withFlag, true, 'a move shown although it is not vetted says so in its file');
+    await st.click('[data-chips="listed"] [data-v="auto"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].listed === undefined; });
+    const noFlag = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return 'listed' in S.regionWith(s, 'knee').entry; });
+    assert.equal(noFlag, false, 'and following vetted writes nothing');
     assert.match(await st.textContent('#dl-file'), /seated_knee_ext\.json/, 'and downloads as its own file');
     assert.ok(await st.$('#save-project[hidden]'), 'no dev server here, so no save button');
     const saved = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'knee'); });

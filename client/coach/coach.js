@@ -23,7 +23,7 @@
     get(k, d) { try { const v = localStorage.getItem('fyzio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('fyzio.' + k, JSON.stringify(v)); } catch { } }
   };
-  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', voiceRate: 'normal', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
+  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', voiceRate: 'normal', figure: 'lines', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
   function saveSettings() { store.set('settings', settings); }
   function setSetting(k, val) { settings[k] = val; saveSettings(); if (k === 'smooth') applySmoothing(); if (k === 'voice') { voice.muted = val === 'off'; if (typeof applyVoiceButton === 'function') applyVoiceButton(); } if (k === 'voiceName') voiceCache = null; }
   function show() { /* screens are managed by the portal */ }
@@ -49,7 +49,7 @@
   /* Catalogue and Studio moves register their two keyframes (built from joint angles or a
      recorded take); they are drawn with the same animated stick figure as the hand-written ones. */
   const REGISTERED = {};
-  function registerFigure(id, fig) { if (id && fig && fig.A) REGISTERED[id] = fig; }
+  function registerFigure(id, fig) { if (!id || !fig || !fig.A) return; REGISTERED[id] = fig; if (muscleFig) try { muscleFig.register(id, fig); } catch (e) { } }
   (window.__pendingFigures || []).forEach((e) => registerFigure(e[0], e[1])); window.__pendingFigures = [];
   const MUSCLE_REGIONS = ['shoulder', 'arm', 'forearm', 'thigh', 'ham', 'calf', 'chest', 'back', 'abs', 'oblique', 'neck', 'glute'];
   const farPath = (j) => (j.knF ? P(j.hip, j.knF, j.anF, j.ftF) : '') + (j.elF ? ' ' + P(j.sh, j.elF, j.wrF) : '');
@@ -99,8 +99,44 @@
     }
     return figure + noteSvg(r);
   }
+  /* ---------- the other figure ----------
+     Before the stick figure there was an anatomical one: the same two keyframes, drawn as a body
+     with muscle laid on the bones, warming up through the movement. It reads better for "what is
+     this working" and worse for "what shape am I making", so it was set aside rather than deleted.
+     It is still here, loaded only if asked for (settings.figure = 'muscles'), and it keeps its own
+     copy of every registered keyframe. */
+  const COACH_SRC = (document.currentScript && document.currentScript.src) || 'coach/coach.js';
+  let muscleFig = null, muscleLoad = null;
+  function loadMuscleFigures() {
+    if (muscleFig) return Promise.resolve(muscleFig);
+    if (muscleLoad) return muscleLoad;
+    muscleLoad = new Promise((res, rej) => {
+      const mine = window.OnTrackAnatomy;                       /* the archived file claims the same global */
+      const sc = document.createElement('script');
+      sc.src = new URL('archive/anatomy.js', COACH_SRC).href;
+      sc.onload = () => {
+        muscleFig = window.OnTrackAnatomy; window.OnTrackAnatomy = mine;
+        for (const id in REGISTERED) { try { muscleFig.register(id, REGISTERED[id]); } catch (e) { } }
+        res(muscleFig);
+      };
+      sc.onerror = () => { muscleLoad = null; rej(new Error('the muscle figure could not be loaded')); };
+      document.head.appendChild(sc);
+    });
+    return muscleLoad;
+  }
+  const muscleStyle = () => settings.figure === 'muscles';
+  /* Called after the page has put a figure on screen: the stick figure is SVG and needs nothing,
+     the muscle one is a canvas that has to be found and started. */
+  function mountFigures(root) {
+    if (!muscleStyle()) { if (muscleFig) try { muscleFig.stopAll(); } catch (e) { } return Promise.resolve(); }
+    return loadMuscleFigures().then((a) => a.mountAll(root || document)).catch(() => { });
+  }
   function demo(ex) {
     if (typeof ex === 'string') ex = E.EXERCISES.find((x) => x.id === ex) || { id: ex, name: ex, type: (REGISTERED[ex] && REGISTERED[ex].hold) ? 'hold' : 'reps' };
+    if (muscleStyle() && REGISTERED[ex.id]) {
+      loadMuscleFigures().then(() => mountFigures(document)).catch(() => { });
+      return `<canvas class="demo-fig muscle" data-anat="${escT(ex.id)}" role="img" aria-label="${escT(ex.name)}, animated"></canvas>`;
+    }
     const r = REGISTERED[ex.id];
     const b = r ? figureBox(r) : { x0: 210, y0: 22, w: 190, h: 145 };
     return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${escT(ex.name)}: ${ex.type === 'hold' ? 'timed hold' : 'repetitions'}">
@@ -1203,6 +1239,6 @@
   function endRest() { if (live && live.state === 'rest') { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); } }
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
-  window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
-  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll: mountFigures, stopAll() { if (muscleFig) try { muscleFig.stopAll(); } catch (e) { } }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
+  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

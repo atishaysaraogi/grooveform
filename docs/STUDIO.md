@@ -232,6 +232,14 @@ turning its presets into plain joint positions, and says so before it does.
 
 ### Check & export
 
+**On the home page** decides whether the move is offered where people browse.
+Left on *Follow vetted* it appears once the move is marked vetted, which is the
+library's default: a hundred and forty moves in a list buries the ten someone
+has actually been through. *Always shown* puts an unvetted move in front of
+people anyway, *Hidden* keeps a vetted one out. Hiding is about the lists only —
+a routine that names the move still runs it, and a link straight to it still
+opens.
+
 Step 7 lists anything missing in plain words, then what is worth fixing (no
 borderline take, a clean take that still fires a fault, no figure). Then the
 move goes into the library as its own file:

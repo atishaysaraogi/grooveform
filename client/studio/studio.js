@@ -53,7 +53,7 @@
 
   function blankSpec() {
     return {
-      id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '',
+      id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '', listed: undefined,
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
       summary: '', setup: '', brief: '', why: '', band: false, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
@@ -83,7 +83,7 @@
     const grpCam = (C.data.files.find((f) => f.name === 'regions/' + ex.file) || { json: {} }).json.camera;
     Object.assign(s, {
       _fileCamera: grpCam ? { ...grpCam } : null,
-      id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
+      id: ex.id, name: ex.name, clinicalName: r.clinicalName || '', listed: r.listed, group: ex.group, type: ex.type, view: ex.view, sided: r.sided ? { ...r.sided } : null, upperBody: !!r.upperBody, icon: r.icon || '',
       camera: { ...(ex.camera || s.camera) }, summary: ex.summary, setup: ex.setup, brief: ex.brief || '', why: ex.why, calibrationPose: r.calibrationPose || '', showAsk: (raw.show && raw.show.ask) || '',
       band: r.band === undefined ? false : r.band, options: (r.options || []).map((o) => ({ ...o })), targets: ex.targets.slice(), defaultTarget: ex.defaultTarget,
       tracking: ex.tracking, level: r.level || 'beginner', equipmentText: (ex.equipment || []).join('\n'), muscleNames: { primary: [...((r.muscles || {}).primary || [])], secondary: [...((r.muscles || {}).secondary || [])] },
@@ -124,6 +124,8 @@
     const e = {};
     const put = (k, v) => { if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) return; if (v && typeof v === 'object' && !Array.isArray(v)) for (const kk of Object.keys(v)) if (v[kk] === undefined) delete v[kk]; e[k] = v; };
     put('id', s.id); put('name', s.name); put('clinicalName', s.clinicalName); put('type', s.type); put('view', s.view); put('tracking', s.tracking || 'form');
+    /* only written when it disagrees with what `vetted` would have said on its own */
+    if (s.listed !== undefined && !!s.listed !== !!s.vetted) put('listed', !!s.listed);
     if (s.vetted) put('vetted', true);
     const inh = s._inherited || {}; const st = SETTINGS();
     if (!(inh.level && s.level === 'beginner')) put('level', s.level);
@@ -428,14 +430,29 @@
     return false;
   }
 
-  /* ---------- move selector ---------- */
+  /* ---------- move selector ----------
+     A hundred and forty moves in the order they happen to be written is a list nobody can find
+     anything in, so both groups are sorted by name and the search box above narrows them. The
+     current move always stays in the list, whatever the search says, or picking it would lose it. */
+  let moveQuery = '';
+  const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
   function refreshSelect() {
-    const sel = $('move-select'); const specs = Object.entries(state.moves).sort((a, b) => (a[1].created || 0) - (b[1].created || 0));
+    const sel = $('move-select'); if (!sel) return;
+    const q = moveQuery.trim().toLowerCase();
+    const hit = (name, id) => !q || String(name || '').toLowerCase().includes(q) || String(id || '').toLowerCase().includes(q);
     const opt = (v, t, dis) => `<option value="${esc(v)}" ${dis ? 'disabled' : ''} ${state.current === v ? 'selected' : ''}>${esc(t)}</option>`;
-    sel.innerHTML = opt('', specs.length ? 'Your moves' : '— New move to begin —', true) + specs.map(([key, s]) => opt(key, (s.name || 'Untitled') + (SPEC.checkSpec(s).length ? ' ·' : ' ✓'))).join('')
-      + opt('', 'Library moves — open one to edit a copy of it', true) + LIB.all().filter((e) => !state.moves[e.id]).map((e) => opt(e.id, e.name + (e.catalog ? '' : ' (code)'))).join('');
+    const mine = Object.entries(state.moves).map(([key, m]) => ({ key, name: m.name || 'Untitled', spec: m })).sort(byName)
+      .filter((m) => m.key === state.current || hit(m.name, m.spec.id));
+    const lib = LIB.all().filter((e) => !state.moves[e.id]).slice().sort(byName)
+      .filter((e) => e.id === state.current || hit(e.name, e.id));
+    const none = q && !mine.length && !lib.length;
+    sel.innerHTML = opt('', Object.keys(state.moves).length ? 'Your moves' : '— New move to begin —', true)
+      + mine.map((m) => opt(m.key, m.name + (SPEC.checkSpec(m.spec).length ? ' ·' : ' ✓'))).join('')
+      + opt('', none ? `No move matches “${moveQuery}”` : 'Library moves — open one to edit a copy of it', true)
+      + lib.map((e) => opt(e.id, e.name + (e.catalog ? '' : ' (code)'))).join('');
     sel.value = state.current || '';
   }
+  if ($('move-search')) $('move-search').oninput = (e) => { moveQuery = e.target.value; refreshSelect(); };
   /* Picking a library move opens it as an editable copy. Looking without editing was the old
      default and it cost a click every time — nothing is written anywhere until step 7 saves it, so
      there is nothing to protect. A code move has no data to copy, so it stays read-only. */
@@ -518,7 +535,7 @@
     return `<div class="stack"><h2>1 · Screen it</h2><p class="lead">Six questions. A "no" to any of the first four is a rejection — no camera on earth fixes it. Better to find out now than after twenty minutes of recording.</p>
       <div class="card"><div class="qs">${QUESTIONS.map(([k, q, h]) => `<div class="q"><div><div class="qt">${q}</div><div class="qh">${h}</div></div>${chips('screen.' + k, [true, false], s.screen[k], { true: 'Yes', false: 'No' })}</div>`).join('')}</div>
       <div class="verdict ${v.cls}" id="verdict" style="margin-top:12px">${v.text}</div></div>
-      <div class="card"><div class="fields two">${field('Working name', text('name', s.name, 'e.g. Side leg raise'))}${field('Physio’s notes on why this move is in the programme', text('notes', s.notes, 'optional'))}</div></div>
+      <div class="card"><div class="fields two">${field('Working name', text('name', s.name, 'e.g. Side leg raise'))}${field('Coach’s notes on why this move is in the programme', text('notes', s.notes, 'optional'))}</div></div>
       <div class="row"><span class="spacer"></span><button class="btn primary" id="next">Describe it →</button></div></div>`;
   }
   function wireScreen(s) { bind($('main'), s, (k) => { if (k.startsWith('screen')) { const v = verdictOf(s.screen); const el = $('verdict'); el.className = 'verdict ' + v.cls; el.textContent = v.text; } render(); }); $('next').onclick = () => go('describe'); }
@@ -530,7 +547,6 @@
     return `<div class="stack"><h2>2 · Describe it</h2><p class="lead">What the move is, what kind it is, and where the camera goes. The three text lines at the bottom appear on the exercise page word for word.</p>
       <div class="st-grid"><div class="card"><div class="fields">
         ${field('Name shown to the user', text('name', s.name, 'Side leg raise'), 'Consumer name. The clinical name goes below.')}
-        ${field('Clinical name', text('clinicalName', s.clinicalName, 'Standing hip abduction'))}
         ${field('Id', text('id', s.id, 'side_leg_raise'), idHint)}
         ${field('Group', text('group', s.group, 'Hip strength'), 'Shown as the eyebrow on the page. Reuse an existing one: ' + [...new Set(LIB.all().map((e) => e.group))].join(' · '))}
         ${field('Exercise type', `<select data-k="ptType">${Object.entries(PT_TYPES).map(([k, v]) => `<option value="${k}" ${s.ptType === k ? 'selected' : ''}>${v}</option>`).join('')}</select>`, 'A and D count reps. B, C count seconds in position. E is a plain timer. F and G need engine work — note them and move on.')}
@@ -1628,7 +1644,7 @@
       <div class="card"><div class="row" style="align-items:baseline"><h3>Tuning</h3><span class="spacer"></span><span class="${tune.pass ? 'ok' : 'muted'}" style="font-weight:800">${tune.pass ? 'passes — every live fault behaves on the takes' : tune.reason}</span></div>
         <p class="muted" style="font-size:.85rem">The rule for every move: two clean takes, a take per live fault, and each fault quiet on the clean takes and firing on its own. Same numbers as the coach runs.</p>
         <table class="tune"><thead><tr><th>fault</th><th>clean</th><th>its own takes</th><th>borderline</th><th></th></tr></thead><tbody>${tune.rows.map((r) => `<tr class="${r.ok ? 'ok' : 'bad'}"><td>${esc(r.label)}</td><td>${r.clean}</td><td>${r.own}</td><td>${r.border}</td><td>${r.ok ? '✓' : esc(r.why)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">no live faults</td></tr>'}</tbody></table>
-        <div class="row" style="margin-top:10px;align-items:center;gap:10px">${field('Vetted', chips('vetted', [false, true], !!s.vetted, { false: 'Not yet', true: 'Yes — checked against these takes' }))}${s._tuned ? `<span class="muted" style="font-size:.85rem">tuned ${esc(s._tuned.date)}${s._tuned.by ? ' by ' + esc(s._tuned.by) : ''} on ${s._tuned.takes} takes</span>` : ''}</div>
+        <div class="row" style="margin-top:10px;align-items:center;gap:10px">${field('Vetted', chips('vetted', [false, true], !!s.vetted, { false: 'Not yet', true: 'Yes — checked against these takes' }))}${field('On the home page', chips('listed', ['auto', 'yes', 'no'], s.listed === undefined ? 'auto' : (s.listed ? 'yes' : 'no'), { auto: `Follow vetted (${s.vetted ? 'shown' : 'hidden'})`, yes: 'Always shown', no: 'Hidden' }), 'A hidden move still runs — a routine that names it, or a link to it, works. It is only kept out of the lists people browse.')}${s._tuned ? `<span class="muted" style="font-size:.85rem">tuned ${esc(s._tuned.date)}${s._tuned.by ? ' by ' + esc(s._tuned.by) : ''} on ${s._tuned.takes} takes</span>` : ''}</div>
         ${!tune.pass ? '<p class="muted" style="font-size:.85rem">Vetted can only be set once the rule passes.</p>' : ''}</div>
       ${checkPanel(s)}
       <div class="card"><h3>The entry, as it will be written</h3><pre class="code">${esc(preview)}</pre></div>
@@ -1654,6 +1670,7 @@
     wireCheck();
     bind($('main'), s, (k) => {
       if (k === '_region') render();
+      if (k === 'listed') { const v = document.querySelector('[data-chips="listed"] .chip[aria-pressed="true"]').dataset.v; s.listed = v === 'auto' ? undefined : v === 'yes'; saveState(); render(); return; }
       if (k === 'vetted') { const on = document.querySelector('[data-chips="vetted"] .chip[aria-pressed="true"]').dataset.v === 'true'; const t = tuningReport(s);
         if (on && !t.pass) { s.vetted = false; toast('Vetted only once every live fault behaves on the takes', 5000); render(); return; }
         s.vetted = on; if (on) s._tuned = { date: new Date().toISOString().slice(0, 10), by: state.pt.name || undefined, takes: state.takes.length, faults: t.rows.map((r) => r.id) }; else delete s._tuned; saveState(); render(); }

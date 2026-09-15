@@ -367,6 +367,15 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
 
+### What people see
+
+`listed` says whether a move is offered in the lists people browse — the home
+page and Moves. Left out it follows `vetted`, so the library can grow faster
+than anyone can check it without burying the moves that were checked. Set it
+`true` to show one that is not vetted yet, `false` to hide one that is. It is
+about browsing only: a routine that names the move still runs it, and a link
+straight to it still opens.
+
 ### More than one angle
 
 A movement is not always one measurement. A squat is the knee bending *and* the
