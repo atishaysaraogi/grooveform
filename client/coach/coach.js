@@ -463,7 +463,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -930,6 +930,18 @@
   function metricPoints(metric, pts, S) { try { return (metric.pts || []).map((n) => MoveSpec.resolve(n, pts, S, E)); } catch { return null; } }
   /* A target pose for the measurement that defines the move: the limb drawn where it should be at
      the target (reps) or the aim (holds). Works from the measurement's geometry, so any move gets it. */
+  /* Per-set memory for the target line: where each arm of the angle started, how far each has
+     swung, and which way the joint bends. Reset with the set, keyed by the measurement. */
+  function ghostState(metric, ref, S) {
+    if (!live || !ref || !ref.pts0 || !window.MoveSpec) return null;
+    const key = metric.pts.join('-') + ':' + S;
+    if (live.ghost && live.ghost.key === key) return live.ghost;
+    let q; try { q = metric.pts.map((n) => MoveSpec.resolve(n, ref.pts0, S, E)); } catch (e) { return null; }
+    if (!q || q.some((p) => !p)) return null;
+    const bear = (p, o) => Math.atan2(p.y - o.y, p.x - o.x);
+    live.ghost = { key, a0: bear(q[0], q[1]), c0: bear(q[2], q[1]), a: 0, c: 0, cross: 0, sense: 1 };
+    return live.ghost;
+  }
   function ghostFor(ex, m, ref, pts) {
     const S = m.side || ref.side || 'L';
     let metric, target;
@@ -943,11 +955,31 @@
     if (!metric || !Number.isFinite(target)) return null;
     const P = metricPoints(metric, pts, S); if (!P || P.some((p) => !p || p.v < 0.3)) return null;
     const rad = (a) => a * Math.PI / 180;
-    if (metric.kind === 'angle') {                       /* rotate the far point about the joint to the target angle */
-      const [A, B, C] = P; const L = E.dist(B, C); const aBA = Math.atan2(A.y - B.y, A.x - B.x);
-      const cross = (A.x - B.x) * (C.y - B.y) - (A.y - B.y) * (C.x - B.x); const sense = cross >= 0 ? 1 : -1;
-      const a = aBA + sense * rad(target);
-      return [A, B, { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L }];
+    if (metric.kind === 'angle') {
+      /* An angle has two arms and the target can be drawn on either of them. Swinging the far arm
+         off the near one — which is what this did — makes the line follow the near arm, so in a
+         squat the target sweeps through eighty degrees as the thigh comes down and never sits
+         still. The arm that is actually moving is the one to draw the target for; the still arm is
+         the reference. Which is which is not a property of the move but of what the person is
+         doing, so it is measured: each arm's bearing about the joint, against the calibration pose,
+         and the larger swing so far wins. A running maximum cannot flip back and forth. */
+      const [A, B, C] = P; const g = ghostState(metric, ref, S);
+      const bear = (p, q) => Math.atan2(p.y - q.y, p.x - q.x);
+      const wrap = (x) => Math.atan2(Math.sin(x), Math.cos(x));
+      if (g) {
+        g.a = Math.max(g.a, Math.abs(wrap(bear(A, B) - g.a0)));
+        g.c = Math.max(g.c, Math.abs(wrap(bear(C, B) - g.c0)));
+      }
+      /* the sense is which way round the joint bends; near lock-out the cross product is ~0 and its
+         sign is noise, so the one from the most open frame so far is kept */
+      const cross = (A.x - B.x) * (C.y - B.y) - (A.y - B.y) * (C.x - B.x);
+      if (g && Math.abs(cross) > g.cross) { g.cross = Math.abs(cross); g.sense = cross >= 0 ? 1 : -1; }
+      const sense = g ? g.sense : (cross >= 0 ? 1 : -1);
+      const swingA = !!g && g.a > g.c;                       /* the hip end moves in a squat, the ankle end in a knee extension */
+      const [still, moving] = swingA ? [C, A] : [A, C];
+      const L = E.dist(B, moving);
+      const a = bear(still, B) + (swingA ? -sense : sense) * rad(target);
+      return [still, B, { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L }];
     }
     if (metric.kind === 'vertical' || metric.kind === 'tilt') {   /* the segment at the target angle, on the side it already points to */
       const [A, B] = P; const L = E.dist(A, B); const dir = Math.sign(B.x - A.x) || 1;

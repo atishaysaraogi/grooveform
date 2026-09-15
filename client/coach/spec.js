@@ -206,6 +206,21 @@
         need(Number.isFinite(spec.progress.target) || (typeof spec.progress.target === 'string' && spec.progress.target.startsWith('opt:')), 'progress: target value');
         if (Number.isFinite(spec.progress.start) && Number.isFinite(spec.progress.target)) need(spec.progress.start !== spec.progress.target, 'progress: start and target are the same');
         if (spec.progress.delta !== undefined) need([1, -1].includes(spec.progress.delta), 'progress: delta must be 1 or -1');
+        /* A movement is not always one angle. A squat is the knee bending AND the hip folding, and a
+           rep that does one without the other is not the exercise. "and" adds measurements on the
+           same footing as the first; each gets its own start and target and its own 0..1, and
+           "combine" says how they become one number. */
+        if (spec.progress.and !== undefined && !(Array.isArray(spec.progress.and) && !spec.progress.and.length)) {
+          need(Array.isArray(spec.progress.and), 'progress: "and" must be a list of further measurements');
+          (Array.isArray(spec.progress.and) ? spec.progress.and : []).forEach((a, i) => {
+            const w = `progress.and[${i}]`;
+            if (!mOk(a && a.metric, w)) return;
+            need(Number.isFinite(a.start) || a.start === 'calibrated', w + ': start value');
+            need(Number.isFinite(a.target) || (typeof a.target === 'string' && a.target.startsWith('opt:')), w + ': target value');
+            if (a.delta !== undefined) need([1, -1].includes(a.delta), w + ': delta must be 1 or -1');
+          });
+        }
+        if (spec.progress.combine !== undefined) need(['min', 'mean', 'max'].includes(spec.progress.combine), 'progress: combine must be min, mean or max');
       }
     } else {
       need(spec.hold && Array.isArray(spec.hold.conditions) && spec.hold.conditions.length, 'hold: at least one position condition');
@@ -272,6 +287,9 @@
     const use = (m) => { const key = JSON.stringify(m); if (!idxOf.has(key)) { idxOf.set(key, metrics.length); metrics.push(m); } return idxOf.get(key); };
     const prog = spec.type === 'reps' ? spec.progress : null;
     const iProg = prog ? use(prog.metric) : -1;
+    /* the progress measurements, the first and any "and" ones, each with its own index */
+    const progParts = prog ? [{ ...prog, i: iProg }, ...((prog.and || []).map((a) => ({ ...a, i: use(a.metric) })))] : [];
+    const combine = (prog && prog.combine) || 'min';
     const holdConds = (spec.type === 'hold' ? spec.hold.conditions : []).map((c) => ({ ...c, i: use(c.metric) }));
     const liveFaults = spec.faults.filter((f) => !f.rule).map((f) => ({ ...f, i: use(f.metric), iScale: f.scale ? (f.scale.metric === 'progress' ? (prog ? use(prog.metric) : -1) : use(f.scale.metric)) : -1 }));
     const gates = (list) => (list || []).map((w) => typeof w === 'string' ? { flag: w } : w.option !== undefined ? { option: w.option, is: Array.isArray(w.is) ? w.is : [w.is] } : { ...w, i: use(w.metric) });
@@ -309,13 +327,17 @@
       ref.work = opts && opts.work ? opts.work : null;
       const side = ref.work || S || S0 || 'L';
       if (prog) {
-        let start = prog.start === 'calibrated' ? ref.base[side][iProg] : prog.start;
-        if (Number.isFinite(prog.startMin)) start = Math.max(start, prog.startMin);
-        if (Number.isFinite(prog.startMax)) start = Math.min(start, prog.startMax);
-        ref.start = start;
-        const t = typeof prog.target === 'string' ? +(opts && opts[prog.target.slice(4)]) : prog.target;
-        ref.target = prog.start === 'calibrated' && prog.targetIsDelta ? start + (prog.delta || 1) * t : t;
-        ref.dataTarget = ref.target;   /* what the file says; a demonstrated pose may replace ref.target */
+        ref.parts = progParts.map((p) => {
+          let start = p.start === 'calibrated' ? ref.base[side][p.i] : p.start;
+          if (Number.isFinite(p.startMin)) start = Math.max(start, p.startMin);
+          if (Number.isFinite(p.startMax)) start = Math.min(start, p.startMax);
+          const t = typeof p.target === 'string' ? +(opts && opts[p.target.slice(4)]) : p.target;
+          const target = p.start === 'calibrated' && p.targetIsDelta ? start + (p.delta || 1) * t : t;
+          return { i: p.i, name: typeof p.metric === 'string' ? p.metric : p.metric.kind, start, target };
+        });
+        /* the first measurement is still "the" one: it is what the readout shows, what the target
+           line is drawn for, and what a demonstrated pose replaces */
+        ref.start = ref.parts[0].start; ref.target = ref.parts[0].target; ref.dataTarget = ref.target;
       }
       return ref;
     }
@@ -375,7 +397,18 @@
       for (const n of focusNames) { const i = indexOf(n, side, k); if (i !== null) m.focus.push(i); }
       const vals = metrics.map((mm) => evalMetric(mm, pts, side, k, ref, opts));
       m.readings = vals;
-      if (prog) { m.v = vals[iProg]; m.p = (vals[iProg] - ref.start) / (ref.target - ref.start); m.value = vals[iProg]; }
+      if (prog) {
+        m.v = vals[iProg]; m.value = vals[iProg];
+        const parts = (ref.parts || [{ i: iProg, start: ref.start, target: ref.target, name: 'progress' }]).map((p, j) => {
+          const start = j === 0 ? ref.start : p.start, target = j === 0 ? ref.target : p.target;   /* a shown pose moves the first one */
+          return { name: p.name, v: vals[p.i], p: (vals[p.i] - start) / (target - start), start, target };
+        });
+        m.parts = parts;
+        const ps = parts.map((p) => p.p);
+        /* min: the rep is only as far through as its least-finished part — a squat that bends the
+           knee without folding the hip has not been done */
+        m.p = ps.length === 1 ? ps[0] : combine === 'mean' ? ps.reduce((a, b) => a + b, 0) / ps.length : combine === 'max' ? Math.max(...ps) : Math.min(...ps);
+      }
       else {
         let ok = true; m.h = [];
         holdConds.forEach((c, j) => {

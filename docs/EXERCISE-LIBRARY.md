@@ -367,6 +367,32 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
 
+### More than one angle
+
+A movement is not always one measurement. A squat is the knee bending *and* the
+hip folding; a rep that bends the knees without hinging is not the exercise, and
+a knee angle alone cannot tell the difference. `and` adds measurements on the
+same footing as the first:
+
+```json
+"progress": {
+  "metric": "knee", "start": "calibrated", "target": 90,
+  "and": [{ "metric": "hip_open", "start": "calibrated", "target": 80 }],
+  "combine": "min"
+}
+```
+
+Each gets its own start and target and its own 0–1. `combine` says how they
+become the one number the rep counter runs on: `min` (the default — the rep is
+only as far through as its least-finished part), `mean`, or `max`. The first
+measurement stays the one the live readout shows, the one the target line is
+drawn for, and the one a demonstrated pose replaces; `m.parts` carries all of
+them for the review and the Studio charts.
+
+`min` is almost always what a physio means. It is the honest reading of "the
+rep must reach depth": every requirement has to be met, and the one that is
+furthest behind is what the person is told about.
+
 ### Checking the start position
 
 Some faults are set-up errors, not movement errors: the heels too far away for a

@@ -94,7 +94,7 @@
       _file: 'moves/' + ex.id + '.json', _region: regionOf(ex.file), _replaces: ex.id, _key: ex.id, created: Date.now(),
       _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
-    if (r.progress) s.progress = { targetIsDelta: false, ...r.progress };
+    if (r.progress) { s.progress = { targetIsDelta: false, ...r.progress }; if ((r.progress.and || []).length) s.progress.and = r.progress.and.map((a) => ({ targetIsDelta: false, ...a })); else delete s.progress.and; }
     if (r.display) s.display = { ...r.display }; if (r.enterCue) s.enterCue = r.enterCue;
     if (r.hold) s.hold = { conditions: r.hold.conditions.map((c) => ({ rel: 'abs', min: null, max: null, ...c })) };
     s.faults = r.faults.map((f) => f.rule ? { ...f } : ({ invalidates: false, ...f, listed: !f.metric, metric: f.metric || { kind: 'angle', pts: [] }, rel: f.rel || 'abs', op: f.op || '>', threshold: f.threshold ?? null, minP: f.minP ?? 0, persist: f.persist || st.fault.persist, severity: f.severity || 2 }));
@@ -139,7 +139,17 @@
     if (s.band !== false && s.band !== undefined) put('band', s.band);
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
-    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1; put('progress', p); }
+    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1;
+      /* the further measurements, each written the same way as the first */
+      const and = (s.progress.and || []).filter((a) => a && a.metric && a.metric.pts.length).map((a) => {
+        const q = { metric: foldMetric(a.metric), start: a.start };
+        if (Number.isFinite(a.startMin)) q.startMin = a.startMin;
+        if (Number.isFinite(a.startMax)) q.startMax = a.startMax;
+        q.target = a.target; if (a.targetIsDelta) q.targetIsDelta = true; if (a.delta === -1) q.delta = -1;
+        return q;
+      });
+      if (and.length) { p.and = and; if (s.progress.combine && s.progress.combine !== 'min') p.combine = s.progress.combine; }
+      put('progress', p); }
     if (s.showAsk && s.type === 'reps' && s.tracking !== 'none') put('show', { ask: s.showAsk });
     if (tracked && s.type === 'hold' && s.hold) { const cs = s.hold.conditions.filter((c) => c.metric.pts.length >= ((SPEC.KINDS[c.metric.kind] || {}).n || 0)).map((c) => { const o = { metric: foldMetric(c.metric) }; if (c.rel === 'change') o.rel = 'change'; if (Number.isFinite(c.min)) o.min = c.min; if (Number.isFinite(c.max)) o.max = c.max; if (c.when && c.when.length) o.when = c.when; return o; }); if (cs.length) { let named = null; for (const [n, v] of Object.entries(SHARED().holds)) if (same(v, cs)) named = n; put('hold', { conditions: named || cs }); } }
     put('faults', (s.faults || []).map((f) => {
@@ -1085,7 +1095,12 @@
       const pr = s.progress; const romOpt = (s.options || []).find((o) => o.key === 'rom');
       return head + `<p class="lead">Pick the joint angle or distance that goes from its start value to a target on every good rep. Measure it from the segment that <i>defines</i> the movement: for a shoulder raise that is shoulder→elbow, not shoulder→wrist, or a bent elbow reads as a lower raise.</p>
         <div class="st-grid wide-left"><div class="stack">
-          <div class="card"><h3>Measurement</h3>${metricEditor('progress.metric', pr.metric)}</div>
+          <div class="card"><h3>Measurement</h3>${metricEditor('progress.metric', pr.metric)}
+            ${(pr.and || []).map((a, i) => `<div class="also" data-ai="${i}"><div class="row" style="align-items:baseline"><h4 style="margin:10px 0 4px">And</h4><span class="spacer"></span><button class="btn ghost small" data-delalso="${i}">✕</button></div>
+              ${metricEditor(`progress.and.${i}.metric`, a.metric)}
+              <div class="row" style="gap:10px;margin-top:6px">${field('Start value', chips(`progress.and.${i}.startMode`, ['calibrated', 'fixed'], a.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed' }))}${field('Target', `<input type="number" step="1" data-k="progress.and.${i}.targetNum" value="${esc(typeof a.target === 'number' ? a.target : '')}" style="width:100px">`)}</div></div>`).join('')}
+            <div class="row" style="margin-top:10px"><button class="btn ghost small" id="add-also">Add another measurement</button>${(pr.and || []).length ? field('A rep is through when', chips('progress.combine', ['min', 'mean', 'max'], pr.combine || 'min', { min: 'every measurement is', mean: 'they average out', max: 'any one of them is' })) : ''}</div>
+            <p class="muted" style="font-size:.85rem;margin-top:6px">A movement is not always one angle. A squat is the knee bending <b>and</b> the hip folding, and a rep that does one without the other is not the exercise. Each measurement gets its own start and target; “every measurement is” means the rep is only as deep as its shallowest part.</p></div>
           <div class="card"><h3>Across the takes</h3>${noTakes ? '<p class="muted">Record a take first and the metric appears here.</p>' : `<canvas class="chart" id="chart-metric"></canvas>${legend()}`}</div>
           <div class="card"><h3>Reps the coach would count</h3>${noTakes ? '<p class="muted">—</p>' : `<canvas class="chart" id="chart-p"></canvas><p class="muted" style="font-size:.85rem;margin-top:6px">Progress 0 = start, 1 = target. A rep counts when it passes 0.85 and returns below 0.15. Dots mark counted reps.</p><div class="fires" style="margin-top:8px">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.full >= 3 ? 'ok' : 'warn') : '')}">${esc(saidText(t))}: ${sim && !sim.error ? sim.full + (sim.partial ? ` (+${sim.partial} partial)` : '') : '—'}</span>`; }).join('')}</div>`}</div>
         </div><div class="stack">
@@ -1127,11 +1142,21 @@
       if (k === 'romValues') { const o = s.options.find((x) => x.key === 'rom'); const vals = s.romValues.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n)); delete s.romValues; if (o && vals.length) { o.values = vals; o.default = vals[vals.length - 1]; resim(); drawMeasureCharts(s); } return; }
       if (k === 'progress.delta') { s.progress.delta = document.querySelector('[data-chips="progress.delta"] .chip[aria-pressed="true"]').dataset.v === '-1' ? -1 : 1; if (s.progress.delta === 1) delete s.progress.delta; resim(); drawMeasureCharts(s); return; }
       if (k === 'progress.startMin' || k === 'progress.startMax') { if (!Number.isFinite(s.progress[k.slice(9)])) delete s.progress[k.slice(9)]; resim(); drawMeasureCharts(s); return; }
+      /* the further measurements: same fields, one level down */
+      if (k.startsWith('progress.and.')) {
+        const [, , i, field] = k.split('.'); const a = (s.progress.and || [])[+i]; if (!a) return;
+        if (field === 'startMode') { a.start = document.querySelector(`[data-chips="progress.and.${i}.startMode"] .chip[aria-pressed="true"]`).dataset.v === 'calibrated' ? 'calibrated' : (Number.isFinite(a.start) ? a.start : 0); return rerender(); }
+        if (field === 'targetNum') { const v = a.targetNum; delete a.targetNum; if (Number.isFinite(v)) a.target = v; resim(); drawMeasureCharts(s); saveState(); return; }
+        return rerender();
+      }
+      if (k === 'progress.combine') { s.progress.combine = document.querySelector('[data-chips="progress.combine"] .chip[aria-pressed="true"]').dataset.v; return rerender(); }
       if (k === 'enterCue') { if (!s.enterCue) delete s.enterCue; saveState(); return; }
       if (k.startsWith('display.')) { s.display = s.display || {}; if (k === 'display.condition') s.display.condition = +s.display.condition; if (k === 'display.from') s.display.from = document.querySelector('[data-chips="display.from"] .chip[aria-pressed="true"]').dataset.v; for (const kk of Object.keys(s.display)) if (s.display[kk] === '' || s.display[kk] === 'start') delete s.display[kk]; if (!Object.keys(s.display).length) delete s.display; saveState(); return; }
       if (k === 'progress.targetIsDelta' || k === 'focus' || k.startsWith('hold.conditions')) { if (k.endsWith('.rel') || k === 'progress.targetIsDelta' || k === 'focus') rerender(); else { resim(); drawMeasureCharts(s); } return; }
     });
     wireMetricEditors(root, s, rerender);
+    if ($('add-also')) $('add-also').onclick = () => { s.progress.and = (s.progress.and || []).concat([{ metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false }]); saveState(); rerender(); };
+    root.querySelectorAll('[data-delalso]').forEach((b) => { b.onclick = () => { s.progress.and.splice(+b.dataset.delalso, 1); if (!s.progress.and.length) delete s.progress.and; saveState(); rerender(); }; });
     if ($('suggest')) $('suggest').onclick = () => {
       const clean = state.takes.filter((t) => shows(t, 'clean')); if (!clean.length) return toast('Record a clean take first');
       const vals = clean.flatMap((t) => trace(s.progress.metric, t, t.side).filter((x) => x[0] >= (t.calT ?? 1200)).map((x) => x[1]));

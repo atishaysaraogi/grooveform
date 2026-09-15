@@ -239,7 +239,8 @@
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip'],
-    progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
+    progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta', 'and', 'combine'],
+    progressPart: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
     when: ['option', 'is', 'metric', 'rel', 'op', 'threshold'], scale: ['metric', 'rel', 'times'], display: ['label', 'unit', 'from', 'aim', 'condition'],
     guide: ['surface', 'stop', 'cannotSee', 'regions'], region: ['name', 'points'], point: ['t', 'tracked'],
@@ -332,7 +333,12 @@
     if (e.muscles) checkKeys(e.muscles, 'muscles', where + ' › muscles');
     (e.sources || []).forEach((s, i) => checkKeys(s, 'source', `${where} › sources[${i}]`));
     (e.options || []).forEach((o, i) => checkKeys(o, 'option', `${where} › options[${i}]`));
-    if (e.progress) { checkKeys(e.progress, 'progress', where + ' › progress'); e.progress.metric = resolveMetric(e.progress.metric, shared, where + ' › progress'); }
+    if (e.progress) {
+      checkKeys(e.progress, 'progress', where + ' › progress');
+      e.progress.metric = resolveMetric(e.progress.metric, shared, where + ' › progress');
+      /* a movement measured by more than one angle: each further one is a progress measure in its own right */
+      (e.progress.and || []).forEach((a, i) => { const w = `${where} › progress.and[${i}]`; checkKeys(a, 'progressPart', w); a.metric = resolveMetric(a.metric, shared, w); });
+    }
     if (e.hold) {
       checkKeys(e.hold, 'hold', where + ' › hold');
       if (typeof e.hold.conditions === 'string') {

@@ -240,3 +240,41 @@ test('a start check cannot be a built-in rule, nor measure the change from the s
   assert.match(bad({ metric: { kind: 'lean', pts: [] }, rel: 'change', op: '>', threshold: 5 }), /change from the start/);
   assert.deepEqual(SPEC.checkSpec((() => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.faults[0].phase = ''; return s; })()), [], 'an empty phase is simply no phase');
 });
+
+/* ---- a movement measured by more than one angle ---- */
+test('progress: "and" adds measurements, and the rep is only as far through as its least-finished part', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  /* the raise now also needs the knee to stay straight-ish: a second measurement with its own target */
+  spec.progress.and = [{ metric: { kind: 'angle', pts: ['HIP', 'KNEE', 'ANK'] }, start: 'calibrated', target: 120 }];
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  const ex = SPEC.compile(spec, K);
+  const sm = new E.PoseSmoother();
+  const first = sm.update(pose(0), 0, 1);
+  const ref = ex.calibrate(first, 'R', { rom: 30 });
+  assert.equal(ref.parts.length, 2, 'both measurements get a start and a target');
+  const m = ex.measure(sm.update(pose(15), 33, 1), 'R', ref);
+  assert.equal(m.parts.length, 2);
+  /* the leg stays straight, so the second part never moves: min holds the whole rep at zero */
+  assert.ok(Math.abs(m.parts[1].p) < 0.1, 'the knee part has not moved: ' + m.parts[1].p);
+  assert.ok(m.p <= m.parts[0].p + 1e-9, 'combined progress is the smaller of the two');
+  /* mean averages them instead, so a half-done part still counts for half */
+  const meanEx = SPEC.compile({ ...spec, progress: { ...spec.progress, combine: 'mean' } }, K);
+  const mRef = meanEx.calibrate(sm.update(pose(0), 66, 1), 'R', { rom: 30 });
+  const m2 = meanEx.measure(sm.update(pose(15), 99, 1), 'R', mRef);
+  assert.ok(m2.p > m.p, 'mean sits above min when one part leads: ' + m2.p + ' vs ' + m.p);
+  /* one measurement behaves exactly as before */
+  const one = SPEC.compile(sideLegRaise, K);
+  const oneRef = one.calibrate(sm.update(pose(0), 132, 1), 'R', { rom: 30 });
+  const m3 = one.measure(sm.update(pose(15), 165, 1), 'R', oneRef);
+  assert.equal(m3.parts.length, 1); assert.ok(Math.abs(m3.p - m3.parts[0].p) < 1e-9);
+});
+
+test('a second progress measurement is checked like the first', () => {
+  const bad = (and) => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.progress.and = and; return SPEC.checkSpec(s).join(' '); };
+  assert.match(bad([{ metric: { kind: 'angle', pts: ['HIP', 'KNEE', 'ANK'] }, start: 'calibrated' }]), /and\[0\]: target value/);
+  assert.match(bad([{ metric: { kind: 'angle', pts: ['HIP'] }, start: 'calibrated', target: 90 }]), /and\[0\]/);
+  assert.deepEqual(SPEC.checkSpec((() => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.progress.and = []; return s; })()), [], 'an empty list is simply no second measurement');
+  assert.match(bad('hip'), /"and" must be a list/);
+  const combo = JSON.parse(JSON.stringify(sideLegRaise)); combo.progress.combine = 'median';
+  assert.match(SPEC.checkSpec(combo).join(' '), /combine must be min, mean or max/);
+});

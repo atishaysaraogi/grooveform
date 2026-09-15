@@ -100,6 +100,15 @@ Everything downstream reads the set, not one word: a rep labelled with two
 faults is evidence for both in the coverage panel and in the tuning table, and
 one labelled Not a rep is evidence for nothing.
 
+**More than one measurement.** *Add another measurement* under the progress
+metric puts a second angle on the same footing as the first: its own start, its
+own target, its own 0–1. A squat is the knee bending *and* the hip folding, and
+a rep that does one without the other is not the exercise. The chips below say
+when a rep counts as through — every measurement (the default, so the rep is
+only as deep as its shallowest part), the average, or any one of them. The first
+measurement stays the one the live readout shows and the target line is drawn
+for.
+
 **A fault can be checked on the start position instead.** The chip row on each
 fault says when to check it: during the set, or at the start position before it
 begins. A set-up error — heels too far away, knee already bent, band already
