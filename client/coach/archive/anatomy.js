@@ -370,5 +370,5 @@
     stopAll();
     Array.prototype.forEach.call((rootEl || document).querySelectorAll('canvas[data-anat]'), mount);
   }
-  root.FyzioAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, figure: function (id) { return REGISTERED[id] || null; }, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
+  root.OnTrackAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, figure: function (id) { return REGISTERED[id] || null; }, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
 })(typeof window !== 'undefined' ? window : globalThis);

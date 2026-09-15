@@ -47,10 +47,10 @@ async function runCoachedSet(page, side = 'right') {
      no-op there. */
   await setBubble(page, 'side', side);
   await page.click('#do-start');
-  await page.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 20000 });
+  await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 20000 });
   // auto-finishes at the target: the last set lands on the review panel, an earlier one on the
   // rest overlay that keeps the camera up.
-  await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.FyzioCoach.restActive(), null, { timeout: 45000 });
+  await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.OnTrackCoach.restActive(), null, { timeout: 45000 });
 }
 (async () => {
   await start(); base = `http://127.0.0.1:${server.address().port}`;
@@ -66,6 +66,17 @@ async function runCoachedSet(page, side = 'right') {
   await step('visitor: home shows free vs pro exercises, no account needed', async () => {
     await visitor.goto(base + '/?mock=1#/'); await visitor.waitForSelector('.hero'); const t = await text(visitor);
     assert.ok(t.includes('Moves') && t.includes('Playlists') && (await visitor.$$('.ex-row')).length >= 10 && (await visitor.$$('.playlist')).length >= 6, 'moves grid and playlist rows'); const badges = await visitor.$$eval('.tiles .tile .badge', bs => bs.map(b => b.textContent.trim().toLowerCase())); const lastFree = badges.lastIndexOf('free'), firstPro = badges.indexOf('pass') >= 0 ? badges.indexOf('pass') : badges.indexOf('pro'); assert.ok(firstPro === -1 || lastFree < firstPro, 'free moves listed first: ' + badges.join(',')); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-home.png'), fullPage: true });
+    /* the filter says what the camera can do with each move, and narrowing to one tier sticks */
+    await visitor.goto(base + '/?mock=1#/exercises'); await visitor.waitForSelector('#ex-filter');
+    const all = await visitor.$$eval('.ex-row:not([hidden])', (e) => e.length);
+    await visitor.click('#ex-filter [data-track="form"]');
+    await visitor.waitForFunction(() => [...document.querySelectorAll('.ex-row:not([hidden])')].every((r) => r.dataset.track === 'form'));
+    const formOnly = await visitor.$$eval('.ex-row:not([hidden])', (e) => e.length);
+    assert.ok(formOnly > 20 && formOnly < all, `form-only narrows the list: ${formOnly} of ${all}`);
+    assert.equal(formOnly, Number(await visitor.$eval('#ex-filter [data-track="form"] .n', (e) => e.textContent)), 'and the count on the button matches');
+    await visitor.reload(); await visitor.waitForSelector('#ex-filter');
+    await visitor.waitForFunction(() => document.querySelector('#ex-filter [aria-pressed="true"]').dataset.track === 'form');
+    await visitor.click('#ex-filter [data-track="all"]');
   });
   await step('visitor: pro exercise is locked, free exercise can start', async () => {
     await visitor.goto(base + '/?mock=1#/exercise/heelslide'); await visitor.waitForSelector('.card.upgrade'); assert.equal(await visitor.$('#do-start'), null, 'locked exercise has no start button');
@@ -102,8 +113,8 @@ async function runCoachedSet(page, side = 'right') {
     await visitor.goto(base + '/?mock=1#/exercise/hipabd'); await visitor.waitForFunction(() => /abduction/i.test((document.querySelector('.ex-head h1') || {}).textContent || ''));
     await setBubble(visitor, 'side', 'right');
     await visitor.click('#do-start');
-    await visitor.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 25000 });
-    const named = await visitor.evaluate(() => ({ work: window.FyzioCoach.live.session.opts.work, hud: document.querySelector('#live-name').textContent }));
+    await visitor.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 25000 });
+    const named = await visitor.evaluate(() => ({ work: window.OnTrackCoach.live.session.opts.work, hud: document.querySelector('#live-name').textContent }));
     assert.equal(named.work, 'R', 'the chosen side is the working limb');
     assert.ok(named.hud.includes('right leg'), named.hud);
     await visitor.click('#btn-exit'); await visitor.waitForSelector('#do-start');
@@ -111,7 +122,7 @@ async function runCoachedSet(page, side = 'right') {
 
   await step('visitor: completes a coached set with the mock camera, then signs up and the set is saved', async () => {
     await setBubble(visitor, 'target', 8); await setBubble(visitor, 'sets', 2); await setBubble(visitor, 'rest', 30); await runCoachedSet(visitor); await visitor.screenshot({ path: path.join(SHOTS, 'visitor-review.png') });
-    await visitor.waitForFunction(() => window.FyzioCoach.restActive(), null, { timeout: 20000 });
+    await visitor.waitForFunction(() => window.OnTrackCoach.restActive(), null, { timeout: 20000 });
     const rest = await visitor.evaluate(() => ({
       live: document.querySelector('#screen-live').classList.contains('active'),
       video: !!document.querySelector('#stage #video'),
@@ -131,7 +142,7 @@ async function runCoachedSet(page, side = 'right') {
     assert.ok(rest.buttons.some(b => /Start set 2/.test(b)), rest.buttons.join(','));
     await visitor.screenshot({ path: path.join(SHOTS, 'rest-between-sets.png') });
     await visitor.click('#ov-actions .btn');
-    await visitor.waitForFunction(() => window.FyzioCoach.live && window.FyzioCoach.live.state === 'active', null, { timeout: 25000 }); await visitor.waitForSelector('#rv-login', { timeout: 45000 });
+    await visitor.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 25000 }); await visitor.waitForSelector('#rv-login', { timeout: 45000 });
     assert.ok((await visitor.innerText('#rv-portal')).includes('these 2 sets')); await visitor.click('#rv-login'); await visitor.waitForSelector('#l-id');
     await otpLogin(visitor, '+91 98765 43210', { name: 'Arjun Mehta' });
     await visitor.waitForFunction(() => document.body.innerText.includes('Recent sets') && document.querySelector('.card[data-sid]'), null, { timeout: 15000 });
@@ -218,15 +229,15 @@ async function runCoachedSet(page, side = 'right') {
 
     });
     await setBubble(pro, 'target', 8); await runCoachedSet(pro, 'left');   // this fixture raises the LEFT arm
-    const rec = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, camera: r.camera, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted on a crooked phone: ' + JSON.stringify(rec));
+    const rec = await pro.evaluate(() => { const r = window.OnTrackCoach.lastRec; return { review: r.review, work: (r.events.find(e => e.type === 'calibrate') || {}).work, opening: (r.events.find(e => e.type === 'opening') || {}).text, camera: r.camera, ev: r.events.map(e => e.type).slice(0, 6) }; }); assert.equal(rec.review.reps, 8, 'eight abduction reps counted on a crooked phone: ' + JSON.stringify(rec));
     assert.equal(rec.camera && rec.camera.rollFrom, 'body', 'the 10° roll was read from the trunk, no sensor in a headless browser: ' + JSON.stringify(rec.camera));
     assert.ok(Math.abs(rec.camera.roll - 10) < 2, 'and measured right: ' + JSON.stringify(rec.camera));
     /* the set can be watched back: the player is up, its timeline has the eight reps, and the report carries it all */
     assert.ok(await pro.$('#rv-replay:not([hidden]) canvas.rp-stage'), 'the replay panel shows with a stage');
-    const rp = await pro.evaluate(() => { const tl = window.Replay.timeline(window.FyzioCoach.lastRec); return { reps: tl.reps.filter(r => r.full).length, cues: tl.cues.length, dur: tl.duration }; });
+    const rp = await pro.evaluate(() => { const tl = window.Replay.timeline(window.OnTrackCoach.lastRec); return { reps: tl.reps.filter(r => r.full).length, cues: tl.cues.length, dur: tl.duration }; });
     assert.equal(rp.reps, 8, 'the timeline shows the eight counted reps: ' + JSON.stringify(rp)); assert.ok(rp.dur > 15000, 'and spans the set: ' + JSON.stringify(rp));
     await pro.click('#rv-replay .rp-timeline', { position: { x: 40, y: 20 } }); await pro.click('#rv-replay .rp-play'); await pro.waitForTimeout(400); await pro.click('#rv-replay .rp-play');
-    const html = await pro.evaluate(async () => { const src = await (await fetch('coach/replay.js')).text(); const r = window.FyzioCoach.lastRec; return window.Replay.reportHtml(r, { name: 'Shoulder abduction', type: 'reps', target: 8, faults: {} }, { score: 90, headline: 'x', type: 'reps', target: 8, reps: 8, partials: 0, faults: {} }, src).length; });
+    const html = await pro.evaluate(async () => { const src = await (await fetch('coach/replay.js')).text(); const r = window.OnTrackCoach.lastRec; return window.Replay.reportHtml(r, { name: 'Shoulder abduction', type: 'reps', target: 8, faults: {} }, { score: 90, headline: 'x', type: 'reps', target: 8, reps: 8, partials: 0, faults: {} }, src).length; });
     assert.ok(html > 20000, 'the report is a full page with the recording inside: ' + html + ' bytes');
     await pro.evaluate(() => { for (let e = document.querySelector('#rv-next'); e; e = e.parentElement) if (e.scrollTop) e.scrollTop = 0; window.scrollTo(0, 0); });
     await pro.screenshot({ path: path.join(SHOTS, 'review-top.png') });
@@ -234,7 +245,7 @@ async function runCoachedSet(page, side = 'right') {
     await pro.screenshot({ path: path.join(SHOTS, 'review-replay.png') });
     /* what the coach says at the end: the set, then the one thing to try — not a read-out of the counts */
     const said = await pro.evaluate(() => {
-      const f = window.FyzioCoach;
+      const f = window.OnTrackCoach;
       const F = (cue, weight, n) => ({ fault: { cue, label: cue + '!', weight }, n });
       const set = (o) => ({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [], ...o });
       return {
@@ -256,7 +267,7 @@ async function runCoachedSet(page, side = 'right') {
     assert.ok(top.above, 'what to work on sits above the stats: ' + JSON.stringify(top));
     assert.ok(top.bar && top.buttons.length, 'and the way out is at the top: ' + JSON.stringify(top));
     /* the downloadable recording is landmarks and events only, whatever is held in memory for the replay */
-    const redacted = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; r.video = new Blob(['not-really-a-video'], { type: 'video/webm' }); r.videoMime = 'video/webm'; const j = JSON.parse(window.FyzioCoach.recJson()); return { keys: Object.keys(j).filter((k) => k === 'video' || k === 'videoMime'), all: Object.keys(j).filter((k) => k.startsWith('video')), frames: j.frames.length }; });
+    const redacted = await pro.evaluate(() => { const r = window.OnTrackCoach.lastRec; r.video = new Blob(['not-really-a-video'], { type: 'video/webm' }); r.videoMime = 'video/webm'; const j = JSON.parse(window.OnTrackCoach.recJson()); return { keys: Object.keys(j).filter((k) => k === 'video' || k === 'videoMime'), all: Object.keys(j).filter((k) => k.startsWith('video')), frames: j.frames.length }; });
     assert.deepEqual(redacted.keys, [], 'no video reaches the file: ' + JSON.stringify(redacted));
     assert.deepEqual(redacted.all, ['videoOffset'], 'only where its frames would have started, which is a number: ' + JSON.stringify(redacted));
     assert.ok(redacted.frames > 100, 'the landmarks are still there: ' + JSON.stringify(redacted));
@@ -308,29 +319,39 @@ async function runCoachedSet(page, side = 'right') {
     await st.waitForFunction(() => !document.querySelector('#btn-rec').disabled);
     await st.click('#btn-rec'); await st.waitForSelector('#rec-badge', { timeout: 8000 });
     await st.waitForTimeout(11000); await st.click('#btn-rec');
-    await st.waitForFunction(() => window.GrooveformStudio.state.takes.length === 1, null, { timeout: 5000 });
-    const take = await st.evaluate(() => { const t = window.GrooveformStudio.state.takes[0]; return { label: t.label, side: t.side, frames: t.frames.length, ms: t.durationMs }; });
+    await st.waitForFunction(() => window.OnTrackStudio.state.takes.length === 1, null, { timeout: 5000 });
+    const take = await st.evaluate(() => { const t = window.OnTrackStudio.state.takes[0]; return { label: t.label, side: t.side, frames: t.frames.length, ms: t.durationMs }; });
     assert.equal(take.label, 'clean'); assert.equal(take.side, 'R'); assert.ok(take.frames > 100 && take.ms > 9000, JSON.stringify(take));
     await st.click('#next');
     // 4 · measure: thigh from vertical, hip → knee; suggest the target from the take
     await st.waitForSelector('[data-mpath="progress.metric"]'); await st.selectOption('[data-mpath="progress.metric"] [data-mkind]', 'vertical');
     await st.waitForSelector('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="HIP"]'); await st.click('[data-mpath="progress.metric"] [data-lm="KNEE"]');
     await st.waitForSelector('#suggest:not([disabled])'); await st.click('#suggest');
-    await st.waitForFunction(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; return typeof m.progress.target === 'number' && m.progress.target >= 20 && m.progress.target <= 40; });
-    const counted = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.sims[s.takes[0].id].full; });
+    await st.waitForFunction(() => { const s = window.OnTrackStudio.state; const m = s.moves[s.current]; return typeof m.progress.target === 'number' && m.progress.target >= 20 && m.progress.target <= 40; });
+    const counted = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.sims[s.takes[0].id].full; });
     assert.ok(counted >= 3, 'clean take counts reps: ' + counted);
     await st.screenshot({ path: path.join(SHOTS, 'studio-measure.png'), fullPage: true });
-    /* one long take, split by rep: each rep becomes a take of its own, and the leaning one (rep 2) is labelled as that fault */
+    /* One long recording, cut into its reps: each becomes a take of its own, trimmed to the rep (so
+       shorter than the whole recording), undescribed until the physio says what it shows. */
     await st.click('#back'); await st.waitForSelector('#takes [data-act="split"]');
+    const wholeMs = await st.evaluate(() => window.OnTrackStudio.state.takes[0].durationMs);
     st.once('dialog', (d) => d.accept());
     const reps = await st.$eval('#takes [data-act="split"]', (b) => Number(b.textContent.match(/\d+/)[0]));
     await st.click('#takes [data-act="split"]');
-    await st.waitForFunction((n) => window.GrooveformStudio.state.takes.length === n, reps, { timeout: 5000 });
-    const kids = await st.evaluate(() => window.GrooveformStudio.state.takes.map((t) => ({ rep: t.origin && t.origin.rep, of: t.origin && t.origin.of, label: t.label, frames: t.frames.length, still: t.frames.filter((f) => f[0] < t.calT).length })));
+    await st.waitForFunction((n) => window.OnTrackStudio.state.takes.length === n, reps, { timeout: 5000 });
+    const kids = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => ({ rep: t.origin && t.origin.rep, of: t.origin && t.origin.of, label: t.label, ms: Math.round(t.durationMs), still: t.frames.filter((f) => f[0] < t.calT).length, frames: t.frames.length })));
     assert.deepEqual(kids.map((k) => k.rep), kids.map((_, i) => i + 1), 'one take per rep, in order: ' + JSON.stringify(kids));
-    assert.ok(kids.every((k) => k.of === reps && k.label === 'clean' && k.still > 10 && k.frames > k.still + 20), 'each keeps the still start and its rep: ' + JSON.stringify(kids));
-    await st.selectOption('#takes .take:nth-child(2) select[data-relabel]', 'fault:leaning_away');
-    await st.waitForFunction(() => window.GrooveformStudio.state.takes[1].label === 'fault:leaning_away');
+    assert.ok(kids.every((k) => k.of === reps && k.still > 10 && k.frames > k.still + 20), 'each keeps the still start and its rep: ' + JSON.stringify(kids));
+    assert.ok(kids.every((k) => k.label === 'todo'), 'and none pretends to be clean before anyone said so: ' + JSON.stringify(kids));
+    assert.ok(kids.every((k) => k.ms < wholeMs * 0.75), `each is trimmed to its rep, not the whole ${Math.round(wholeMs)} ms: ` + JSON.stringify(kids));
+    const coverage = await st.$eval('.fires', (e) => e.textContent);
+    assert.match(coverage, /3 reps not described yet/, 'the coverage panel says so: ' + coverage);
+    /* describe each one: the middle rep is the one that leaned */
+    for (const [i, label] of [[1, 'clean'], [2, 'fault:leaning_away'], [3, 'clean']]) await st.selectOption(`#takes .take:nth-child(${i}) select[data-relabel]`, label);
+    await st.waitForFunction(() => window.OnTrackStudio.state.takes.map((t) => t.label).join() === 'clean,fault:leaning_away,clean');
+    /* more examples than the target is fine, and reads as a count rather than a fraction */
+    const after = await st.$eval('.fires', (e) => e.textContent);
+    assert.ok(!/not described yet/.test(after) && /Clean 2 ✓/.test(after), 'coverage counts up and stops fussing: ' + after);
     await st.screenshot({ path: path.join(SHOTS, 'studio-split.png'), fullPage: true });
     await st.click('#next'); await st.waitForSelector('[data-mpath="progress.metric"]');
     await st.click('#next');
@@ -341,7 +362,7 @@ async function runCoachedSet(page, side = 'right') {
     await st.selectOption('[data-mpath="faults.0.metric"] [data-mkind]', 'lean'); await st.waitForSelector('[data-fi="0"] [data-chips="faults.0.op"]');
     await st.click('[data-chips="faults.0.op"] [data-v="<"]'); await st.fill('[data-k="faults.0.threshold"]', '-8'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
     /* the rule fires on the rep labelled as this fault and on none of the clean reps — the split is what makes that visible */
-    try { await st.waitForFunction(() => { const t = document.querySelector('[data-fi="0"] .fires').textContent; return /fires on 0\/\d+ clean/.test(t) && /fires on 1\/1 this fault/.test(t); }, null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.GrooveformStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.GrooveformStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }
+    try { await st.waitForFunction(() => { const t = document.querySelector('[data-fi="0"] .fires').textContent; return /fires on 0\/\d+ clean/.test(t) && /fires on 1\/1 this fault/.test(t); }, null, { timeout: 8000 }); } catch (e) { const d = await st.evaluate(() => { const s = window.OnTrackStudio.state; const m = s.moves[s.current]; const sim = s.sims[s.takes[0].id]; return { fault: m.faults[0], fires: document.querySelector('[data-fi="0"] .fires').textContent, err: sim && sim.error, spans: sim && sim.faultSpans, lean: window.OnTrackStudio.trace({ kind: 'lean', pts: [] }, s.takes[0], 'R').map((x) => Math.round(x[1])) }; }); throw new Error(JSON.stringify(d)); }
     await st.click('#add-fast'); await st.waitForSelector('[data-fi="1"]');
     await st.screenshot({ path: path.join(SHOTS, 'studio-faults.png'), fullPage: true });
     await st.click('#next');
@@ -350,19 +371,19 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('[data-addp="0"]'); await st.waitForSelector('[data-k="guide.regions.0.points.0.t"]'); await st.fill('[data-k="guide.regions.0.points.0.t"]', 'Stand tall, hip bones level.'); await st.click('[data-tr="0.0"]');
     await st.click('[data-mus="glute"]'); await st.click('[data-mus="thigh"]');
     await st.click('#build-fig'); await st.waitForSelector('svg.demo-fig');
-    const fig = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.moves[s.current].figure; });
+    const fig = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.moves[s.current].figure; });
     assert.equal(fig.view, 'front'); assert.ok(fig.A.hipR && fig.B.knR && fig.A.hipR[1] < 161 && fig.B.anR[1] <= 161, JSON.stringify(fig.B));
     await st.click('#next');
     // 7 · export: complete, accepted, and the emitted move compiles in Node too
     await st.waitForSelector('#dl-js'); await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
-    const spec = await st.evaluate(() => { const s = window.GrooveformStudio.state; return s.moves[s.current]; });
+    const spec = await st.evaluate(() => { const s = window.OnTrackStudio.state; return s.moves[s.current]; });
     const SPEC = require('../client/coach/spec.js'); const LIB = require('../client/coach/exercise-library.js');
     assert.doesNotThrow(() => LIB.validate(SPEC.compile(spec, LIB.kinematics)), 'the exported spec compiles on the build side');
-    const src = await st.evaluate(() => window.GrooveformStudio.moveFileSource(window.GrooveformStudio.state.moves[window.GrooveformStudio.state.current]));
+    const src = await st.evaluate(() => window.OnTrackStudio.moveFileSource(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current]));
     assert.ok(/lib\.define\(\(k\) => spec\.compile\(SPEC, k\)\)/.test(src) && !/"_key"/.test(src), 'move file embeds the spec without studio bookkeeping');
     await st.screenshot({ path: path.join(SHOTS, 'studio-export.png'), fullPage: true });
     // try it in the app: the draft appears on the exercise page with its figure and guide
-    await st.evaluate(() => { const s = window.GrooveformStudio.state; const d = {}; d[s.moves[s.current].id] = s.moves[s.current]; localStorage.setItem('grooveform.drafts', JSON.stringify(d)); });
+    await st.evaluate(() => { const s = window.OnTrackStudio.state; const d = {}; d[s.moves[s.current].id] = s.moves[s.current]; localStorage.setItem('grooveform.drafts', JSON.stringify(d)); });
     await st.goto(base + '/?mock=1#/exercise/side_leg_raise'); await st.waitForSelector('#do-start'); await st.click('#do-details');
     const pageText = await st.evaluate(() => document.body.innerText);
     assert.ok(/Side leg raise \(draft\)/.test(pageText) && /cannot see/i.test(pageText), 'draft renders with its guide');
@@ -376,7 +397,7 @@ async function runCoachedSet(page, side = 'right') {
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#btn-new2');
     /* every catalogue move survives entry → draft → entry with the same compiled result */
     const rt = await st.evaluate(() => {
-      const S = window.GrooveformStudio, LIB = window.ExerciseLibrary, C = window.FyzioCatalog;
+      const S = window.OnTrackStudio, LIB = window.ExerciseLibrary, C = window.OnTrackCatalog;
       const strip = (ex) => JSON.parse(JSON.stringify(ex, (k, v) => (typeof v === 'function' ? '[fn]' : k === 'entry' || k === 'file' || k === 'figure' || k === 'spec' ? undefined : v)));
       const canon = (v) => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v;
       const out = { checked: 0, problems: [], changed: [], rewritten: [] };
@@ -404,14 +425,14 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(await st.$eval('[data-k="faults.0.threshold"]', (e) => e.value), '68');
     await st.fill('[data-k="faults.0.threshold"]', '62'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
     /* a fault with no measurement shows as person-watched — find it by id, not by position */
-    const listedAt = await st.evaluate(() => { const S = window.GrooveformStudio; const s = S.state.moves[S.state.current]; return s.faults.findIndex((f) => f.id === 'drop'); });
+    const listedAt = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return s.faults.findIndex((f) => f.id === 'drop'); });
     assert.ok(listedAt >= 0, 'the drop fault survived the round trip');
     assert.equal(await st.$eval(`[data-chips="faults.${listedAt}.listed"] [aria-pressed="true"]`, (e) => e.dataset.v), 'true', 'a fault without a measurement is listed for the person');
     await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
     await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
     assert.equal(await st.$eval('[data-k="_target"]', (e) => e.value), 'knee', 'saves back into the file it came from');
     assert.ok(await st.$('#save-project[hidden]'), 'no dev server here, so no save button');
-    const saved = await st.evaluate(() => { const S = window.GrooveformStudio; const s = S.state.moves[S.state.current]; return S.fileWith(s, 'knee'); });
+    const saved = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.fileWith(s, 'knee'); });
     const m = saved.json.moves.find((x) => x.id === 'seated_knee_ext'); assert.equal(saved.json.moves.filter((x) => x.id === 'seated_knee_ext').length, 1, 'replaces, does not duplicate');
     assert.equal(m.faults[0].threshold, 62); assert.equal(m.faults[1].metric, undefined); assert.ok(m._studio && m._studio.edited, 'the Studio leaves its provenance as a note');
     assert.equal(m.pose.A.preset, undefined === undefined ? m.pose.A.preset : null);   // pose passes through untouched

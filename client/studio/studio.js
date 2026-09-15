@@ -1,5 +1,5 @@
 /* ============================================================
-   Grooveform Studio — where a physio turns a move into a spec.
+   OnTrack Studio — where a physio turns a move into a spec.
 
    Screen → Describe → Record takes → pick the progress measure →
    write faults as numbers and see them fire on the takes → guide →
@@ -9,7 +9,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const E = window.FormEngine, LIB = window.ExerciseLibrary, SPEC = window.MoveSpec, ANAT = window.FyzioAnatomy, C = window.FyzioCatalog;
+  const E = window.FormEngine, LIB = window.ExerciseLibrary, SPEC = window.MoveSpec, ANAT = window.OnTrackAnatomy, C = window.OnTrackCatalog;
   const K = LIB.kinematics;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,6 +23,8 @@
   function say(text) { try { if (!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch { } }
 
   /* ---------- storage ---------- */
+  /* Storage keys keep their old names on purpose: renaming them would throw away any Studio work
+     and drafts already sitting in the browser. Only what a person sees or exchanges is renamed. */
   const LS = 'grooveform.studio';
   function loadState() { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } }
   function saveState() { try { localStorage.setItem(LS, JSON.stringify({ moves: state.moves, current: state.current, step: state.step, pt: state.pt })); } catch (e) { toast('Could not save: ' + e.message); } }
@@ -334,7 +336,7 @@
     switch (step) {
       case 'screen': return Object.keys(s.screen || {}).length >= 6;
       case 'describe': return !!(s.id && s.name && s.group && s.summary && s.setup && s.why && s.faults.some((f) => f.label));
-      case 'record': return state.takes.length > 0;
+      case 'record': return state.takes.some((t) => t.label !== 'todo');
       case 'measure': return s.type === 'reps' ? (s.progress.metric.pts.length >= (SPEC.KINDS[s.progress.metric.kind] || {}).n) : s.hold.conditions.some((c) => c.metric.pts.length >= (SPEC.KINDS[c.metric.kind] || {}).n && (Number.isFinite(c.min) || Number.isFinite(c.max)));
       case 'faults': return s.faults.length > 0 && s.faults.every((f) => f.cue && f.tip);
       case 'guide': return !!(s.guide.surface && s.guide.stop && s.guide.cannotSee);
@@ -492,23 +494,23 @@
   }
 
   /* ===================== 3 · record ===================== */
-  const LABELS = { clean: 'Clean', borderline: 'Borderline', setup: 'Awkward set-up', other: 'Other' };
+  const LABELS = { clean: 'Clean', borderline: 'Borderline', setup: 'Awkward set-up', other: 'Other', todo: 'Not said yet' };
   const rec = { on: false, frames: [], t0: 0, raf: 0, stream: null, label: 'clean', side: 'L', mirror: true, keepVideo: true, mr: null, chunks: [], countdown: 0, lastVideoT: -1, fileMode: false };
   /* what a take can be: clean, one of the move's faults, borderline, an awkward set-up, other */
   function takeLabels() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
-    return [['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
+    return [['todo', 'Not said yet'], ['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['setup', 'Awkward set-up'], ['other', 'Other']];
   }
   function recordPanel() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
     const labels = takeLabels();
     const sided = s ? !!s.sided : !!(ex && ex.sided);
     return `<div class="stack"><h2>3 · Record takes</h2><p class="lead">${ex ? `<b>${esc(ex.name)}</b> is in the library. Record takes here and see how its current rules fire on them (step 5)${ex.catalog ? `, or <button type="button" class="btn secondary small" id="edit-copy">Edit a copy</button> to change its numbers and words and save it back to <code>${esc(ex.file)}</code>.` : '. It is a hand-written code move, so its rules are changed in <code>client/coach/library/' + esc(ex.id) + '.js</code>.'}` : 'Recordings are where thresholds come from. Two clean takes, one exaggerated take per fault named in step 2, two borderline ones, the other side, one awkward set-up. Hold the start position still for the first two seconds of every take.'}</p>
-        <p class="muted" style="font-size:.9rem">Or do it all in one go: record (or analyze a file of) one long take with every rep in it — clean ones, each fault, a borderline one — and once the progress measure is set in step 4, <b>Split into reps</b> on that take turns each rep into its own take. Then set what each one shows from the list on its row.</p>
+        <p class="muted" style="font-size:.9rem"><b>The quick way:</b> one long video — or one long recording — with everything in it: a few clean reps, one deliberately showing each fault, a borderline one. <b>Upload a video…</b> and the Studio cuts it into its reps (the set-up before the first and the tail after the last are dropped), then you say what each rep shows from the list on its row. As many examples of each as you like. A brand-new move has nothing to find reps with yet, so it stays whole until the progress measure is set in step 4 — then <b>Split into reps</b> on its row.</p>
       <div class="st-grid wide-left"><div class="stack">
         <div class="stage ${rec.mirror ? 'mirror' : ''}" id="stage"><video id="cam" playsinline muted autoplay></video><canvas id="cam-canvas"></canvas><div class="status" id="cam-status">Camera off</div></div>
-        <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file">Analyze a video file…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
+        <div class="row"><button class="btn primary" id="btn-cam">Start camera</button><button class="btn ghost" id="btn-flip" title="Mirror the preview">Mirror</button><button class="btn ghost" id="btn-file" title="One long video with several reps in it — the Studio cuts it into reps for you to describe">Upload a video…</button><input type="file" id="file-input" accept="video/*" hidden><span class="spacer"></span><label class="row" style="gap:6px;font-size:.9rem"><input type="checkbox" id="keep-video" ${rec.keepVideo ? 'checked' : ''}> keep video</label></div>
         <div class="card"><h3>Takes <span class="muted" style="font-weight:500">· ${state.takes.length}</span></h3><div class="takes" id="takes">${takesList()}</div></div>
         <div class="card"><h3>Coverage</h3>${coverage()}</div>
       </div>
@@ -534,12 +536,17 @@
         <div class="acts">${canSplit ? `<button class="btn secondary small" data-act="split" title="One take per rep, each labelled on its own">Split into ${sim.reps.length} reps</button>` : ''}<button class="btn ghost small" data-act="play">Play</button><button class="btn ghost small" data-act="note">Note</button><button class="btn ghost small" data-act="del">✕</button></div></div>`;
     }).join('');
   }
+  /* How many of each kind of take there are. The numbers are a floor, not a quota: more examples
+     make a better threshold, so a row that is past its target says how many there are and stops
+     counting against anything. */
   function coverage() {
     const s = cur(); const ex = currentExercise(); const n = (fn) => state.takes.filter(fn).length;
+    const todo = n((t) => t.label === 'todo');
     const rows = [['Clean', n((t) => t.label === 'clean'), 2], ['Borderline', n((t) => t.label === 'borderline'), 2], ['Awkward set-up', n((t) => t.label === 'setup'), 1]];
     for (const f of (s ? s.faults : (ex ? ex.faults : []))) rows.push(['Fault: ' + f.label, n((t) => t.label === 'fault:' + f.id), 1]);
     if ((s && s.sided) || (ex && ex.sided)) rows.push(['Left', n((t) => t.side === 'L'), 1], ['Right', n((t) => t.side === 'R'), 1]);
-    return `<div class="fires">${rows.map(([l, c, want]) => `<span class="${c >= want ? 'ok' : c ? 'warn' : ''}">${esc(l)} ${c}/${want}</span>`).join('')}</div>`;
+    const cell = ([l, c, want]) => `<span class="${c >= want ? 'ok' : c ? 'warn' : ''}">${esc(l)} ${c >= want ? `${c} ✓` : `${c} of ${want}`}</span>`;
+    return `<div class="fires">${todo ? `<span class="bad">${todo} rep${todo > 1 ? 's' : ''} not described yet</span>` : ''}${rows.map(cell).join('')}</div>`;
   }
   function editCopy(id) {
     const ex = builtin(id); if (!ex || !ex.catalog) return;
@@ -625,30 +632,52 @@
      progress measure from step 4. Each new take keeps the parent's still start in front of its
      rep, so it calibrates exactly as the parent did, and remembers where its rep sits in the
      parent's video. The parent is removed: its reps would otherwise be counted twice. */
-  async function splitTake(t) {
+  const PAD = 250;                                    // a moment either side of a rep, so nothing is clipped
+  /* Cut one long recording into its reps. The boundaries are the engine's own: a rep ends when the
+     progress reading drops back to rest, and began one duration earlier — so each take holds the
+     rep and nothing else. The lead-in before the first rep and the tail after the last are not
+     reps and do not become takes; they are counted and reported as set-up and wind-down. Every
+     rep keeps the parent's still start in front of it, so it calibrates exactly as the parent did,
+     and remembers where it sits in the parent's video. */
+  function repCuts(take, sim) {
+    if (!sim || sim.error || !sim.reps || !sim.reps.length) return null;
+    const calT = take.calT ?? 1200, last = take.durationMs;
+    const cuts = sim.reps.map((r) => {
+      const dur = (r.rep && r.rep.duration) || 0;
+      return { t0: Math.max(calT, r.t - dur - PAD), t1: Math.min(last, r.t + PAD), full: !!r.full };
+    }).filter((c) => c.t1 - c.t0 > 200);
+    if (!cuts.length) return null;
+    return { cuts, setupMs: Math.max(0, cuts[0].t0 - (sim.calT ?? calT)), tailMs: Math.max(0, last - cuts[cuts.length - 1].t1) };
+  }
+  async function splitTake(t, { quiet = false } = {}) {
     const sim = state.sims[t.id];
-    if (!sim || sim.error || !sim.reps || sim.reps.length < 2) return toast('Nothing to split yet — set the progress measure in step 4 so the reps can be found');
+    const cut = repCuts(t, sim);
+    if (!cut || cut.cuts.length < 2) { if (!quiet) toast(sim && sim.reps && sim.reps.length === 1 ? 'Only one rep found in this take' : 'No reps found yet — set the progress measure in step 4, then split'); return 0; }
     const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT);
-    if (!still.length) return toast('This take has no still start to calibrate each rep from');
-    const n = sim.reps.length; const kids = []; let from = sim.calT ?? calT;
-    sim.reps.forEach((r, i) => {
-      const seg = t.frames.filter((f) => f[0] > from && f[0] <= r.t); from = r.t;
-      if (seg.length < 5) return;
-      const t0 = seg[0][0];
-      const frames = [...still.map((f) => [f[0], f[1]]), ...seg.map((f) => [calT + (f[0] - t0), f[1]])];
-      kids.push({ id: uid(), moveId: t.moveId, label: t.label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: t0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT, origin: { take: t.id, rep: i + 1, of: n, full: !!r.full } });
-    });
-    if (!kids.length) return toast('Could not find the rep boundaries in this take');
-    if (!confirm(`Split this take into ${kids.length} reps? Each rep becomes its own take, labelled "${LABELS[t.label] || t.label.replace('fault:', 'fault: ')}" for now — change any of them from its row. The original take is removed.`)) return;
+    if (!still.length) { if (!quiet) toast('This take has no still start to calibrate each rep from'); return 0; }
+    const n = cut.cuts.length;
+    if (!quiet && !confirm(`Split into ${n} reps? Each becomes its own take for you to describe; the ${(cut.setupMs / 1000).toFixed(1)} s of set-up before the first rep and ${(cut.tailMs / 1000).toFixed(1)} s after the last are dropped. The whole take is replaced.`)) return 0;
+    const kids = cut.cuts.map((c, i) => {
+      const seg = t.frames.filter((f) => f[0] >= c.t0 && f[0] <= c.t1);
+      const frames = [...still.map((f) => [f[0], f[1]]), ...seg.map((f) => [calT + (f[0] - c.t0), f[1]])];
+      /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
+         pretend to be clean — "not said yet" is excluded from every count until the physio says */
+      const label = t.label && t.label !== 'todo' && t.origin ? t.label : (n > 1 ? 'todo' : t.label);
+      return { id: uid(), moveId: t.moveId, label, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
+    }).filter((k) => k.frames.length > still.length + 4);
+    if (!kids.length) { if (!quiet) toast('Could not cut the reps out of this take'); return 0; }
     for (const k of kids) await idb.put(k);
     await idb.del(t.id);
     state.takes = state.takes.filter((x) => x.id !== t.id).concat(kids).sort((a, b) => a.created - b.created);
-    resim(); render(); toast(`Split into ${kids.length} reps — now say what each one shows`);
+    resim(); render();
+    toast(`${kids.length} reps — now say what each one shows`, 4000);
+    return kids.length;
   }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
     const take = { id: uid(), moveId: moveKey(), label: rec.label, side: rec.side, note: '', aspect, frames, video, source, created: Date.now(), durationMs: frames[frames.length - 1][0], calT: 1200 };
     await idb.put(take); state.takes.push(take); resim(); toast(`Saved ${LABELS[rec.label] || rec.label} take — ${(take.durationMs / 1000).toFixed(1)} s`); render();
+    return take;
   }
   /* Run the pose model over a video file the physio recorded on a phone, at the video's own pace. */
   async function analyzeFile(file) {
@@ -664,8 +693,14 @@
         const tick = () => { if (video.ended || video.paused && video.currentTime >= video.duration) return res(); if (video.currentTime !== last) { last = video.currentTime; const lm = MOCK ? null : detect(video, performance.now()); ctx.clearRect(0, 0, canvas.width, canvas.height); drawSkeleton(ctx, lm, canvas.width, canvas.height, '#ff2e88'); frames.push([Math.round(video.currentTime * 1000), lm ? lm.map((l) => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null]); status(`Analyzing… ${video.currentTime.toFixed(1)} / ${video.duration.toFixed(1)} s`); } requestAnimationFrame(tick); };
         tick();
       });
-      await saveTake(frames, video.videoWidth / video.videoHeight, rec.keepVideo ? file : null, 'file');
-      URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load(); status('Camera off');
+      const take = await saveTake(frames, video.videoWidth / video.videoHeight, rec.keepVideo ? file : null, 'file');
+      URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load();
+      /* One long video is a set, not a rep. If the move already knows what it measures, cut it into
+         its reps now; otherwise it stays whole and step 4 offers the cut once the measure is set. */
+      if (take) {
+        const n = await splitTake(take, { quiet: true });
+        status(n ? `Analysed — ${n} reps to describe` : 'Analysed — set the progress measure in step 4, then Split into reps');
+      } else status('Camera off');
     } catch (e) { status('Failed: ' + e.message); toast(e.message, 5000); }
   }
 
@@ -1025,7 +1060,7 @@
   function moveFileSource(s) {
     const clean = JSON.parse(JSON.stringify(s)); for (const k of ['_key', '_file', '_replaces', '_target', '_inherited', '_fileCamera', '_tuned', 'idTouched', 'screen', 'created', 'targetsText', 'romValues', 'equipmentText', 'sourcesText', 'muscleNames']) delete clean[k]; for (const f of clean.faults) if (f.listed) { delete f.listed; delete f.metric; delete f.op; delete f.threshold; } for (const f of clean.faults) delete f.idTouched;
     const credit = state.pt.name ? ` Authored with ${state.pt.name}.` : '';
-    return `/* ${s.name} — written in Grooveform Studio.${credit}
+    return `/* ${s.name} — written in OnTrack Studio.${credit}
    A declarative move: no code, only measurements and thresholds. It is compiled by
    coach/spec.js into the same shape as the hand-written moves. Edit the numbers here
    or re-open the Studio session file; see docs/STUDIO.md. */
@@ -1044,6 +1079,8 @@
     const name = s._target || targetFileName(s);
     const problems = catalogProblems(s, name);
     const warn = [];
+    const todo = state.takes.filter((t) => t.label === 'todo').length;
+    if (todo) warn.push(`${todo} rep${todo > 1 ? 's have' : ' has'} not been described yet — say what each one shows, or it counts for nothing.`);
     if (!state.takes.some((t) => t.label === 'clean')) warn.push('No clean take recorded — thresholds are guesses.');
     for (const f of s.faults) if (!f.rule && !f.listed && !state.takes.some((t) => t.label === 'fault:' + f.id)) warn.push(`No take showing “${f.label}” — its threshold has not been checked against a real fault.`);
     for (const t of state.takes.filter((t) => t.label === 'clean')) { const sim = state.sims[t.id]; if (sim && !sim.error) { const fired = Object.keys(sim.faultSpans); if (fired.length) warn.push(`A clean take still fires: ${fired.join(', ')}.`); if (s.type === 'reps' && s.tracking !== 'none' && sim.full < 2) warn.push('A clean take counts fewer than 2 reps — check the start/target or the calibration window.'); } }
@@ -1117,13 +1154,13 @@
     const takes = await idb.all();
     const blobToB64 = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(b); });
     const includeVideo = takes.some((t) => t.video) && confirm('Include the videos? Landmark streams are always included; videos make the file much larger but let the build side see what happened.');
-    const out = { app: 'grooveform-studio', version: 1, exported: new Date().toISOString(), pt: state.pt, moves: state.moves, takes: [] };
+    const out = { app: 'ontrack-studio', version: 1, exported: new Date().toISOString(), pt: state.pt, moves: state.moves, takes: [] };
     for (const t of takes) { const c = { ...t }; if (c.video) { c.videoType = c.video.type; c.video = includeVideo ? await blobToB64(c.video) : null; } out.takes.push(c); }
-    download(`grooveform-session-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(out), 'application/json'); toast(`Saved ${Object.keys(state.moves).length} moves, ${takes.length} takes`);
+    download(`ontrack-session-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(out), 'application/json'); toast(`Saved ${Object.keys(state.moves).length} moves, ${takes.length} takes`);
   }
   async function importBundle(file) {
     const text = await file.text(); let data; try { data = JSON.parse(text); } catch { return toast('Not a JSON file'); }
-    if (data.app === 'grooveform-studio') {
+    if (data.app === 'ontrack-studio' || data.app === 'grooveform-studio') {   /* sessions saved before the rename still open */
       Object.assign(state.moves, data.moves || {}); if (data.pt && data.pt.name && !state.pt.name) state.pt = data.pt;
       for (const t of data.takes || []) { if (typeof t.video === 'string') { const bin = atob(t.video); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); t.video = new Blob([arr], { type: t.videoType || 'video/webm' }); } await idb.put(t); }
       toast(`Imported ${Object.keys(data.moves || {}).length} moves, ${(data.takes || []).length} takes`);
@@ -1141,5 +1178,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.GrooveformStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, fileWith, catalogProblems, editCopy };
+  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, fileWith, catalogProblems, editCopy };
 })();

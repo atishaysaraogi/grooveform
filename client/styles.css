@@ -1,4 +1,4 @@
-/* ===== Grooveform theme (brand guide v1.0) — cream, grape, hot pink, tangerine, lime, violet ===== */
+/* ===== OnTrack theme (brand guide v1.0) — cream, grape, hot pink, tangerine, lime, violet ===== */
 :root {
   --cream: #fff3e2; --grape: #2b1546; --pink: #ff2e88; --tangerine: #ffb830; --lime: #b8f542; --violet: #7a3fb8; --plum: #5a3f78;
   --bg: var(--cream); --surface: #fffaf2; --surface-2: #ffe8c9; --line: #e9d6bf;
@@ -457,6 +457,8 @@ a.ex-card .name { color: var(--text, inherit); }
    a label too long for it is cut with an ellipsis and read in full from the tooltip */
 .bubble { width: 100px; min-width: 100px; max-width: 100px; padding: 8px 8px; display: inline-block; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 22px; font-size: .88rem; }
 .bubble .swatch { vertical-align: middle; }
+/* the band bubble holds a colour, not a word: centre it in the same fixed box */
+.bubble:has(.swatch) { display: inline-flex; align-items: center; justify-content: center; }
 
 /* ---- nav search ---- */
 .nav-search { flex: 1 1 120px; max-width: 260px; min-height: 36px; padding: 4px 12px; font-size: .9rem; }
@@ -476,7 +478,7 @@ a.ex-card .name { color: var(--text, inherit); }
 .knob { display: contents; }
 .knob .k { font-size: .9rem; }
 .knob .bubble { width: 100%; }
-.bubble .swatch.big { margin: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem; color: var(--muted); box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
+.bubble .swatch.big { margin: 0 auto; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem; color: var(--muted); box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
 /* ---- stick figure: equipment ---- */
 .demo-fig .prop, .thumb-fig .prop { fill: var(--surface-2); stroke: var(--line); stroke-width: 2.5; }
 .demo-fig .band { stroke: var(--pink); stroke-width: 2.5; stroke-dasharray: 4 3; }
@@ -529,3 +531,11 @@ a.ex-card .name { color: var(--text, inherit); }
 .fixlist .s { font-weight: 800; }
 .fixlist .t { grid-column: 2; color: var(--muted); font-size: .85rem; }
 .fixlist .empty { grid-column: 1 / -1; }
+
+/* ---------- moves list: filter by what the camera can do ---------- */
+.ex-filter { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 10px; }
+.ex-filter .k { font-size: .82rem; font-weight: 800; color: var(--ink-soft); margin-right: 2px; }
+.ex-filter button { font: inherit; font-weight: 800; font-size: .85rem; padding: 5px 12px; border-radius: 999px;
+  border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.ex-filter button[aria-pressed="true"] { border-color: var(--ink); background: var(--lime); color: var(--grape); }
+.ex-filter .n { font-weight: 700; opacity: .65; margin-left: 5px; }

@@ -1,4 +1,4 @@
-/* Fyzio — public site, member area, curator area and admin. No framework, no build step. */
+/* OnTrack — public site, member area, curator area and admin. No framework, no build step. */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -29,14 +29,14 @@
       try {
         const d = drafts[id]; if (!window.MoveSpec || !window.ExerciseLibrary) break;
         /* a Studio draft is a catalogue entry (built the way the data files are) or, from older sessions, a bare spec */
-        const e = ExerciseLibrary.get(id) || (d.entry ? FyzioCatalog.buildFile({ ...(d.group || {}), moves: [d.entry] }, 'draft', FyzioCatalog.data, true)[0] : ExerciseLibrary.define((k) => MoveSpec.compile(d, k)));
+        const e = ExerciseLibrary.get(id) || (d.entry ? OnTrackCatalog.buildFile({ ...(d.group || {}), moves: [d.entry] }, 'draft', OnTrackCatalog.data, true)[0] : ExerciseLibrary.define((k) => MoveSpec.compile(d, k)));
         out.push({ id: e.id, name: e.name + ' (draft)', group: e.group, type: e.type, view: e.view, icon: e.icon, sided: e.sided || null, summary: e.summary, setup: e.setup, why: e.why, defaultTarget: e.defaultTarget, targets: e.targets, options: e.options || [], faults: e.faults.map((f) => ({ id: f.id, label: f.label, tip: f.tip })), guide: e.guide, tier: 'free', locked: false, draft: true });
       } catch (err) { console.warn('draft move skipped:', id, err.message); }
     }
     return out;
   }
   const exById = (id) => (exercises || []).find(e => e.id === id);
-  const coachEx = (id) => FyzioCoach.exercises.find(e => e.id === id);
+  const coachEx = (id) => OnTrackCoach.exercises.find(e => e.id === id);
 
   /* Every move is in the library; the vetted ones (hand-checked rep by rep) simply sort first. */
   const visibleEx = () => (exercises || []);
@@ -131,7 +131,7 @@
 
   /* The brand wordmark at hero scale. Same artwork as the topbar mark, so the homepage
      leads with the logo itself rather than repeating a small copy of it. */
-  const heroMark = () => `<span class="wordmark hero-wordmark" role="img" aria-label="jodd.io">jodd.io</span>`;
+  const heroMark = () => `<span class="wordmark hero-wordmark" role="img" aria-label="OnTrack">OnTrack</span>`;
 
   /* ================= PUBLIC ================= */
   async function renderHome() {
@@ -143,7 +143,7 @@
         <div class="row"><a class="btn primary" href="#/exercise/${free[0] ? free[0].id : exs[0].id}">Try ${esc(free[0] ? free[0].name : exs[0].name)}</a>${solo() ? '' : '<a class="btn secondary" href="#/curators">Find a coach</a>'}</div></section>
       <section class="home-sec"><h2>Moves</h2><p class="muted">Pick one, put the phone down, follow the voice.</p>${listHtml(exs)}<p class="muted search-none" hidden>No move matches that search.</p></section>
       <section class="home-sec"><h2>Playlists</h2><p class="muted">Ready-made routines. Each move runs with its own reps, sets and rest.</p><div class="playlists">${rts.map(rtRow).join('')}${ent && ent.canBuild ? `<a class="playlist build" href="#/build/new"><span class="count">+</span><span class="body"><span class="title">Build your own</span><span class="tracks">custom playlist</span></span></a>` : ''}</div></section>
-      <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'Grooveform')} is a fitness tool, not a medical service.</p></div>
+      <div class="card"><h3>How it works</h3><p class="muted">The pose model runs on your device — video never leaves your phone. The coach counts the reps, times the holds, checks your angles against a target and says what to fix. ${solo() ? '' : 'Coaches are independent professionals; '}${esc(env.appName || 'OnTrack')} is a fitness tool, not a medical service.</p></div>
     </div>`);
     /* The hero carries the wordmark on this page, so the topbar does not repeat it. */
     $('topbar').classList.add('at-home'); wireSearch(view);
@@ -152,7 +152,7 @@
     return `<a class="playlist ${tone}" href="#/routine/${r.id}"><span class="count">${r.items.length}</span><span class="body"><span class="title">${esc(r.title)}</span><span class="desc">${esc(r.description || '')}</span><span class="tracks">${names.map(esc).join(' · ')}</span></span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pass</span>`}</a>`; }
   function hash(str) { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return h; }
   const allFree = () => (exercises || []).every(e => e.tier === 'free');
-  function exRow(ex) { return `<a class="ex-row" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span class="body"><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'}${ex.tracking === 'none' ? '' : ` · ${ex.view === 'front' ? 'front-on' : 'side-on'}`}<span class="nb"> · ${trackWord(ex)}</span></span></span>${allFree() ? '' : tierBadge(ex)}</a>`; }
+  function exRow(ex) { return `<a class="ex-row" href="#/exercise/${ex.id}" data-name="${esc(ex.name.toLowerCase())}" data-group="${esc(ex.group)}" data-track="${esc(ex.tracking || 'form')}"><span class="glyph">${OnTrackCoach.thumb(coachEx(ex.id))}</span><span class="body"><span class="name">${esc(ex.name)}</span><span class="meta">${ex.type === 'reps' ? 'reps' : 'timed hold'}${ex.tracking === 'none' ? '' : ` · ${ex.view === 'front' ? 'front-on' : 'side-on'}`}<span class="nb"> · ${trackWord(ex)}</span></span></span>${allFree() ? '' : tierBadge(ex)}</a>`; }
   /* The moves as a list: one list while it is short, one per body region once the full library is in. */
   function listHtml(list) {
     if (list.length <= 16) return `<div class="ex-list">${list.map(exRow).join('')}</div>`;
@@ -162,11 +162,28 @@
   /* The search box lives in the nav bar; it filters whatever list is on the page (and opens the
      full list from any other page). */
   let navQuery = '';
+  /* What the camera can do with a move is the first thing most people want to narrow by — "show me
+     only the ones it judges". Kept in the row's own data, so the filter is the same pass as the
+     search and nothing has to be re-rendered. */
+  let trackFilter = (() => { try { return localStorage.getItem('fz.track') || 'all'; } catch { return 'all'; } })();
+  function filterBar(list) {
+    const n = (t) => list.filter((e) => (e.tracking || 'form') === t).length;
+    const opts = [['all', 'All', list.length], ['form', 'Form coached', n('form')], ['reps', 'Counts reps', n('reps')], ['none', 'Guide only', n('none')]];
+    return `<div class="ex-filter" id="ex-filter"><span class="k">The camera</span>${opts.map(([v, label, c]) =>
+      `<button type="button" data-track="${v}" aria-pressed="${trackFilter === v}" title="${esc((TRACK[v] || [])[2] || 'Every move in the library')}">${esc(label)}<span class="n">${c}</span></button>`).join('')}</div>`;
+  }
   function applySearch(root) {
     const s = navQuery.trim().toLowerCase();
-    root.querySelectorAll('.ex-row[data-name]').forEach(t => t.hidden = !!s && !t.dataset.name.includes(s) && !t.dataset.group.toLowerCase().includes(s));
+    root.querySelectorAll('.ex-row[data-name]').forEach(t => t.hidden = (trackFilter !== 'all' && t.dataset.track !== trackFilter) || (!!s && !t.dataset.name.includes(s) && !t.dataset.group.toLowerCase().includes(s)));
     root.querySelectorAll('.ex-group').forEach(g => g.hidden = ![...g.querySelectorAll('.ex-row')].some(t => !t.hidden));
-    const none = root.querySelector('.search-none'); if (none) none.hidden = !s || !!root.querySelector('.ex-row:not([hidden])');
+    const none = root.querySelector('.search-none'); if (none) { none.hidden = !!root.querySelector('.ex-row:not([hidden])'); none.textContent = s ? 'No move matches that search.' : 'No move in the library the camera does that with.'; }
+    const bar = root.querySelector('#ex-filter');
+    if (bar && !bar.dataset.wired) {
+      bar.dataset.wired = '1';
+      bar.onclick = (e) => { const b = e.target.closest('button[data-track]'); if (!b) return;
+        trackFilter = b.dataset.track; try { localStorage.setItem('fz.track', trackFilter); } catch { }
+        bar.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); applySearch(root); };
+    }
   }
   function wireSearch(root) { applySearch(root); }
   $('nav-q').oninput = (e) => { navQuery = e.target.value; const h = location.hash; if (!h || h === '#/' || h.startsWith('#/exercises')) applySearch(view); else if (navQuery.trim()) location.hash = '#/exercises'; };
@@ -174,11 +191,11 @@
   $('btn-how').onclick = () => showIntro(true);
   function rtTile(r) { const names = r.items.map(i => i.exercise ? i.exercise.name : '').filter(Boolean); return `<a class="tile routine" href="#/routine/${r.id}"><span class="glyph"><span class="rt-count">${r.items.length}</span></span><span class="name">${esc(r.title)}</span><span class="meta">${esc(names.slice(0, 3).join(' · '))}${names.length > 3 ? ' …' : ''}</span>${allFree() ? '' : r.items.every(i => i.exercise && i.exercise.tier === 'free') ? '<span class="badge good">Free</span>' : `<span class="badge ${r.locked ? 'warn' : 'accent'}">Pro</span>`}</a>`; }
 
-  function exCard(ex) { return `<a class="ex-card" href="#/exercise/${ex.id}"><span class="glyph">${FyzioCoach.thumb(coachEx(ex.id))}</span><span><span class="name">${esc(ex.name)}</span><br><span class="sum">${esc(ex.summary)}</span></span>${tierBadge(ex)}</a>`; }
+  function exCard(ex) { return `<a class="ex-card" href="#/exercise/${ex.id}"><span class="glyph">${OnTrackCoach.thumb(coachEx(ex.id))}</span><span><span class="name">${esc(ex.name)}</span><br><span class="sum">${esc(ex.summary)}</span></span>${tierBadge(ex)}</a>`; }
   function routineCard(r) { return `<a class="card link" href="#/routine/${r.id}" style="text-decoration:none;color:inherit"><div class="row"><strong>${esc(r.title)}</strong>${r.kind === 'prebuilt' ? lockBadge(r.locked) : r.ownerName ? `<span class="badge accent">from ${esc(r.ownerName)}</span>` : '<span class="badge">mine</span>'}<div class="spacer"></div><span class="meta">${r.items.length} exercises</span></div><p class="meta" style="margin-top:4px">${esc(r.description || '')}</p><p class="meta">${r.items.map(i => i.exercise ? i.exercise.name : i.exerciseId).join(' · ')}</p></a>`; }
   async function renderExercises() { await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const list = visibleEx();
     render(`<div class="stack"><h1>Moves</h1><p class="muted">${allFree() ? 'Pick one, put the phone down, follow the voice.' : ent && ent.tier !== 'anon' && ent.tier !== 'free' ? 'Everything is unlocked on your plan.' : 'Free ones need no account. Pro ones unlock with a subscription or a curator-sent routine.'} Some moves the camera can only count, and some it cannot see at all — each row says which.</p>
-      ${listHtml(list)}<p class="muted search-none" hidden>No move matches that search.</p>${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
+      ${filterBar(list)}${listHtml(list)}<p class="muted search-none" hidden>No move matches that search.</p>${ent && !ent.pro && !allFree() ? upgradeCard('Unlock the full library') : ''}</div>`); wireSearch(view); }
   async function renderExercise(id, sub) {
     await refreshMe(); await loadExercises(); /* entitlements can change between views (purchase, curator send) */ const cat = exById(id); if (!cat) return renderHome(); const ex = coachEx(id); const g = cat.guide;
     let itemCtx = null; if (sub && sub.startsWith('item-')) { try { const [rid, iid] = sub.slice(5).split('_'); const r = (await api('GET', '/api/routines/' + rid)).routine; itemCtx = { routine: r, item: r.items.find(i => i.id === iid) }; if (!itemCtx.item) itemCtx = null; } catch { } }
@@ -193,8 +210,8 @@
       ${cat.locked ? upgradeCard(`${cat.name} is a Pro exercise`) : ''}
       <div class="ex-grid">
         <div class="stack">
-          <div class="card move-card"><h3>The move</h3>${FyzioCoach.phoneInset(ex)}${FyzioCoach.demo(cat)}</div>
-          <div class="card"><h3>Where to put the phone</h3>${FyzioCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p></div>
+          <div class="card move-card"><h3>The move</h3>${OnTrackCoach.phoneInset(ex)}${OnTrackCoach.demo(cat)}</div>
+          <div class="card"><h3>Where to put the phone</h3>${OnTrackCoach.cameraDiagram(ex)}<p style="margin-top:8px">${esc(cat.setup)}</p></div>
         </div>
         <div class="stack">
           ${itemCtx ? `<div class="card"><h3>From “${esc(itemCtx.routine.title)}”</h3><p><strong>${esc(optionSummary(cat, opts))}</strong></p>${itemCtx.item.notes ? `<p class="notice" style="margin-top:8px">${esc(itemCtx.item.notes)}</p>` : ''}</div>` : `<div class="card config">${configBlock(cat, opts)}</div>`}
@@ -329,12 +346,12 @@
       if (step.ex.tracking === 'none') return manualSet();
       showLive();
       const more = setNo < total || si < steps.length - 1;   // keep the camera up for the rest
-      FyzioCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, keepCameraAfter: more, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone });
+      OnTrackCoach.start({ exercise: step.ex, target, options: { ...o, set: setNo }, file, keepCameraAfter: more, exit: (dest) => { close(); location.hash = dest || back; }, done: onDone });
     };
     /* A move the camera cannot track: the set-up on screen, a counter or a timer, and a Done
        button. It lands in the same results list as a camera set, marked as logged by hand. */
     const manualSet = () => {
-      showReview(true); FyzioCoach.endRest();   /* a held camera from the previous set is not needed here */
+      showReview(true); OnTrackCoach.endRest();   /* a held camera from the previous set is not needed here */
       const ex = step.ex, cat = exById(ex.id) || ex, hold = ex.type === 'hold', startedAt = Date.now(); let n = hold ? 0 : target, timer = null;
       const sideWord = o.side && o.side !== 'both' ? ` — ${sideLabel(ex, o.side) || o.side}` : '';
       portal.innerHTML = `<div class="panel stack manual"><span class="eyebrow">Set ${setNo} of ${total} · logged by hand</span><h3>${esc(ex.name)}${esc(sideWord)}</h3><p class="muted">${esc(cat.setup)}</p>
@@ -344,8 +361,8 @@
         const review = { exercise: ex.id, name: ex.name, type: ex.type, target, score: null, headline: 'Logged by hand', reps: hold ? undefined : n, partials: 0, holdSec: hold ? n : undefined, goodSec: hold ? n : undefined, durationMs, faults: {}, tips: [], manual: true };
         onDone({ review, rec: null, opts: { ...o, set: setNo }, startedAt, cameraHeld: false, manual: true }); };
       portal.querySelector('#man-done').onclick = finish; portal.querySelector('#man-exit').onclick = () => { clearInterval(timer); close(); location.hash = back; };
-      if (hold) { portal.querySelector('#man-timer').onclick = (e) => { const b = e.currentTarget; if (timer) return; b.disabled = true; FyzioCoach.voice.say('Hold.', { priority: 2 }); let left = target;
-          timer = setInterval(() => { left--; n = target - left; const el = portal.querySelector('#man-clock'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) { clearInterval(timer); FyzioCoach.voice.beep(880, 0.15); finish(); } }, 1000); }; }
+      if (hold) { portal.querySelector('#man-timer').onclick = (e) => { const b = e.currentTarget; if (timer) return; b.disabled = true; OnTrackCoach.voice.say('Hold.', { priority: 2 }); let left = target;
+          timer = setInterval(() => { left--; n = target - left; const el = portal.querySelector('#man-clock'); if (el) el.textContent = left; if (left <= 3 && left > 0) OnTrackCoach.voice.beep(660, 0.06); if (left <= 0) { clearInterval(timer); OnTrackCoach.voice.beep(880, 0.15); finish(); } }, 1000); }; }
       else { const paint = () => { portal.querySelector('#man-n').textContent = n; portal.querySelector('#man-done').textContent = `Done — log ${n} reps`; }; portal.querySelector('#man-minus').onclick = () => { n = Math.max(0, n - 1); paint(); }; portal.querySelector('#man-plus').onclick = () => { n = Math.min(999, n + 1); paint(); }; }
     };
     const onDone = ({ review, rec, opts: usedOpts, startedAt, cameraHeld, manual }) => {
@@ -366,20 +383,20 @@
     /* Rest with the camera, skeleton and your last count still on screen. */
     const restOnCamera = ({ title, review, note, goLabel, onGo }) => {
       let left = rest; const c = coaching(review);
-      const stop = () => { clearInterval(restTimer); FyzioCoach.endRest(); showReview(); savePanel(); };
+      const stop = () => { clearInterval(restTimer); OnTrackCoach.endRest(); showReview(); savePanel(); };
       const go = () => { clearInterval(restTimer); onGo(); };
-      const paint = () => FyzioCoach.restOverlay({ title, text: c.text, checks: c.checks, count: left, note, actions: [{ label: goLabel, fn: go }, { label: 'Stop here', cls: 'ghost', fn: stop }] });
+      const paint = () => OnTrackCoach.restOverlay({ title, text: c.text, checks: c.checks, count: left, note, actions: [{ label: goLabel, fn: go }, { label: 'Stop here', cls: 'ghost', fn: stop }] });
       paint();
-      restTimer = setInterval(() => { left--; paint(); if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
+      restTimer = setInterval(() => { left--; paint(); if (left <= 3 && left > 0) OnTrackCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
     };
     const restScreen = (review, held) => {
-      FyzioCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
+      OnTrackCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
       if (held) return restOnCamera({ title: `Set ${setNo} of ${total} done · ${coaching(review).did}`, review, note: `Set ${setNo + 1} starts by itself — get back into position.`, goLabel: `Start set ${setNo + 1}`, onGo: startSet });
       let left = rest;
       portal.innerHTML = `<div class="panel stack rest"><h3>Set ${setNo} of ${total} done</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">Set ${setNo + 1} starts by itself — get back into position.</p></div>`;
       const go = () => { clearInterval(restTimer); startSet(); };
       setActions([{ label: `Start set ${setNo + 1}`, id: 'rest-go', fn: go }, { label: 'Stop here', cls: 'ghost', id: 'rest-stop', fn: () => { clearInterval(restTimer); savePanel(); } }, backAction, { clock: true, id: 'rest-left-top', label: `${left} s` }]);
-      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
+      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) OnTrackCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
     };
     /* Between two exercises of a routine: same rest clock, but it rolls into the next move. */
     const nextStepPanel = (review, held) => {
@@ -389,12 +406,12 @@
       const nextSide = sideLabel(next.ex, next.opts.side);
       const title = switching ? `Switch sides — now your ${nextSide}` : `Next up: ${next.ex.name}`;
       const goLabel = switching ? `Start ${nextSide}` : `Start ${next.ex.name} now`;
-      FyzioCoach.voice.say(switching ? `Now the other side. ${nextSide}. Rest ${rest} seconds.` : `${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
+      OnTrackCoach.voice.say(switching ? `Now the other side. ${nextSide}. Rest ${rest} seconds.` : `${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
       if (held) return restOnCamera({ title, review, note: (switching ? 'Swap over — ' : '') + optionSummary(exById(next.ex.id) || next.ex, next.opts), goLabel, onGo: beginStep });
       portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>${esc(title)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p></div>`;
       const go = () => { clearInterval(restTimer); beginStep(); };
       setActions([{ label: goLabel, id: 'rest-go', fn: go }, { label: 'Finish here', cls: 'ghost', id: 'rest-stop', fn: () => { clearInterval(restTimer); savePanel(); } }, backAction, { clock: true, id: 'rest-left-top', label: `${left} s` }]);
-      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
+      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) OnTrackCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
     };
     const savePanel = () => {
       const n = results.length; const label = n > 1 ? `these ${n} sets` : 'this set';
@@ -427,7 +444,7 @@
       ${startBar}
       <p class="muted" style="font-size:.9rem">Tune any move below — the routine runs with whatever you pick here.</p>
       <div class="list">${r.items.map((it, i) => { const cat = exById(it.exerciseId); if (!cat) return '';
-        return `<div class="card rt-item" data-item="${esc(it.id)}"><div class="item-row"><span class="glyph">${FyzioCoach.thumb(coachEx(cat.id))}</span><span><span class="eyebrow">${i + 1} of ${r.items.length}</span><br><strong>${esc(cat.name)}</strong> ${it.locked ? '<span class="badge warn">Pro</span>' : ''}<br><span class="meta" data-summary>${esc(optionSummary(cat, plan[it.id]))}</span>${it.notes ? `<br><span class="meta">📝 ${esc(it.notes)}</span>` : ''}</span>${it.locked ? '<a class="btn ghost small" href="#/pricing">Unlock</a>' : ''}</div>${it.locked ? '' : `<div class="rt-config">${configBlock(cat, plan[it.id])}</div>`}</div>`; }).join('')}</div>
+        return `<div class="card rt-item" data-item="${esc(it.id)}"><div class="item-row"><span class="glyph">${OnTrackCoach.thumb(coachEx(cat.id))}</span><span><span class="eyebrow">${i + 1} of ${r.items.length}</span><br><strong>${esc(cat.name)}</strong> ${it.locked ? '<span class="badge warn">Pro</span>' : ''}<br><span class="meta" data-summary>${esc(optionSummary(cat, plan[it.id]))}</span>${it.notes ? `<br><span class="meta">📝 ${esc(it.notes)}</span>` : ''}</span>${it.locked ? '<a class="btn ghost small" href="#/pricing">Unlock</a>' : ''}</div>${it.locked ? '' : `<div class="rt-config">${configBlock(cat, plan[it.id])}</div>`}</div>`; }).join('')}</div>
       <div class="row">${ent && ent.canBuild && !solo() ? `<button class="btn ghost small" id="rt-copy">Copy to my routines</button>` : ''}${me && me.role === 'curator' && (r.ownerId === me.id || r.kind === 'prebuilt') ? `<a class="btn ghost small" href="#/curator">Send to a member →</a>` : ''}</div></div>`);
     /* Keep each item's one-line summary in step with its chips. */
     wireChips(view, plan, null, (host, bag) => { const it = r.items.find(x => x.id === host.dataset.item); const el = host.querySelector('[data-summary]'); if (it && el) el.textContent = optionSummary(exById(it.exerciseId), bag); });
@@ -437,7 +454,7 @@
   async function renderCurators() {
     await loadExercises(); const url = new URLSearchParams((location.hash.split('?')[1] || '')); const q = url.get('q') || '', spec = url.get('specialty') || '', kind = url.get('kind') || '', city = url.get('city') || '';
     const d = await api('GET', `/api/curators?q=${encodeURIComponent(q)}&specialty=${encodeURIComponent(spec)}&kind=${encodeURIComponent(kind)}&city=${encodeURIComponent(city)}`);
-    render(`<div class="stack"><div><span class="eyebrow">Directory</span><h1>Find a curator</h1><p class="muted">Physiotherapists and trainers who build routines in ${esc(env.appName || 'Fyzio')} and coach through it. Request a connection; once they accept, routines they send you are unlocked at no extra cost, and they can see how your sets went.</p></div>
+    render(`<div class="stack"><div><span class="eyebrow">Directory</span><h1>Find a curator</h1><p class="muted">Physiotherapists and trainers who build routines in ${esc(env.appName || 'OnTrack')} and coach through it. Request a connection; once they accept, routines they send you are unlocked at no extra cost, and they can see how your sets went.</p></div>
       <form class="card form" id="f-cur"><div class="cols"><label class="field"><span>Search</span><input type="text" name="q" value="${esc(q)}" placeholder="name, condition, keyword"></label><label class="field"><span>Specialty</span><select name="specialty"><option value="">Any</option>${d.specialties.map(s => `<option ${s === spec ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label><label class="field"><span>Type</span><select name="kind"><option value="">Any</option>${['physiotherapist', 'trainer', 'coach', 'other'].map(k => `<option value="${k}" ${k === kind ? 'selected' : ''}>${k}</option>`).join('')}</select></label><label class="field"><span>City</span><input type="text" name="city" value="${esc(city)}"></label></div><button class="btn primary small" type="submit" style="justify-self:start">Search</button></form>
       ${d.curators.length ? `<div class="list">${d.curators.map(cu => `<a class="card link" href="#/curator/${cu.id}" style="text-decoration:none;color:inherit"><div class="row"><strong>${esc(cu.displayName)}</strong>${cu.verified ? '<span class="badge good">verified</span>' : ''}<span class="badge">${esc(cu.kind)}</span><div class="spacer"></div><span class="meta">${esc(cu.city || '')}</span></div><p style="margin-top:4px">${esc(cu.headline || '')}</p><p class="meta">${cu.specialties.map(esc).join(' · ')}${cu.rateText ? ' · ' + esc(cu.rateText) : ''} · ${cu.routinesShared} members coached</p></a>`).join('')}</div>` : '<div class="card"><h3>No curators match</h3><p class="muted">Try fewer filters. Are you a physio or trainer? <a href="#/login/curator">List yourself</a>.</p></div>'}
       <div class="card"><h3>Are you a physiotherapist or trainer?</h3><p class="muted">A Curator plan lists you here, lets you build routines with per-exercise targets and notes, send them to your clients, and see every set they complete. <a href="#/pricing">See the Curator plan</a>.</p></div></div>`);
@@ -447,10 +464,10 @@
     let d; try { d = await api('GET', '/api/curators/' + id); } catch (e) { return render('<div class="card"><h3>Curator not found</h3></div>'); } const cu = d.curator, cn = d.connection;
     render(`<div class="stack" style="max-width:720px"><div class="row"><a class="btn ghost small" href="#/curators">← Directory</a></div>
       <div><span class="eyebrow">${esc(cu.kind)}${cu.city ? ' · ' + esc(cu.city) : ''}</span><h1>${esc(cu.displayName)} ${cu.verified ? '<span class="badge good">verified</span>' : '<span class="badge">self-declared credentials</span>'}</h1><p>${esc(cu.headline || '')}</p></div>
-      <div class="card"><dl class="kv"><dt>Credentials</dt><dd>${esc(cu.credentials || '—')}</dd><dt>Specialties</dt><dd>${cu.specialties.map(esc).join(', ') || '—'}</dd><dt>Languages</dt><dd>${cu.languages.map(esc).join(', ') || '—'}</dd><dt>Rate</dt><dd>${esc(cu.rateText || 'Ask')}</dd>${cu.website ? `<dt>Website</dt><dd><a href="${esc(cu.website)}" rel="noopener" target="_blank">${esc(cu.website)}</a></dd>` : ''}${cu.publicContact ? `<dt>Contact</dt><dd>${esc(cu.publicContact)}</dd>` : ''}<dt>Coached</dt><dd>${cu.routinesShared} members through ${esc(env.appName || 'Fyzio')}</dd></dl></div>
+      <div class="card"><dl class="kv"><dt>Credentials</dt><dd>${esc(cu.credentials || '—')}</dd><dt>Specialties</dt><dd>${cu.specialties.map(esc).join(', ') || '—'}</dd><dt>Languages</dt><dd>${cu.languages.map(esc).join(', ') || '—'}</dd><dt>Rate</dt><dd>${esc(cu.rateText || 'Ask')}</dd>${cu.website ? `<dt>Website</dt><dd><a href="${esc(cu.website)}" rel="noopener" target="_blank">${esc(cu.website)}</a></dd>` : ''}${cu.publicContact ? `<dt>Contact</dt><dd>${esc(cu.publicContact)}</dd>` : ''}<dt>Coached</dt><dd>${cu.routinesShared} members through ${esc(env.appName || 'OnTrack')}</dd></dl></div>
       ${cu.bio ? `<div class="card"><p style="white-space:pre-wrap">${esc(cu.bio)}</p></div>` : ''}
       ${!cu.listedNow ? '<p class="notice">This curator is not currently accepting connections.</p>' : cn && cn.status === 'accepted' ? '<div class="card"><strong>You are connected.</strong> <a href="#/dashboard">See routines they sent you →</a></div>' : cn && cn.status === 'requested' ? '<div class="card"><strong>Request sent.</strong> <span class="muted">They will see it in their member list.</span></div>' : `<div class="card"><h3>Request a connection</h3><p class="muted" style="font-size:.9rem">Tell them briefly what you need. Once accepted they can send you routines and see your completed sets for those routines — nothing else.</p><form class="form" id="f-conn" style="margin-top:8px"><textarea name="message" maxlength="500" placeholder="e.g. 6 weeks post ACL repair, cleared for home exercises"></textarea><button class="btn primary small" type="submit" style="justify-self:start">${me ? 'Send request' : 'Sign in to request'}</button><p class="error" id="cn-err"></p></form></div>`}
-      <p class="muted" style="font-size:.85rem">${esc(env.appName || 'Fyzio')} does not employ curators or verify treatment; a verified badge means we checked a registration number, nothing more. Fees, if any, are agreed between you and the curator.</p></div>`);
+      <p class="muted" style="font-size:.85rem">${esc(env.appName || 'OnTrack')} does not employ curators or verify treatment; a verified badge means we checked a registration number, nothing more. Fees, if any, are agreed between you and the curator.</p></div>`);
     const f = $('f-conn'); if (f) f.onsubmit = async (e) => { e.preventDefault(); if (!requireLogin()) return; try { await api('POST', '/api/connections', { curatorId: cu.id, message: f.message.value }); toast('Request sent'); route(); } catch (err) { $('cn-err').textContent = err.message; } };
   }
   async function renderPricing() {
@@ -462,7 +479,7 @@
         <div class="card plan featured"><h3>Pro</h3><div class="price">${rupees(P.pro_monthly.amountPaise)}<span class="muted">/month</span></div><p class="meta">or ${rupees(P.pro_yearly.amountPaise)}/year</p><ul class="checklist"><li>Every exercise</li><li>Every prebuilt routine</li><li>Build and edit your own routines</li><li>Everything in Free</li></ul>${proSub ? `<p class="notice">Active until ${fmtDay(proSub.periodEnd)}</p>` : ''}<div class="row"><button class="btn primary" data-buy="pro_monthly">${proSub ? 'Extend a month' : 'Get Pro monthly'}</button><button class="btn ghost" data-buy="pro_yearly">${proSub ? 'Extend a year' : 'Yearly'}</button></div></div>
         <div class="card plan"><h3>Curator</h3><div class="price">${rupees(P.curator_monthly.amountPaise)}<span class="muted">/month</span></div><p class="meta">or ${rupees(P.curator_yearly.amountPaise)}/year · for physiotherapists & trainers</p><ul class="checklist"><li>Listed in Find a curator</li><li>Build routines with targets and notes</li><li>Send routines to clients — unlocked for them at no cost</li><li>See clients' completed sets, leave comments</li><li>Everything in Pro for your own training</li></ul>${curSub ? `<p class="notice">Active until ${fmtDay(curSub.periodEnd)}</p>` : ''}<div class="row"><button class="btn primary" data-buy="curator_monthly">${curSub ? 'Extend a month' : me && me.role === 'curator' ? 'Get Curator monthly' : 'Become a curator'}</button><button class="btn ghost" data-buy="curator_yearly">Yearly</button></div></div>
       </div>
-      <p class="muted" style="font-size:.85rem">Payments are processed by Razorpay; ${esc(env.appName || 'Fyzio')} never sees your card details. ${env.payments === 'mock' ? '<strong>Test mode:</strong> no money moves — the plan activates immediately.' : ''}</p></div>`);
+      <p class="muted" style="font-size:.85rem">Payments are processed by Razorpay; ${esc(env.appName || 'OnTrack')} never sees your card details. ${env.payments === 'mock' ? '<strong>Test mode:</strong> no money moves — the plan activates immediately.' : ''}</p></div>`);
     view.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buy(b.dataset.buy));
   }
   async function buy(plan) {
@@ -480,7 +497,7 @@
   /* ---------- login / consent ---------- */
   function renderLogin(roleHint) {
     let role = roleHint === 'curator' ? 'curator' : 'member';
-    render(`<div class="stack" style="max-width:440px;margin:24px auto"><div class="brand"><span class="mark" style="font-size:1.6rem">${esc(env.appName || 'Fyzio')}</span></div><h1>Sign in or create an account</h1><p class="muted">Enter your mobile number or email. We'll send a one-time code — no password. New numbers become new accounts.</p>
+    render(`<div class="stack" style="max-width:440px;margin:24px auto"><div class="brand"><span class="mark" style="font-size:1.6rem">${esc(env.appName || 'OnTrack')}</span></div><h1>Sign in or create an account</h1><p class="muted">Enter your mobile number or email. We'll send a one-time code — no password. New numbers become new accounts.</p>
       <form class="form" id="f-login"><label class="field"><span>Mobile number or email</span><input type="text" id="l-id" inputmode="email" autocomplete="username" placeholder="+91 98765 43210" required autofocus></label><button class="btn primary" type="submit" id="l-send">Send code</button><p class="error" id="l-err"></p></form>
       <form class="form" id="f-code" hidden><p class="muted" id="l-sent"></p><label class="field"><span>6-digit code</span><input type="text" id="l-code" class="otp-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>
         <div id="l-new" hidden class="form"><label class="field"><span>Your name</span><input type="text" id="l-name" maxlength="120" placeholder="What should we call you?"></label><div><span class="muted" style="font-size:.9rem">I am a…</span><div class="opts" style="margin-top:6px"><button type="button" class="chip" data-role="member" aria-pressed="${role === 'member'}">Person exercising</button><button type="button" class="chip" data-role="curator" aria-pressed="${role === 'curator'}">Physio / trainer (curator)</button></div></div></div>
@@ -589,7 +606,7 @@
       ${me.role === 'member' ? `<div class="card"><h3>Are you a physio or trainer?</h3><p class="muted" style="font-size:.9rem">Switch to a curator account to get a listing and send routines to clients. Your history stays.</p><button class="btn ghost small" id="acc-curator" style="margin-top:8px">Switch to curator account</button></div>` : ''}
       <div class="card"><h3>Coach settings (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Keep the set&rsquo;s video</span><select id="cs-video"><option value="on">On — watch it back</option><option value="off">Off — skeleton only</option></select></label><label class="field"><span>Head on the skeleton</span><select id="cs-head"><option value="">Default</option><option value="ball">Solid ball</option><option value="circle">Outlined circle</option><option value="dot">Small dot</option><option value="face">Nose and ears</option><option value="none">No head</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto (most natural available)</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
       <div class="card"><h3>How it works</h3><p class="muted">The three steps of a session: position the camera, follow the voice, review the set.</p><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-intro">Show me again</button></div></div>
-      <div class="card"><h3>Privacy</h3><label class="row"><input type="checkbox" id="acc-diag" ${me.prefs.store_diagnostics !== false ? 'checked' : ''}> <span>Store movement keypoints (never video) to improve the coach</span></label><div class="row" style="margin-top:10px"><a class="btn ghost small" href="/api/me/export" download="fyzio-my-data.json">Download my data</a>${me.status === 'erasure_requested' ? '<button class="btn ghost small" id="acc-cancel-erase">Cancel deletion</button>' : '<button class="btn danger small" id="acc-erase">Delete my account</button>'}</div><p class="meta" style="margin-top:8px">Grievances: ${esc(notice.grievanceContact)} · Notice v${esc(me.consentVersion || '')}</p></div></div>`);
+      <div class="card"><h3>Privacy</h3><label class="row"><input type="checkbox" id="acc-diag" ${me.prefs.store_diagnostics !== false ? 'checked' : ''}> <span>Store movement keypoints (never video) to improve the coach</span></label><div class="row" style="margin-top:10px"><a class="btn ghost small" href="/api/me/export" download="ontrack-my-data.json">Download my data</a>${me.status === 'erasure_requested' ? '<button class="btn ghost small" id="acc-cancel-erase">Cancel deletion</button>' : '<button class="btn danger small" id="acc-erase">Delete my account</button>'}</div><p class="meta" style="margin-top:8px">Grievances: ${esc(notice.grievanceContact)} · Notice v${esc(me.consentVersion || '')}</p></div></div>`);
     $('f-acc').onsubmit = async (e) => { e.preventDefault(); await api('PATCH', '/api/me', { name: e.target.name.value }); await refreshMe(); toast('Saved'); route(); };
     wireCoachSettings();
     $('acc-diag').onchange = async () => { await api('PATCH', '/api/me', { prefs: { store_diagnostics: $('acc-diag').checked } }); await refreshMe(); toast('Saved'); };
@@ -607,10 +624,10 @@
     wireCoachSettings();
   }
   function wireCoachSettings() {
-    for (const k of ['model', 'smooth', 'voice', 'video', 'head']) { const el = $('cs-' + k); el.value = FyzioCoach.settings[k]; el.onchange = () => FyzioCoach.setSetting(k, el.value); }
-    const fillVoices = () => { const sel = $('cs-voicename'); if (!sel) return; const cur = FyzioCoach.settings.voiceName || 'auto'; const auto = FyzioCoach.pickVoice(); sel.innerHTML = `<option value="auto">Auto${auto ? ' — ' + esc(auto.name) : ''}</option>` + FyzioCoach.listVoices().map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join(''); sel.value = cur; };
-    fillVoices(); setTimeout(fillVoices, 800); $('cs-voicename').onchange = () => FyzioCoach.setSetting('voiceName', $('cs-voicename').value);
-    $('cs-test').onclick = () => { FyzioCoach.voice.unlock(); FyzioCoach.voice.muted = false; FyzioCoach.voice.say('Nice and slow. Keep the elbow at your side. Three, four, five.', { priority: 2 }); FyzioCoach.voice.muted = FyzioCoach.settings.voice === 'off'; };
+    for (const k of ['model', 'smooth', 'voice', 'video', 'head']) { const el = $('cs-' + k); el.value = OnTrackCoach.settings[k]; el.onchange = () => OnTrackCoach.setSetting(k, el.value); }
+    const fillVoices = () => { const sel = $('cs-voicename'); if (!sel) return; const cur = OnTrackCoach.settings.voiceName || 'auto'; const auto = OnTrackCoach.pickVoice(); sel.innerHTML = `<option value="auto">Auto${auto ? ' — ' + esc(auto.name) : ''}</option>` + OnTrackCoach.listVoices().map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join(''); sel.value = cur; };
+    fillVoices(); setTimeout(fillVoices, 800); $('cs-voicename').onchange = () => OnTrackCoach.setSetting('voiceName', $('cs-voicename').value);
+    $('cs-test').onclick = () => { OnTrackCoach.voice.unlock(); OnTrackCoach.voice.muted = false; OnTrackCoach.voice.say('Nice and slow. Keep the elbow at your side. Three, four, five.', { priority: 2 }); OnTrackCoach.voice.muted = OnTrackCoach.settings.voice === 'off'; };
   }
   /* ================= CURATOR ================= */
   async function renderCuratorHome() {
@@ -620,7 +637,7 @@
     const requests = conns.filter(c => c.status === 'requested' && c.requestedBy !== me.id), members = conns.filter(c => c.status === 'accepted'), sentReq = conns.filter(c => c.status === 'requested' && c.requestedBy === me.id);
     render(`<div class="stack"><div><span class="eyebrow">Curator</span><h1>My members</h1>${ent.curator ? '' : `<div class="card upgrade"><h3>Your Curator plan is not active</h3><p class="muted">You can build routines for yourself, but listing, accepting members and sending routines need the Curator plan.</p><a class="btn primary small" href="#/pricing" style="margin-top:8px">Activate</a></div>`}</div>
       ${requests.length ? `<div class="card"><h3>Requests (${requests.length})</h3>${requests.map(c => `<div class="row" style="margin-top:8px"><span><strong>${esc(c.memberName)}</strong><br><span class="meta">${esc(c.message || '')}</span></span><div class="spacer"></div><button class="btn primary small" data-accept="${c.id}">Accept</button><button class="btn ghost small" data-decline="${c.id}">Decline</button></div>`).join('')}</div>` : ''}
-      <div class="card"><h3>Invite a member</h3><p class="muted" style="font-size:.9rem">They need a ${esc(env.appName || 'Fyzio')} account first (free). Enter the mobile number or email they signed up with.</p><form class="form" id="f-invite" style="margin-top:8px"><div class="cols"><input type="text" name="memberIdentifier" placeholder="+91 … or email" required><input type="text" name="message" placeholder="Message (optional)" maxlength="500"></div><button class="btn ghost small" type="submit" style="justify-self:start">Send invitation</button><p class="error" id="inv-err"></p></form>${sentReq.length ? `<p class="meta" style="margin-top:8px">Pending: ${sentReq.map(c => esc(c.memberName)).join(', ')}</p>` : ''}</div>
+      <div class="card"><h3>Invite a member</h3><p class="muted" style="font-size:.9rem">They need a ${esc(env.appName || 'OnTrack')} account first (free). Enter the mobile number or email they signed up with.</p><form class="form" id="f-invite" style="margin-top:8px"><div class="cols"><input type="text" name="memberIdentifier" placeholder="+91 … or email" required><input type="text" name="message" placeholder="Message (optional)" maxlength="500"></div><button class="btn ghost small" type="submit" style="justify-self:start">Send invitation</button><p class="error" id="inv-err"></p></form>${sentReq.length ? `<p class="meta" style="margin-top:8px">Pending: ${sentReq.map(c => esc(c.memberName)).join(', ')}</p>` : ''}</div>
       <h2>Members (${members.length})</h2>${members.length ? `<div class="list">${members.map(c => `<div class="card"><div class="row"><a href="#/curator-member/${c.memberId}" style="font-weight:600;color:inherit;text-decoration:none">${esc(c.memberName)}</a><span class="meta">${c.memberSessionsThisWeek} sets this week · since ${fmtDay(c.updatedAt)}</span><div class="spacer"></div><button class="btn primary small" data-send="${c.memberId}" data-name="${esc(c.memberName)}">Send routine</button><a class="btn ghost small" href="#/curator-member/${c.memberId}">Sessions</a></div><div class="send-slot"></div></div>`).join('')}</div>` : '<p class="muted">No members yet. Accept requests from your <a href="#/curator-profile">listing</a> or invite someone above.</p>'}</div>`);
     view.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { try { await api('PATCH', '/api/connections/' + b.dataset.accept, { status: 'accepted' }); toast('Accepted'); route(); } catch (e) { toast(e.message, 5000); if (e.upgrade) location.hash = '#/pricing'; } });
     view.querySelectorAll('[data-decline]').forEach(b => b.onclick = async () => { await api('PATCH', '/api/connections/' + b.dataset.decline, { status: 'declined' }); route(); });
@@ -665,7 +682,7 @@
      missing comma, a mistyped field, a fault with no threshold — is shown here, naming the file and the
      move, so whoever edited it sees the problem instead of an empty list. */
   (async () => {
-    try { await FyzioCatalog.load('.'); }
+    try { await OnTrackCatalog.load('.'); }
     catch (e) { $('view').innerHTML = `<div class="card data-error"><h2>The exercise files did not load</h2><p>${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload. <code>node scripts/catalog.js check</code> lists every problem at once.</p></div>`; console.error(e); return; }
     try { await refreshMe(); if (me && !me.consentRequired) await flushPending(); } catch (e) { console.error(e); }
     route(); showIntro(false);

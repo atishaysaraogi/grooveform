@@ -147,7 +147,7 @@ router.get('/api/me/export', (req, res) => {
     connections: db.q('SELECT id, curator_id, member_id, status, created_at FROM connections WHERE member_id = ? OR curator_id = ?').all(u.id, u.id), sessions: db.q('SELECT * FROM exercise_sessions WHERE user_id = ?').all(u.id).map(s => sessionView(s, { withDiagnostics: true })),
     notes: db.q('SELECT * FROM notes WHERE user_id = ?').all(u.id).map(n => ({ id: n.id, exerciseId: n.exercise_id, text: c.decrypt(n.text_enc), createdAt: n.created_at })), curatorProfile: u.role === 'curator' ? curatorPublic(db.q('SELECT * FROM curator_profiles WHERE user_id = ?').get(u.id), u) : null };
   audit.log({ actorId: u.id, action: 'data.exported', targetType: 'user', targetId: u.id, ip: clientIp(req) });
-  send(res, 200, out, { 'content-disposition': 'attachment; filename="fyzio-my-data.json"' });
+  send(res, 200, out, { 'content-disposition': 'attachment; filename="ontrack-my-data.json"' });
 });
 router.post('/api/me/erasure', async (req, res) => {
   const u = auth.requireAuth(req); const b = await readJson(req);

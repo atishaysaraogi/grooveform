@@ -8,7 +8,7 @@ The app is sold as a fitness and movement tool. Nothing in it diagnoses, treats 
 
 - The privacy notice, the home page, every curator profile and the curator listing editor all say the app is not a medical service and curators are independent. Keep those sentences when editing copy.
 - Do not collect diagnoses, conditions, pain scores or injury details as structured fields. The app deliberately has **effort** (0–10 exertion) rather than **pain**, free-text notes rather than condition pickers, and no age band. A member may type "ACL surgery" into a note or connection request; that is their choice and their text, encrypted at rest, and it is never used for anything but display to them (and, for connection requests, to the curator they addressed).
-- Curators self-declare credentials. "Verified" means an admin checked a registration number against a public register (IAP, state council) and nothing more; the badge copy says so. Never say "licensed by Fyzio" or "our physiotherapists".
+- Curators self-declare credentials. "Verified" means an admin checked a registration number against a public register (IAP, state council) and nothing more; the badge copy says so. Never say "licensed by OnTrack" or "our physiotherapists".
 - The Telemedicine Practice Guidelines 2020 apply to registered medical practitioners giving consultations, not to a software platform that lets a physio send exercise routines; the curator remains responsible for whether their own practice is compliant. Put that in the curator terms (see §5).
 - Trainers and coaches are not regulated professions in India; the `kind` field (physiotherapist / trainer / coach / other) exists so members can tell the difference.
 

@@ -467,7 +467,7 @@
   const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
-     the browser's FyzioCatalog.load() uses: settings first, then the hand-written code moves the
+     the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the
      manifest lists, then every catalogue file. Either way each move registers itself into
      library.list, which EXERCISES points at. */
   if (typeof module !== 'undefined' && module.exports) {

@@ -205,7 +205,7 @@
   }
 
   function registerFigure(id, fig) {
-    if (root.FyzioAnatomy && root.FyzioAnatomy.register) root.FyzioAnatomy.register(id, fig);
+    if (root.OnTrackAnatomy && root.OnTrackAnatomy.register) root.OnTrackAnatomy.register(id, fig);
     else (root.__pendingFigures = root.__pendingFigures || []).push([id, fig]);
   }
 
@@ -526,5 +526,5 @@
   }
 
   const api = { KEYS, defineAll, buildFile, checkFile, checkShared, checkSettings, checkManifest, readDataSync, fetchData, load, format, resolveEntry, poseToFigure, sidePose, frontPose, data: null };
-  if (isNode) module.exports = api; else root.FyzioCatalog = api;
+  if (isNode) module.exports = api; else root.OnTrackCatalog = api;
 })(typeof window !== 'undefined' ? window : globalThis);

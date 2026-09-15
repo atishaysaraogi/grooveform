@@ -1,4 +1,4 @@
-# Running Fyzio on your own computer — and opening it from your phone
+# Running OnTrack on your own computer — and opening it from your phone
 
 Two things matter here: the app itself is trivial to run (one command), but **the camera only works on a secure page**. Browsers allow the camera on `http://localhost` but block it on plain `http://192.168.x.x` addresses, so reaching the app from a phone needs an HTTPS URL. Part B below gives you one in about a minute.
 

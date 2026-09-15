@@ -1,4 +1,4 @@
-# Fyzio marketplace — setup, step by step
+# OnTrack marketplace — setup, step by step
 
 This document takes you from a zip file to a live app in India with real OTP sign-in and real Razorpay payments. Every step you have to do yourself is marked **You:**. Everything else the app does on its own.
 
@@ -85,7 +85,7 @@ Refunds are manual from the Razorpay dashboard; after refunding, cancel the subs
 
 **You:**
 
-1. Register on a telecom DLT portal as a Principal Entity; register a Sender ID (6 letters, e.g. `FYZIOA`) and a template with one variable: `Your Fyzio sign-in code is ##OTP##. Valid 5 minutes. Do not share it.`
+1. Register on a telecom DLT portal as a Principal Entity; register a Sender ID (6 letters, e.g. `FYZIOA`) and a template with one variable: `Your OnTrack sign-in code is ##OTP##. Valid 5 minutes. Do not share it.`
 2. In MSG91, add the DLT template id to a Flow/OTP template; copy the template id and your auth key into `MSG91_TEMPLATE_ID` / `MSG91_AUTHKEY`.
 3. `NOTIFY_PROVIDER=msg91`. Email addresses still go through `RESEND_API_KEY` if set, so you can support both.
 

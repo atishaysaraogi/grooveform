@@ -1,4 +1,4 @@
-# Grooveform Studio — building moves with a physio
+# OnTrack Studio — building moves with a physio
 
 `/studio/` is the authoring tool. It lives next to the app (same engine, same
 pose model, same move library) and runs entirely in the browser, so it works on
@@ -55,16 +55,27 @@ recording the survivors.
 | 8 | 4 · Measure, 5 · Faults | builder drives; physio decides — see below |
 | 4 | 6 · Guide | physio dictates the form points, marks which the camera checks; builds the figure |
 
-**Or one long take, split by rep.** Instead of one take per label, record — or
-analyze a file of — a single take with every rep in it: a few clean ones, one
-deliberately showing each fault, a borderline one. Once the progress measure is
-set (step 4) the Studio can find the reps, and **Split into N reps** on that
-take's row turns each rep into its own take, still start included, so each
-calibrates exactly as the parent did. Then use the label selector on each row
-to say what that rep shows (clean, which fault, borderline). Everything
-downstream — threshold suggestions, the fires strip, the tuning report — counts
-those reps as separate takes. A rep cut from a kept video still plays from the
-right place in it.
+**One long video is the quick way in.** Rather than a recording per label, take
+one video with everything in it — a few clean reps, one deliberately showing
+each fault, a borderline one — and hit **Upload a video…**. The Studio runs the
+pose model over it and cuts it into its reps: each rep becomes a take of its
+own, trimmed to the rep itself, with the parent's still start in front of it so
+it calibrates exactly as the parent did. The lead-in before the first rep and
+the tail after the last are not reps and are dropped; the split says how much
+of each it left out.
+
+Each rep arrives labelled **Not said yet**, in pink, and counts for nothing
+until you use the selector on its row to say what it shows — clean, which
+fault, borderline. That is deliberate: a rep silently assumed clean would poison
+every threshold derived from it, so step 3 is not done and the check will not
+pass while any remain. There is no limit on how many examples of a label you
+give; the coverage panel's numbers are a floor, and a row past its target reads
+`Clean 5 ✓` rather than a fraction.
+
+A brand-new move has nothing to find reps with yet — the progress measure is
+step 4 — so its video stays whole until you set it, then **Split into N reps**
+on that take's row. A rep cut from a kept video still plays from the right place
+in it.
 
 **Recording order, every move:**
 
@@ -206,9 +217,9 @@ client/coach/spec.js        spec → exercise compiler (also validates a spec, i
 client/studio/index.html    the Studio page
 client/studio/studio.js     screens, recorder, simulator, charts, figure builder, export
 client/studio/studio.css
-client/coach/catalog.js     reads and checks the data files; FyzioCatalog.format() writes them
+client/coach/catalog.js     reads and checks the data files; OnTrackCatalog.format() writes them
 client/data/moves/*.json    where a saved move ends up
-client/coach/coach.js       FyzioAnatomy.register(id, figure) — spec moves supply their own keyframes (drawn as the animated stick figure; the anatomical renderer is archived in coach/archive/)
+client/coach/coach.js       OnTrackAnatomy.register(id, figure) — spec moves supply their own keyframes (drawn as the animated stick figure; the anatomical renderer is archived in coach/archive/)
 test/spec.test.js           a spec compiles, counts reps, fires faults as the numbers say
 test/e2e.test.js            "studio:" step — the whole flow in a browser with a synthetic stream
 ```

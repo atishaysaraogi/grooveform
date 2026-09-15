@@ -1,4 +1,4 @@
-/* Grooveform Studio — the physio's authoring tool. Laptop-first (it sits beside the camera), still usable on a tablet. */
+/* OnTrack Studio — the physio's authoring tool. Laptop-first (it sits beside the camera), still usable on a tablet. */
 body { font-size: 15px; }
 .st-top { display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-bottom: 2px solid var(--grape); background: var(--surface); flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
 .st-brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 1.25rem; color: var(--text); text-decoration: none; }
@@ -79,6 +79,9 @@ canvas.chart { width: 100%; height: 220px; display: block; border-radius: 12px; 
 .fires span { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
 .fires span.ok { background: var(--lime); color: var(--grape); }
 .fires span.warn { background: var(--tangerine); color: var(--grape); }
+.fires span.bad { background: var(--pink); color: #fff; font-weight: 900; }
+/* a rep nobody has described yet: loud, because it counts for nothing until it is */
+.take select.lbl.todo { background: var(--pink); color: #fff; }
 .fires span.bad { background: var(--pink); color: var(--grape); }
 .wc { font-size: .78rem; color: var(--muted); }
 .wc.over { color: var(--bad); font-weight: 900; }

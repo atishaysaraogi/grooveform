@@ -9,7 +9,7 @@ const config = require('./config');
 async function sendOtp(identifier, code) {
   const { kind, value } = identifier;
   const provider = kind === 'email' ? (config.notifyProvider === 'resend' || config.resendApiKey ? 'resend' : 'console') : config.notifyProvider;
-  const text = `${code} is your Fyzio login code. It expires in ${Math.round(config.otpTtlMs / 60000)} minutes. Do not share it.`;
+  const text = `${code} is your OnTrack login code. It expires in ${Math.round(config.otpTtlMs / 60000)} minutes. Do not share it.`;
   switch (provider) {
     case 'console':
       console.log(`[otp] ${value}: ${code}`);
@@ -32,7 +32,7 @@ async function sendOtp(identifier, code) {
     case 'resend': {
       if (!config.resendApiKey) throw new Error('RESEND_API_KEY is required');
       if (kind !== 'email') throw new Error('Resend can only deliver to email addresses; set NOTIFY_PROVIDER=msg91 or twilio for phone numbers');
-      const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: 'Bearer ' + config.resendApiKey, 'content-type': 'application/json' }, body: JSON.stringify({ from: config.emailFrom, to: [value], subject: `${code} is your Fyzio login code`, text }) });
+      const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: 'Bearer ' + config.resendApiKey, 'content-type': 'application/json' }, body: JSON.stringify({ from: config.emailFrom, to: [value], subject: `${code} is your OnTrack login code`, text }) });
       if (!r.ok) throw new Error('Resend send failed: ' + r.status + ' ' + (await r.text()).slice(0, 200));
       return { delivered: 'email' };
     }

@@ -1,5 +1,5 @@
 /* ============================================================
-   Fyzio Form Coach — app layer: camera, pose model, drawing,
+   OnTrack Form Coach — app layer: camera, pose model, drawing,
    calibration flow, voice cues, review & history.
    ============================================================ */
 (function () {
@@ -915,7 +915,7 @@
   }
   /* the recording as a file: landmarks and events only — the set's video stays on this device */
   const recJson = () => JSON.stringify(lastRec, (k, v) => (k === 'video' || k === 'videoMime' ? undefined : v));
-  const recName = (ext) => `jodd-${lastRec.exercise}-${String(lastRec.started || '').replace(/[:.]/g, '-')}.${ext}`;
+  const recName = (ext) => `ontrack-${lastRec.exercise}-${String(lastRec.started || '').replace(/[:.]/g, '-')}.${ext}`;
 
   /* ---------- watch it back ----------
      What the replay needs to know about the move, without the move's code: its name, what each
@@ -1040,6 +1040,6 @@
   function endRest() { if (live && live.state === 'rest') { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); } }
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
-  window.FyzioAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
-  window.FyzioCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll() { }, stopAll() { }, regions: MUSCLE_REGIONS };
+  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, applyVoiceButton, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

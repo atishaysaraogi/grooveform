@@ -413,7 +413,7 @@
     if (spec.sided) ex.sided = { limb: spec.sided.limb, by: spec.sided.by || 'pick' };
     if (spec.upperBody) ex.upperBody = true;
     if (spec.figure) {
-      if (root.FyzioAnatomy && root.FyzioAnatomy.register) root.FyzioAnatomy.register(spec.id, spec.figure);
+      if (root.OnTrackAnatomy && root.OnTrackAnatomy.register) root.OnTrackAnatomy.register(spec.id, spec.figure);
       else (root.__pendingFigures = root.__pendingFigures || []).push([spec.id, spec.figure]);   /* drained when the figure renderer loads */
     }
     return ex;

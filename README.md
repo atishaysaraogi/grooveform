@@ -1,10 +1,10 @@
-# jodd.io — camera-guided exercise
+# OnTrack — camera-guided exercise
 
-(Repository name: grooveform. The product is called jodd.io in the app.)
+(Repository name: grooveform. The product is called OnTrack in the app. Browser storage keys and the test fixtures still say fyzio/grooveform on purpose — renaming them would discard work already saved in people’s browsers.)
 
 **Current mode: solo.** `SOLO_MODE=true` (the default) hides sign-in, plans, prices and curators and makes every exercise free; the app runs entirely anonymously on the device. Set `SOLO_MODE=false` to bring the marketplace back (accounts, Pro/Curator plans, directory) — all of that code and its tests are still here.
 
-Working name was Fyzio; the folder, docs and some identifiers still say so.
+Working name was OnTrack; the folder, docs and some identifiers still say so.
 
 A phone or laptop camera watches your form (pose estimation runs on the device, video never leaves it), counts reps, times holds and speaks corrections. Some exercises are free for anyone with no account. The rest unlock with a **Pro** subscription — or when a **curator** (physiotherapist or trainer, who subscribes to a Curator plan) sends you a routine. Anyone signed in keeps history and notes; Pro members and curators build custom routines; a **Find a curator** directory lets professionals advertise.
 

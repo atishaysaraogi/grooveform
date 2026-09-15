@@ -1,7 +1,7 @@
 {
   "name": "grooveform",
   "version": "1.0.0",
-  "description": "Fyzio — camera-guided exercise coach with free and Pro exercises, curator-sent routines, a curator directory and Razorpay subscriptions. Zero-dependency Node 22 server + SQLite.",
+  "description": "OnTrack — camera-guided exercise coach with free and Pro exercises, curator-sent routines, a curator directory and Razorpay subscriptions. Zero-dependency Node 22 server + SQLite.",
   "private": true,
   "engines": {
     "node": ">=22.12"

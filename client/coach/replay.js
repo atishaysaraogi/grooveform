@@ -292,7 +292,7 @@
   <div class="panel"><h3>Watch it back</h3><p class="muted" style="margin-bottom:8px">The skeleton the coach saw. ${rec.video ? 'The set&rsquo;s video stayed on the device it was recorded on, so this page carries the skeleton only.' : 'No video was kept.'} Reps along the top, range through the middle, faults and cues below. Click the timeline to jump.</p><div id="replay"></div></div>
   <div class="panel"><h3>Work on next</h3>${faults.length ? faults.map((fc) => `<div class="fault"><span class="n">×${fc.n}</span><span><span class="l">${esc(fc.fault ? fc.fault.label : fc.id)}</span><br><span class="t">${esc(fc.fault ? fc.fault.tip : '')}</span></span></div>`).join('') : '<p class="muted">No faults flagged.</p>'}</div>
   <div class="panel"><h3>Timeline</h3><p class="muted">${tl.reps.length ? tl.reps.map((r) => `${r.full ? 'Rep ' + r.n : 'Partial'} at ${((r.t1 - tl.t0) / 1000).toFixed(1)} s${r.faults.length ? ' — ' + r.faults.map((id) => (meta.faults[id] || {}).label || id).join(', ') : ''}`).join('<br>') : 'A hold: see the fault spans on the timeline.'}${tl.cues.length ? '<br><br>Cues: ' + tl.cues.map((c) => `${((c.t - tl.t0) / 1000).toFixed(1)} s “${esc(c.text)}”`).join(' · ') : ''}</p></div>
-  <p class="muted" style="text-align:center">Made with jodd.io · the recording is inside this file (landmarks and events, never video)</p>
+  <p class="muted" style="text-align:center">Made with OnTrack · the recording is inside this file (landmarks and events, never video)</p>
 </div>
 <script id="set-data" type="application/json">${data}</script>
 <script>${source}</script>

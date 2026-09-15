@@ -63,7 +63,7 @@ Curator plans require `role=curator` at checkout time; a member can switch role 
 
 ## Client
 
-`client/app.js` is a hash-router SPA (`#/exercise/:id`, `#/routine/:id`, `#/curators?q=…`, …). It keeps `me`, `ent` (entitlements) and the exercise catalogue in memory and re-fetches them on views where locks matter. The coach (`client/coach/`) is embedded: `FyzioCoach.start({exercise, target, options, file, done, exit})` shows the live screen, runs MediaPipe on the camera (or a video file), counts reps / times holds, speaks cues, and calls `done` with the review. `app.js` renders the save panel (effort, note) into `#rv-portal` and posts the session. An anonymous visitor's completed set is parked in `sessionStorage` (`fz.pending`) through sign-up and consent and saved automatically afterwards.
+`client/app.js` is a hash-router SPA (`#/exercise/:id`, `#/routine/:id`, `#/curators?q=…`, …). It keeps `me`, `ent` (entitlements) and the exercise catalogue in memory and re-fetches them on views where locks matter. The coach (`client/coach/`) is embedded: `OnTrackCoach.start({exercise, target, options, file, done, exit})` shows the live screen, runs MediaPipe on the camera (or a video file), counts reps / times holds, speaks cues, and calls `done` with the review. `app.js` renders the save panel (effort, note) into `#rv-portal` and posts the session. An anonymous visitor's completed set is parked in `sessionStorage` (`fz.pending`) through sign-up and consent and saved automatically afterwards.
 
 `?mock=1` makes the coach read `window.__mockPose(t)` instead of the camera; the browser tests use this to drive full sets.
 

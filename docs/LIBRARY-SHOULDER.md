@@ -1,4 +1,4 @@
-# Fyzio exercise library — shoulder & neck (exercises 6–10)
+# OnTrack exercise library — shoulder & neck (exercises 6–10)
 
 Companion to the five-exercise library. These five were picked from two shoulder home-exercise handouts (HEP2go / HEP.video programmes, 30 exercises between them) using the same test as before: one camera, a large joint movement in the camera plane, faults that show up as geometry the pose model can measure. The same conventions apply (landmark indices, `p`, persist/cooldown, calibration after 1.2 s of stillness). Each move — rules, faults and position guide — is one entry in `client/data/moves/shoulder.json` or `spine.json` (see [EXERCISE-LIBRARY.md](EXERCISE-LIBRARY.md)).
 
