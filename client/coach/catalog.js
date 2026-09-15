@@ -242,7 +242,7 @@
     kfFront: ['preset', 'legL', 'legR', 'shinL', 'shinR', 'armL', 'armR', 'foreL', 'foreR', 'lean', 'headTilt', 'squat'],
     prop: ['kind', 'at', 'to', 'w', 'dy', 'dx', 'len', 'r', 'extend'],
     shared: ['measurements', 'faults', 'poses', 'holds'],
-    settings: ['rep', 'camera', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
+    settings: ['rep', 'skeleton', 'camera', 'fault', 'targets', 'landmarks', 'cannotSee', 'standardFaults', 'side', 'band', 'score'],
   };
   const isNote = (k) => k.startsWith('_');
   const fail = (where, msg) => { const e = new Error(`${where}: ${msg}`); e.where = where; throw e; };

@@ -212,6 +212,34 @@
   }
   const Camera = { rotatePts, scaleX, rollFromBody, yawOf, correctPts };
 
+  /* ---------------- How the head is drawn ----------------
+     The pose model gives a nose and two ears, no skull. Joining them (nose–ear, ear–shoulder) makes
+     a small triangle that reads as a face from the side and as a bow-tie from the front, which is
+     why it is worth a choice. headShape returns a circle and a neck line in the same normalised
+     coordinates as the landmarks, so every drawer — the live camera, the replay, the Studio — puts
+     the head in the same place. The style comes from settings.json (skeleton.head).
+       face   the nose-and-ears triangle the model gives, joints included (what it has always been)
+       ball   a filled circle on the head, and a neck down to the shoulders
+       circle the same circle, outlined, so the video shows through it
+       dot    one dot where the head is, and a neck
+       none   a neck stub and nothing else                                                   */
+  const HEAD_STYLES = ['face', 'ball', 'circle', 'dot', 'none'];
+  const HEAD_LINKS = [[7, 11], [8, 12], [0, 7], [0, 8]];
+  function headShape(pts, at) {
+    const g = (i) => (pts[i] && (pts[i].v ?? pts[i].visibility ?? 1) >= 0.3 ? pts[i] : null);
+    const nose = g(0), eL = g(7), eR = g(8), sL = g(11), sR = g(12);
+    if (!sL && !sR) return null;
+    const neck = sL && sR ? mid(sL, sR) : (sL || sR);
+    const c = eL && eR ? mid(eL, eR) : nose || null;
+    if (!c) return null;
+    /* the ears span the skull across; from a true side view they sit almost on top of each other,
+       so the neck distance carries the estimate instead */
+    const span = eL && eR ? dist(eL, eR) : 0;
+    const up = dist(c, neck);
+    const r = Math.max(span * 0.62, up * 0.42, 0.012);
+    return { x: c.x, y: c.y, r, neck: { x: neck.x, y: neck.y } };
+  }
+
   function bodyHeight(pts) {
     let miny = 1, maxy = 0; for (const i of [0, 11, 12, 23, 24, 25, 26, 27, 28]) { miny = Math.min(miny, pts[i].y); maxy = Math.max(maxy, pts[i].y); }
     return maxy - miny;
@@ -436,7 +464,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's FyzioCatalog.load() uses: settings first, then the hand-written code moves the

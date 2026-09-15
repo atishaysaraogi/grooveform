@@ -28,6 +28,20 @@
     [7, 11], [8, 12], [0, 7], [0, 8],
   ];
   const JOINTS = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+  const HEAD_LINKS = [[7, 11], [8, 12], [0, 7], [0, 8]];
+  /* The head, in the style the set was recorded with. Deliberately repeated here rather than taken
+     from engine.js: this file is inlined whole into the exported report, which loads nothing. */
+  function headShape(lm) {
+    const V = (p) => (p && (p[3] == null ? 1 : p[3]) >= 0.3 ? p : null);
+    const g = (i) => V(lm[i]);
+    const nose = g(0), eL = g(7), eR = g(8), sL = g(11), sR = g(12);
+    if (!sL && !sR) return null;
+    const m = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const neck = sL && sR ? m(sL, sR) : (sL || sR);
+    const c = eL && eR ? m(eL, eR) : nose; if (!c) return null;
+    return { c, neck, r: Math.max((eL && eR ? d(eL, eR) : 0) * 0.62, d(c, neck) * 0.42, 0.012) };
+  }
   const C = { stage: '#14121a', bone: '#fff3e2', boneDim: 'rgba(255,243,226,0.45)', joint: '#b8f542', hot: '#ff2e88', good: '#b8f542', warn: '#ffb830', bad: '#ff2e88', ink: '#2b2233', line: 'rgba(43,34,51,0.18)', paper: '#fffaf3', cursor: '#7a3fb8', text: '#2b2233', muted: 'rgba(43,34,51,0.6)' };
 
   /* ---------- what the bands say: pure ---------- */
@@ -66,11 +80,21 @@
   }
 
   /* ---------- drawing ---------- */
-  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1 } = {}) {
+  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1, head = 'face' } = {}) {
     if (!lm) return;
     const X = (p) => (mirror ? 1 - p[0] : p[0]) * W, Y = (p) => p[1] * H, V = (p) => (p[3] == null ? 1 : p[3]);
     ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, W / 320);
+    const h = head === 'face' ? null : headShape(lm);
+    if (h) {
+      const r = Math.max(4, h.r * W), cx = X(h.c), cy = Y(h.c);
+      ctx.strokeStyle = C.bone; ctx.fillStyle = C.bone;
+      ctx.beginPath(); ctx.moveTo(X(h.neck), Y(h.neck)); ctx.lineTo(cx, cy); ctx.stroke();
+      if (head === 'ball') { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+      else if (head === 'circle') { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
+      else if (head === 'dot') { ctx.beginPath(); ctx.arc(cx, cy, Math.max(3, r * 0.42), 0, Math.PI * 2); ctx.fill(); }
+    }
     for (const [a, b] of BONES) {
+      if (h && HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
       const p = lm[a], q = lm[b]; if (!p || !q || V(p) < 0.3 || V(q) < 0.3) continue;
       const isHot = hot.has(a) || hot.has(b);
       ctx.strokeStyle = isHot ? C.hot : (V(p) < 0.6 || V(q) < 0.6) ? C.boneDim : C.bone;
@@ -78,6 +102,7 @@
     }
     const r = Math.max(4, W / 220);
     for (const i of JOINTS) {
+      if (h && i === 0) continue;
       const p = lm[i]; if (!p || V(p) < 0.3) continue;
       const isHot = hot.has(i); ctx.fillStyle = isHot ? C.hot : C.joint;
       ctx.beginPath(); ctx.arc(X(p), Y(p), isHot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
@@ -101,7 +126,7 @@
       ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(0, 0, W, H);   /* the skeleton has to stay readable over it */
     }
     const hot = new Set(); for (const id of f.f || []) for (const i of ((meta.faults || {})[id] || {}).landmarks || []) hot.add(i);
-    drawSkeleton(ctx, f.lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35 });
+    drawSkeleton(ctx, f.lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35, head: meta.head || 'face' });
     const fs = Math.max(12, Math.round(H / 18)); ctx.font = `800 ${fs}px system-ui, sans-serif`; ctx.textBaseline = 'top';
     const done = tl.reps.filter((r) => r.t1 <= t && r.full).length;
     const label = meta.type === 'hold' ? `${Math.max(0, (t - tl.t0) / 1000).toFixed(0)} s` : `${done} / ${meta.target || '–'}`;
@@ -275,6 +300,6 @@
 </body></html>`;
   }
 
-  const Replay = { timeline, frameAt, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, BONES };
+  const Replay = { timeline, frameAt, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, headShape, BONES, HEAD_LINKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = Replay; else root.Replay = Replay;
 })(typeof window !== 'undefined' ? window : globalThis);

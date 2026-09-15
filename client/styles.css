@@ -515,3 +515,17 @@ a.ex-card .name { color: var(--text, inherit); }
 .rp-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--muted); }
 .rp-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
 .rp-legend i.tick { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 9px solid var(--bad); border-radius: 0; background: none; }
+
+/* ---------- review: what to do next, and the way out, both at the top ---------- */
+.rv-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin: -4px -4px 0; padding: 10px 4px; background: linear-gradient(var(--bg) 78%, transparent); }
+.rv-bar .clock { font-weight: 900; font-variant-numeric: tabular-nums; margin-left: auto; color: var(--ink-soft); }
+.panel.tight { padding: 12px 14px; }
+.panel.tight h3 { margin-bottom: 6px; }
+/* one line per suggestion: what to do, how often it came up, and why underneath */
+.fixlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fixlist li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; line-height: 1.3; }
+.fixlist .n { font-family: var(--font-mono); font-weight: 700; color: var(--bad); font-size: .85rem; }
+.fixlist .s { font-weight: 800; }
+.fixlist .t { grid-column: 2; color: var(--muted); font-size: .85rem; }
+.fixlist .empty { grid-column: 1 / -1; }

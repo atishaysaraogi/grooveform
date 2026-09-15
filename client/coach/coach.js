@@ -23,7 +23,7 @@
     get(k, d) { try { const v = localStorage.getItem('fyzio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem('fyzio.' + k, JSON.stringify(v)); } catch { } }
   };
-  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', mirror: 'auto', fps: 'off', video: 'on' }, store.get('settings', {}));
+  const settings = Object.assign({ model: 'lite', smooth: 'med', voice: 'on', voiceName: 'auto', mirror: 'auto', fps: 'off', video: 'on', head: '' }, store.get('settings', {}));
   function saveSettings() { store.set('settings', settings); }
   function setSetting(k, val) { settings[k] = val; saveSettings(); if (k === 'smooth') applySmoothing(); if (k === 'voice') { voice.muted = val === 'off'; if (typeof applyVoiceButton === 'function') applyVoiceButton(); } if (k === 'voiceName') voiceCache = null; }
   function show() { /* screens are managed by the portal */ }
@@ -722,6 +722,20 @@
   }
 
   /* ---------- drawing ---------- */
+  /* The head, in whichever style settings.json asks for (see FormEngine.headShape). Drawn with the
+     same helper everywhere so the live camera, the replay and the Studio all show the same figure. */
+  function drawHead(ctx, pts, X, Y, S, style, colour, lineW) {
+    if (style === 'face') return false;                       // the nose-and-ear links are in CONNECTIONS already
+    const h = E.headShape(pts); if (!h) return true;
+    const r = Math.max(4, Math.abs(X({ x: h.x + h.r, y: h.y }) - X({ x: h.x, y: h.y })));
+    ctx.save(); ctx.lineWidth = lineW; ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(X(h.neck), Y(h.neck)); ctx.lineTo(X(h), Y(h)); ctx.stroke();   // the neck, in every style but face
+    if (style === 'ball') { ctx.beginPath(); ctx.arc(X(h), Y(h), r, 0, Math.PI * 2); ctx.fill(); }
+    else if (style === 'circle') { ctx.beginPath(); ctx.arc(X(h), Y(h), r, 0, Math.PI * 2); ctx.stroke(); }
+    else if (style === 'dot') { ctx.beginPath(); ctx.arc(X(h), Y(h), Math.max(3, r * 0.42), 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    return true;                                              // the caller skips the head links and the face joints
+  }
   function draw(pts, aspect, W, H, lost) {
     ctx.clearRect(0, 0, W, H);
     if (!pts) return;
@@ -732,8 +746,11 @@
     if (live?.state === 'active' && live.session.m) drawGhost(pts, X, Y, W, H);
     ctx.lineWidth = Math.max(3, W / 320); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.globalAlpha = alpha;
+    const headStyle = settings.head || (E.settings.skeleton || {}).head || 'face';
+    const ownHead = drawHead(ctx, pts, X, Y, null, headStyle, lost ? 'rgba(255,243,226,0.45)' : '#fff3e2', ctx.lineWidth = Math.max(3, W / 320));
     // bones
     for (const [a, b] of E.CONNECTIONS) {
+      if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
       const p = pts[a], q = pts[b]; if (p.v < 0.3 || q.v < 0.3) continue;
       const hot = faulty && (focus.has(a) || focus.has(b));
       ctx.strokeStyle = hot ? '#ff2e88' : (p.v < 0.6 || q.v < 0.6) ? 'rgba(255,243,226,0.45)' : '#fff3e2';
@@ -742,6 +759,7 @@
     // joints
     const r = Math.max(4, W / 220);
     for (const i of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
+      if (ownHead && i === 0) continue;
       const p = pts[i]; if (p.v < 0.3) continue;
       const hot = faulty && focus.has(i);
       ctx.fillStyle = hot ? '#ff2e88' : '#b8f542'; ctx.beginPath(); ctx.arc(X(p), Y(p), hot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
@@ -912,7 +930,7 @@
       faults[f.id] = { label: f.label, cue: f.cue, tip: f.tip, landmarks };
     }
     const side = lastRec.opts && lastRec.opts.work ? `${sideName(lastRec.opts.work)} ${limbWord(ex)}` : lastRec.opts && SIDE_CODE[lastRec.opts.side] ? `${lastRec.opts.side} ${limbWord(ex)}` : '';
-    return { name: ex.name, type: ex.type, target: rv.target, side, faults };
+    return { name: ex.name, type: ex.type, target: rv.target, side, faults, head: settings.head || (E.settings.skeleton || {}).head || 'face' };
   }
   let replayer = null;
   function renderReplay(rv) {
@@ -956,7 +974,15 @@
     let s = short
       ? `${which} done — ${rv.type === 'reps' ? `${rv.reps} of ${rv.target} reps` : `${Math.round(rv.holdSec)} of ${rv.target} seconds`}. `
       : `${which} complete. `;
-    s += rv.tips.length ? `Next set, try: ${rv.tips[0].cue || rv.tips[0].label}.` : 'Nothing to fix — same again.';
+    /* Every suggestion worth hearing, not just the first — reading the screen is the thing this
+       is meant to replace. "Major" is a severity weight from settings.json, heaviest first, capped
+       so it cannot become a paragraph; a set with only light faults still gets the heaviest one. */
+    const sc = (E.settings.score || {}), minW = sc.speakWeight ?? 2, max = sc.speakMax ?? 4;
+    const sorted = Object.values(rv.faults || {}).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
+    const major = sorted.filter((fc) => fc.fault.weight >= minW).slice(0, max);
+    const fixes = (major.length ? major : sorted.slice(0, 1)).map((fc) => String(fc.fault.cue || fc.fault.label)).map((c) => c[0].toLowerCase() + c.slice(1));
+    const list = fixes.length < 2 ? fixes[0] : fixes.slice(0, -1).join(', ') + ' and ' + fixes[fixes.length - 1];
+    s += fixes.length ? `Next set: ${list}.` : 'Nothing to fix — same again.';
     return s;
   }
   function renderReview(rv) {
@@ -979,9 +1005,13 @@
       const path = tr.map((p, i) => (i ? 'L' : 'M') + (p[0] / T * 600).toFixed(1) + ' ' + (85 - E.clamp(p[1], 0, 1.2) / 1.2 * 80).toFixed(1)).join(' ');
       $('rv-trace').innerHTML = `<line x1="0" y1="${85 - E.FULL / 1.2 * 80}" x2="600" y2="${85 - E.FULL / 1.2 * 80}"></line><path d="${path}"></path>`;
     } else wrap.hidden = true;
+    /* Advice, not diagnosis: the cue says what to do ("Slow it down"), the label only names what
+       went wrong ("Too fast"). Heaviest first, so the top line is the one worth fixing. */
     const fl = $('rv-faults');
     const items = Object.values(rv.faults).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
-    fl.innerHTML = items.length ? items.map(fc => `<div class="fault"><span class="n">×${fc.n}</span><span><span class="l">${fc.fault.label}</span><br><span class="t">${fc.fault.tip}</span></span></div>`).join('') : '<p class="empty">No faults flagged. Same again next set — or add a couple of reps.</p>';
+    fl.innerHTML = items.length
+      ? items.map((fc) => `<li><span class="n">×${fc.n}</span><span class="s">${escT(fc.fault.cue || fc.fault.label)}</span><span class="t">${escT(fc.fault.tip)}</span></li>`).join('')
+      : '<li class="empty">Nothing to fix. Same again next set — or add a couple of reps.</li>';
     const spk = $('btn-speak-review'); if (spk) spk.onclick = () => { voice.unlock(); voice.say(spokenSummary(rv), { priority: 2 }); };
     renderReplay(rv);
     const dg = $('rv-diag'); if (!dg) return; dg.hidden = !lastRec;

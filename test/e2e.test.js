@@ -228,19 +228,33 @@ async function runCoachedSet(page, side = 'right') {
     await pro.click('#rv-replay .rp-timeline', { position: { x: 40, y: 20 } }); await pro.click('#rv-replay .rp-play'); await pro.waitForTimeout(400); await pro.click('#rv-replay .rp-play');
     const html = await pro.evaluate(async () => { const src = await (await fetch('coach/replay.js')).text(); const r = window.FyzioCoach.lastRec; return window.Replay.reportHtml(r, { name: 'Shoulder abduction', type: 'reps', target: 8, faults: {} }, { score: 90, headline: 'x', type: 'reps', target: 8, reps: 8, partials: 0, faults: {} }, src).length; });
     assert.ok(html > 20000, 'the report is a full page with the recording inside: ' + html + ' bytes');
+    await pro.evaluate(() => { for (let e = document.querySelector('#rv-next'); e; e = e.parentElement) if (e.scrollTop) e.scrollTop = 0; window.scrollTo(0, 0); });
+    await pro.screenshot({ path: path.join(SHOTS, 'review-top.png') });
+    await pro.evaluate(() => { for (let e = document.querySelector('#rv-next'); e; e = e.parentElement) if (e.scrollHeight > e.clientHeight + 40) { e.scrollTop = 460; break; } });
     await pro.screenshot({ path: path.join(SHOTS, 'review-replay.png') });
     /* what the coach says at the end: the set, then the one thing to try — not a read-out of the counts */
     const said = await pro.evaluate(() => {
       const f = window.FyzioCoach;
+      const F = (cue, weight, n) => ({ fault: { cue, label: cue + '!', weight }, n });
+      const set = (o) => ({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [], ...o });
       return {
-        done: f.spokenSummary({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [{ label: 'Leaning away', cue: 'Stay tall' }] }),
-        clean: f.spokenSummary({ type: 'reps', reps: 8, target: 8, partials: 0, tips: [] }),
-        short: f.spokenSummary({ type: 'reps', reps: 5, target: 8, partials: 1, tips: [] }),
+        one: f.spokenSummary(set({ faults: { a: F('Stay tall', 2, 1) } })),
+        many: f.spokenSummary(set({ faults: { a: F('Stay tall', 2, 1), b: F('Slow it down', 3, 4), c: F('Heels down', 2, 2) } })),
+        light: f.spokenSummary(set({ faults: { a: F('All the way', 1, 2) } })),
+        clean: f.spokenSummary(set({ faults: {} })),
+        short: f.spokenSummary(set({ reps: 5, partials: 1, faults: {} })),
       };
     });
-    assert.equal(said.done, 'Set 1 complete. Next set, try: Stay tall.', JSON.stringify(said));
+    assert.equal(said.one, 'Set 1 complete. Next set: stay tall.', JSON.stringify(said));
+    /* every major one, heaviest first, as things to do rather than things that went wrong */
+    assert.equal(said.many, 'Set 1 complete. Next set: slow it down, heels down and stay tall.', JSON.stringify(said));
+    assert.equal(said.light, 'Set 1 complete. Next set: all the way.', 'a set with only light faults still gets the heaviest: ' + JSON.stringify(said));
     assert.equal(said.clean, 'Set 1 complete. Nothing to fix — same again.', JSON.stringify(said));
     assert.equal(said.short, 'Set 1 done — 5 of 8 reps. Nothing to fix — same again.', 'a set cut short still says how far it got: ' + JSON.stringify(said));
+    /* and the written list at the top of the review says the same things, in the same words */
+    const top = await pro.evaluate(() => { const el = document.querySelector('#rv-next'); const r = el.getBoundingClientRect(), s = document.querySelector('#rv-stats').getBoundingClientRect(); return { above: r.top < s.top, text: el.textContent.trim().slice(0, 60), bar: !document.querySelector('#rv-actions').hidden, buttons: [...document.querySelectorAll('#rv-actions button')].map((b) => b.textContent) }; });
+    assert.ok(top.above, 'what to work on sits above the stats: ' + JSON.stringify(top));
+    assert.ok(top.bar && top.buttons.length, 'and the way out is at the top: ' + JSON.stringify(top));
     /* the downloadable recording is landmarks and events only, whatever is held in memory for the replay */
     const redacted = await pro.evaluate(() => { const r = window.FyzioCoach.lastRec; r.video = new Blob(['not-really-a-video'], { type: 'video/webm' }); r.videoMime = 'video/webm'; const j = JSON.parse(window.FyzioCoach.recJson()); return { keys: Object.keys(j).filter((k) => k === 'video' || k === 'videoMime'), all: Object.keys(j).filter((k) => k.startsWith('video')), frames: j.frames.length }; });
     assert.deepEqual(redacted.keys, [], 'no video reaches the file: ' + JSON.stringify(redacted));

@@ -301,12 +301,27 @@
     const res = landmarker.detectForVideo(video, now);
     return res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
   }
+  /* The head, in whichever style settings.json asks for (see FormEngine.headShape). Drawn with the
+     same helper everywhere so the live camera, the replay and the Studio all show the same figure. */
+  function drawHead(ctx, pts, X, Y, S, style, colour, lineW) {
+    if (style === 'face') return false;                       // the nose-and-ear links are in CONNECTIONS already
+    const h = E.headShape(pts.map((l) => ({ x: l.x, y: l.y, v: l.visibility ?? l.v ?? 1 }))); if (!h) return true;
+    const r = Math.max(4, Math.abs(X({ x: h.x + h.r, y: h.y }) - X({ x: h.x, y: h.y })));
+    ctx.save(); ctx.lineWidth = lineW; ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(X(h.neck), Y(h.neck)); ctx.lineTo(X(h), Y(h)); ctx.stroke();   // the neck, in every style but face
+    if (style === 'ball') { ctx.beginPath(); ctx.arc(X(h), Y(h), r, 0, Math.PI * 2); ctx.fill(); }
+    else if (style === 'circle') { ctx.beginPath(); ctx.arc(X(h), Y(h), r, 0, Math.PI * 2); ctx.stroke(); }
+    else if (style === 'dot') { ctx.beginPath(); ctx.arc(X(h), Y(h), Math.max(3, r * 0.42), 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    return true;                                              // the caller skips the head links and the face joints
+  }
   function drawSkeleton(ctx, lm, W, H, color = '#fff3e2', focus = []) {
     if (!lm) return;
     const P = (i) => ({ x: lm[i].x * W, y: lm[i].y * H, v: lm[i].visibility ?? lm[i].v ?? 1 });
     ctx.lineWidth = Math.max(2, W / 320); ctx.strokeStyle = color; ctx.lineCap = 'round';
-    for (const [a, b] of E.CONNECTIONS) { const p = P(a), q = P(b); if (p.v < 0.3 || q.v < 0.3) continue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
-    for (const i of [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) { const p = P(i); if (p.v < 0.3) continue; ctx.fillStyle = focus.includes(i) ? '#ff2e88' : color; ctx.beginPath(); ctx.arc(p.x, p.y, focus.includes(i) ? W / 90 : W / 160, 0, Math.PI * 2); ctx.fill(); }
+    const ownHead = drawHead(ctx, lm, (p) => p.x * W, (p) => p.y * H, null, (E.settings.skeleton || {}).head || 'face', color, ctx.lineWidth);
+    for (const [a, b] of E.CONNECTIONS) { if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue; const p = P(a), q = P(b); if (p.v < 0.3 || q.v < 0.3) continue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+    for (const i of [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) { if (ownHead && (i === 0 || i === 7 || i === 8)) continue; const p = P(i); if (p.v < 0.3) continue; ctx.fillStyle = focus.includes(i) ? '#ff2e88' : color; ctx.beginPath(); ctx.arc(p.x, p.y, focus.includes(i) ? W / 90 : W / 160, 0, Math.PI * 2); ctx.fill(); }
   }
 
   /* ---------- routing / steps ---------- */

@@ -301,9 +301,22 @@
     const steps = expandSides(rawSteps);
     const coach = $('coach'); coach.hidden = false; document.body.style.overflow = 'hidden';
     const portal = coach.querySelector('#rv-portal');
-    const close = () => { clearInterval(restTimer); coach.hidden = true; document.body.style.overflow = ''; coach.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); };
+    /* The way out of the review lives at the TOP, above the score: after a set you want Next set,
+       Done or Back, not a scroll past the charts to find them. The panels below keep the things
+       you read or fill in — the rest clock, the effort rating, the note. */
+    const topBar = coach.querySelector('#rv-actions');
+    const setActions = (list) => {
+      const items = (list || []).filter(Boolean);
+      topBar.hidden = !items.length; topBar.innerHTML = '';
+      for (const a of items) {
+        if (a.clock) { const sp = document.createElement('span'); sp.className = 'clock'; sp.id = a.id || ''; sp.textContent = a.label; topBar.appendChild(sp); continue; }
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (a.cls || 'primary'); b.textContent = a.label; if (a.id) b.id = a.id; b.onclick = a.fn; topBar.appendChild(b);
+      }
+    };
+    const backAction = { label: 'Back', cls: 'ghost', fn: () => { clearInterval(restTimer); close(); location.hash = back; } };
+    const close = () => { clearInterval(restTimer); coach.hidden = true; document.body.style.overflow = ''; coach.querySelector('#rv-actions').hidden = true; coach.querySelector('#rv-actions').innerHTML = ''; coach.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); };
     const results = []; let restTimer = null, si = -1, step = null, total = 1, rest = 60, target = null, o = {}, setNo = 0;
-    const showLive = () => { coach.querySelector('#screen-live').classList.add('active'); coach.querySelector('#screen-review').classList.remove('active'); portal.innerHTML = ''; };
+    const showLive = () => { coach.querySelector('#screen-live').classList.add('active'); coach.querySelector('#screen-review').classList.remove('active'); portal.innerHTML = ''; setActions([]); };
     const showReview = (manual) => { coach.querySelector('#screen-live').classList.remove('active'); const rv = coach.querySelector('#screen-review'); rv.classList.add('active'); rv.classList.toggle('manual', !!manual); };
     const beginStep = () => {
       si++; step = steps[si]; setNo = 0;
@@ -346,7 +359,9 @@
       const tips = (rv && rv.tips) || [];
       const did = rv.type === 'reps' ? `${rv.reps} of ${rv.target} reps${rv.partials ? `, ${rv.partials} partial` : ''}` : `held ${Math.round(rv.holdSec)} s of ${rv.target}`;
       if (!tips.length) return { did, text: `${did} — nothing to correct. Same again.`, checks: [] };
-      return { did, text: `${tips[0].label}: ${tips[0].tip}`, checks: tips.slice(0, 3).map((t) => ({ label: `${t.label} ×${t.n}`, ok: false })) };
+      /* the same words as the review and the voice: what to do, not what went wrong */
+      const say = (t) => t.cue || t.label;
+      return { did, text: `${say(tips[0])} — ${tips[0].tip}`, checks: tips.slice(0, 3).map((t) => ({ label: `${say(t)} ×${t.n}`, ok: false })) };
     };
     /* Rest with the camera, skeleton and your last count still on screen. */
     const restOnCamera = ({ title, review, note, goLabel, onGo }) => {
@@ -361,10 +376,10 @@
       FyzioCoach.voice.say(`Set ${setNo} done. Rest ${rest} seconds.`, { priority: 2 });
       if (held) return restOnCamera({ title: `Set ${setNo} of ${total} done · ${coaching(review).did}`, review, note: `Set ${setNo + 1} starts by itself — get back into position.`, goLabel: `Start set ${setNo + 1}`, onGo: startSet });
       let left = rest;
-      portal.innerHTML = `<div class="panel stack rest"><h3>Set ${setNo} of ${total} done</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">Set ${setNo + 1} starts by itself — get back into position.</p><div class="row"><button class="btn primary" id="rest-go">Start set ${setNo + 1} now</button><button class="btn ghost" id="rest-stop">Stop here</button></div></div>`;
+      portal.innerHTML = `<div class="panel stack rest"><h3>Set ${setNo} of ${total} done</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">Set ${setNo + 1} starts by itself — get back into position.</p></div>`;
       const go = () => { clearInterval(restTimer); startSet(); };
-      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
-      portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
+      setActions([{ label: `Start set ${setNo + 1}`, id: 'rest-go', fn: go }, { label: 'Stop here', cls: 'ghost', id: 'rest-stop', fn: () => { clearInterval(restTimer); savePanel(); } }, backAction, { clock: true, id: 'rest-left-top', label: `${left} s` }]);
+      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
     };
     /* Between two exercises of a routine: same rest clock, but it rolls into the next move. */
     const nextStepPanel = (review, held) => {
@@ -376,23 +391,25 @@
       const goLabel = switching ? `Start ${nextSide}` : `Start ${next.ex.name} now`;
       FyzioCoach.voice.say(switching ? `Now the other side. ${nextSide}. Rest ${rest} seconds.` : `${step.ex.name} done. Next up, ${next.ex.name}. Rest ${rest} seconds.`, { priority: 2 });
       if (held) return restOnCamera({ title, review, note: (switching ? 'Swap over — ' : '') + optionSummary(exById(next.ex.id) || next.ex, next.opts), goLabel, onGo: beginStep });
-      portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>${esc(title)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p><div class="row"><button class="btn primary" id="rest-go">${esc(goLabel)}</button><button class="btn ghost" id="rest-stop">Finish here</button></div></div>`;
+      portal.innerHTML = `<div class="panel stack rest"><span class="eyebrow">${si + 1} of ${steps.length} done</span><h3>${esc(title)}</h3><div class="rest-clock"><span id="rest-left">${left}</span><span class="unit">s rest</span></div><p class="muted">${esc(optionSummary(exById(next.ex.id) || next.ex, next.opts))}</p></div>`;
       const go = () => { clearInterval(restTimer); beginStep(); };
-      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
-      portal.querySelector('#rest-go').onclick = go; portal.querySelector('#rest-stop').onclick = () => { clearInterval(restTimer); savePanel(); };
+      setActions([{ label: goLabel, id: 'rest-go', fn: go }, { label: 'Finish here', cls: 'ghost', id: 'rest-stop', fn: () => { clearInterval(restTimer); savePanel(); } }, backAction, { clock: true, id: 'rest-left-top', label: `${left} s` }]);
+      restTimer = setInterval(() => { left--; const el = portal.querySelector('#rest-left'); if (el) el.textContent = left; const tp = topBar.querySelector('#rest-left-top'); if (tp) tp.textContent = left + ' s'; if (left <= 3 && left > 0) FyzioCoach.voice.beep(660, 0.06); if (left <= 0) go(); }, 1000);
     };
     const savePanel = () => {
       const n = results.length; const label = n > 1 ? `these ${n} sets` : 'this set';
-      if (!me && env.solo) { portal.innerHTML = `<div class="panel stack"><div class="row"><button class="btn primary" id="rv-discard">Done</button></div></div>`; portal.querySelector('#rv-discard').onclick = () => { close(); location.hash = back; }; return; }
-      if (!me) { portal.innerHTML = `<div class="panel stack"><h3>Save ${label}?</h3><p class="muted">Sign in (free) to keep your history, take notes and track progress over time.</p><div class="row"><button class="btn primary" id="rv-login">Sign in to save</button><button class="btn ghost" id="rv-discard">Done</button></div></div>`;
-        portal.querySelector('#rv-discard').onclick = () => { close(); location.hash = back; }; portal.querySelector('#rv-login').onclick = () => { try { sessionStorage.setItem('fz.pending', JSON.stringify(results.map(r => ({ ...r, diagnostics: undefined })))); } catch { } close(); requireLogin(back); }; return; }
+      const done = () => { close(); location.hash = back; };
+      if (!me && env.solo) { portal.innerHTML = ''; setActions([{ label: 'Done', id: 'rv-discard', fn: done }]); return; }
+      const signIn = () => { try { sessionStorage.setItem('fz.pending', JSON.stringify(results.map(r => ({ ...r, diagnostics: undefined })))); } catch { } close(); requireLogin(back); };
+      if (!me) { portal.innerHTML = `<div class="panel stack"><h3>Save ${label}?</h3><p class="muted">Sign in (free) to keep your history, take notes and track progress over time.</p></div>`;
+        setActions([{ label: 'Sign in to save', id: 'rv-login', fn: signIn }, { label: 'Done', cls: 'ghost', id: 'rv-discard', fn: done }]); return; }
       let effort = null;
-      portal.innerHTML = `<div class="panel stack"><h3>Save ${label}</h3><div><span class="muted" style="font-size:.9rem">How hard was it? (0 easy – 10 max)</span><div class="pain" id="effort">${Array.from({ length: 11 }, (_, i) => `<button type="button" data-v="${i}">${i}</button>`).join('')}</div></div><label class="field"><span>Note (optional)</span><textarea id="rv-note" maxlength="1000" placeholder="e.g. left knee clicked on rep 4"></textarea></label><div class="row"><button class="btn primary" id="rv-submit">Save</button><button class="btn ghost" id="rv-discard">Discard</button></div><p class="error" id="rv-err"></p></div>`;
+      portal.innerHTML = `<div class="panel stack"><h3>Save ${label}</h3><div><span class="muted" style="font-size:.9rem">How hard was it? (0 easy – 10 max)</span><div class="pain" id="effort">${Array.from({ length: 11 }, (_, i) => `<button type="button" data-v="${i}">${i}</button>`).join('')}</div></div><label class="field"><span>Note (optional)</span><textarea id="rv-note" maxlength="1000" placeholder="e.g. left knee clicked on rep 4"></textarea></label><p class="error" id="rv-err"></p></div>`;
       portal.querySelectorAll('#effort button').forEach(b => b.onclick = () => { effort = Number(b.dataset.v); portal.querySelectorAll('#effort button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-      portal.querySelector('#rv-discard').onclick = () => { close(); location.hash = back; };
-      portal.querySelector('#rv-submit').onclick = async () => { const btn = portal.querySelector('#rv-submit'); btn.disabled = true; try {
+      const submit = async () => { const btn = topBar.querySelector('#rv-submit'); btn.disabled = true; try {
           for (const r of results) await api('POST', '/api/sessions', { routineItemId: r.routineItemId, review: r.review, opts: r.opts, diagnostics: me.prefs.store_diagnostics !== false ? r.diagnostics : undefined, effort, note: portal.querySelector('#rv-note').value, startedAt: r.startedAt, source: r.source });
           close(); toast(n > 1 ? `${n} sets saved` : 'Saved'); location.hash = back; } catch (err) { portal.querySelector('#rv-err').textContent = err.message; btn.disabled = false; } };
+      setActions([{ label: 'Save', id: 'rv-submit', fn: submit }, { label: 'Discard', cls: 'ghost', id: 'rv-discard', fn: done }]);
     };
     beginStep();
   }
@@ -570,7 +587,7 @@
       <div class="card"><form class="form" id="f-acc"><div class="cols"><label class="field"><span>Name</span><input type="text" name="name" value="${esc(me.name || '')}" maxlength="120"></label><label class="field"><span>Sign-in</span><input type="text" value="${esc(me.identifier)}" disabled></label></div><button class="btn primary small" type="submit" style="justify-self:start">Save</button></form></div>
       <div class="card"><h3>Plan</h3><p><strong>${esc(ent.tier === 'anon' ? 'Free' : ent.tier)}</strong>${subs.filter(s => s.active).map(s => ` · ${esc(s.title)} until ${fmtDay(s.periodEnd)}${s.status === 'cancelled' ? ' (not renewing)' : ''}`).join('')}</p><div class="row" style="margin-top:8px"><a class="btn ghost small" href="#/pricing">${subs.some(s => s.active) ? 'Extend or change plan' : 'See plans'}</a>${subs.filter(s => s.active && s.status === 'active').map(s => `<button class="btn ghost small" data-cancel="${s.id}">Cancel ${esc(s.title)}</button>`).join('')}</div>${subs.length ? `<table class="plain" style="margin-top:10px"><thead><tr><th>Plan</th><th>Status</th><th>Until</th><th>Paid</th></tr></thead><tbody>${subs.map(s => `<tr><td>${esc(s.title)} (${esc(s.period)})</td><td>${esc(s.status)}</td><td>${fmtDay(s.periodEnd)}</td><td>${rupees(s.amountPaise)}</td></tr>`).join('')}</tbody></table>` : ''}</div>
       ${me.role === 'member' ? `<div class="card"><h3>Are you a physio or trainer?</h3><p class="muted" style="font-size:.9rem">Switch to a curator account to get a listing and send routines to clients. Your history stays.</p><button class="btn ghost small" id="acc-curator" style="margin-top:8px">Switch to curator account</button></div>` : ''}
-      <div class="card"><h3>Coach settings (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Keep the set&rsquo;s video</span><select id="cs-video"><option value="on">On — watch it back</option><option value="off">Off — skeleton only</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto (most natural available)</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
+      <div class="card"><h3>Coach settings (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Keep the set&rsquo;s video</span><select id="cs-video"><option value="on">On — watch it back</option><option value="off">Off — skeleton only</option></select></label><label class="field"><span>Head on the skeleton</span><select id="cs-head"><option value="">Default</option><option value="ball">Solid ball</option><option value="circle">Outlined circle</option><option value="dot">Small dot</option><option value="face">Nose and ears</option><option value="none">No head</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto (most natural available)</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
       <div class="card"><h3>How it works</h3><p class="muted">The three steps of a session: position the camera, follow the voice, review the set.</p><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-intro">Show me again</button></div></div>
       <div class="card"><h3>Privacy</h3><label class="row"><input type="checkbox" id="acc-diag" ${me.prefs.store_diagnostics !== false ? 'checked' : ''}> <span>Store movement keypoints (never video) to improve the coach</span></label><div class="row" style="margin-top:10px"><a class="btn ghost small" href="/api/me/export" download="fyzio-my-data.json">Download my data</a>${me.status === 'erasure_requested' ? '<button class="btn ghost small" id="acc-cancel-erase">Cancel deletion</button>' : '<button class="btn danger small" id="acc-erase">Delete my account</button>'}</div><p class="meta" style="margin-top:8px">Grievances: ${esc(notice.grievanceContact)} · Notice v${esc(me.consentVersion || '')}</p></div></div>`);
     $('f-acc').onsubmit = async (e) => { e.preventDefault(); await api('PATCH', '/api/me', { name: e.target.name.value }); await refreshMe(); toast('Saved'); route(); };
@@ -584,13 +601,13 @@
 
   function renderSettings() {
     render(`<div class="stack" style="max-width:640px"><h1>Settings</h1>
-      <div class="card"><h3>Coach (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Keep the set&rsquo;s video</span><select id="cs-video"><option value="on">On — watch it back</option><option value="off">Off — skeleton only</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
+      <div class="card"><h3>Coach (this device)</h3><div class="form cols"><label class="field"><span>Pose model</span><select id="cs-model"><option value="lite">Lite (fast)</option><option value="full">Full (precise)</option></select></label><label class="field"><span>Smoothing</span><select id="cs-smooth"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label><label class="field"><span>Voice cues</span><select id="cs-voice"><option value="on">On</option><option value="off">Off</option></select></label><label class="field"><span>Keep the set&rsquo;s video</span><select id="cs-video"><option value="on">On — watch it back</option><option value="off">Off — skeleton only</option></select></label><label class="field"><span>Head on the skeleton</span><select id="cs-head"><option value="">Default</option><option value="ball">Solid ball</option><option value="circle">Outlined circle</option><option value="dot">Small dot</option><option value="face">Nose and ears</option><option value="none">No head</option></select></label><label class="field"><span>Voice</span><select id="cs-voicename"><option value="auto">Auto</option></select></label></div><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-test">Hear a sample</button></div></div>
       <div class="card"><h3>How it works</h3><p class="muted">The three steps of a session: position the camera, follow the voice, review the set.</p><div class="row" style="margin-top:8px"><button class="btn ghost small" id="cs-intro">Show me again</button></div></div>
       <div class="card"><h3>Privacy</h3><p class="muted">Camera video is processed on this device and never uploaded. A set&rsquo;s video is held in this tab only while you review it, and is never part of the diagnostics file or of anything a curator sees — those carry joint positions only. Nothing is stored anywhere but this browser.</p></div></div>`);
     wireCoachSettings();
   }
   function wireCoachSettings() {
-    for (const k of ['model', 'smooth', 'voice', 'video']) { const el = $('cs-' + k); el.value = FyzioCoach.settings[k]; el.onchange = () => FyzioCoach.setSetting(k, el.value); }
+    for (const k of ['model', 'smooth', 'voice', 'video', 'head']) { const el = $('cs-' + k); el.value = FyzioCoach.settings[k]; el.onchange = () => FyzioCoach.setSetting(k, el.value); }
     const fillVoices = () => { const sel = $('cs-voicename'); if (!sel) return; const cur = FyzioCoach.settings.voiceName || 'auto'; const auto = FyzioCoach.pickVoice(); sel.innerHTML = `<option value="auto">Auto${auto ? ' — ' + esc(auto.name) : ''}</option>` + FyzioCoach.listVoices().map(v => `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join(''); sel.value = cur; };
     fillVoices(); setTimeout(fillVoices, 800); $('cs-voicename').onchange = () => FyzioCoach.setSetting('voiceName', $('cs-voicename').value);
     $('cs-test').onclick = () => { FyzioCoach.voice.unlock(); FyzioCoach.voice.muted = false; FyzioCoach.voice.say('Nice and slow. Keep the elbow at your side. Three, four, five.', { priority: 2 }); FyzioCoach.voice.muted = FyzioCoach.settings.voice === 'off'; };

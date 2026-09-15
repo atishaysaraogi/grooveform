@@ -73,7 +73,9 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 7. Prop the phone visibly crooked (10–15°) and do a set: the positioning overlay says "phone tilted N°, corrected"; reps still count; the review's JSON has `camera.rollFrom: "sensor"`. Turn 30° away from the lens mid-set: "turn to face the camera" / "turn side-on" within a couple of seconds.
 8. Band pull-apart on a real phone: the coach asks for the end position before the set, the target follows what was shown, and skipping it falls back to the file's number.
 9. Pick the left leg on a front-on move and work the right one: within about half a second the coach says "following your right leg" and counts from there.
-10. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
+10. Review: Save / Discard (or Start set N / Stop here during a rest) sit at the top and stay there while you scroll; "Work on next" is the first panel under the score and reads as instructions ("Slow it down"), not diagnoses ("Too fast"); the voice reads every major one.
+11. Settings → Head on the skeleton: each of the five styles draws sensibly front-on and side-on, live and in the replay.
+12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI
 

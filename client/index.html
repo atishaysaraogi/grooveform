@@ -119,6 +119,7 @@
 <!-- ===== Review ===== -->
 <section id="screen-review" class="screen coach-review">
   <div class="wrap stack">
+    <div class="rv-bar" id="rv-actions" hidden></div>
     <span class="eyebrow">Set complete</span>
     <div class="review-head">
       <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="52"></circle><circle class="val" id="ring-val" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle><text id="ring-text" x="60" y="70" text-anchor="middle">0</text></svg>
@@ -126,6 +127,10 @@
         <h1 id="rv-headline"></h1>
         <p class="muted" id="rv-sub"></p>
       </div>
+    </div>
+    <div class="panel tight" id="rv-next">
+      <h3>Work on next</h3>
+      <ol class="fixlist" id="rv-faults"></ol>
     </div>
     <div class="stats" id="rv-stats"></div>
     <div class="panel" id="rv-replay" hidden>
@@ -141,10 +146,6 @@
       <div class="legend"><span><i style="background:var(--good)"></i>Clean</span><span><i style="background:var(--bad)"></i>Fault flagged</span><span><i style="background:var(--warn)"></i>Partial (not counted)</span></div>
       <svg class="trace" id="rv-trace" viewBox="0 0 600 90" preserveAspectRatio="none"></svg>
       <div class="replist" id="rv-replist"></div>
-    </div>
-    <div class="panel">
-      <h3>Work on next</h3>
-      <div class="fault-list" id="rv-faults"></div>
     </div>
     <div class="panel" id="rv-diag" hidden>
       <h3>Diagnostics</h3>
