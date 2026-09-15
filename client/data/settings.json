@@ -7,7 +7,7 @@
       "fault.persist": "Milliseconds a fault has to be true, continuously, before it is spoken. Filters out one-frame wobbles. Good: 300–600. Bad: 0 (every jitter cues) or 3000 (the rep is over before the cue).",
       "fault.cooldown": "Milliseconds before the same cue may be repeated. Good: 4000–6000. Bad: 500 (the coach nags).",
       "fault.maxCues": "How many times one cue may be spoken in a single set, keyed by rule name. \"Slow it down\" only lands the first time you hear it, so fast is capped at 1; leave a rule out for no cap. A single move can override it with \"maxCues\" on the fault itself. Good: 1–2. Bad: 0 (the cue never fires — remove the fault instead).",
-      "camera": "How much a phone off its ideal spot is forgiven. level: auto (motion sensor when the phone has one, else the body at calibration), sensor, body or off \u2014 turns the picture so gravity is straight down before anything is measured. maxRoll: a bigger roll than this is not corrected (the phone is probably on its side on purpose). tolerance: degrees the person may turn away from the ideal view mid-set before the coach says to turn back; a move can set its own in camera.tolerance. yawPersist: ms that has to hold before it is said. widthRatio: shoulder width as a share of torso length, used to guess the turn when depth is missing (0.55 is typical). unforeshorten: measured (stretch the picture back out only when the turn was read from depth), always, or off. Good: tolerance 20\u201330. Bad: level off on phones propped on the floor.",
+      "camera": "How much a phone off its ideal spot is forgiven. level: auto (motion sensor when the phone has one, else the body at calibration), sensor, body or off — turns the picture so gravity is straight down before anything is measured. maxRoll: a bigger roll than this is not corrected (the phone is probably on its side on purpose). tolerance: degrees the person may turn away from the ideal view mid-set before the coach says to turn back; a move can set its own in camera.tolerance. yawPersist: ms that has to hold before it is said. widthRatio: shoulder width as a share of torso length, used to guess the turn when depth is missing (0.55 is typical). unforeshorten: measured (stretch the picture back out only when the turn was read from depth), always, or off. Good: tolerance 20–30. Bad: level off on phones propped on the floor.",
       "fault.severityWeight": "How much each severity (1, 2, 3) costs in the score and how it ranks against other cues when two fire at once.",
       "targets": "The rep counts and hold seconds a move offers when it does not name its own: choices (what the bubble cycles through) and default. Good: 4–6 sensible steps. Bad: 30 choices.",
       "landmarks": "Body points (MediaPipe indices) that must be in frame before a set can start. always = shoulders and hips (11, 12, 23, 24). legs = knees and ankles, added unless the move says upperBody: true.",
@@ -19,8 +19,20 @@
     }
   },
   "rep": { "rest": 0.15, "attempt": 0.32, "full": 0.85 },
-  "camera": { "level": "auto", "maxRoll": 25, "tolerance": 25, "yawPersist": 1500, "widthRatio": 0.55, "unforeshorten": "measured" },
-  "fault": { "persist": 400, "cooldown": 5000, "maxCues": { "fast": 1 }, "severityWeight": { "1": 1, "2": 2, "3": 3 } },
+  "camera": {
+    "level": "auto",
+    "maxRoll": 25,
+    "tolerance": 25,
+    "yawPersist": 1500,
+    "widthRatio": 0.55,
+    "unforeshorten": "measured"
+  },
+  "fault": {
+    "persist": 400,
+    "cooldown": 5000,
+    "maxCues": { "fast": 1 },
+    "severityWeight": { "1": 1, "2": 2, "3": 3 }
+  },
   "targets": {
     "reps": { "choices": [6, 8, 10, 12, 15], "default": 10 },
     "hold": { "choices": [10, 15, 20, 30, 45, 60], "default": 20 }

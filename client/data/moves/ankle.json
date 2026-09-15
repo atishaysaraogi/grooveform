@@ -192,7 +192,7 @@
         "conditions": [
           { "metric": { "kind": "gap", "pts": ["WR", "SH"], "abs": true, "per": ["SH", "EL"] }, "min": 120 },
           { "metric": { "kind": "vertical", "pts": ["KNEE", "ANK"] }, "min": 10 },
-          { "metric": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] }, "max": 8 },
+          { "metric": "heel_lift", "max": 8 },
           { "metric": "knee", "min": 165, "when": [{ "option": "variant", "is": "straight" }] },
           { "metric": "knee", "min": 135, "max": 165, "when": [{ "option": "variant", "is": "bent" }] },
           { "metric": "hip_open", "min": 150 }
@@ -206,7 +206,7 @@
           "cue": "Press the back heel down",
           "tip": "The stretch only reaches the calf when the heel stays flat. Step the foot closer to the wall if it will not stay down.",
           "severity": 3,
-          "metric": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] },
+          "metric": "heel_lift",
           "op": ">",
           "threshold": 8,
           "phase": "any",
@@ -278,7 +278,7 @@
               "op": ">",
               "threshold": 120
             },
-            { "metric": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] }, "op": "<", "threshold": 8 }
+            { "metric": "heel_lift", "op": "<", "threshold": 8 }
           ],
           "persist": 900,
           "cooldown": 4000

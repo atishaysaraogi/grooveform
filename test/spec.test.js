@@ -154,3 +154,25 @@ test('gates, scaled thresholds and the return rule compile and fire as written',
   const b = seq(25, { variant: 'b' }); assert.ok(b.review.faults.onlyb, 'option gate opens'); assert.ok(b.review.faults.hike, 'a big hike is over 5 + 15');
   assert.equal(b.review.reps, 3, 'side followed automatically: ' + JSON.stringify(b.review.faults));
 });
+
+/* Foot on the floor: the shared names resolve to a heel / toes / whole-foot rise since calibration,
+   and the ready-made fault fires on a lifted heel but not on a foot that stays planted. */
+test('heel_lift / toes_lift / foot_lift read a foot leaving the floor, and heel_up fires on it', () => {
+  const E = require('../client/coach/engine.js');
+  const shared = require('../client/data/shared.json');
+  for (const name of ['heel_lift', 'toes_lift', 'foot_lift']) assert.ok(shared.measurements[name], name + ' is a shared measurement');
+  const metrics = [shared.measurements.heel_lift, shared.measurements.toes_lift, shared.measurements.foot_lift];
+  const planted = frame({ 11: [0.59, 0.30], 12: [0.41, 0.30], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.95], 28: [0.44, 0.95], 29: [0.55, 0.97], 30: [0.45, 0.97], 31: [0.58, 0.97], 32: [0.42, 0.97], 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15] });
+  const ref = SPEC.calibrateRef(metrics, planted, K, {});
+  const at = (m, pts) => SPEC.evalMetric(m, pts, 'L', K, ref, {});
+  /* heel up 0.03 on a 0.20 shin, toes still down */
+  const heelUp = frame({ 11: [0.59, 0.30], 12: [0.41, 0.30], 23: [0.56, 0.55], 24: [0.44, 0.55], 25: [0.56, 0.75], 26: [0.44, 0.75], 27: [0.56, 0.93], 28: [0.44, 0.95], 29: [0.55, 0.94], 30: [0.45, 0.97], 31: [0.58, 0.97], 32: [0.42, 0.97], 0: [0.50, 0.14], 7: [0.47, 0.15], 8: [0.53, 0.15] });
+  assert.equal(Math.round(at(metrics[0], heelUp)), 15, 'heel 0.03 up on a 0.20 shin = 15 %');
+  assert.equal(Math.round(at(metrics[1], heelUp)), 0, 'toes have not moved');
+  assert.equal(Math.round(at(metrics[2], heelUp)), 10, 'the ankle rose 0.02 = 10 %');
+  /* the template, compiled into a move: every form move that watches the heel got it from here */
+  const ws = E.EXERCISES.find((e) => e.id === 'wallsit'); const f = ws.faults.find((x) => x.id === 'heels');
+  assert.ok(f && typeof f.check === 'function', 'wall sit watches the heels');
+  const hs = E.EXERCISES.find((e) => e.id === 'heelslide'); const hf = hs.faults.find((x) => x.id === 'heel');
+  assert.ok(hf && !hf.onRep && hf.weight === 3, 'heel slide keeps its own words and severity on the shared measurement');
+});

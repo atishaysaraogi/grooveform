@@ -231,6 +231,17 @@
           "threshold": 12,
           "persist": 1200,
           "cooldown": 8000
+        },
+        {
+          "id": "heels",
+          "label": "Heel lifting",
+          "cue": "Heels down",
+          "tip": "Feet flat, a good step from the wall; if the heels lift, walk the feet out a little.",
+          "severity": 2,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         }
       ],
       "pose": {
@@ -376,7 +387,7 @@
           "cue": "Keep your heel on the floor",
           "tip": "The heel should slide, not lift. Lifting it turns the movement into a leg raise and loses the knee-bend.",
           "severity": 3,
-          "metric": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] },
+          "metric": "heel_lift",
           "op": ">",
           "threshold": 12,
           "minP": 0.15,
@@ -452,7 +463,7 @@
       ],
       "pose": {
         "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 85 },
-        "B": { "preset": "supine", "thigh": 125, "shin": 40, "foot": 60 },
+        "B": { "preset": "supine", "thigh": 125, "shin": -55, "foot": 55 },
         "work": { "ham": 1, "thigh": 0.4 },
         "anchor": ["hip"]
       }
@@ -635,8 +646,16 @@
         ]
       },
       "pose": {
-        "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 90, "thighF": 45, "shinF": 150 },
-        "B": { "preset": "supine", "thigh": 125, "shin": 125, "foot": 125, "thighF": 45, "shinF": 150 },
+        "A": { "preset": "supine", "thigh": 90, "shin": 90, "foot": 90, "thighF": 135, "shinF": -45, "footF": 0 },
+        "B": {
+          "preset": "supine",
+          "thigh": 125,
+          "shin": 125,
+          "foot": 125,
+          "thighF": 135,
+          "shinF": -45,
+          "footF": 0
+        },
         "work": { "thigh": 1, "abs": 0.4 }
       }
     },
@@ -699,7 +718,11 @@
           "label": "Heel lifting",
           "cue": "Whole foot on the floor",
           "tip": "The heel stays down so the quad does the work rather than the calf.",
-          "severity": 1
+          "severity": 1,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         }
       ],
       "guide": {
@@ -875,7 +898,11 @@
           "label": "Heels lifting",
           "cue": "Keep the heels down",
           "tip": "Sit the hips back rather than driving the knees forward; the weight belongs in the whole foot.",
-          "severity": 2
+          "severity": 2,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         },
         {
           "id": "toes",
@@ -1100,7 +1127,17 @@
       },
       "pose": {
         "A": { "preset": "standing", "uarm": 60, "farm": 60 },
-        "B": { "face": "right", "torso": 0, "thigh": 0, "shin": -90, "uarm": 60, "farm": 60 },
+        "B": {
+          "preset": "standing",
+          "uarm": 60,
+          "farm": 60,
+          "thigh": 0,
+          "shin": -90,
+          "foot": 90,
+          "thighF": 0,
+          "shinF": 0,
+          "footF": 0
+        },
         "work": { "ham": 1, "glute": 0.4, "calf": 0.3 },
         "wall": "ahead"
       }
@@ -1312,8 +1349,26 @@
         ]
       },
       "pose": {
-        "A": { "face": "right", "torso": 0, "thigh": 25, "shin": -25, "thighF": -20, "shinF": -20 },
-        "B": { "face": "right", "torso": 5, "thigh": 70, "shin": -20, "thighF": -35, "shinF": 35 },
+        "A": {
+          "face": "right",
+          "torso": 0,
+          "thigh": 20,
+          "shin": 20,
+          "foot": 0,
+          "thighF": -15,
+          "shinF": -40,
+          "footF": -20
+        },
+        "B": {
+          "face": "right",
+          "torso": 5,
+          "thigh": 75,
+          "shin": -15,
+          "foot": 0,
+          "thighF": -30,
+          "shinF": -74,
+          "footF": -15
+        },
         "work": { "thigh": 1, "glute": 0.8, "ham": 0.4 }
       }
     },
@@ -1483,22 +1538,28 @@
       },
       "pose": {
         "A": {
-          "face": "right",
-          "torso": 0,
+          "preset": "standing",
           "thigh": -8,
           "shin": -150,
+          "foot": 60,
           "uarm": -40,
           "farm": -70,
+          "thighF": 0,
+          "shinF": 0,
+          "footF": 0,
           "uarmF": 60,
           "farmF": 60
         },
         "B": {
-          "face": "right",
-          "torso": 0,
+          "preset": "standing",
           "thigh": -14,
           "shin": -165,
+          "foot": 60,
           "uarm": -45,
           "farm": -80,
+          "thighF": 0,
+          "shinF": 0,
+          "footF": 0,
           "uarmF": 60,
           "farmF": 60
         },

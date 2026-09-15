@@ -228,12 +228,7 @@
       "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
       "targets": [8, 16, 24, 32],
       "defaultTarget": 16,
-      "progress": {
-        "metric": { "kind": "rise", "pts": ["ANK"], "per": ["KNEE", "ANK"] },
-        "start": "calibrated",
-        "target": 12,
-        "targetIsDelta": true
-      },
+      "progress": { "metric": "foot_lift", "start": "calibrated", "target": 12, "targetIsDelta": true },
       "display": { "label": "lift", "unit": "%", "from": "start" },
       "tempo": "Start slow — one strike per second. Speed comes later.",
       "dosage": "4 sets of 16, both feet, daily.",

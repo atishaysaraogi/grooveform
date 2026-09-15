@@ -110,7 +110,11 @@
           "label": "Heels lifting",
           "cue": "Heels down",
           "tip": "Sit back into the hips; if the heels lift, raise them on a small plate for now.",
-          "severity": 2
+          "severity": 2,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         },
         {
           "id": "butt",
@@ -198,7 +202,11 @@
           "label": "Heels lifting",
           "cue": "Heels down",
           "tip": "Spread the floor with the feet; heels stay planted.",
-          "severity": 2
+          "severity": 2,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         },
         {
           "id": "round",
@@ -212,13 +220,6 @@
           "label": "Weight drifting away from the chest",
           "cue": "Elbows in, weight close",
           "tip": "The weight rests against the chest. Letting it drift out pulls you forward.",
-          "severity": 2
-        },
-        {
-          "id": "heels2",
-          "label": "Heels lifting",
-          "cue": "Heels stay down",
-          "tip": "Shallower is better than a heel that lifts.",
           "severity": 2
         }
       ],
@@ -388,6 +389,17 @@
           "cue": "Back knee to the floor",
           "tip": "Drop the back knee toward the floor; the front thigh should reach level.",
           "severity": 1
+        },
+        {
+          "id": "heels",
+          "label": "Front heel lifting",
+          "cue": "Front heel down",
+          "tip": "Drive up through the front heel; if it lifts, the stride is too short or the weight is on the toes.",
+          "severity": 2,
+          "metric": "heel_lift",
+          "op": ">",
+          "threshold": 10,
+          "minP": 0.2
         }
       ],
       "guide": {
@@ -772,7 +784,8 @@
           "cue": "Stand tall, do not lean back",
           "tip": "Finishing by leaning back hyperextends the lower back. Stop at upright.",
           "severity": 2
-        }
+        },
+        { "template": "heel_up" }
       ],
       "guide": {
         "surface": "Flat floor.",
@@ -951,7 +964,8 @@
           "cue": "Take the slack, then lift",
           "tip": "Pull the tension on first, then stand. A jerk loads the back before it is braced.",
           "severity": 2
-        }
+        },
+        { "template": "heel_up" }
       ],
       "guide": {
         "surface": "Flat, non-slip floor.",
@@ -1036,7 +1050,8 @@
           "cue": "Neck follows the spine",
           "tip": "Craning to look forward as you fold hyperextends the neck.",
           "severity": 1
-        }
+        },
+        { "template": "heel_up" }
       ],
       "guide": {
         "surface": "Flat floor.",
@@ -1316,25 +1331,25 @@
       "pose": {
         "A": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
           "thigh": 0,
-          "shin": 90,
+          "shin": -90,
+          "foot": 180,
           "uarm": 0,
-          "farm": 0,
-          "foot": 180
+          "farm": 0
         },
         "B": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
-          "thigh": -88,
-          "shin": 0,
+          "thigh": -75,
+          "shin": -150,
+          "foot": 180,
           "uarm": 0,
           "farm": 0,
-          "foot": 240,
           "thighF": 0,
-          "shinF": 90,
+          "shinF": -90,
           "footF": 180
         },
         "work": { "glute": 1, "ham": 0.5 },

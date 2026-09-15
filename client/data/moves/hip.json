@@ -377,8 +377,8 @@
         ]
       },
       "pose": {
-        "A": { "preset": "supine", "thigh": 135, "shin": -20, "foot": 0 },
-        "B": { "face": "right", "torso": -112, "uarm": 90, "farm": 90, "thigh": 120, "shin": -25 },
+        "A": { "preset": "supine", "thigh": 135, "shin": -45, "foot": 0 },
+        "B": { "preset": "supine", "torso": -112, "neck": 22, "thigh": 110, "shin": -27, "foot": 0 },
         "work": { "glute": 1, "ham": 0.5, "abs": 0.3 }
       }
     },
@@ -457,22 +457,30 @@
         "A": {
           "face": "right",
           "torso": -90,
-          "uarm": -60,
-          "farm": 0,
-          "thigh": 135,
-          "shin": -30,
-          "thighF": 135,
-          "shinF": -30
+          "uarm": 90,
+          "farm": 90,
+          "uarmF": -20,
+          "farmF": -150,
+          "thigh": 120,
+          "shin": -60,
+          "foot": 0,
+          "thighF": 120,
+          "shinF": -60,
+          "footF": 0
         },
         "B": {
           "face": "right",
           "torso": -90,
-          "uarm": -60,
-          "farm": 0,
-          "thigh": 128,
-          "shin": -36,
-          "thighF": 135,
-          "shinF": -30
+          "uarm": 90,
+          "farm": 90,
+          "uarmF": -20,
+          "farmF": -150,
+          "thigh": 150,
+          "shin": -30,
+          "foot": 0,
+          "thighF": 120,
+          "shinF": -60,
+          "footF": 0
         },
         "work": { "glute": 1 }
       }
@@ -568,24 +576,30 @@
         "A": {
           "face": "right",
           "torso": -90,
-          "uarm": -60,
-          "farm": 0,
+          "uarm": 90,
+          "farm": 90,
+          "uarmF": -20,
+          "farmF": -150,
           "thigh": 90,
           "shin": 90,
           "foot": 90,
           "thighF": 120,
-          "shinF": -30
+          "shinF": -60,
+          "footF": 0
         },
         "B": {
           "face": "right",
           "torso": -90,
-          "uarm": -60,
-          "farm": 0,
+          "uarm": 90,
+          "farm": 90,
+          "uarmF": -20,
+          "farmF": -150,
           "thigh": 122,
           "shin": 122,
           "foot": 122,
           "thighF": 120,
-          "shinF": -30
+          "shinF": -60,
+          "footF": 0
         },
         "work": { "glute": 1, "oblique": 0.3 }
       }
@@ -666,7 +680,8 @@
           "cue": "Hips further back",
           "tip": "The hips travel backwards, not down. Aim for a firm stretch behind the thighs.",
           "severity": 1
-        }
+        },
+        { "template": "heel_up" }
       ],
       "guide": {
         "surface": "Firm floor.",
@@ -1043,17 +1058,25 @@
         ]
       },
       "pose": {
-        "A": { "preset": "supine", "thigh": 135, "shin": -20, "thighF": 95, "shinF": 95, "footF": 95 },
-        "B": {
-          "face": "right",
-          "torso": -112,
-          "uarm": 90,
-          "farm": 90,
-          "thigh": 120,
-          "shin": -25,
+        "A": {
+          "preset": "supine",
+          "thigh": 135,
+          "shin": -45,
+          "foot": 0,
           "thighF": 100,
           "shinF": 100,
           "footF": 100
+        },
+        "B": {
+          "preset": "supine",
+          "torso": -112,
+          "neck": 22,
+          "thigh": 110,
+          "shin": -27,
+          "foot": 0,
+          "thighF": 122,
+          "shinF": 122,
+          "footF": 122
         },
         "work": { "glute": 1, "ham": 0.6, "oblique": 0.3 }
       }
@@ -1144,28 +1167,10 @@
         ]
       },
       "pose": {
-        "A": {
-          "face": "right",
-          "torso": -50,
-          "neck": 20,
-          "thigh": 100,
-          "shin": -10,
-          "foot": 0,
-          "uarm": 100,
-          "farm": 130
-        },
-        "B": {
-          "face": "right",
-          "torso": -90,
-          "neck": 25,
-          "thigh": 90,
-          "shin": 0,
-          "foot": 0,
-          "uarm": 100,
-          "farm": 130
-        },
+        "A": { "face": "right", "torso": -60, "thigh": 110, "shin": 52, "foot": 0, "uarm": 60, "farm": 60 },
+        "B": { "face": "right", "torso": -90, "thigh": 90, "shin": 0, "foot": 0, "uarm": 90, "farm": 90 },
         "work": { "glute": 1, "ham": 0.5, "thigh": 0.3 },
-        "props": [{ "kind": "box", "at": "sh", "w": 30, "dy": 4 }]
+        "props": [{ "kind": "box", "at": "sh", "w": 44, "dx": 8, "dy": 4 }]
       }
     },
     {
@@ -1239,25 +1244,25 @@
       "pose": {
         "A": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
-          "thigh": 0,
-          "shin": 90,
           "uarm": 0,
           "farm": 0,
+          "thigh": 0,
+          "shin": -90,
           "foot": 180
         },
         "B": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
-          "thigh": 8,
-          "shin": 100,
-          "thighF": 0,
-          "shinF": 90,
           "uarm": 0,
           "farm": 0,
+          "thigh": -60,
+          "shin": -120,
           "foot": 180,
+          "thighF": 0,
+          "shinF": -90,
           "footF": 180
         },
         "work": { "glute": 1 }

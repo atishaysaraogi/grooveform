@@ -645,7 +645,7 @@
       "pose": {
         "A": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
           "thigh": 0,
           "shin": -90,
@@ -655,19 +655,21 @@
         },
         "B": {
           "face": "right",
-          "torso": 88,
+          "torso": 63,
           "neck": 25,
           "thigh": 0,
           "shin": -90,
           "foot": 180,
-          "uarm": 92,
-          "farm": 92,
-          "thighF": -88,
+          "uarm": 0,
+          "farm": 0,
+          "uarmF": 100,
+          "farmF": 100,
+          "thighF": -90,
           "shinF": -90,
-          "footF": 200
+          "footF": 180
         },
         "work": { "back": 1, "glute": 0.8, "abs": 0.6, "shoulder": 0.4 },
-        "anchor": ["kn", "wrF"]
+        "anchor": ["kn", "wr"]
       }
     },
     {

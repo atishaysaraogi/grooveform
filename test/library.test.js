@@ -72,7 +72,7 @@ test('every shipped file checks clean, and a mistake is reported with the file, 
   assert.match(one((j, by) => { by('seated_knee_ext').pose.A.thigh_angle = 10; }), /pose.A: unknown field "thigh_angle"/);
   assert.match(one((j, by) => { by('seated_knee_ext').id = 'quad_set'; }), /id "quad_set" is used twice/);
   assert.match(one((j, by) => { by('seated_knee_ext').id = 'slr'; }), /slr.*used twice/);
-  assert.match(one((j, by) => { by('heelslide').faults[0].metric.per = ['KNEE']; }), /heelslide.*per must be/);
+  assert.match(one((j, by) => { by('heelslide').faults.find((f) => f.id === 'hip').metric.per = ['KNEE']; }), /heelslide.*per must be/);   /* the heel fault now names a shared measurement; hip still spells its own */
   assert.match(one((j, by) => { by('heelslide').faults[1].when[0].op = '='; }), /heelslide.*when needs op/);
   assert.match(one((j, by) => { by('quad_set').tracking = 'form'; }), /quad_set/);
   assert.match(one((j, by) => { delete by('quad_set').summary; }), /quad_set.*summary/);

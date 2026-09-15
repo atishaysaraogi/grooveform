@@ -2,7 +2,7 @@
   "_about": {
     "what": "Pieces many moves share, referred to by name from the moves files. Add here when the same measurement, fault or pose would otherwise be typed twice.",
     "measurements": "name → { \"kind\", \"pts\", \"per\", \"sign\", \"abs\", \"flip\" }. kinds: \"angle\" (3 points: the angle at the middle one, 0–180°), \"vertical\" (2: the segment's angle from hanging straight down, 90 = horizontal), \"tilt\" (2: from horizontal, 90 = upright), \"dist\" (2: distance, % of the reference length), \"offset\" (3: how far the third sits off the line through the first two, % of that line, + = below), \"rise\" (1: how far the point has risen since calibration, %), \"height\" (2: how far the first point is above the second, %), \"ratio\" (2: the segment's length vs calibration, 100 = unchanged — a limb leaving the camera plane reads shorter), \"gap\" (2: sideways offset of the first point from the second, %; \"sign\": \"outward\" = away from the midline, \"forward\" = the way the toes point), \"rotation\" (2: how far a segment has swung toward the camera, degrees), \"near\" (3: distance from the first point to the segment between the others, %), \"lean\" (0: trunk lean, + = toward the working side, or the way the toes point with \"sign\": \"forward\"), \"headTilt\" (0: head roll against the pelvis), \"pelvis\" (0: pelvis tilt seen from the front). \"per\" = what a % is of: \"torso\" (default) or a segment [\"KNEE\", \"ANK\"], measured at calibration. \"abs\": true ignores the sign. \"flip\": { \"option\": \"variant\", \"when\": \"ir\" } negates the reading for that option value. Point names: NOSE EAR SH EL WR HIP KNEE ANK HEEL FOOT on the working side; put o in front for the other side (oKNEE); mEAR mSH mHIP for midpoints.",
-    "faults": "name → a complete fault. A move writes { \"template\": \"lean\", \"threshold\": 60 } and gets this fault with that threshold; any field the move writes wins over the template's. A template without a threshold requires the move to give one.",
+    "faults": "name → a complete fault. A move writes { \"template\": \"lean\", \"threshold\": 60 } and gets this fault with that threshold; any field the move writes wins over the template's. A template without a threshold requires the move to give one. Foot on the floor: heel_up, toes_up and foot_up watch the heel, the toes or the whole foot (ankle) rising since calibration, as a % of shin length (10 ≈ a few centimetres); the person's start position is where the floor is, so the phone only needs to see the foot. Add \"phase\": \"any\" on a hold, \"minP\" to ignore the start of a rep, or \"pts\": [\"oHEEL\"] via your own measurement for the other foot.",
     "poses": "name → keyframe angles. A move writes { \"preset\": \"standing\", \"uarm\": 20 } and gets these values with its own on top.",
     "holds": "name → a list of hold conditions, used by hold moves as \"conditions\": \"balance\"."
   },
@@ -21,7 +21,10 @@
     "sag": { "kind": "offset", "pts": ["SH", "ANK", "HIP"] },
     "sag_kneeling": { "kind": "offset", "pts": ["SH", "KNEE", "HIP"] },
     "lean": { "kind": "lean", "pts": [] },
-    "pelvis": { "kind": "pelvis", "pts": [] }
+    "pelvis": { "kind": "pelvis", "pts": [] },
+    "heel_lift": { "kind": "rise", "pts": ["HEEL"], "per": ["KNEE", "ANK"] },
+    "toes_lift": { "kind": "rise", "pts": ["FOOT"], "per": ["KNEE", "ANK"] },
+    "foot_lift": { "kind": "rise", "pts": ["ANK"], "per": ["KNEE", "ANK"] }
   },
   "faults": {
     "lean": {
@@ -106,6 +109,39 @@
       "threshold": 68,
       "minP": 0.3,
       "persist": 300
+    },
+    "heel_up": {
+      "id": "heels",
+      "label": "Heel lifting",
+      "cue": "Heels down",
+      "tip": "The heel came off the floor. Sit back into the hips and keep the weight through the whole foot; raise the heels on a small plate if they will not stay down.",
+      "severity": 2,
+      "metric": "heel_lift",
+      "op": ">",
+      "threshold": 10,
+      "minP": 0.2
+    },
+    "toes_up": {
+      "id": "toes",
+      "label": "Toes lifting",
+      "cue": "Toes down",
+      "tip": "The front of the foot came off the floor — the weight has gone back into the heels. Spread the toes and press the ball of the foot down.",
+      "severity": 1,
+      "metric": "toes_lift",
+      "op": ">",
+      "threshold": 10,
+      "minP": 0.2
+    },
+    "foot_up": {
+      "id": "foot",
+      "label": "Foot leaving the floor",
+      "cue": "Whole foot on the floor",
+      "tip": "The foot lifted off the floor. It should stay planted for the whole rep.",
+      "severity": 2,
+      "metric": "foot_lift",
+      "op": ">",
+      "threshold": 12,
+      "minP": 0.2
     }
   },
   "poses": {

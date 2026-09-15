@@ -634,23 +634,23 @@
       "pose": {
         "A": {
           "face": "right",
-          "torso": 80,
-          "neck": -20,
+          "torso": 55,
+          "neck": -10,
           "thigh": 0,
-          "shin": 90,
+          "shin": -90,
+          "foot": 180,
           "uarm": 0,
-          "farm": 0,
-          "foot": 180
+          "farm": 0
         },
         "B": {
           "face": "right",
-          "torso": 95,
-          "neck": 50,
+          "torso": 70,
+          "neck": 60,
           "thigh": 0,
-          "shin": 90,
+          "shin": -90,
+          "foot": 180,
           "uarm": 0,
-          "farm": 0,
-          "foot": 180
+          "farm": 0
         },
         "work": { "back": 1, "abs": 0.5, "neck": 0.5 },
         "anchor": ["kn", "wr", "wrF"]

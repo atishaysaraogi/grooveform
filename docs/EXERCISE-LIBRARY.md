@@ -379,6 +379,25 @@ correction can be seen in the review's JSON. `test/engine.test.js` runs the
 oracle recordings through a 12° roll and a 20° yaw and requires the same reps
 and faults out.
 
+### Is the foot on the floor?
+
+Yes — it is a `rise` reading of the heel, the toes or the whole foot since
+calibration, as a share of shin length; the person's start position is where
+the floor is, so nothing has to find the floor line. `shared.json` names the
+three (`heel_lift`, `toes_lift`, `foot_lift`) and ships a ready-made fault for
+each (`heel_up`, `toes_up`, `foot_up`), so a move writes one line:
+
+```json
+{ "template": "heel_up" }
+{ "template": "heel_up", "label": "Front heel lifting", "cue": "Front heel down" }
+```
+
+Every form‑tracked move whose foot has to stay planted now watches it — the
+squats, the hinges, the wall sit, the lunge, the terminal knee extension and
+the two that already read it (heel slide, calf stretch) — and the review counts
+it like any other fault. The other way round (a foot that must stay *off* the
+floor) is the same measurement with `"op": "<"`.
+
 ### The spoken opening
 
 A set does not start in silence. As the camera comes up — while the person is
