@@ -146,7 +146,7 @@
     if (s.cues && Object.keys(s.cues).length) put('cues', { ...s.cues });
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
-    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1;
+    if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.max != null) { p.max = typeof s.progress.max === 'object' ? { delta: s.progress.max.delta } : s.progress.max; for (const k of ['overLabel', 'overCue', 'overTip']) if (s.progress[k]) p[k] = s.progress[k]; } if (s.progress.delta === -1) p.delta = -1;
       /* the further measurements, each written the same way as the first */
       const and = (s.progress.and || []).filter((a) => a && a.metric && a.metric.pts.length).map((a) => {
         const q = { metric: foldMetric(a.metric), start: a.start };
@@ -619,7 +619,8 @@
   function faultLabel(id) { const s = cur(); const ex = s ? null : (state.current ? builtin(state.current) : null); const f = ((s ? s.faults : (ex ? ex.faults : [])) || []).find((x) => x.id === id); return f ? f.label : id; }
   function takeLabels() {
     const s = cur(); const ex = state.current ? (cur() ? null : builtin(state.current)) : null;
-    const faultLabels = (s ? s.faults : (ex ? ex.faults : [])).map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
+    const all = s ? s.faults.concat(farEndFault(s) || []) : (ex ? ex.faults : []);
+    const faultLabels = all.map((f) => [`fault:${f.id}`, 'Fault: ' + f.label]);
     return [['todo', 'Not said yet'], ['clean', 'Clean'], ...faultLabels, ['borderline', 'Borderline'], ['notrep', 'Not a rep'], ['setup', 'Awkward set-up'], ['other', 'Other']];
   }
   function recordPanel() {
@@ -1206,6 +1207,51 @@
     }; });
   }
 
+  /* The point the coach rings on the live video, so the person can see what the camera is watching.
+     It is a display choice, not a measurement: nothing is counted from it. */
+  function focusCard(s, names, dflt) {
+    return `<div class="card"><h3>Point to follow on screen</h3>
+      <p class="muted" style="font-size:.88rem;margin-bottom:8px">During a set the coach rings one point on the person and puts the live reading beside it — the moving end of the movement, so they can see the camera is following them. Nothing is measured from this choice.</p>
+      ${chips('focus', ['', ...names], s.focus || '', { '': 'Whatever moves most' })}
+      <p class="muted" style="font-size:.8rem;margin-top:6px">Default: ${esc(dflt)}.</p></div>`;
+  }
+  /* A first guess at the far end: a quarter of the travel past the target, never less than 5. */
+  function defaultFarEnd(s) {
+    const pr = s.progress || {};
+    const T = typeof pr.target === 'number' ? pr.target : ((s.options || []).find((o) => o.key === 'rom') || {}).default;
+    const travel = Number.isFinite(T) && Number.isFinite(pr.start) ? Math.abs(T - pr.start) : Number.isFinite(T) ? Math.abs(T) : 40;
+    return Math.max(5, Math.round(travel * 0.25 / 5) * 5);
+  }
+  /* The far end of the range is a fault the compiler writes, not one the physio types. It still has
+     to be recordable and visible here, or it is the one rule nobody ever checks against a take. */
+  const farEndFault = (s) => (s && s.type === 'reps' && s.progress && s.progress.max != null)
+    ? { id: 'past_range', label: s.progress.overLabel || 'Going past the range', cue: s.progress.overCue || 'Not so far', builtIn: true } : null;
+
+  /* Measurement hygiene. Two faults reading the same number the same way are one fault; a fault that
+     reads the progress metric is one end of the range wearing a disguise. Both are easy to write by
+     accident, and both show up as a rule that fires whenever its twin does. */
+  const sameMetric = (a, b) => a && b && a.kind === b.kind && (a.pts || []).join() === (b.pts || []).join() && JSON.stringify(a.per || null) === JSON.stringify(b.per || null);
+  function measurementNotes(s) {
+    /* a measurement is complete when it has the points its kind needs — which for a trunk lean or a
+       pelvis tilt is none at all, so "has any points" would quietly skip exactly those */
+    const whole = (m) => m && SPEC.KINDS[m.kind] && (m.pts || []).length >= SPEC.KINDS[m.kind].n;
+    const notes = []; const live = (s.faults || []).filter((f) => !f.rule && !f.listed && whole(f.metric));
+    if (s.type === 'reps' && s.progress && s.progress.metric) {
+      for (const f of live) if (sameMetric(f.metric, s.progress.metric)) {
+        notes.push(`“${f.label || f.id}” measures the same thing progress does. Going ${f.op === '>' ? 'past' : 'short of'} the target is already ${f.op === '>' ? 'the far end of the range (step 4)' : 'the built-in “not reaching the target”'} — delete it, or measure something else.`);
+      }
+    }
+    for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+      if (sameMetric(live[i].metric, live[j].metric) && live[i].op === live[j].op && (live[i].rel || 'abs') === (live[j].rel || 'abs')) {
+        notes.push(`“${live[i].label || live[i].id}” and “${live[j].label || live[j].id}” read the same number the same way — whichever threshold is nearer fires first and the other never speaks on its own.`);
+      }
+    }
+    for (const f of live) if ((f.rel || 'abs') === 'abs' && ['dist', 'angle'].includes(f.metric.kind)) {
+      notes.push(`“${f.label || f.id}” compares an absolute ${f.metric.kind === 'dist' ? 'distance' : 'angle'}, so the person’s own build is inside the threshold. “Change from start” is usually what you mean.`);
+    }
+    return notes;
+  }
+
   /* ===================== 4 · measure ===================== */
   function measurePanel(s) {
     const noTakes = !state.takes.length;
@@ -1225,16 +1271,17 @@
         </div><div class="stack">
           <div class="card"><div class="fields">
             ${field('Start value', `<div class="row">${chips('progress.startMode', ['calibrated', 'fixed'], pr.start === 'calibrated' ? 'calibrated' : 'fixed', { calibrated: 'Read at calibration', fixed: 'Fixed number' })}${pr.start === 'calibrated' ? '' : `<input type="number" step="1" data-k="progress.start" value="${esc(pr.start)}" style="width:110px">`}</div>`, 'Calibrated = whatever the metric reads while the person holds the start pose. Use it unless the start pose varies between people in a way that matters.')}
-            ${field('Target value', `<div class="row"><input type="number" step="1" data-k="progress.targetNum" value="${esc(typeof pr.target === 'number' ? pr.target : (romOpt ? romOpt.default : ''))}" style="width:110px" ${romOpt ? 'disabled' : ''}><span class="muted">${esc(SPEC.unitOf(pr.metric) || '')}</span></div>`, pr.start === 'calibrated' ? (pr.targetIsDelta ? 'Interpreted as a change from the calibrated start.' : 'Absolute value the metric must reach.') : '')}
+            ${field('Counts as a rep at', `<div class="row"><input type="number" step="1" data-k="progress.targetNum" value="${esc(typeof pr.target === 'number' ? pr.target : (romOpt ? romOpt.default : ''))}" style="width:110px" ${romOpt ? 'disabled' : ''}><span class="muted">${esc(SPEC.unitOf(pr.metric) || '')}</span></div>`, pr.start === 'calibrated' ? (pr.targetIsDelta ? 'Interpreted as a change from the calibrated start.' : 'Absolute value the metric must reach.') : '')}
             ${pr.start === 'calibrated' ? field('Target is', chips('progress.targetIsDelta', [false, true], !!pr.targetIsDelta, { false: 'An absolute value', true: 'A change from the start' })) : ''}
             ${pr.start === 'calibrated' && pr.targetIsDelta ? field('During the rep the reading', chips('progress.delta', [1, -1], pr.delta === -1 ? -1 : 1, { 1: 'rises', '-1': 'falls (a knee angle closing)' })) : ''}
+            ${field('Too far is', `<div class="row">${chips('progress.maxMode', ['none', 'delta', 'fixed'], pr.max == null ? 'none' : (typeof pr.max === 'object' ? 'delta' : 'fixed'), { none: 'No far end', delta: 'Past the target by', fixed: 'A fixed value' })}${pr.max == null ? '' : `<input type="number" step="1" data-k="progress.maxNum" value="${esc(typeof pr.max === 'object' ? pr.max.delta : pr.max)}" style="width:90px"><span class="muted">${esc(SPEC.unitOf(pr.metric))}</span>`}</div>`, 'Where the joint starts working outside the range this exercise is for. Optional — plenty of moves have no far end. “Past the target by” follows the person’s own choice when they pick their range; a fixed value does not. The coach says it as a fault of its own, which you do not have to write.')}
             ${pr.start === 'calibrated' ? field('Treat the start as at least / at most', `<div class="row"><input type="number" step="1" data-k="progress.startMin" value="${pr.startMin ?? ''}" placeholder="min" style="width:90px"><input type="number" step="1" data-k="progress.startMax" value="${pr.startMax ?? ''}" placeholder="max" style="width:90px"></div>`, 'A knee that calibrates at 150° can be treated as 160°. Leave empty for no clamp.') : ''}
             ${field('Live readout', `<div class="row"><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="bend" style="width:120px"><input type="text" data-k="display.unit" value="${esc((s.display || {}).unit || '')}" placeholder="°" style="width:60px">${chips('display.from', ['start', 'abs'], (s.display || {}).from === 'abs' ? 'abs' : 'start', { start: 'change from the start', abs: 'raw reading' })}</div>`, 'What the person sees during the set: “62° / 90° bend”.')}
             ${field('Let the user choose the target?', `<div class="row">${chips('romMode', [false, true], !!romOpt, { false: 'No, one target', true: 'Yes — a “range” option' })}${romOpt ? `<input type="text" data-k="romValues" value="${esc(romOpt.values.join(', '))}" placeholder="45, 60, 75, 90" style="width:160px">` : ''}</div>`, romOpt ? 'The last value is the default. Rehab moves usually want this — early weeks aim lower.' : '')}
             <button class="btn ghost small" id="suggest" ${noTakes ? 'disabled' : ''}>Suggest start and target from clean takes</button>
           </div></div>
           ${stableCard(s)}
-          <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(pr.metric.pts)], s.focus || '', { '': 'Last point of the metric' })}<p class="muted" style="font-size:.85rem;margin-top:6px">Drawn as the pink dot on the person during a set.</p></div>
+          ${focusCard(s, [...new Set(pr.metric.pts)], 'the last point of the measurement')}
         </div></div>
         <div class="row"><button class="btn ghost" id="back">← Record</button><span class="spacer"></span><button class="btn primary" id="next">Faults →</button></div></div>`;
     }
@@ -1249,7 +1296,7 @@
         <button class="btn ghost" id="addc">Add a condition</button></div>
         <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(saidText(t))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
         ${stableCard(s)}
-        <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'First point of the first condition' })}</div>
+        ${focusCard(s, [...new Set(conds.flatMap((c) => c.metric.pts))], 'the first point of the first condition')}
         <div class="card"><div class="fields">${field('Live readout', `<div class="row"><select data-k="display.condition">${conds.map((c, i) => `<option value="${i}" ${((s.display || {}).condition || 0) === i ? 'selected' : ''}>condition ${i + 1}</option>`).join('')}</select><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="knee" style="width:110px"><input type="text" data-k="display.aim" value="${esc((s.display || {}).aim || '')}" placeholder="90°" style="width:80px"></div>`, 'What the person sees: “97° knee · aim 90°”.')}
           ${field('When out of position, the coach says', text('enterCue', s.enterCue || '', 'Slide down the wall until your knees are at ninety'), 'Spoken after a few seconds out of position, instead of silence.')}</div></div></div></div>
       <div class="row"><button class="btn ghost" id="back">← Record</button><span class="spacer"></span><button class="btn primary" id="next">Faults →</button></div></div>`;
@@ -1257,8 +1304,20 @@
   function wireMeasure(s) {
     const root = $('main'); const rerender = () => { resim(); render(); };
     wireStable(s, root);
+    root.querySelectorAll('[data-chips="progress.maxMode"]').forEach((g) => { delete g.dataset.num; });
     bind(root, s, (k) => {
       if (k === 'progress.startMode') { s.progress.start = document.querySelector('[data-chips="progress.startMode"] .chip[aria-pressed="true"]').dataset.v === 'calibrated' ? 'calibrated' : (Number.isFinite(s.progress.start) ? s.progress.start : 0); delete s.progress.startMode; rerender(); return; }
+      if (k === 'progress.maxMode') {
+        const v = document.querySelector('[data-chips="progress.maxMode"] .chip[aria-pressed="true"]').dataset.v; delete s.progress.maxMode;
+        s.progress.max = v === 'none' ? null : v === 'delta' ? { delta: defaultFarEnd(s) } : (defaultFarEnd(s) + (typeof s.progress.target === 'number' ? s.progress.target : 0));
+        if (s.progress.max === null) delete s.progress.max;
+        rerender(); return;
+      }
+      if (k === 'progress.maxNum') {
+        const v = s.progress.maxNum; delete s.progress.maxNum;
+        if (Number.isFinite(v)) { s.progress.max = typeof s.progress.max === 'object' ? { delta: Math.max(1, v) } : v; resim(); drawMeasureCharts(s); }
+        return;
+      }
       if (k === 'progress.targetNum') { const v = s.progress.targetNum; delete s.progress.targetNum; if (Number.isFinite(v)) { s.progress.target = v; resim(); drawMeasureCharts(s); } return; }
       if (k === 'romMode') { const on = document.querySelector('[data-chips="romMode"] .chip[aria-pressed="true"]').dataset.v === 'true'; delete s.romMode; s.options = (s.options || []).filter((o) => o.key !== 'rom'); if (on) { const vals = [45, 60, 75, 90]; s.options.push({ key: 'rom', label: 'Range target', values: vals, unit: SPEC.unitOf(s.progress.metric) || '', default: vals[vals.length - 1] }); s.progress.target = 'opt:rom'; } else if (typeof s.progress.target === 'string') s.progress.target = 90; rerender(); return; }
       if (k === 'romValues') { const o = s.options.find((x) => x.key === 'rom'); const vals = s.romValues.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n)); delete s.romValues; if (o && vals.length) { o.values = vals; o.default = vals[vals.length - 1]; resim(); drawMeasureCharts(s); } return; }
@@ -1289,7 +1348,18 @@
       s.progress.target = typeof s.progress.target === 'string' ? s.progress.target : r5(target);
       if (typeof s.progress.target === 'string') { const o = s.options.find((x) => x.key === 'rom'); if (o) { const T = r5(target); o.values = [...new Set([r5(T * 0.5), r5(T * 0.67), r5(T * 0.83), T])].sort((a, b) => a - b); o.default = T; } }
       if (s.progress.start !== 'calibrated') s.progress.start = r5(startV);
-      toast(`Start ≈ ${startV.toFixed(0)}, clean takes reach ≈ ${target.toFixed(0)}`); saveState(); rerender();
+      /* the far end, when the move has one, sits past where the clean takes actually stop: far
+         enough that a good rep never trips it, near enough to catch a real overshoot */
+      let farNote = '';
+      if (s.progress.max != null) {
+        const peaks = clean.map((t) => { const d = trace(s.progress.metric, t, t.side).filter((x) => x[0] >= (t.calT ?? 1200)).map((x) => x[1]); return d.length ? (goesUp ? Math.max(...d) : Math.min(...d)) : NaN; }).filter(Number.isFinite);
+        const T = typeof s.progress.target === 'number' ? s.progress.target : r5(target);
+        const past = peaks.length ? Math.max(...peaks.map((v) => Math.abs(v - T))) : 0;
+        const delta = Math.max(5, Math.round((past + 5) / 5) * 5);
+        s.progress.max = typeof s.progress.max === 'object' ? { delta } : (goesUp ? T + delta : T - delta);
+        farNote = `, too far at ${typeof s.progress.max === 'object' ? '+' + delta : s.progress.max}`;
+      }
+      toast(`Start ≈ ${startV.toFixed(0)}, clean takes reach ≈ ${target.toFixed(0)}${farNote}`); saveState(); rerender();
     };
     root.querySelectorAll('[data-delc]').forEach((b) => { b.onclick = () => { s.hold.conditions.splice(+b.dataset.delc, 1); saveState(); rerender(); }; });
     root.querySelectorAll('[data-cw]').forEach((el) => { el.onchange = () => { const c = s.hold.conditions[+el.dataset.cw]; if (!el.value) delete c.when; else { const [option, when] = el.value.split('='); const o = (s.options || []).find((x) => x.key === option); const v = o && o.values.find((x) => String(x) === when); c.when = [{ option, is: v === undefined ? when : v }]; } saveState(); rerender(); }; });
@@ -1303,7 +1373,10 @@
       const pr = s.progress; const n = (SPEC.KINDS[pr.metric.kind] || {}).n; if (pr.metric.pts.length < n) return;
       const series = takeSeries(pr.metric, 'abs'); const lines = [];
       const first = state.sims[state.takes[0].id]; const ref = first && first.session ? first.session.ref : null;
-      if (ref) { lines.push({ y: ref.start, label: 'start', color: '#7a3fb8' }, { y: ref.target, label: 'target', color: '#ff2e88' }); }
+      if (ref) {
+        lines.push({ y: ref.start, label: 'start', color: '#7a3fb8' }, { y: ref.target, label: 'counts as a rep', color: '#4f9a1e' });
+        if (ref.max != null) lines.push({ y: ref.max, label: 'too far', color: '#ff2e88' });
+      }
       if ($('chart-metric')) drawChart($('chart-metric'), series, { lines, yLabel: SPEC.unitOf(pr.metric) });
       if ($('chart-p')) drawChart($('chart-p'), state.takes.filter(usable).map((t) => ({ data: (state.sims[t.id] && state.sims[t.id].p) || [], color: COLORS[labelOf(t)] || COLORS.other })), { lines: [{ y: E.FULL, label: 'full', color: '#4f9a1e' }, { y: E.ATTEMPT, label: 'attempt', color: '#ffb830' }, { y: E.REST, label: 'rest', color: '#7a3fb8' }], y0: 0, y1: 1, marks: state.takes.filter(usable).flatMap((t) => ((state.sims[t.id] && state.sims[t.id].reps) || []).map((r) => ({ t: r.t, y: r.full ? 1 : 0.5, color: r.full ? '#4f9a1e' : '#ffb830' }))) });
     } else {
@@ -1359,7 +1432,10 @@
   }
   function faultsPanel(s) {
     return `<div class="stack"><h2>5 · Faults, as numbers</h2><p class="lead">The faults named in step 2, each with what the camera measures and how much is too much (a fault marked <i>Person</i> in step 2 needs no number). Then look at the strip below each one — it must fire on the exaggerated take and stay quiet on the clean ones. If a threshold from a textbook fires on every clean rep, the recordings are right and the textbook is not.</p>
-      <div class="stack" id="faults">${s.faults.map((f, i) => faultCard(s, f, i)).join('') || '<p class="muted">No faults yet. Most moves need three to five.</p>'}</div>
+      <div class="stack" id="faults">${s.faults.map((f, i) => faultCard(s, f, i)).join('') || '<p class="muted">No faults yet. Most moves need three to five.</p>'}
+        ${farEndFault(s) ? `<div class="card fault-card built-in"><div class="row" style="align-items:baseline;gap:10px"><strong>${esc(farEndFault(s).label)}</strong><span class="muted" style="font-size:.85rem">“${esc(farEndFault(s).cue)}”</span><span class="spacer"></span><span class="chip small" aria-disabled="true">written for you</span></div>
+          <p class="muted" style="font-size:.85rem;margin:6px 0">The far end of the range from step 4. The coach says it like any other fault; you do not write it, and you cannot measure it twice. Record a take of someone going past the range and it is checked here like the rest.</p>
+          ${fireReport(farEndFault(s))}</div>` : ''}</div>
       <div class="row"><button class="btn secondary" id="addf">Add a measured fault</button>${s.type === 'reps' ? `<button class="btn ghost" id="add-shallow" ${s.faults.some((f) => f.rule === 'shallow') ? 'disabled' : ''}>Add “not reaching the target”</button><button class="btn ghost" id="add-fast" ${s.faults.some((f) => f.rule === 'fast') ? 'disabled' : ''}>Add “too fast”</button><button class="btn ghost" id="add-return" ${s.faults.some((f) => f.rule === 'return') ? 'disabled' : ''}>Add “not returning fully”</button>` : ''}</div>
       <div class="row"><button class="btn ghost" id="back">← Measure</button><span class="spacer"></span><button class="btn primary" id="next">Guide →</button></div></div>`;
   }
@@ -1512,7 +1588,14 @@
     const cx = (minX + maxX) / 2; const fit = (o) => { const r = {}; for (const k in o) r[k] = [Math.round(306 + (o[k].x - cx) * sc), Math.round(161 - (maxY - o[k].y) * sc)]; return r; };
     const fA = fit(mA), fB = fit(mB);
     const flip = s.view === 'side' ? fA.ft[0] < fA.an[0] : false;
-    return { view: s.view, A: fA, B: fB, hold: s.type === 'hold', side: 'both', flip, w: { ...s.muscles }, from: { take: take.id, tA, tB } };
+    const fig = { view: s.view, A: fA, B: fB, hold: s.type === 'hold', side: 'both', flip, w: { ...s.muscles }, from: { take: take.id, tA, tB } };
+    /* which way the front of the body faces, so the abdominal wall is not drawn on the spine */
+    if (s.view === 'side' && fA.hip && fA.sh) {
+      const tux = fA.sh[0] - fA.hip[0], tuy = fA.sh[1] - fA.hip[1];
+      const ref = fA.kn || fA.ft || fA.an;
+      if (ref) fig.belly = ((ref[0] - fA.hip[0]) * -tuy + (ref[1] - fA.hip[1]) * tux) >= 0 ? 1 : -1;
+    }
+    return fig;
   }
 
 
@@ -1737,6 +1820,9 @@
     if (!state.takes.some((t) => shows(t, 'borderline'))) warn.push('No borderline take — the most valuable kind.');
     if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
+    /* two faults reading the same number, or one that duplicates the progress measurement */
+    for (const n of measurementNotes(s)) warn.push(n);
+    if (farEndFault(s) && !state.takes.some((t) => shows(t, 'fault:past_range'))) warn.push('No take showing someone going past the range — its far end has not been checked against a body.');
     const tune = tuningReport(s);
     let preview = ''; try { preview = C.format(regionWith(s, region).entry); } catch (e) { preview = e.message; }
     const ready = !problems.length;
@@ -1834,5 +1920,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy, repCuts, cutKids, videoTime, STILL_KEEP };
+  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy, repCuts, cutKids, videoTime, STILL_KEEP, measurementNotes, farEndFault };
 })();

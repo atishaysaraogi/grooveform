@@ -385,6 +385,23 @@ than anyone can check it without burying the moves that were checked. Set it
 about browsing only: a routine that names the move still runs it, and a link
 straight to it still opens.
 
+### The target is a range
+
+`progress.target` says where a rep counts. Some movements also have a place
+past which the joint is working outside the range the exercise is for, and
+`progress.max` is that far end. Write it as a number, or as `{ "delta": n }`
+— a distance past the target, so it follows the person's own choice when
+they pick their range.
+
+It compiles into a built-in fault, `past_range`, which no move may claim as
+an id. That is the point: the far end used to be written out by hand as a
+separate fault carrying its own copy of the progress measurement, and a copy
+is a second thing to keep in step with the first. `overLabel`, `overCue`
+(≤ 8 words) and `overTip` put your own words on it; `overSeverity` and
+`overInvalidates` set how it scores.
+
+It is optional. Plenty of movements have no far end.
+
 ### More than one angle
 
 A movement is not always one measurement. A squat is the knee bending *and* the

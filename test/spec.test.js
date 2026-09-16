@@ -478,3 +478,49 @@ test('a cue is said at most twice a set, and a capped one is named in the review
   const once = run(ex, takes(30, 1, 20), { rom: 30 }).review.faults.hike;
   if (once) assert.ok(!once.capped, 'nothing owed when it was said every time');
 });
+
+/* A target says where a rep counts. Some movements also have a place past which the joint is
+   working outside the range the exercise is for, and that far end is a rule the compiler writes. */
+test('progress.max is the far end of the range, and compiles into its own rule', () => {
+  const mk = (max, extra = {}) => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.progress = { ...s.progress, max, ...extra }; return s; };
+  assert.deepEqual(SPEC.checkSpec(mk({ delta: 15 })), []);
+  const ex = SPEC.compile(mk({ delta: 15 }), K);
+  const f = ex.faults.find((x) => x.id === 'past_range');
+  assert.ok(f && f.label === 'Going past the range' && f.cue === 'Not so far' && f.phase === 'moving', JSON.stringify(f));
+  assert.equal(f.check({ over: 2 }), true); assert.equal(f.check({ over: -2 }), false); assert.equal(f.check({}), false);
+  /* a move with no far end has no such rule */
+  assert.equal(SPEC.compile(sideLegRaise, K).faults.some((x) => x.id === 'past_range'), false);
+  /* the far end follows a target the person chose: 30° raise + 15 = 45, 20° raise + 15 = 35 */
+  for (const rom of [20, 40]) {
+    const ref = ex.calibrate(pose(0), 'R', { rom, work: 'R' });
+    assert.ok(Math.abs(ref.max - (ref.target + 15)) < 1e-6, `far end follows the ${rom}° choice: target ${ref.target}, max ${ref.max}`);
+    assert.equal(ref.dir, 1);
+  }
+  /* and a fixed far end does not */
+  const fixed = SPEC.compile(mk(70, { target: 40 }), K).calibrate(pose(0), 'R', {});
+  assert.equal(fixed.max, 70);
+  /* the reading the rule watches: degrees past the far end */
+  const m = ex.measure(pose(50), 'R', ex.calibrate(pose(0), 'R', { rom: 30, work: 'R' }));
+  assert.ok(m.over > 0, 'a 50° raise is past a 45° far end: ' + m.over.toFixed(1));
+  const inside = ex.measure(pose(35), 'R', ex.calibrate(pose(0), 'R', { rom: 30, work: 'R' }));
+  assert.ok(inside.over < 0, 'a 35° raise is not: ' + inside.over.toFixed(1));
+  /* what the author may not write */
+  assert.match(SPEC.checkSpec(mk({ delta: -5 })).join(' '), /must be a number or \{ delta: n \}/);
+  assert.match(SPEC.checkSpec(mk(40, { start: 0, target: 40 })).join(' '), /max is the target/);
+  assert.match(SPEC.checkSpec(mk(20, { start: 0, target: 40 })).join(' '), /not past the target/);
+  const clash = mk({ delta: 10 }); clash.faults.push({ id: 'past_range', label: 'Mine', cue: 'No', tip: 'No.', severity: 2, metric: { kind: 'lean', pts: [] }, op: '>', threshold: 5 });
+  assert.match(SPEC.checkSpec(clash).join(' '), /reserved id/);
+});
+
+/* Folded onto one number, a tilt cannot tell 20° past level from 20° short of it. */
+test('tilt is signed', () => {
+  const up = frame({ 11: [0.5, 0.30], 12: [0.5, 0.30], 23: [0.5, 0.60], 24: [0.5, 0.60] });     // hip below the shoulder
+  const down = frame({ 11: [0.5, 0.60], 12: [0.5, 0.60], 23: [0.5, 0.30], 24: [0.5, 0.30] });   // hip above it
+  const m = { kind: 'tilt', pts: ['SH', 'HIP'] };
+  const a = SPEC.evalMetric(m, up, 'R', K), b = SPEC.evalMetric(m, down, 'R', K);
+  assert.ok(a > 80 && a <= 90, 'hip below the shoulder is about +90: ' + a.toFixed(1));
+  assert.ok(b < -80 && b >= -90, 'and above it is about −90, not +90 again: ' + b.toFixed(1));
+  /* level reads zero from either side */
+  const level = frame({ 11: [0.4, 0.45], 12: [0.4, 0.45], 23: [0.6, 0.45], 24: [0.6, 0.45] });
+  assert.ok(Math.abs(SPEC.evalMetric(m, level, 'R', K)) < 1, 'level is 0');
+});

@@ -266,6 +266,7 @@ a.ex-card .name { color: var(--text, inherit); }
 /* the archived anatomical figure draws to a canvas; the --fig-* palette above is already themed */
 .demo-fig.muscle { aspect-ratio: 16 / 9; }
 /* the animation-style choice sits under the figure, clear of the phone inset in the corner */
+.fault-card.built-in { border-style: dashed; }
 .cue-rows { gap: 10px; } .cue-row input { width: 100%; }
 .fig-toggle { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; } .fig-toggle .chip { min-height: 30px; padding: 3px 10px; font-size: .78rem; }
 .demo-fig .ink { stroke: var(--text); fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }

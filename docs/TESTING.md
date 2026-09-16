@@ -104,6 +104,10 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 37. Studio → split a long recording: playing rep nine starts at rep nine's own place in the video and runs straight through, with a moment of the start position in front of it. No clip begins with the start of the set.
 38. Shift, adjust the mat or rest a hand on the floor between reps: nothing is flagged; the same posture during a rep is.
 39. A set where one thing goes wrong on every rep: the cue is spoken twice and then stops, the count still climbs, and the end-of-set summary names it.
+40. Studio step 4 → Too far is → Past the target by: a second line appears on the chart, Suggest fills both ends, and step 5 shows "Going past the range" as a rule written for you with its own firing strip.
+41. A move whose target the user picks: the far end follows their choice (a 20° raise and a 40° raise get different far ends from one { delta } value).
+42. Write two faults on the same measurement with the same comparison: step 7 says they read the same number the same way. Write one on the progress measurement: step 7 says it duplicates progress.
+43. A side-on move with the abdominal muscles lit (plank, wall sit) in Settings → Muscles: the abdominal wall is drawn on the belly, not the spine.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

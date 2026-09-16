@@ -34,7 +34,7 @@
   const KINDS = {
     angle:    { n: 3, unit: '°',  label: 'Angle at the middle joint',              help: 'Interior angle a–b–c, 0–180°. Knee: HIP–KNEE–ANK. Elbow: SH–EL–WR.' },
     vertical: { n: 2, unit: '°',  label: 'Segment from hanging straight down',    help: '0° = hanging down, 90° = horizontal, 180° = straight up. Arm raise: SH–EL.' },
-    tilt:     { n: 2, unit: '°',  label: 'Segment from horizontal',               help: '0° = flat, 90° = upright. Thigh in a wall sit: HIP–KNEE.' },
+    tilt:     { n: 2, unit: '°',  label: 'Segment from horizontal',               help: 'Signed: 0° = level, +90° = the second point directly below the first, −90° = directly above. Trunk: SH–HIP. Thigh in a wall sit: HIP–KNEE.' },
     dist:     { n: 2, unit: '%',  label: 'Distance between two points',           help: 'As % of the reference length (torso, or a segment). Shrinks or grows with the movement. Shrug: EAR–SH.' },
     offset:   { n: 3, unit: '%',  label: 'How far a point sits off a line',        help: 'Third point off the line through the first two, % of that line. + = below. Plank sag: SH–ANK, HIP.' },
     rise:     { n: 1, unit: '%',  label: 'How far a point has risen since the start', help: '+ = above where it was at calibration, as % of the reference length. Heel lifting: HEEL per KNEE–ANK. Hip lifting: HIP per HIP–KNEE.' },
@@ -129,7 +129,9 @@
     switch (m.kind) {
       case 'angle': v = k.angle(P(0), P(1), P(2)); break;
       case 'vertical': v = k.armAngle(P(0), P(1)); break;
-      case 'tilt': v = k.segTilt(P(0), P(1)); break;
+      /* signed: the unsigned version folds up and down onto the same number, which hides half of
+         every fault written on it — a trunk 20° past level reads the same as 20° short of it */
+      case 'tilt': v = k.lineTilt(P(0), P(1)); break;
       case 'dist': v = 100 * k.dist(P(0), P(1)) / unitLen(m, pts, S, k, ref); break;
       case 'offset': v = 100 * k.lineOffset(P(0), P(1), P(2)); break;
       case 'rise': { const p0 = ref && ref.pts0 ? resolve(m.pts[0], ref.pts0, S, k) : P(0); v = 100 * (p0.y - P(0).y) / unitLen(m, pts, S, k, ref); break; }
@@ -187,6 +189,8 @@
 
   const faultSettings = (k) => { const s = k.settings && k.settings.fault; if (!s) throw new Error('settings.json needs a fault section'); return s; };
   const RULES = ['shallow', 'fast', 'return', 'shortHold'];
+  /* Ids the compiler adds itself, so a move cannot claim them. */
+  const RESERVED_FAULTS = ['past_range'];
   /* Every moment the coach speaks or writes on its own account, in the order a set meets them.
      A move may silence any of them or put its own words in their place — see `cues`. */
   const STAGES = ['opening', 'position', 'start', 'show', 'countIn', 'go', 'count', 'praise', 'partial', 'fault', 'mark', 'enter', 'finish', 'lost', 'turn'];
@@ -254,6 +258,26 @@
         need(Number.isFinite(spec.progress.target) || (typeof spec.progress.target === 'string' && spec.progress.target.startsWith('opt:')), 'progress: target value');
         if (Number.isFinite(spec.progress.start) && Number.isFinite(spec.progress.target)) need(spec.progress.start !== spec.progress.target, 'progress: start and target are the same');
         if (spec.progress.delta !== undefined) need([1, -1].includes(spec.progress.delta), 'progress: delta must be 1 or -1');
+        /* A target is where a rep counts. Some movements also have a place past which the joint is
+           working outside the range the exercise is for, and that far end is optional: a move with
+           no "too far" simply has none. Written as a number, or as { "delta": n } — a distance past
+           the target, so it follows the person's own choice when they pick their range. */
+        const pm = spec.progress.max;
+        if (pm != null) {
+          const isDelta = typeof pm === 'object' && !Array.isArray(pm);
+          need(isDelta ? Number.isFinite(pm.delta) && pm.delta > 0 : Number.isFinite(pm), 'progress: max (the far end of the range) must be a number or { delta: n }');
+          if (!isDelta && Number.isFinite(pm) && Number.isFinite(spec.progress.target)) {
+            need(pm !== spec.progress.target, 'progress: max is the target — the far end of the range has to be past where the rep counts');
+            /* which way the reading travels is only known here when the start is a number; with a
+               calibrated start it is read off the person, and { delta } is the way to say it */
+            if (Number.isFinite(spec.progress.start)) {
+              const dir = Math.sign(spec.progress.target - spec.progress.start) || 1;
+              need(dir * (pm - spec.progress.target) > 0, 'progress: max is not past the target — every rep would be out of range the moment it counted');
+            }
+          }
+          for (const key of ['overLabel', 'overCue', 'overTip']) if (spec.progress[key] !== undefined) need(typeof spec.progress[key] === 'string' && spec.progress[key].trim(), 'progress: ' + key + ' must be words');
+          if (spec.progress.overCue) need(spec.progress.overCue.trim().split(/\s+/).length <= 8, 'progress: overCue longer than 8 words');
+        }
         /* A movement is not always one angle. A squat is the knee bending AND the hip folding, and a
            rep that does one without the other is not the exercise. "and" adds measurements on the
            same footing as the first; each gets its own start and target and its own 0..1, and
@@ -279,6 +303,7 @@
     for (const f of spec.faults || []) {
       const w = 'fault "' + (f.label || f.id || '?') + '"';
       need(f.id && /^[a-z][a-z0-9_]*$/.test(f.id), w + ': id');
+      need(!RESERVED_FAULTS.includes(f.id), w + ': "' + f.id + '" is a reserved id the compiler uses');
       need(!ids.has(f.id), w + ': duplicate id'); ids.add(f.id);
       need(f.label, w + ': label'); need(f.cue, w + ': spoken cue'); need(f.tip, w + ': written tip');
       if (f.cue) need(f.cue.trim().split(/\s+/).length <= 8, w + ': cue longer than 8 words');
@@ -390,6 +415,14 @@
         return { i: p.i, name: typeof p.metric === 'string' ? p.metric : p.metric.kind, start, target };
       });
     }
+    /* Which way the reading travels as the rep is done, and where the far end of the range sits.
+       Recomputed wherever the target moves: a target the person chose, one demonstrated before the
+       set, or the per-rep start being read again. */
+    function setRange(ref) {
+      ref.dir = Math.sign(ref.target - ref.start) || 1;
+      const pm = prog && prog.max;
+      ref.max = pm == null ? null : (typeof pm === 'object' ? ref.target + ref.dir * pm.delta : pm);
+    }
     function calibrate(pts, S, opts) {
       const ref = calibrateRef(metrics, pts, k, opts);
       ref.opts = opts || {};
@@ -403,6 +436,7 @@
         /* what the beginning of the set read, kept so a later rep's start can be held near it */
         ref.parts0 = ref.parts.map((p) => ({ start: p.start, target: p.target }));
         ref.base0 = { L: ref.base.L.slice(), R: ref.base.R.slice() };
+        setRange(ref);
       }
       return ref;
     }
@@ -442,7 +476,7 @@
       /* only where the rep is measured from moves. What a fault compares against does not: a heel
          that has been off the floor since the first rep is still off the floor, and a baseline that
          crept up with it every rep would quietly stop saying so. */
-      ref.parts = next; ref.start = next[0].start; ref.target = next[0].target;
+      ref.parts = next; ref.start = next[0].start; ref.target = next[0].target; setRange(ref);
       ref.restarts = (ref.restarts || 0) + 1;
       return true;
     }
@@ -463,7 +497,7 @@
       if (!want) return null;
       const frac = reach / want;
       if (!(frac > 0.4 && frac < 2.5)) return null;
-      ref.shown = v; ref.target = v;
+      ref.shown = v; ref.target = v; setRange(ref);
       return v;
     }
     /* The start position, before anything is calibrated for real: the frame is its own reference,
@@ -509,6 +543,8 @@
           return { name: p.name, v: vals[p.i], p: (vals[p.i] - start) / (target - start), start, target };
         });
         m.parts = parts;
+        /* how far past the far end of the range the reading is, so a threshold of 0 reads as "past it" */
+        m.over = ref.max == null ? -1 : (ref.dir || 1) * (vals[iProg] - ref.max);
         const ps = parts.map((p) => p.p);
         /* min: the rep is only as far through as its least-finished part — a squat that bends the
            knee without folding the hip has not been done */
@@ -585,6 +621,24 @@
         check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= gate) && m.gates[f.id] && over(m),
       };
     });
+
+    /* A range has two ends. The near end is the target, and falling short of it is the built-in
+       "shallow" rule. The far end, when a move has one, is this: past it the joint is working
+       outside the range the exercise is for. It used to be written out by hand as a fault with its
+       own copy of the progress measurement, which is a second thing to keep in step with the first. */
+    if (prog && prog.max != null) {
+      const sev = Number.isFinite(prog.overSeverity) ? prog.overSeverity : 2;
+      const capAll = (fs.maxCues || {}).perSet;
+      faults.push({
+        id: 'past_range', label: prog.overLabel || 'Going past the range',
+        cue: prog.overCue || 'Not so far',
+        tip: prog.overTip || 'Past this point the joint is working outside the range this exercise is for. Stop at the target and come back.',
+        weight: fs.severityWeight[String(sev)] || 2, invalidates: !!prog.overInvalidates,
+        ...(Number.isFinite(capAll) ? { maxCues: capAll } : {}),
+        persist: prog.overPersist || fs.persist, cooldown: prog.overCooldown || fs.cooldown, phase: 'moving',
+        check: (m) => (m.over ?? -1) > 0,
+      });
+    }
 
     const ex = {
       id: spec.id, order: spec.order || 500, name: spec.name, group: spec.group, type: spec.type, view: spec.view, icon: spec.icon || 'move',

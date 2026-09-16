@@ -188,6 +188,20 @@
   }
 
   /* pose: { A: angles, B: angles, work: {region: 0..1}, wall: 'behind'|'ahead'|null, anchor, lift, raise, props } */
+  /* Which side of the hip→shoulder line the front of the body is on, as a sign in the across frame.
+     Only side views need it: the abdominal wall and the chest are drawn on that side and the spinal
+     muscles on the other, and without it a prone plank wears its abs on its back. Read off the pose,
+     because the knee leads the front in every side-on move we can coach. */
+  function bellyOf(F) {
+    if (!F || !F.hip || !F.sh) return undefined;
+    const tux = F.sh[0] - F.hip[0], tuy = F.sh[1] - F.hip[1];
+    for (const p of [F.kn, F.ft, F.an]) {
+      if (!p) continue;
+      const d = (p[0] - F.hip[0]) * -tuy + (p[1] - F.hip[1]) * tux;
+      if (Math.abs(d) > 1e-6) return d >= 0 ? 1 : -1;
+    }
+    return undefined;
+  }
   function poseToFigure(view, pose, opts) {
     const build = view === 'front' ? frontPose : sidePose;
     const rawA = build(pose.A || {}), rawB = build(pose.B || pose.A || {});
@@ -201,7 +215,8 @@
     /* `face` is the way the front of the body points, so the figure's muscles follow it. */
     const flip = view === 'side' ? (rawA.dir || 1) < 0 : false;
     const props = resolveProps(pose.props, A, B, wall);
-    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, w: pose.work || {}, wall, props, anchors, notes: pose.notes || [] };
+    const belly = view === 'side' ? bellyOf(A) : undefined;
+    return { view, A, B, hold: !!opts.hold, side: opts.side || 'both', flip, ...(belly ? { belly } : {}), w: pose.work || {}, wall, props, anchors, notes: pose.notes || [] };
   }
 
   function registerFigure(id, fig) {
@@ -239,7 +254,7 @@
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip', 'unit'],
-    progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta', 'and', 'combine'],
+    progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta', 'and', 'combine', 'max', 'overLabel', 'overCue', 'overTip', 'overSeverity', 'overInvalidates'],
     progressPart: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],
     hold: ['conditions'], condition: ['metric', 'rel', 'min', 'max', 'when'],
     when: ['option', 'is', 'metric', 'rel', 'op', 'threshold'], scale: ['metric', 'rel', 'times'], display: ['label', 'unit', 'from', 'aim', 'condition'],

@@ -82,11 +82,30 @@
   var TORSO_SHAPES = {
     chest:   [[.62, .06], [.90, .10], [.96, .36], [.66, .40]],
     back:    [[.60, .06], [.92, .10], [.98, .38], [.64, .42]],
-    abs:     [[.18, .04], [.54, .05], [.56, .26], [.20, .24]],
-    oblique: [[.16, .24], [.52, .26], [.54, .46], [.18, .44]],
+    abs:     [[.18, .04], [.54, .05], [.56, .26], [.20, .24]],        /* front: the rectus, either side of the midline */
+    oblique: [[.16, .24], [.52, .26], [.54, .46], [.18, .44]],        /* front: the flanks, outside it */
     neck:    [[.95, .04], [1.22, .12], [1.14, .40], [.92, .32]],
     glute:   [[-.06, .10], [.16, .12], [.18, .44], [-.04, .42]]
   };
+  /* Edge-on the abdominal wall stacks the other way round: the oblique is the broad sheet over the
+     flank and the rectus the narrow strip at the very front of it. Reusing the front-view pair here
+     drew the rectus behind the obliques, which is what made a plank look inside-out. */
+  var SIDE_TORSO = {
+    abs:     [[.10, .31], [.58, .29], [.60, .17], [.12, .19]],
+    oblique: [[.12, .19], [.58, .17], [.60, -.03], [.14, .01]]
+  };
+  /* Which side of the hip→shoulder line the front of the body is on, for a figure that carries no
+     belly sign of its own: in almost every side-on exercise the knee leads the front. The foot
+     stands in when the leg is straight under the hip and the knee says nothing. */
+  function bellySide(J, tvx, tvy) {
+    var pts = [J.kn, J.ft, J.an];
+    for (var i = 0; i < pts.length; i++) {
+      if (!pts[i] || !J.hip) continue;
+      var d = (pts[i].x - J.hip.x) * tvx + (pts[i].y - J.hip.y) * tvy;
+      if (Math.abs(d) > 1e-3) return d > 0 ? 1 : -1;
+    }
+    return 1;
+  }
   var REGIONS = ['shoulder','arm','forearm','thigh','ham','calf','chest','back','abs','oblique','neck','glute'];
   var REST = 0.07;
 
@@ -237,14 +256,25 @@
       }));
       ctx.fillStyle = heat(P, h); ctx.fill(); ctx.strokeStyle = P.skinline; ctx.lineWidth = 1; ctx.stroke();
     }
-    (view === 'side' ? [flip ? -1 : 1] : [1, -1]).forEach(function (sgn) {
-      /* side view: +sgn is the front of the body (chest, abs), so the back and the glutes go on -sgn */
-      if (view === 'side') { torsoBlob(TORSO_SHAPES.chest, sgn, heats.chest); torsoBlob(TORSO_SHAPES.back, -sgn, heats.back); torsoBlob(TORSO_SHAPES.glute, -sgn, heats.glute); }
-      else { torsoBlob(TORSO_SHAPES.chest, sgn, Math.max(heats.chest, heats.back * 0.6)); torsoBlob(TORSO_SHAPES.glute, sgn, heats.glute); }
-      torsoBlob(TORSO_SHAPES.abs, sgn, heats.abs);
-      torsoBlob(TORSO_SHAPES.oblique, sgn, heats.oblique);
-      torsoBlob(TORSO_SHAPES.neck, sgn, heats.neck);
-    });
+    if (view === 'side') {
+      /* One body, two halves: the spine side and the belly side. Which is which comes from the move
+         when it says so, and from the pose itself when it does not. */
+      var belly = cfg.belly != null ? cfg.belly : bellySide(J, tvx, tvy);
+      torsoBlob(TORSO_SHAPES.back, -belly, heats.back);
+      torsoBlob(TORSO_SHAPES.chest, belly, heats.chest);
+      torsoBlob(SIDE_TORSO.oblique, belly, heats.oblique);
+      torsoBlob(SIDE_TORSO.abs, belly, heats.abs);             /* last: the rectus is the layer nearest the camera */
+      torsoBlob(TORSO_SHAPES.glute, -belly, heats.glute);
+      torsoBlob(TORSO_SHAPES.neck, belly, heats.neck);
+    } else {
+      [1, -1].forEach(function (sgn) {
+        torsoBlob(TORSO_SHAPES.chest, sgn, Math.max(heats.chest, heats.back * 0.6));
+        torsoBlob(TORSO_SHAPES.glute, sgn, heats.glute);
+        torsoBlob(TORSO_SHAPES.abs, sgn, heats.abs);
+        torsoBlob(TORSO_SHAPES.oblique, sgn, heats.oblique);
+        torsoBlob(TORSO_SHAPES.neck, sgn, heats.neck);
+      });
+    }
 
     // near limbs with muscle
     near.forEach(function (L) {
@@ -277,7 +307,7 @@
   function mount(canvas) {
     var id = canvas.getAttribute('data-anat'); if (!id) return;
     var reg = REGISTERED[id];
-    var cfg = reg ? { hold: !!reg.hold, side: reg.side || 'both', flip: !!reg.flip, w: reg.w || {} } : (WORK[id] || { hold: false, side: 'both', w: {} });
+    var cfg = reg ? { hold: !!reg.hold, side: reg.side || 'both', flip: !!reg.flip, belly: reg.belly, w: reg.w || {} } : (WORK[id] || { hold: false, side: 'both', w: {} });
     var view = reg ? reg.view : (FRONTP[id] ? 'front' : 'side'), data = reg || FRONTP[id] || SIDE[id];
     if (!data || !data.A) return;
     var A = unify(data.A, view), B = data.B ? unify(data.B, view) : null;

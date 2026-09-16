@@ -161,6 +161,22 @@ body settles, as above.
 
 ### Measure and faults — the part that needs the physio in the room
 
+Step 4 reads as a range: *Counts as a rep at* is the near end, *Too far is*
+the far end, and *Suggest* proposes both from the clean takes — the far end
+placed past where those takes actually stop, far enough that a good rep never
+trips it. The chart draws both lines. The far end appears on step 5 as a rule
+written for you, with its own firing strip, and on step 3 as a label a take
+can be recorded against, so it is checked against a body like every other
+fault rather than being the one rule nobody looks at.
+
+Step 7 also reads the measurements against each other. Two faults reading the
+same number the same way are one fault wearing two labels: whichever
+threshold is nearer fires first and the other never speaks. A fault that
+reads the progress measurement is one end of the range in disguise. An
+absolute distance or angle carries the person's own build inside the
+threshold, where *change from start* is usually what was meant. Each is easy
+to write by accident, and each is named on the check page.
+
 **The progress number.** Pick the measurement kind (angle at a joint, segment
 from vertical, segment from horizontal, distance as % of torso, a point's offset
 from a line, trunk lean, pelvis tilt), then tap each empty slot and say which

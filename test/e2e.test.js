@@ -818,6 +818,54 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('studio: the target is a range, and the measure step says when two faults read the same number', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'hipabd'));
+    await st.selectOption('#move-select', 'hipabd'); await st.waitForSelector('#steps [data-step="measure"]');
+    await st.click('#steps [data-step="measure"]'); await st.waitForSelector('[data-chips="progress.maxMode"]');
+    /* a move with no far end says so, and the reading is named as the near end of a range */
+    assert.equal(await st.$eval('[data-chips="progress.maxMode"] .chip[aria-pressed="true"]', (e) => e.dataset.v), 'none');
+    assert.ok((await st.innerText('#main')).includes('Counts as a rep at') && (await st.innerText('#main')).includes('Too far is'), 'the measure step reads as a range');
+    assert.equal(await st.$('[data-k="progress.maxNum"]'), null, 'no far end, no number to type');
+    /* turning it on proposes a distance past the target, and it follows the person\'s own choice */
+    await st.click('[data-chips="progress.maxMode"] [data-v="delta"]');
+    await st.waitForSelector('[data-k="progress.maxNum"]');
+    const far = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return { max: s.progress.max, entry: S.regionWith(s, 'hip').entry.progress.max }; });
+    assert.ok(far.max && far.max.delta > 0, 'a first guess at the far end: ' + JSON.stringify(far));
+    assert.deepEqual(far.entry, far.max, 'and it is written into the file');
+    /* it compiles into a rule the physio did not write, shown read-only on the fault step */
+    await st.click('#steps [data-step="faults"]'); await st.waitForSelector('.fault-card.built-in');
+    const built = await st.textContent('.fault-card.built-in');
+    assert.ok(/Going past the range/.test(built) && /written for you/.test(built), built.slice(0, 120));
+    const ids = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return { far: S.farEndFault(s).id, compiled: window.MoveSpec.compile(Object.assign(JSON.parse(JSON.stringify(s)), { id: 'probe' }), window.ExerciseLibrary.kinematics).faults.map((f) => f.id) }; });
+    assert.ok(ids.compiled.includes('past_range'), ids.compiled.join(','));
+    /* and it is a label a take can be recorded against */
+    await st.click('#steps [data-step="record"]'); await st.waitForSelector('#steps');
+    const labels = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return !!S.farEndFault(s); });
+    assert.equal(labels, true);
+    /* measurement hygiene: two faults reading the same number the same way */
+    const notes = await st.evaluate(() => {
+      const S = window.OnTrackStudio; const s = S.state.moves[S.state.current];
+      const m = { kind: 'lean', pts: [] };
+      const twin = { faults: [
+        { id: 'a', label: 'One', metric: m, op: '>', rel: 'change', threshold: 5 },
+        { id: 'b', label: 'Two', metric: m, op: '>', rel: 'change', threshold: 9 },
+      ], type: 'hold' };
+      const dupe = { type: 'reps', progress: { metric: s.progress.metric }, faults: [{ id: 'c', label: 'Over', metric: JSON.parse(JSON.stringify(s.progress.metric)), op: '>', rel: 'abs', threshold: 40 }] };
+      const absolute = { type: 'hold', faults: [{ id: 'd', label: 'Wide', metric: { kind: 'dist', pts: ['SH', 'EL'] }, op: '>', rel: 'abs', threshold: 40 }] };
+      return { twin: S.measurementNotes(twin), dupe: S.measurementNotes(dupe), absolute: S.measurementNotes(absolute), clean: S.measurementNotes({ type: 'hold', faults: [] }) };
+    });
+    assert.match(notes.twin.join(' '), /read the same number the same way/);
+    assert.match(notes.dupe.join(' '), /measures the same thing progress does/);
+    assert.match(notes.absolute.join(' '), /Change from start/);
+    assert.deepEqual(notes.clean, [], 'and a move with nothing wrong is not nagged');
+    /* the focus card explains itself and measures nothing */
+    await st.click('#steps [data-step="measure"]'); await st.waitForSelector('[data-chips="focus"]');
+    assert.ok((await st.innerText('#main')).includes('Point to follow on screen'), 'the point is named for what it does');
+    await st.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');
