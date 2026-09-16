@@ -198,6 +198,19 @@ Rep-level questions the physio answers per fault: does it invalidate the rep
 (rep does not count) or only cost a cue; only once the rep is under way, or at any
 time; how long it must persist before it counts (0.4 s is the usual answer).
 
+### What it says, and when
+
+Step 6 lists every moment the coach speaks for itself — the brief, the
+count-in, the rep number, the word for a clean rep, a hold's seconds, the
+summary — and each can be silenced or given your own words. The fault cues
+written on step 5 are one of those moments too, so a move can be counted
+without being corrected.
+
+Step 4 has *Which parts stay still*: the points the person is resting on that
+do not travel. The target line over the camera is pinned to them instead of
+being worked out by watching, which is what makes it sit still from the first
+rep rather than the third.
+
 ### Guide
 
 Surface, what the camera **cannot** see (required — it is shown to the user so

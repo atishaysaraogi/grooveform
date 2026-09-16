@@ -540,6 +540,43 @@ test over recorded frames, so a phone video dropped into the Studio calibrates
 where the person went still rather than at a fixed moment — walking in and
 lying down are not the start position.
 
+### Where a rep starts
+
+A set is not done in one place. The person lies down a little differently on
+the fourth bridge than on the first, and a rep measured from where the *set*
+began is then read wrong: too far through before it starts, or never back at
+rest when it ends.
+
+So each rep is measured from the position held just before it. Between reps,
+once the reading has stopped moving for `rep.startAgain.still`, that position
+becomes the next rep's start. What stops it drifting into nonsense is
+`rep.startAgain.drift`: a start may only wander that share of the way from the
+calibrated start toward the target, so a body that settles is followed while
+someone who stops half way down does not get to redefine the exercise — that
+is still a short rep, and the `return` rule still says so.
+
+Only where the rep is measured from moves. What a fault compares against does
+not: a heel that has been off the floor since the first rep is still off the
+floor, and a baseline that crept up with it every rep would quietly stop
+saying so. A demonstrated target is left alone entirely. Each rep records the
+value it was measured from, so the diagnostics show the drift.
+
+### The parts that stay still
+
+The target line drawn over the camera has to know which end of the movement
+is the anchor. It can work that out by watching which end has travelled
+furthest — but not on the first rep, and not when the whole body shifts. On
+the reported bridge set it never worked it out at all: the person moved
+around enough that the shoulder out-travelled the hip, and the line stayed
+on the arm that rides up with the hips.
+
+`stable` says it outright: the landmarks that do not move during this
+exercise, named the way a measurement names them. A bridge is
+`["SH", "KNEE"]` — the hip rises between a shoulder and a knee that stay on
+the floor. Told that, the line is drawn shoulder to hip-target to knee from
+the first frame, holding the target angle exactly. Leave it out and the
+watching heuristic still applies.
+
 ### Still is not the same as ready
 
 The start position is read while the person holds still. Someone who lies
@@ -560,6 +597,21 @@ second is over where it settled: it counts (full if the top was reached),
 the next rise is the next rep, and a descent from that level to the floor is
 not a rep of its own. The "return" rule is where "did not come all the way
 back" belongs; the counter no longer waits forever for it.
+
+### What the coach says, and when
+
+Besides the faults, the coach speaks for itself: the opening brief, the
+count-in, the number after each rep, a word for a clean one, the line for one
+that did not count, a hold's seconds, the summary. Not every move wants all
+of them — a set of twenty rarely wants every rep counted aloud, a slow
+stretch does not want a countdown, and a clinic may want its own words.
+
+`cues` is a block of stage: setting. `false` silences that moment; a string
+replaces its words; `praise` and `mark` take lists. A stage left out behaves
+as it always did. The stages, in the order a set meets them: `opening`,
+`position`, `start`, `show`, `countIn`, `go`, `count`, `praise`, `partial`,
+`fault`, `mark`, `enter`, `finish`, `lost`, `turn`. Step 6 of the Studio has
+a row for each.
 
 ### Which cue is said
 

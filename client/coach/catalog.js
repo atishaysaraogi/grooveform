@@ -235,7 +235,7 @@
     file: ['region', 'group', 'order', 'camera', 'equipment', 'sources', 'moves'],
     entry: ['id', 'name', 'clinicalName', 'type', 'view', 'tracking', 'vetted', 'level', 'equipment', 'muscles', 'sided', 'upperBody',
       'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'weight', 'repHold', 'minMs', 'focus',
-      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show', 'listed',
+      'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show', 'listed', 'stable', 'cues',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
     fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip', 'unit'],
@@ -400,6 +400,7 @@
       if (e.sided) ex.sided = e.sided;
       if (e.upperBody) ex.upperBody = true;
       if (type === 'reps' && e.repHold) ex.repHold = e.repHold;
+      if (e.stable) ex.stable = e.stable.slice(); if (e.cues) ex.cues = { ...e.cues };
     } else {
       /* A counted move needs at least one thing the counter can judge; "did you reach the
          target" and "too fast" hold for any rep-based move, so they are the floor. */
@@ -423,7 +424,7 @@
       const spec = {
         id: e.id, order, name: e.name, group: e.group || grp.group, type, view: e.view || 'front', icon: e.icon || 'move',
         summary: e.summary, setup: e.setup, brief: e.brief, why: e.why, targets, defaultTarget, options: e.options || [],
-        progress: e.progress, hold: e.hold, faults: specFaults, guide, show: e.show, sided: e.sided, upperBody: e.upperBody, band: e.band, weight: e.weight, repHold: e.repHold, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
+        progress: e.progress, hold: e.hold, faults: specFaults, guide, show: e.show, sided: e.sided, upperBody: e.upperBody, band: e.band, weight: e.weight, repHold: e.repHold, stable: e.stable, cues: e.cues, focus: e.focus, figure: e.figure, enterCue: e.enterCue, display: e.display, vetted: !!e.vetted,
       };
       ex = SPEC.compile(spec, lib.kinematics);
       ex.faults = [...ex.faults, ...docFaults(true)];

@@ -456,6 +456,7 @@
       if (!live.turnedSince) live.turnedSince = now;
       if (now - live.turnedSince > (cam.yawPersist || 1500) && now - (live.lastTurnCue || 0) > 6000) {
         live.lastTurnCue = now; const cue = live.ex.view === 'front' ? 'Turn to face the camera' : 'Turn side-on to the camera';
+        if (!cueOn(live.ex, 'turn')) return;
         if (voice.say(cue, { priority: 1, minGap: 1500 }) || voice.muted) { showCue(cue, 'info'); recEvent('turned', { yaw: Math.round(c.yaw), cue }); }
       }
     } else live.turnedSince = 0;
@@ -518,7 +519,8 @@
     /* Spoken now rather than at "Go": it plays while they are getting into position, and the
        three-second count-in stays clear. */
     const opening = openingLine(ex, target, current.opts);
-    if (opening) { voice.say(opening, { priority: 2 }); recEvent('opening', { text: opening }); }
+    const openWords = cueAt(ex, 'opening', opening);
+    if (openWords) { voice.say(openWords, { priority: 2 }); recEvent('opening', { text: openWords }); }
     lastVideoTime = -1;
     cancelAnimationFrame(rafId); rafId = requestAnimationFrame(loop);
   }
@@ -528,6 +530,26 @@
   function setStatus(kind, text) { const s = $('track-status'); s.className = 'status ' + kind; $('track-text').textContent = text; }
   // Coloured outline around the camera view: green = person in frame / form good, red = not in position or a fault is active.
   function setFrame(kind) { const st = $('stage'); if (st.dataset.frame === kind) return; st.dataset.frame = kind; st.classList.toggle('frame-ok', kind === 'ok'); st.classList.toggle('frame-bad', kind === 'bad'); }
+  /* ---------- what this move says, and when ----------
+     The coach has its own things to say besides the faults: the opening brief, the count-in, the
+     number after each rep, the word for a clean one, the line for one that did not count, the
+     seconds of a hold, the summary at the end. Not every move wants all of them — a slow stretch
+     does not want a countdown, a set of twenty does not want praise twenty times, and a physio may
+     want their own words. So each of those moments is a stage a move can turn off or reword.
+
+     cueAt(ex, stage, dflt) returns the words to use, or null for silence. A stage the move does
+     not mention behaves as it always did. */
+  function cueAt(ex, stage, dflt) {
+    const c = ex && ex.cues ? ex.cues[stage] : undefined;
+    if (c === false) return null;
+    if (c === undefined || c === true) return dflt;
+    if (Array.isArray(c)) return c.length ? c : dflt;
+    return c;
+  }
+  const cueOn = (ex, stage) => cueAt(ex, stage, true) !== null;
+  /* a list stage (the praise words, the hold's marks) with the move's list if it gave one */
+  function cueList(ex, stage, dflt) { const c = ex && ex.cues ? ex.cues[stage] : undefined; return c === false ? [] : Array.isArray(c) && c.length ? c : dflt; }
+
   function showCue(text, kind = 'warn', ms = 2600) { const c = $('cue'); c.textContent = text; c.className = 'cue show ' + (kind === 'good' ? 'good' : kind === 'info' ? 'info' : ''); clearTimeout(live?.cueTimer); if (live) live.cueTimer = setTimeout(() => c.classList.remove('show'), ms); }
 
   /* ---------- pose source (real or mock) ---------- */
@@ -676,7 +698,7 @@
     if (!bad.length) { live.startSince = 0; return { bad, checks: live.ex.faults.filter((f) => f.atStart).length ? [{ label: 'Start position looks right', ok: true }] : [], actions: null }; }
     if (!live.startSince) live.startSince = now;
     const top = bad.slice().sort((a, b) => b.weight - a.weight)[0];
-    if (now - (live.lastStartCue || 0) > 5000) { live.lastStartCue = now; voice.say(top.cue, { priority: 1 }); recEvent('startFault', { id: top.id, cue: top.cue }); }
+    if (now - (live.lastStartCue || 0) > 5000 && cueOn(live.ex, 'start')) { live.lastStartCue = now; voice.say(top.cue, { priority: 1 }); recEvent('startFault', { id: top.id, cue: top.cue }); }
     return { bad: [top, ...bad.filter((f) => f !== top)], checks: bad.map((f) => ({ label: f.label, ok: false })), actions: now - live.startSince > 6000 ? START_SKIP : null };
   }
   /* Stable array identity: overlay() diffs on the labels, so this must not be rebuilt per frame. */
@@ -713,7 +735,7 @@
       }
     } else {
       live.steadySince = 0;
-      if (now - (live.lastPosCue || 0) > 6000 && c.msg) { live.lastPosCue = now; voice.say(c.msg, { priority: 1 }); }
+      if (now - (live.lastPosCue || 0) > 6000 && c.msg && cueOn(live.ex, 'position')) { live.lastPosCue = now; voice.say(c.msg, { priority: 1 }); }
       /* Always offer a way out: if the camera cannot see the whole body the set never starts,
          and without these the overlay is a dead end. */
       overlay('Get into position', c.msg, { checks: c.checks, note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on'), actions: POSITION_EXITS });
@@ -731,7 +753,7 @@
   ];
   function showStep(pts, now, lost) {
     const ask = live.ex.show.ask;
-    if (!live.showSpoken) { live.showSpoken = true; voice.say(`First, show me: ${ask}. Hold it there.`, { priority: 2 }); }
+    if (!live.showSpoken) { live.showSpoken = true; const w = cueAt(live.ex, 'show', `First, show me: ${ask}. Hold it there.`); if (w) voice.say(w, { priority: 2 }); }
     const note = 'No band or weight for this — the coach is measuring what the end of the range looks like on you.';
     if (lost || !pts) { live.showSteady = 0; overlay('Show me the end position', ask, { note, actions: SHOW_EXITS }); return; }
     const hip = E.mid(pts[23], pts[24]);
@@ -748,7 +770,7 @@
   }
   function countdownStep(pts, now) {
     const elapsed = now - live.countdownAt; const n = 3 - Math.floor(elapsed / 1000);
-    if (n !== live.lastCountSpoken && n > 0) { live.lastCountSpoken = n; voice.say(String(n), { priority: 2 }); voice.beep(660, 0.06); }
+    if (n !== live.lastCountSpoken && n > 0) { live.lastCountSpoken = n; if (cueOn(live.ex, 'countIn')) voice.say(String(n), { priority: 2 }); voice.beep(660, 0.06); }
     overlay('', 'Get ready…', { count: n > 0 ? n : 'GO' });
     if (elapsed >= 3000) {
       /* A 'pick' move works the limb the person chose; otherwise the side the lens can see. */
@@ -771,19 +793,21 @@
         else { current.shownFor = live.ex.id; current.shownPts = shownPts; }
       } recEvent('calibrate', { side, work: live.session.opts.work || null, ref: live.session.ref, camera: live.rec.camera });
       if (live.session.opts.work) $('live-name').textContent = `${live.ex.name} · ${sideName(live.session.opts.work)} ${limbWord(live.ex)}`;
-      live.state = 'active'; hideOverlay(); voice.say('Go', { priority: 2 }); voice.beep(990, 0.12);
-      showCue(live.ex.type === 'reps' ? 'Go — the coach is counting' : 'Hold it — timer running', 'good');
+      live.state = 'active'; hideOverlay(); const go = cueAt(live.ex, 'go', 'Go'); if (go) voice.say(go, { priority: 2 }); voice.beep(990, 0.12);
+      showCue(go || (live.ex.type === 'reps' ? 'Go — the coach is counting' : 'Hold it — timer running'), 'good');
       live.startedAt = now;
     }
   }
   function activeStep(pts, now, lost) {
     const s = live.session, ex = live.ex;
     setStatus(lost ? 'bad' : 'ok', lost ? 'Lost you' : (settings.fps === 'on' ? fps + ' fps' : 'Tracking'));
-    if (lost && now - (live.lastLostCue || 0) > 5000) { live.lastLostCue = now; showCue('Can\'t see you — step back into frame', 'info'); }
+    if (lost && now - (live.lastLostCue || 0) > 5000) { const w = cueAt(ex, 'lost', 'Can\'t see you — step back into frame'); if (w) { live.lastLostCue = now; showCue(w, 'info'); } }
     const r = s.step(pts, now);
     /* the start position was read again where the person actually settled (see SetSession.rebaseIfSettled):
        the target line and the readout follow the new baselines, and the file says it happened */
     if (r.rebased) { live.ghost = null; showCue('Start position read again', 'info'); recEvent('recalibrate', { side: s.side, ref: { base: s.ref.base, start: s.ref.start, target: s.ref.target } }); }
+    /* this rep is measured from where the person is now, so the target line is redrawn for it */
+    if (r.restarted) { live.ghost = null; recEvent('restart', { start: +s.ref.start.toFixed(2), target: +s.ref.target.toFixed(2) }); }
     /* the engine followed the limb that was actually moving: say so, and record it, so the review
        and the history name the limb that did the work */
     if (s.ref && s.ref.switched && s.ref.switched !== live.sideSwitched) {
@@ -815,12 +839,16 @@
           : (r.repCues[0] || r.cues[0]);
         if (r.repEvent.full) {
           $('count').textContent = s.counter.count; voice.beep(880, 0.1);
-          voice.say(s.counter.count + (pick ? '. ' + pick.cue : ''), { priority: 2 });
-          showCue(pick ? pick.cue : ['Nice', 'Good rep', 'Clean', 'Keep going'][s.counter.count % 4], pick ? 'warn' : 'good');
+          const n = cueOn(ex, 'count') ? String(s.counter.count) : '';
+          const praise = cueList(ex, 'praise', ['Nice', 'Good rep', 'Clean', 'Keep going']);
+          const said = [n, pick ? pick.cue : ''].filter(Boolean).join('. ');
+          if (said) voice.say(said, { priority: 2 });
+          const shown = pick ? pick.cue : praise.length ? praise[s.counter.count % praise.length] : '';
+          if (shown) showCue(shown, pick ? 'warn' : 'good');
         } else {
           voice.beep(330, 0.15);
-          const cue = pick ? pick.cue : 'Doesn\'t count — full range';
-          voice.say(cue, { priority: 2 }); showCue(cue, 'warn');
+          const cue = pick ? pick.cue : cueAt(ex, 'partial', 'Doesn\'t count — full range');
+          if (cue) { voice.say(cue, { priority: 2 }); showCue(cue, 'warn'); }
         }
         /* Start its cooldown, so the same cue is not repeated on the next rep. */
         if (pick) { said = pick; s.ackCue(pick.id, now); live.lastCueFault = pick.id; recEvent('cue', { fault: pick.id, cue: pick.cue }); }
@@ -829,15 +857,16 @@
       const sec = s.holdMs / 1000; $('count').textContent = Math.floor(sec) + 's';
       $('phase').textContent = r.m.inPosition ? (s.faults.active.size ? 'fix it' : 'holding') : 'get in position';
       const remaining = live.target - sec;
-      for (const mark of [Math.round(live.target / 2), 5, 4, 3, 2, 1]) {
-        if (remaining <= mark && !live.holdSpoken[mark] && remaining > mark - 1) { live.holdSpoken[mark] = true; voice.say(mark === Math.round(live.target / 2) && mark > 5 ? 'Halfway' : String(mark), { priority: 2 }); }
+      const half = Math.round(live.target / 2);
+      for (const mark of cueList(ex, 'mark', [half, 5, 4, 3, 2, 1])) {
+        if (remaining <= mark && !live.holdSpoken[mark] && remaining > mark - 1) { live.holdSpoken[mark] = true; voice.say(mark === half && mark > 5 ? 'Halfway' : String(mark), { priority: 2 }); }
       }
     }
     updateReadout(ex, r.m, s);
-    if (r.cues.length && !said) {
+    if (r.cues.length && !said && cueOn(ex, 'fault')) {
       const f = r.cues[0]; const spoken = voice.say(f.cue, { priority: 1, minGap: 1500 });
       if (spoken || voice.muted || !('speechSynthesis' in window)) { s.ackCue(f.id, now); showCue(f.cue, 'warn'); voice.beep(440, 0.08); live.lastCueFault = f.id; recEvent('cue', { fault: f.id, cue: f.cue }); }
-    } else if (!said && ex.type === 'hold' && !r.m.inPosition && ex.enterCue) {
+    } else if (!said && ex.type === 'hold' && !r.m.inPosition && ex.enterCue && cueOn(ex, 'enter')) {
       // holding exercise but not in the hold position: tell them how to get there instead of going quiet
       if (!live.outSince) live.outSince = now;
       if (now - live.outSince > 2500 && now - (live.lastEnterCue || 0) > 6000 && (now - live.startedAt) > 3000) { if (voice.say(ex.enterCue, { priority: 1, minGap: 1500 }) || voice.muted) { live.lastEnterCue = now; showCue(ex.enterCue, 'info'); recEvent('cue', { fault: 'enter', cue: ex.enterCue }); } }
@@ -882,7 +911,7 @@
     if (!keep) { cancelAnimationFrame(rafId); stopCamera(); try { wakeLock?.release(); } catch { } }
     voice.beep(990, 0.1); setTimeout(() => voice.beep(1320, 0.15), 120);
     if (!keep) renderReview(review);
-    const summary = spokenSummary(review); setTimeout(() => voice.say(summary, { priority: 2 }), 500);
+    const summary = cueAt(live.ex, 'finish', spokenSummary(review)); if (summary) setTimeout(() => voice.say(summary, { priority: 2 }), 500);
     const rec = live.rec;
     /* A stub keeps the frame loop alive so the video and skeleton keep drawing; it carries no
        session, so record() and the step handlers all no-op. */
@@ -997,6 +1026,10 @@
     if (!metric || !Number.isFinite(target)) return null;
     const P = metricPoints(metric, pts, S); if (!P || P.some((p) => !p || p.v < 0.3)) return null;
     const rad = (a) => a * Math.PI / 180;
+    /* Which points the move says stay put. Told outright, the target line is pinned to them
+       instead of to whichever end happens to have swung furthest so far. */
+    const still0 = new Set(ex.stable || []);
+    const fixed = (metric.pts || []).map((n) => still0.has(n));
     if (metric.kind === 'angle') {
       /* An angle has two arms and the target can be drawn on either of them. Swinging the far arm
          off the near one — which is what this did — makes the line follow the near arm, so in a
@@ -1019,8 +1052,11 @@
          angle is found from them (two sides and the angle between fix the triangle) and the target
          is drawn end to joint to end. Which side of the line the joint bends to is latched from
          the frame where it was clearest, like the sense below. */
-      if (g && g.dB > 0.02 && g.dB > 1.3 * Math.max(g.dA, g.dC)) {
-        const [S1, S2] = g.dA <= g.dC ? [A, C] : [C, A];
+      /* the joint itself travels between two ends that stay put: either the move says so, or it
+         has plainly happened */
+      const vertex = (fixed[0] && fixed[2] && !fixed[1]) || (!fixed.some(Boolean) && g && g.dB > 0.02 && g.dB > 1.3 * Math.max(g.dA, g.dC));
+      if (vertex) {
+        const [S1, S2] = (fixed[0] && fixed[2] ? E.dist(A, g.q0[0]) <= E.dist(C, g.q0[2]) : g.dA <= g.dC) ? [A, C] : [C, A];
         const L = E.dist(S1, B), D = E.dist(S1, S2), th = rad(target);
         const vc = (S2.x - S1.x) * (B.y - S1.y) - (S2.y - S1.y) * (B.x - S1.x);
         if (Math.abs(vc) > g.vcross) { g.vcross = Math.abs(vc); g.vsense = vc >= 0 ? 1 : -1; }
@@ -1037,14 +1073,18 @@
       const cross = (A.x - B.x) * (C.y - B.y) - (A.y - B.y) * (C.x - B.x);
       if (g && Math.abs(cross) > g.cross) { g.cross = Math.abs(cross); g.sense = cross >= 0 ? 1 : -1; }
       const sense = g ? g.sense : (cross >= 0 ? 1 : -1);
-      const swingA = !!g && g.a > g.c;                       /* the hip end moves in a squat, the ankle end in a knee extension */
+      /* the moving arm: the one the move did not call stable, else the one that has swung further
+         (the hip end in a squat, the ankle end in a knee extension) */
+      const swingA = fixed[2] && !fixed[0] ? true : fixed[0] && !fixed[2] ? false : (!!g && g.a > g.c);
       const [still, moving] = swingA ? [C, A] : [A, C];
       const L = E.dist(B, moving);
       const a = bear(still, B) + (swingA ? -sense : sense) * rad(target);
       return [still, B, { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L }];
     }
     if (metric.kind === 'vertical' || metric.kind === 'tilt') {   /* the segment at the target angle, on the side it already points to */
-      const [A, B] = P; const L = E.dist(A, B); const dir = Math.sign(B.x - A.x) || 1;
+      /* it pivots about its first point, unless the move says that is the end that moves */
+      const [A, B] = fixed[1] && !fixed[0] ? [P[1], P[0]] : [P[0], P[1]];
+      const L = E.dist(A, B); const dir = Math.sign(B.x - A.x) || 1;
       const a = metric.kind === 'vertical' ? rad(target) : rad(90 - target);
       return [A, { x: A.x + Math.sin(a) * dir * L, y: A.y + Math.cos(a) * L }];
     }
@@ -1266,5 +1306,5 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll: mountFigures, stopAll() { if (muscleFig) try { muscleFig.stopAll(); } catch (e) { } }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
-  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, cueAt, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

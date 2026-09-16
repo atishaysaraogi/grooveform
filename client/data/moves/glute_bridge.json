@@ -14,6 +14,7 @@
   "why": "From the side the shoulder–hip–knee angle opens from bent to straight as the hips rise, which counts each bridge. Ribs flaring and the back arching are hard to see side-on, so they are listed, not judged.",
   "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
   "progress": { "metric": "hip_open", "start": "calibrated", "target": 160 },
+  "stable": ["SH", "KNEE"],
   "faults": [
     {
       "id": "shallow",

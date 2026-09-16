@@ -482,6 +482,7 @@
       this.startT = null; this.lastT = null; this.holdMs = 0; this.goodMs = 0; this.lostMs = 0; this.frames = 0;
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
       this.pHist = []; this.calT = null; this.rebases = 0;
+      this.restP = null; this.restSince = 0; this.restarts = 0;
     }
     calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); this.calT = this.lastT; this.pHist = []; }
     /* The start position was read while the person was still, but still is not the same as ready:
@@ -516,6 +517,21 @@
       if (!pts) { this.lostMs += dt; return { m: this.m, cues: [], repEvent: null, done: false }; }
       let m = this.ex.measure(pts, this.side, this.ref);
       const rebased = this.counter && this.rebaseIfSettled(pts, m.p, t);
+      /* Between reps, the position being held is the next rep's start (see spec.js startAgain):
+         a body that settles differently on the fourth rep is still read correctly on the fourth
+         rep. Only at rest, only once a rep has been done, and only once the reading has stopped
+         moving, so the descent of the rep just finished is not mistaken for a new start. */
+      let restarted = false;
+      if (this.counter && !rebased && this.ex.startAgain && this.counter.reps.length && this.counter.state === 'rest') {
+        const cfg = (settingsOr().rep || {}).startAgain || null;
+        if (cfg) {
+          if (this.restP === null || Math.abs(m.p - this.restP) > 0.04) { this.restP = m.p; this.restSince = t; }
+          if (t - this.restSince >= (cfg.still ?? 400)) {
+            restarted = this.ex.startAgain(this.ref, pts, this.side, cfg);
+            if (restarted) { this.restarts++; this.restSince = t; this.restP = null; m = this.ex.measure(pts, this.side, this.ref); this.counter.p = m.p; }
+          }
+        }
+      } else if (this.counter && this.counter.state !== 'rest') { this.restP = null; }
       if (rebased) m = this.ex.measure(pts, this.side, this.ref);
       this.m = m;
       let repEvent = null, held = null, phase = 'hold';
@@ -523,6 +539,8 @@
         repEvent = this.counter.update(m.p, t); phase = this.counter.phase;
         if (repEvent && repEvent.type === 'held') { held = repEvent; repEvent = null; }
         if (repEvent) {
+          /* what this rep was measured from, so the review and the diagnostics can say so */
+          repEvent.rep.from = this.ref && Number.isFinite(this.ref.start) ? +this.ref.start.toFixed(2) : undefined;
           for (const f of this.ex.faults.filter(f => f.onRep)) if (f.check(repEvent.rep)) { repEvent.rep.faults.push(f.id); }
           for (const id of repEvent.rep.faults) this.repFaultCounts[id] = (this.repFaultCounts[id] || 0) + 1;
           this.repEvents.push(repEvent);
@@ -542,7 +560,7 @@
       const repCues = repEvent
         ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
-      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, done: this.complete };
+      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, restarted, done: this.complete };
     }
     review() {
       const ex = this.ex; const faultCounts = {}; const tips = [];

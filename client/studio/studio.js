@@ -55,7 +55,7 @@
     return {
       id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '', listed: undefined,
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
-      summary: '', setup: '', brief: '', why: '', band: false, weight: false, repHold: 0, options: [],
+      summary: '', setup: '', brief: '', why: '', band: false, weight: false, repHold: 0, stable: [], cues: {}, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
       calibrationPose: '', showAsk: '',
       progress: { metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false },
@@ -91,6 +91,7 @@
       sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
       muscles: { ...((raw.pose && raw.pose.work) || (raw.figure && raw.figure.w) || {}) }, pose: raw.pose ? JSON.parse(JSON.stringify(raw.pose)) : null, figure: raw.figure || null,
       minMs: r.minMs, focus: r.focus, order: raw.order, vetted: !!r.vetted,
+      stable: (r.stable || []).slice(), cues: r.cues ? { ...r.cues } : {},
       _file: 'moves/' + ex.id + '.json', _region: regionOf(ex.file), _replaces: ex.id, _key: ex.id, created: Date.now(),
       _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
@@ -141,6 +142,8 @@
     if (s.band !== false && s.band !== undefined) put('band', s.band);
     if (s.weight !== false && s.weight !== undefined) put('weight', s.weight);
     if (s.type === 'reps' && s.repHold > 0) put('repHold', s.repHold);
+    if ((s.stable || []).length) put('stable', s.stable.slice());
+    if (s.cues && Object.keys(s.cues).length) put('cues', { ...s.cues });
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
     if (tracked && s.type === 'reps' && s.progress && s.progress.metric.pts.length) { const p = { metric: foldMetric(s.progress.metric), start: s.progress.start }; if (Number.isFinite(s.progress.startMin)) p.startMin = s.progress.startMin; if (Number.isFinite(s.progress.startMax)) p.startMax = s.progress.startMax; p.target = s.progress.target; if (s.progress.targetIsDelta) p.targetIsDelta = true; if (s.progress.delta === -1) p.delta = -1;
@@ -1112,6 +1115,79 @@
   }
   const legend = () => `<div class="legend"><span><i style="background:${COLORS.clean}"></i>clean</span><span><i style="background:${COLORS.fault}"></i>fault takes</span><span><i style="background:${COLORS.borderline}"></i>borderline</span><span><i style="background:${COLORS.setup}"></i>awkward set-up</span></div>`;
 
+  /* ---------- the limbs that stay put ----------
+     The target line drawn over the camera has to know which end of the movement is the anchor. It
+     can work that out by watching — but not on the first rep, and not when both ends move a little.
+     Told outright, it is right from the first frame. */
+  const STABLE_PTS = ['SH', 'EL', 'WR', 'HIP', 'KNEE', 'ANK', 'HEEL', 'FOOT', 'oSH', 'oHIP', 'oKNEE', 'oANK'];
+  function stableCard(s) {
+    const on = new Set(s.stable || []);
+    return `<div class="card"><h3>Which parts stay still</h3>
+      <p class="muted" style="font-size:.85rem;margin-bottom:8px">The points the person is resting on, that do not travel during the movement — the shoulder and knee in a bridge, the hip in a knee extension. The target line is pinned to them. Leave it empty and the coach works it out by watching.</p>
+      <div class="opts" id="stable-pts">${STABLE_PTS.map((n) => `<button type="button" class="chip small" data-st="${n}" aria-pressed="${on.has(n)}">${esc(LM_WORDS[n] || LM_WORDS[n.slice(1)] && ('other ' + LM_WORDS[n.slice(1)]) || n)}</button>`).join('')}</div></div>`;
+  }
+  function wireStable(s, root) {
+    root.querySelectorAll('[data-st]').forEach((b) => { b.onclick = () => {
+      const n = b.dataset.st; const on = new Set(s.stable || []);
+      if (on.has(n)) on.delete(n); else on.add(n);
+      s.stable = STABLE_PTS.filter((x) => on.has(x)); saveState(); render();
+    }; });
+  }
+  /* ---------- what the coach says, and when ----------
+     Every moment the coach speaks on its own account. A move may keep the usual words, put its own
+     in their place, or have it say nothing there at all. */
+  const STAGE_WORDS = [
+    ['opening', 'The opening brief', 'as the camera opens'],
+    ['position', 'Get into frame', 'while they are not in shot'],
+    ['start', 'Start-position faults', 'before the count-in'],
+    ['show', 'Asking for the end position', 'only if the move asks for one'],
+    ['countIn', 'The count-in', '3, 2, 1'],
+    ['go', 'Go', 'as the set begins'],
+    ['count', 'The rep number', 'after each full rep'],
+    ['praise', 'The word for a clean rep', 'a list to draw from'],
+    ['partial', 'A rep that did not count', ''],
+    ['fault', 'The live fault cues', 'the cues written on step 5'],
+    ['mark', 'A hold’s seconds', 'halfway, then the last few'],
+    ['enter', 'Get into the hold position', ''],
+    ['finish', 'The summary', 'at the end of the set'],
+    ['lost', 'Cannot see you', ''],
+    ['turn', 'Turn back to the camera', ''],
+  ];
+  const LISTY = { praise: 'Nice, Good rep, Clean', mark: '10, 5, 3, 2, 1' };
+  function cuesCard(s) {
+    const c = s.cues || {};
+    const rows = STAGE_WORDS.filter(([k]) => {
+      if (s.type === 'reps') return k !== 'mark' && k !== 'enter';
+      return k !== 'count' && k !== 'praise' && k !== 'partial' && k !== 'countIn';
+    }).map(([k, label, hint]) => {
+      const v = c[k]; const off = v === false;
+      const words = typeof v === 'string' ? v : Array.isArray(v) ? v.join(', ') : '';
+      return `<div class="cue-row" data-cue="${k}"><div class="row" style="gap:8px;align-items:baseline">
+        <button type="button" class="chip small" data-cueon="${k}" aria-pressed="${!off}">${off ? 'silent' : 'says it'}</button>
+        <strong style="font-size:.9rem">${esc(label)}</strong>${hint ? `<span class="muted" style="font-size:.8rem">${esc(hint)}</span>` : ''}</div>
+        ${off ? '' : `<input type="text" data-cuetext="${k}" value="${esc(words)}" placeholder="${esc(LISTY[k] ? LISTY[k] : 'the usual words')}" style="margin-top:4px">`}</div>`;
+    }).join('');
+    return `<div class="card"><h3>What the coach says, and when</h3>
+      <p class="muted" style="font-size:.85rem;margin-bottom:8px">Every moment the coach speaks for itself, besides the faults. Leave a box empty for the usual words, type your own to replace them, or turn the moment off. ${s.type === 'reps' ? 'A set of twenty rarely wants every rep counted aloud.' : 'A slow stretch rarely wants a countdown.'}</p>
+      <div class="stack cue-rows">${rows}</div></div>`;
+  }
+  function wireCues(s, root) {
+    root.querySelectorAll('[data-cueon]').forEach((b) => { b.onclick = () => {
+      const k = b.dataset.cueon; s.cues = s.cues || {};
+      if (s.cues[k] === false) delete s.cues[k]; else s.cues[k] = false;
+      saveState(); render();
+    }; });
+    root.querySelectorAll('[data-cuetext]').forEach((el) => { el.oninput = () => {
+      const k = el.dataset.cuetext; s.cues = s.cues || {};
+      const t = el.value.trim();
+      if (!t) delete s.cues[k];
+      else if (LISTY[k]) s.cues[k] = k === 'mark' ? t.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0) : t.split(/\s*,\s*/).filter(Boolean);
+      else s.cues[k] = t;
+      if (LISTY[k] && !(s.cues[k] || []).length) delete s.cues[k];
+      saveState();
+    }; });
+  }
+
   /* ===================== 4 · measure ===================== */
   function measurePanel(s) {
     const noTakes = !state.takes.length;
@@ -1139,6 +1215,7 @@
             ${field('Let the user choose the target?', `<div class="row">${chips('romMode', [false, true], !!romOpt, { false: 'No, one target', true: 'Yes — a “range” option' })}${romOpt ? `<input type="text" data-k="romValues" value="${esc(romOpt.values.join(', '))}" placeholder="45, 60, 75, 90" style="width:160px">` : ''}</div>`, romOpt ? 'The last value is the default. Rehab moves usually want this — early weeks aim lower.' : '')}
             <button class="btn ghost small" id="suggest" ${noTakes ? 'disabled' : ''}>Suggest start and target from clean takes</button>
           </div></div>
+          ${stableCard(s)}
           <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(pr.metric.pts)], s.focus || '', { '': 'Last point of the metric' })}<p class="muted" style="font-size:.85rem;margin-top:6px">Drawn as the pink dot on the person during a set.</p></div>
         </div></div>
         <div class="row"><button class="btn ghost" id="back">← Record</button><span class="spacer"></span><button class="btn primary" id="next">Faults →</button></div></div>`;
@@ -1153,6 +1230,7 @@
         ${state.takes.length ? `<canvas class="chart" id="chart-c${i}" style="margin-top:10px"></canvas>` : ''}</div>`).join('')}
         <button class="btn ghost" id="addc">Add a condition</button></div>
         <div class="stack"><div class="card"><h3>Seconds the coach would count</h3>${state.takes.length ? `<div class="fires">${state.takes.filter(usable).map((t) => { const sim = state.sims[t.id]; return `<span class="${!sim || sim.error ? '' : (labelOf(t) === 'clean' ? (sim.holdMs > 0.7 * sim.durationMs ? 'ok' : 'warn') : '')}">${esc(saidText(t))}: ${sim && !sim.error ? (sim.holdMs / 1000).toFixed(1) + ' / ' + (sim.durationMs / 1000).toFixed(1) + ' s' : '—'}</span>`; }).join('')}</div>${legend()}` : '<p class="muted">Record a take first.</p>'}</div>
+        ${stableCard(s)}
         <div class="card"><h3>Which landmark to highlight</h3>${chips('focus', ['', ...new Set(conds.flatMap((c) => c.metric.pts))], s.focus || '', { '': 'First point of the first condition' })}</div>
         <div class="card"><div class="fields">${field('Live readout', `<div class="row"><select data-k="display.condition">${conds.map((c, i) => `<option value="${i}" ${((s.display || {}).condition || 0) === i ? 'selected' : ''}>condition ${i + 1}</option>`).join('')}</select><input type="text" data-k="display.label" value="${esc((s.display || {}).label || '')}" placeholder="knee" style="width:110px"><input type="text" data-k="display.aim" value="${esc((s.display || {}).aim || '')}" placeholder="90°" style="width:80px"></div>`, 'What the person sees: “97° knee · aim 90°”.')}
           ${field('When out of position, the coach says', text('enterCue', s.enterCue || '', 'Slide down the wall until your knees are at ninety'), 'Spoken after a few seconds out of position, instead of silence.')}</div></div></div></div>
@@ -1160,6 +1238,7 @@
   }
   function wireMeasure(s) {
     const root = $('main'); const rerender = () => { resim(); render(); };
+    wireStable(s, root);
     bind(root, s, (k) => {
       if (k === 'progress.startMode') { s.progress.start = document.querySelector('[data-chips="progress.startMode"] .chip[aria-pressed="true"]').dataset.v === 'calibrated' ? 'calibrated' : (Number.isFinite(s.progress.start) ? s.progress.start : 0); delete s.progress.startMode; rerender(); return; }
       if (k === 'progress.targetNum') { const v = s.progress.targetNum; delete s.progress.targetNum; if (Number.isFinite(v)) { s.progress.target = v; resim(); drawMeasureCharts(s); } return; }
@@ -1347,6 +1426,7 @@
           ${field('Muscles — also', text('muscleNames.secondaryText', listText((s.muscleNames || {}).secondary), 'hamstrings'))}
           ${field('Sources', area('sourcesText', s.sourcesText, 'E3 Rehab — knee pain | https://…', 2), 'One per line: name | url. Added to the file’s own sources.')}
         </div></div>
+        ${cuesCard(s)}
         <div class="card"><h3>Muscles the figure should light up</h3><p class="muted" style="font-size:.85rem;margin-bottom:8px">Tap to cycle: off → some → most.</p><div class="muscles">${ANAT.regions.map((r) => `<button type="button" class="chip small" data-mus="${r}" aria-pressed="${(s.muscles[r] || 0) > 0}">${r}${s.muscles[r] ? ' · ' + (s.muscles[r] >= 1 ? 'most' : 'some') : ''}</button>`).join('')}</div></div>
         <div class="card"><h3>Demo figure</h3><p class="muted" style="font-size:.85rem">Two keyframes — the start position and the end of the movement. Built from a clean take, written from preset angles, or dragged into shape by hand.</p>
           <div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn secondary small" id="build-fig" ${state.takes.some((t) => shows(t, 'clean')) ? '' : 'disabled'}>${s.figure ? 'Rebuild' : 'Build'} from the best clean take</button>
@@ -1358,7 +1438,7 @@
       <div class="row"><button class="btn ghost" id="back">← Faults</button><span class="spacer"></span><button class="btn primary" id="next">Check &amp; export →</button></div></div>`;
   }
   function wireGuide(s) {
-    const root = $('main'); bind(root, s, (k) => {
+    const root = $('main'); wireCues(s, root); bind(root, s, (k) => {
       if (k === 'muscleNames.primaryText' || k === 'muscleNames.secondaryText') { const which = k.includes('primary') ? 'primary' : 'secondary'; s.muscleNames = s.muscleNames || { primary: [], secondary: [] }; s.muscleNames[which] = listFrom(s.muscleNames[which + 'Text']); delete s.muscleNames[which + 'Text']; saveState(); }
     });
     root.querySelectorAll('[data-tr]').forEach((b) => { b.onclick = () => { const [ri, pi] = b.dataset.tr.split('.').map(Number); const p = s.guide.regions[ri].points[pi]; p.tracked = !p.tracked; saveState(); render(); }; });

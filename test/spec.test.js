@@ -381,3 +381,58 @@ test('a fault reading landmarks the model is unsure of needs a bigger violation'
      line between them, not a tax on every fault */
   assert.ok(u.vis > 0.7 && u.floor < u.vis);
 });
+
+/* A set is not done in one place. Each rep is measured from the position held just before it, so a
+   body that settles differently on the fourth rep is still read correctly on the fourth rep — but
+   the start may only wander so far, or stopping half way down would redefine the exercise. */
+test('each rep is measured from the position held before it, within a drift cap', () => {
+  const ex = SPEC.compile(sideLegRaise, K);
+  const ref = ex.calibrate(pose(0), 'R', { rom: 30 });
+  const s0 = ref.start, span = Math.abs(ref.target - s0);
+  const cfg = E.settings.rep.startAgain;
+  /* the leg now hangs 6° further out than it did: the next rep starts from there */
+  assert.equal(ex.startAgain(ref, pose(6), 'R', cfg), true);
+  assert.ok(Math.abs(ref.start - (s0 + 6)) < 1.5, 'the new start is where the leg is: ' + ref.start);
+  assert.equal(ref.restarts, 1);
+  /* the same position again is not a new start */
+  assert.equal(ex.startAgain(ref, pose(6), 'R', cfg), false, 'nothing moved, nothing re-read');
+  /* resting half way up does not become the new floor: the start is capped at drift of the way */
+  ex.startAgain(ref, pose(28), 'R', cfg);
+  assert.ok(ref.start <= s0 + span * cfg.drift + 0.01, `capped at ${(span * cfg.drift).toFixed(1)}° of drift, got ${(ref.start - s0).toFixed(1)}`);
+  /* an absolute target does not move with the start; a delta target does */
+  assert.equal(ref.target, ref.parts0[0].target, 'the target is where it was');
+  const dspec = JSON.parse(JSON.stringify(sideLegRaise)); dspec.progress = { metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, start: 'calibrated', target: 30, targetIsDelta: true };
+  const dex = SPEC.compile(dspec, K); const dref = dex.calibrate(pose(0), 'R', {});
+  const t0 = dref.target; dex.startAgain(dref, pose(6), 'R', cfg);
+  assert.ok(dref.target > t0 + 4, 'a target written as a change moves with the start');
+  /* a demonstrated target is left alone entirely */
+  const shown = SPEC.compile({ ...JSON.parse(JSON.stringify(sideLegRaise)), show: { ask: 'hold it out' } }, K);
+  const sref = shown.calibrate(pose(0), 'R', { rom: 30, work: 'R' }); assert.ok(shown.showTarget(pose(28), sref), 'the demonstration was read');
+  assert.equal(shown.startAgain(sref, pose(6), 'R', cfg), false, 'what they demonstrated is not re-read');
+});
+
+/* The target line has to know which end of the movement is the anchor. A move can say so outright
+   instead of leaving the coach to work it out by watching. */
+test('stable names the landmarks that do not move, and is checked', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise)); spec.stable = ['SH', 'KNEE'];
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  assert.deepEqual(SPEC.compile(spec, K).stable, ['SH', 'KNEE']);
+  spec.stable = ['ELBOW']; assert.match(SPEC.checkSpec(spec).join(' '), /unknown landmark "ELBOW"/);
+  spec.stable = 'SH'; assert.match(SPEC.checkSpec(spec).join(' '), /stable must be a list/);
+  delete spec.stable; assert.deepEqual(SPEC.compile(spec, K).stable, []);
+});
+
+/* Every moment the coach speaks for itself is a stage a move can silence or reword. */
+test('cues: a move says which of the coach\'s own moments it wants', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  spec.cues = { count: false, praise: ['Steady'], partial: 'Higher next time', mark: [10, 3], go: 'Begin' };
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  assert.deepEqual(SPEC.compile(spec, K).cues.praise, ['Steady']);
+  assert.ok(SPEC.STAGES.includes('opening') && SPEC.STAGES.includes('finish') && SPEC.STAGES.length === 15);
+  const bad = (c) => { const s = JSON.parse(JSON.stringify(sideLegRaise)); s.cues = c; return SPEC.checkSpec(s).join(' '); };
+  assert.match(bad({ whistle: false }), /"whistle" is not a stage/);
+  assert.match(bad({ go: 3 }), /cues.go: true, false or the words/);
+  assert.match(bad({ praise: 'Nice' }), /cues.praise: true, false or a list/);
+  assert.match(bad({ go: '  ' }), /cues.go/);
+  assert.match(bad([]), /cues must be a block/);
+});

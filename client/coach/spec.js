@@ -29,6 +29,8 @@
   'use strict';
 
   const NAMES = ['EAR', 'SH', 'EL', 'WR', 'HIP', 'KNEE', 'ANK', 'HEEL', 'FOOT'];
+  /* every landmark name a move may write: the working side, the other side, and the midpoints */
+  const LM_ALL = [...NAMES, ...NAMES.map((n) => 'o' + n), 'NOSE', 'mSH', 'mHIP', 'mEAR'];
   const KINDS = {
     angle:    { n: 3, unit: '°',  label: 'Angle at the middle joint',              help: 'Interior angle a–b–c, 0–180°. Knee: HIP–KNEE–ANK. Elbow: SH–EL–WR.' },
     vertical: { n: 2, unit: '°',  label: 'Segment from hanging straight down',    help: '0° = hanging down, 90° = horizontal, 180° = straight up. Arm raise: SH–EL.' },
@@ -185,6 +187,9 @@
 
   const faultSettings = (k) => { const s = k.settings && k.settings.fault; if (!s) throw new Error('settings.json needs a fault section'); return s; };
   const RULES = ['shallow', 'fast', 'return', 'shortHold'];
+  /* Every moment the coach speaks or writes on its own account, in the order a set meets them.
+     A move may silence any of them or put its own words in their place — see `cues`. */
+  const STAGES = ['opening', 'position', 'start', 'show', 'countIn', 'go', 'count', 'praise', 'partial', 'fault', 'mark', 'enter', 'finish', 'lost', 'turn'];
   /* When a fault is watched. The first four are inside a running set; "start" is the odd one out —
      it is checked once, on the start position, before the set begins, so a set-up error (feet too
      far away, band already taut, knee already bent) is said while it can still be fixed rather
@@ -207,6 +212,19 @@
     need(['reps', 'hold'].includes(spec.type), 'type must be reps or hold');
     if (spec.repHold !== undefined && spec.repHold !== null && spec.repHold !== 0) { need(spec.type === 'reps', 'repHold (a hold at the top of each rep) is for a counted move — a timed move is a hold already'); need(Number.isFinite(spec.repHold) && spec.repHold > 0 && spec.repHold <= 30, 'repHold: seconds, more than 0 and at most 30'); }
     if (spec.weight !== undefined && spec.weight !== false) need(spec.weight === true || spec.weight === 'none' || (Number.isFinite(spec.weight) && spec.weight > 0), 'weight must be true, "none" or a number of kilograms');
+    if (spec.stable !== undefined) {
+      if (!Array.isArray(spec.stable)) problems.push('stable must be a list of landmark names');
+      else for (const n of spec.stable) if (!LM_ALL.includes(n)) problems.push('stable: unknown landmark "' + n + '"');
+    }
+    if (spec.cues !== undefined) {
+      if (!spec.cues || typeof spec.cues !== 'object' || Array.isArray(spec.cues)) problems.push('cues must be a block of stage: setting');
+      else for (const [stage, v] of Object.entries(spec.cues)) {
+        if (!STAGES.includes(stage)) { problems.push('cues: "' + stage + '" is not a stage (' + STAGES.join(', ') + ')'); continue; }
+        const listy = stage === 'praise' || stage === 'mark';
+        if (v === false || v === true) continue;
+        if (listy ? !Array.isArray(v) || !v.length : typeof v !== 'string' || !v.trim()) problems.push('cues.' + stage + ': ' + (listy ? 'true, false or a list' : 'true, false or the words to say'));
+      }
+    }
     need(['front', 'side'].includes(spec.view), 'view must be front or side');
     need(spec.summary, 'summary (one line for the tile) is missing');
     need(spec.setup, 'setup (where the camera goes) is missing');
@@ -361,25 +379,72 @@
       return g.op === '>' ? v > g.threshold : v < g.threshold;
     };
 
+    /* Where each measurement starts from and where it is going, read off a set of baselines. */
+    function startsFrom(ref, side, opts) {
+      return progParts.map((p) => {
+        let start = p.start === 'calibrated' ? ref.base[side][p.i] : p.start;
+        if (Number.isFinite(p.startMin)) start = Math.max(start, p.startMin);
+        if (Number.isFinite(p.startMax)) start = Math.min(start, p.startMax);
+        const t = typeof p.target === 'string' ? +(opts && opts[p.target.slice(4)]) : p.target;
+        const target = p.start === 'calibrated' && p.targetIsDelta ? start + (p.delta || 1) * t : t;
+        return { i: p.i, name: typeof p.metric === 'string' ? p.metric : p.metric.kind, start, target };
+      });
+    }
     function calibrate(pts, S, opts) {
       const ref = calibrateRef(metrics, pts, k, opts);
       ref.opts = opts || {};
       ref.work = opts && opts.work ? opts.work : null;
       const side = ref.work || S || S0 || 'L';
       if (prog) {
-        ref.parts = progParts.map((p) => {
-          let start = p.start === 'calibrated' ? ref.base[side][p.i] : p.start;
-          if (Number.isFinite(p.startMin)) start = Math.max(start, p.startMin);
-          if (Number.isFinite(p.startMax)) start = Math.min(start, p.startMax);
-          const t = typeof p.target === 'string' ? +(opts && opts[p.target.slice(4)]) : p.target;
-          const target = p.start === 'calibrated' && p.targetIsDelta ? start + (p.delta || 1) * t : t;
-          return { i: p.i, name: typeof p.metric === 'string' ? p.metric : p.metric.kind, start, target };
-        });
+        ref.parts = startsFrom(ref, side, opts);
         /* the first measurement is still "the" one: it is what the readout shows, what the target
            line is drawn for, and what a demonstrated pose replaces */
         ref.start = ref.parts[0].start; ref.target = ref.parts[0].target; ref.dataTarget = ref.target;
+        /* what the beginning of the set read, kept so a later rep's start can be held near it */
+        ref.parts0 = ref.parts.map((p) => ({ start: p.start, target: p.target }));
+        ref.base0 = { L: ref.base.L.slice(), R: ref.base.R.slice() };
       }
       return ref;
+    }
+    /* ---------- the start of THIS rep ----------
+       A set is not done in one place. The person settles a little differently on the fourth bridge
+       than on the first, and a rep measured from where the set began is then read wrong — too far
+       through before it starts, or never back at rest when it ends. So the position held just
+       before a rep becomes that rep's start: the baselines are read again on that frame.
+
+       What stops it drifting into nonsense is the clamp. A start may only wander `drift` of the
+       way from the calibrated start toward the target, so a body that settles is followed while
+       someone who stops half way down does not get to redefine the exercise — that is still a
+       short rep, and the "return" rule still says so. A demonstrated target is left alone. */
+    function startAgain(ref, pts, S, cfg) {
+      if (!prog || !ref || !ref.parts0 || ref.shown != null) return false;
+      const side = ref.work || S || S0 || 'L';
+      const opts = ref.opts || {};
+      const drift = (cfg && Number.isFinite(cfg.drift)) ? cfg.drift : 0.4;
+      const next = []; let moved = false;
+      for (let j = 0; j < progParts.length; j++) {
+        const p = progParts[j], was = ref.parts0[j], cur = ref.parts[j];
+        if (p.start !== 'calibrated') { next.push({ ...cur }); continue; }    /* a start written as a number is a number */
+        let v; try { v = evalMetric(metrics[p.i], pts, side, k, ref, opts); } catch (e) { return false; }
+        if (!Number.isFinite(v)) return false;
+        let start = v;
+        if (Number.isFinite(p.startMin)) start = Math.max(start, p.startMin);
+        if (Number.isFinite(p.startMax)) start = Math.min(start, p.startMax);
+        const lim = Math.abs(was.target - was.start) * drift, off = start - was.start;
+        if (Math.abs(off) > lim) start = was.start + Math.sign(off) * lim;
+        const t = typeof p.target === 'string' ? +(opts[p.target.slice(4)]) : p.target;
+        const target = p.targetIsDelta ? start + (p.delta || 1) * t : was.target;
+        /* worth re-reading only when it has actually shifted, so a long rest is not a stream of them */
+        if (Math.abs(start - cur.start) > Math.max(0.01 * Math.abs(was.target - was.start), 0.05)) moved = true;
+        next.push({ i: p.i, name: cur.name, start, target });
+      }
+      if (!moved) return false;
+      /* only where the rep is measured from moves. What a fault compares against does not: a heel
+         that has been off the floor since the first rep is still off the floor, and a baseline that
+         crept up with it every rep would quietly stop saying so. */
+      ref.parts = next; ref.start = next[0].start; ref.target = next[0].target;
+      ref.restarts = (ref.restarts || 0) + 1;
+      return true;
     }
     /* ---------- a pose the person shows once, before the set ----------
        Some targets are a number that only means anything on the body in front of the camera: "arms
@@ -518,7 +583,8 @@
       summary: spec.summary, setup: spec.setup, brief: spec.brief, why: spec.why, show: spec.show || null, showTarget,
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
-      calibrate, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted, repHold: spec.type === 'reps' && spec.repHold ? spec.repHold : 0,
+      calibrate, startAgain, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted, repHold: spec.type === 'reps' && spec.repHold ? spec.repHold : 0,
+      stable: (spec.stable || []).slice(), cues: spec.cues ? { ...spec.cues } : null,
       guide: { surface: spec.guide.surface, stop: spec.guide.stop, cannotSee: spec.guide.cannotSee, regions: spec.guide.regions.filter((r) => r.name && (r.points || []).some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) },
       display: spec.display || null, enterCue: spec.enterCue || null, metrics, iProg, holdConds,
       spec,
@@ -534,6 +600,6 @@
 
   /* the unit a metric reads in: its own (inches, centimetres) or the kind's (°, %) */
   const unitOf = (m) => (m && m.unit) || ((KINDS[m && m.kind] || {}).unit) || '';
-  const api = { KINDS, NAMES, RULES, PHASES, compile, checkSpec, evalMetric, calibrateRef, metricLandmarks, describeKind, resolve, stature, unitOf, DEFAULT_HEIGHT_IN };
+  const api = { KINDS, NAMES, RULES, PHASES, STAGES, compile, checkSpec, evalMetric, calibrateRef, metricLandmarks, describeKind, resolve, stature, unitOf, DEFAULT_HEIGHT_IN };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MoveSpec = api;
 })(typeof window !== 'undefined' ? window : globalThis);

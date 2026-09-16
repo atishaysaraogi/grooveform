@@ -97,6 +97,10 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 30. Glute bridge: the target line is drawn shoulder to hip to knee and stays put as the hips rise; the arm-anchored line of a squat is unchanged.
 31. Side-on move, a fault written against the far limb (`oKNEE`…): it stays quiet through a take where the near-limb version of the same fault fires, and only speaks on a plainly large violation.
 32. Two faults true at once: the same cue does not repeat inside 8 seconds.
+33. A bridge where you lie down slightly differently each rep: every rep still counts, and the diagnostics show each rep's own start drifting a few degrees while the calibrated one stays put.
+34. Rest half way down between reps: the start does not follow you all the way there (it stops at the drift cap) and the rep still reads as short.
+35. Studio step 4 → Which parts stay still: tick shoulder and knee on a bridge; the target line is drawn shoulder to hip to knee from the first rep and holds its angle as the hips rise.
+36. Studio step 6 → What the coach says: silence "The rep number" and run a set — the reps still count on screen, nothing is spoken; type your own words for "Go" and hear them.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

@@ -700,6 +700,81 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('each rep has its own start, the anchors are declared, and a move says what the coach says', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'glute_bridge'));
+    /* the bridge names the points the person rests on, and it survives the round trip */
+    const stable = await st.evaluate(() => window.ExerciseLibrary.all().find((e) => e.id === 'glute_bridge').stable);
+    assert.deepEqual(stable, ['SH', 'KNEE'], 'the bridge says the shoulder and knee stay put');
+    await st.selectOption('#move-select', 'glute_bridge'); await st.waitForSelector('#steps [data-step="measure"]');
+    await st.click('#steps [data-step="measure"]'); await st.waitForSelector('#stable-pts');
+    assert.equal(await st.$eval('[data-st="SH"]', (e) => e.getAttribute('aria-pressed')), 'true');
+    assert.equal(await st.$eval('[data-st="KNEE"]', (e) => e.getAttribute('aria-pressed')), 'true');
+    assert.equal(await st.$eval('[data-st="WR"]', (e) => e.getAttribute('aria-pressed')), 'false');
+    await st.click('[data-st="WR"]');
+    await st.waitForFunction(() => (window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).includes('WR'));
+    assert.deepEqual(await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'hip').entry.stable; }), ['SH', 'WR', 'KNEE'], 'written in a fixed order, head to toe');
+    await st.click('[data-st="WR"]');
+    await st.waitForFunction(() => !(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).includes('WR'));
+    /* and step 6 says what the coach says at each moment */
+    await st.click('#steps [data-step="guide"]'); await st.waitForSelector('[data-cueon="count"]');
+    assert.equal(await st.$eval('[data-cueon="count"]', (e) => e.textContent.trim()), 'says it');
+    await st.click('[data-cueon="count"]');
+    await st.waitForFunction(() => window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].cues.count === false);
+    assert.equal(await st.$eval('[data-cueon="count"]', (e) => e.textContent.trim()), 'silent');
+    assert.equal(await st.$('[data-cuetext="count"]'), null, 'a silent stage has no words to write');
+    await st.fill('[data-cuetext="go"]', 'Begin'); await st.dispatchEvent('[data-cuetext="go"]', 'input');
+    await st.fill('[data-cuetext="praise"]', 'Steady, Strong'); await st.dispatchEvent('[data-cuetext="praise"]', 'input');
+    const cues = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'hip').entry.cues; });
+    assert.deepEqual(cues, { count: false, go: 'Begin', praise: ['Steady', 'Strong'] }, JSON.stringify(cues));
+    /* a hold is not offered the rep-only moments */
+    const forHold = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; s.type = 'hold'; S.render(); return [...document.querySelectorAll('[data-cueon]')].map((b) => b.dataset.cueon); });
+    assert.ok(forHold.includes('mark') && forHold.includes('enter') && !forHold.includes('count'), forHold.join(','));
+    await st.close();
+
+    /* the coach, at each moment: silenced says nothing, reworded says the move's words */
+    const page = await newPage();
+    await page.goto(base + '/?mock=1#/exercise/hipabd'); await page.waitForSelector('#do-start');
+    const heard = await page.evaluate(() => {
+      const at = window.OnTrackCoach.cueAt;
+      const ex = { cues: { count: false, go: 'Begin', praise: ['Steady'] } };
+      return { silenced: at(ex, 'count', '3'), reworded: at(ex, 'go', 'Go'), listed: at(ex, 'praise', ['Nice']),
+        untouched: at(ex, 'finish', 'Set complete'), noBlock: at({}, 'go', 'Go') };
+    });
+    assert.equal(heard.silenced, null, 'a silenced moment says nothing');
+    assert.equal(heard.reworded, 'Begin', 'a reworded one says the move\'s words');
+    assert.deepEqual(heard.listed, ['Steady']);
+    assert.equal(heard.untouched, 'Set complete', 'a stage left out is unchanged');
+    assert.equal(heard.noBlock, 'Go', 'and a move with no cues block is unchanged');
+    /* the engine: each rep records the start it was measured from */
+    const froms = await page.evaluate(() => {
+      const E = window.FormEngine, ex = window.ExerciseLibrary.all().find((e) => e.id === 'hipabd');
+      const frame = (raise) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, v: 1, visibility: 1 });
+        const hip = [0.46, 0.55], kn = [hip[0] - Math.sin(raise * Math.PI / 180) * 0.2, hip[1] + Math.cos(raise * Math.PI / 180) * 0.2];
+        p[11] = { x: 0.58, y: 0.30, z: 0, v: 1 }; p[12] = { x: 0.42, y: 0.30, z: 0, v: 1 };
+        p[23] = { x: 0.54, y: 0.55, z: 0, v: 1 }; p[24] = { x: hip[0], y: hip[1], z: 0, v: 1 };
+        p[25] = { x: 0.54, y: 0.75, z: 0, v: 1 }; p[26] = { x: kn[0], y: kn[1], z: 0, v: 1 };
+        p[27] = { x: 0.54, y: 0.95, z: 0, v: 1 }; p[28] = { x: kn[0], y: kn[1] + 0.2, z: 0, v: 1 };
+        for (const i of [7, 8, 29, 30, 31, 32]) p[i] = { x: 0.5, y: 0.9, z: 0, v: 1 };
+        return p; };
+      const sess = new E.SetSession(ex, { target: 20, rom: 30, work: 'R' }); const sm = new E.PoseSmoother();
+      let t = 0, pts; for (let i = 0; i < 40; i++) { t += 33; pts = sm.update(frame(0), t, 1); }
+      sess.calibrate(pts, 'R');
+      const out = [];
+      /* three raises, each returning to a resting position 4° further out than the last */
+      for (let r = 0; r < 3; r++) {
+        for (let i = 0; i < 60; i++) { t += 33; const q = sm.update(frame(r * 4 + 35 * Math.sin(Math.PI * i / 60)), t, 1); const v = sess.step(q, t); if (v.repEvent) out.push(v.repEvent.rep.from); }
+        for (let i = 0; i < 60; i++) { t += 33; const q = sm.update(frame((r + 1) * 4), t, 1); const v = sess.step(q, t); if (v.repEvent) out.push(v.repEvent.rep.from); }
+      }
+      return { froms: out, restarts: sess.restarts, calibrated: +sess.ref.parts0[0].start.toFixed(1) };
+    });
+    assert.ok(froms.restarts > 0, 'the start was read again between reps');
+    assert.ok(froms.froms.length >= 2, 'reps were counted: ' + JSON.stringify(froms));
+    assert.ok(froms.froms[froms.froms.length - 1] > froms.froms[0], `each rep starts from where the leg now rests: ${froms.froms.join(', ')}`);
+    await page.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');
