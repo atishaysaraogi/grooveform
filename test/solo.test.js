@@ -16,7 +16,10 @@ const SHOTS = path.join(__dirname, '..', 'docs', 'screenshots');
   assert.equal(await page.$('#btn-login:not([hidden])'), null, 'no sign-in button');
   assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(body), 'no emoji on the home page');
   const titles = await page.$$eval('.ex-list', cols => cols.map(c => [...c.querySelectorAll('.ex-row .name')].map(n => n.textContent.trim())));
-  assert.equal(titles[0].length, 10, 'ten moves'); assert.ok((await page.$$('.playlist')).length >= 6, 'six playlists, one per row');
+  /* the home page is the shortlist: every listed move (vetted, unless the entry says otherwise), no more */
+  const listed = await page.evaluate(() => window.ExerciseLibrary.all().filter((e) => e.listed !== false).length);
+  assert.ok(listed >= 10, 'at least the ten checked moves: ' + listed);
+  assert.equal(titles[0].length, listed, 'the shortlist, ' + listed + ' moves'); assert.ok((await page.$$('.playlist')).length >= 6, 'six playlists, one per row');
   await page.screenshot({ path: path.join(SHOTS, 'solo-home.png'), fullPage: true });
   // routines are distinct sets of exercises
   const pre = await page.evaluate(async () => (await (await fetch('/api/routines/prebuilt')).json()).routines.map(r => r.items.map(i => i.exerciseId).sort().join('+')));
