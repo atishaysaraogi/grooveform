@@ -565,7 +565,30 @@ back" belongs; the counter no longer waits forever for it.
 
 The heaviest due cue is said first — but a fault that has not been said yet
 in this set comes before one that has, however heavy. Two faults on cooldown
-otherwise take turns for the whole set and a third is never heard.
+otherwise take turns for the whole set and a third is never heard. The
+cooldown itself — how long before the same cue may repeat — is
+`fault.cooldown` in `settings.json`.
+
+### The limb the camera cannot see
+
+Filmed side-on, the far arm and leg are behind the body. The pose model
+still returns positions for them, and they look like positions; the one
+thing that says otherwise is the confidence it reports, which on a real
+side-on set sits near 1.0 for the near limb and around 0.5 for the far one.
+
+So a fault is judged on what the camera can see. Every landmark it reads
+must be at least `fault.unsure.vis` confident for the threshold to be the
+threshold. Below that the fault is not silenced — a knee that has plainly
+collapsed is worth saying whichever side it is on — but it must clear the
+threshold by `fault.unsure.margin`, in the reading's own units, and hold for
+`fault.unsure.persist` times as long. Below `fault.unsure.floor` the
+landmarks are invention and nothing is said.
+
+This costs the near side nothing: on the reported bridge set the near leg is
+judged exactly as before, while the same fault written against the far leg
+drops from seventeen firings to one. It is why a side-on move should measure
+the limb nearest the lens, and why `oKNEE`-style cross-side points in a
+side-on fault will mostly stay quiet.
 
 ### Is the foot on the floor?
 

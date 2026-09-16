@@ -159,7 +159,7 @@
       "op": "<",
       "threshold": 12,
       "persist": 1200,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "heels",

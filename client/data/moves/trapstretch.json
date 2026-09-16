@@ -138,7 +138,7 @@
       "op": ">",
       "threshold": 25,
       "persist": 1200,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "shallow",
@@ -153,7 +153,7 @@
       "phase": "any",
       "when": ["notInPosition"],
       "persist": 2500,
-      "cooldown": 8000
+      "cooldown": 12000
     }
   ],
   "pose": {

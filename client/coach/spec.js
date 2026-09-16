@@ -310,6 +310,15 @@
     if (problems.length) throw new Error('spec "' + (spec && spec.id) + '": ' + problems.join('; '));
     const { FULL, ATTEMPT, BAND } = k;
     const fs = faultSettings(k);
+    /* How sure the pose model is of the landmarks a fault reads. Filmed side-on the far arm and
+       leg are behind the body, and the model returns a confident-looking guess for them; the one
+       thing that says so is the visibility it reports, which drops to about half. A fault reading
+       those is not silenced — a knee that has plainly collapsed is worth saying either way — but
+       it has to clear a bigger margin and hold longer, and below the floor it is not said at all. */
+    const unsure = fs.unsure || null;
+    const lmCache = new Map();
+    const faultLms = (f, S) => { const key = f.id + S; let v = lmCache.get(key); if (!v) { try { v = metricLandmarks(f.metric, S, k); } catch (e) { v = []; } lmCache.set(key, v); } return v; };
+    const visAt = (p) => (p && (p.v ?? p.visibility ?? p.score)) ?? 1;
     const S0 = spec.sided ? null : 'L';
 
     /* every measurement the move reads, once each; the index is how measure() finds its baseline */
@@ -455,6 +464,8 @@
         /* a threshold that scales with another reading is folded into the value: v - times × other */
         if (f.iScale >= 0) { const o = vals[f.iScale] - (f.scale.rel === 'change' || f.scale.metric === 'progress' ? ref.base[side][f.iScale] : 0); m['f_' + f.id] -= f.scale.times * o; }
       }
+      /* the least confident landmark each fault depends on, on the side being measured */
+      if (unsure) { m.conf = {}; for (const f of liveFaults) { let lo = 1; for (const i of faultLms(f, side)) lo = Math.min(lo, visAt(pts[i])); m.conf[f.id] = lo; } }
       m.gates = {};
       for (const [id, gs] of faultGates) m.gates[id] = gs.every((g) => gateOk(g, m, vals, opts));
       return m;
@@ -474,7 +485,21 @@
       /* the top was reached but not held for the move's repHold seconds */
       if (f.rule === 'shortHold') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => !!rep.shortHold };
       const gate = f.minP == null ? 0 : f.minP;
-      const over = (m) => m.gates[f.id] && (f.op === '>' ? m['f_' + f.id] > f.threshold : m['f_' + f.id] < f.threshold);
+      const confOf = (m) => (m.conf && m.conf[f.id] !== undefined) ? m.conf[f.id] : 1;
+      /* what the reading has to beat: the threshold, or the threshold plus a flat margin in the
+         reading's own units when the landmarks are guesses */
+      const pad = unsure ? (unsure.margin ?? 8) : 0;
+      const over = (m) => {
+        if (!m.gates[f.id]) return false;
+        const v = m['f_' + f.id], c = confOf(m);
+        if (unsure && c < (unsure.vis ?? 0.75)) {
+          if (c < (unsure.floor ?? 0.4)) return false;
+          return f.op === '>' ? v > f.threshold + pad : v < f.threshold - pad;
+        }
+        return f.op === '>' ? v > f.threshold : v < f.threshold;
+      };
+      /* and how long it has to hold: longer while the landmarks are unsure */
+      const persistFor = unsure ? (m) => (confOf(m) < (unsure.vis ?? 0.75) ? Math.round((f.persist || fs.persist) * (unsure.persist ?? 2.5)) : (f.persist || fs.persist)) : null;
       /* the start position, judged once before the set: no progress gate to pass and no held
          position to be in, because neither exists yet — only the measurement and its threshold */
       if (f.phase === 'start') return { ...common, atStart: true, phase: 'start', persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, check: over };
@@ -483,6 +508,7 @@
       const needPosition = spec.type === 'hold' && f.phase !== 'any';
       return {
         ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, phase,
+        ...(persistFor ? { persistFor } : {}),        /* the tracker asks per frame: unsure landmarks hold longer */
         check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= gate) && m.gates[f.id] && over(m),
       };
     });

@@ -197,7 +197,7 @@
       "op": ">",
       "threshold": 35,
       "persist": 900,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "return",

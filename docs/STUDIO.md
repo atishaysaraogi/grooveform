@@ -278,6 +278,11 @@ Studio's step 7 scores it against the rule before it will call it vetted:
 3. **Faults** — for each live fault, *Suggest* puts the threshold between the
    clean takes' edge and the fault take's middle. The strip under the fault
    must read **quiet on every clean take, fires on every take of that fault**.
+   A fault written against the limb away from the camera will read quiet on
+   takes where it should fire: the coach holds back a fault whose landmarks
+   the pose model is unsure of (see *The limb the camera cannot see* in
+   `docs/EXERCISE-LIBRARY.md`), and the tuning simulation does the same.
+   Measure the near limb.
    If it cannot, the measurement is wrong, not the number: pick a different
    kind, a different reference length, or add a gate.
 4. **Check & save** — the *Tuning* card lists each live fault with its

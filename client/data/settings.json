@@ -5,7 +5,8 @@
     "fields": {
       "rep": "How far through a rep (0 = start position, 1 = target) the counter treats as resting, attempting and complete. rest: back below this and the rep is over. attempt: above this and a rep has started. full: reach this and the rep counts as a full one; between attempt and full it is a partial. Good: 0.15 / 0.32 / 0.85. Bad: full at 1.0 (nobody hits the target exactly, no rep would ever count) or rest above attempt.",
       "fault.persist": "Milliseconds a fault has to be true, continuously, before it is spoken. Filters out one-frame wobbles. Good: 300–600. Bad: 0 (every jitter cues) or 3000 (the rep is over before the cue).",
-      "fault.cooldown": "Milliseconds before the same cue may be repeated. Good: 4000–6000. Bad: 500 (the coach nags).",
+      "fault.cooldown": "Milliseconds before the same cue may be repeated. A cue not yet said in this set is always offered before one that has, so this is what paces a cue that keeps being true, not what decides which fault is heard. Good: 7000–9000. Bad: 500 (the coach nags).",
+      "fault.unsure": "What a fault has to clear when the pose model is not sure of the landmarks it reads — on a side-on move that is the far arm or leg, which the body hides and the model guesses at. vis: every landmark the fault reads must be at least this confident (0–1) for the fault to be judged normally; on a side-on body the near limb sits near 1.0 and the far one around 0.5. Below vis the reading still counts, but only as a large violation: it must pass the threshold by margin, in the reading’s own units (degrees, or percent of the reference length), and hold for persist times as long. floor: below this the landmarks are guesses and the fault does not fire at all. Good: vis 0.75, floor 0.55, margin 12 — on a side-on bridge that leaves the near leg judged exactly as before and drops the far leg from seventeen firings to one. Bad: vis at 1.0 (nothing is ever sure enough), floor at 0 (the far leg is coached on invented positions), or a margin so big the fault can never clear it.",
       "fault.maxCues": "How many times one cue may be spoken in a single set, keyed by rule name. \"Slow it down\" only lands the first time you hear it, so fast is capped at 1; leave a rule out for no cap. A single move can override it with \"maxCues\" on the fault itself. Good: 1–2. Bad: 0 (the cue never fires — remove the fault instead).",
       "skeleton": "How the skeleton drawn over the camera is shaped. head: \"face\" (the nose-and-ears triangle the pose model gives), \"ball\" (a filled circle and a neck), \"circle\" (the same outlined, so the video shows through), \"dot\" (one dot and a neck), \"none\" (a neck stub only). Good: ball or circle — a head-sized head is what makes the figure read as a person. Bad: face over video, where the triangle looks like a crack in the picture. show: how sure (0–1) the pose model has to be of a joint before it is drawn at all, with a little hysteresis so a limb on the edge does not flicker; dim: sure enough to draw at full strength, fainter below. The arm and leg on the far side of a side-on body sit below these most of the time and stay off the picture instead of flailing. Good: show 0.5, dim 0.7. Bad: show under 0.35, where the model’s guesses about hidden joints get drawn.",
       "camera": "How much a phone off its ideal spot is forgiven. level: auto (motion sensor when the phone has one, else the body at calibration), sensor, body or off — turns the picture so gravity is straight down before anything is measured. maxRoll: a bigger roll than this is not corrected (the phone is probably on its side on purpose). tolerance: degrees the person may turn away from the ideal view mid-set before the coach says to turn back; a move can set its own in camera.tolerance. yawPersist: ms that has to hold before it is said. widthRatio: shoulder width as a share of torso length, used to guess the turn when depth is missing (0.55 is typical). unforeshorten: measured (stretch the picture back out only when the turn was read from depth), always, or off. Good: tolerance 20–30. Bad: level off on phones propped on the floor.",
@@ -32,7 +33,8 @@
   },
   "fault": {
     "persist": 400,
-    "cooldown": 5000,
+    "cooldown": 8000,
+    "unsure": { "vis": 0.75, "floor": 0.55, "margin": 12, "persist": 2.5 },
     "maxCues": { "fast": 1 },
     "severityWeight": { "1": 1, "2": 2, "3": 3 }
   },
@@ -68,7 +70,7 @@
       "tip": "The hold only counts while you are in the position — ease back in and keep breathing.",
       "severity": 1,
       "persist": 600,
-      "cooldown": 6000
+      "cooldown": 9000
     }
   },
   "side": {

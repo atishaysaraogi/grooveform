@@ -216,13 +216,16 @@ test('phase "start": the same detectors, read once on the position being held', 
   const ex = SPEC.compile(spec, K);
   const f = ex.faults.find((x) => x.id === 'bentknee');
   assert.equal(f.atStart, true); assert.equal(f.phase, 'start');
-  const sm = () => new E.PoseSmoother();
+  /* the smoother's confidence in a landmark warms up over a few frames, and a fault reading
+     landmarks it is unsure of is held back (see fault.unsure), so the still start position is
+     fed in the way the coach feeds it: a second of it */
+  const still = (p) => { const s = new E.PoseSmoother(); let out; for (let t = 0; t <= 1000; t += 33) out = s.update(p, t, 1); return out; };
   /* a straight leg at the start: nothing to say */
-  const straight = sm().update(pose(0), 0, 1);
+  const straight = still(pose(0));
   assert.deepEqual(ex.checkStart(straight, 'R', {}).map((x) => x.id), []);
   /* the same position with the knee bent: the fault is found before anything has been calibrated */
   const bentFrame = (() => { const p = pose(0); p[26] = { x: p[24].x - 0.06, y: (p[24].y + p[28].y) / 2, z: 0, visibility: 0.95 }; return p; })();
-  const bent = sm().update(bentFrame, 0, 1);
+  const bent = still(bentFrame);
   assert.deepEqual(ex.checkStart(bent, 'R', {}).map((x) => x.id), ['bentknee'], 'the bent knee is caught on the start position');
   /* and it is never raised during the set itself, however the leg moves */
   const r = run(ex, takes(30, 3), { rom: 30 });
@@ -352,4 +355,29 @@ test('the start position is read again when the person settles somewhere else be
   for (let i = 0; i < 90; i++) later.push(pose(30 * Math.sin(Math.PI * i / 90)));
   for (let i = 0; i < 70; i++) later.push(pose(12));
   assert.equal(run(ex, later, { rom: 30 }).sess.rebases, 0);
+});
+
+/* Filmed side-on, the far arm and leg are behind the body and the pose model guesses at them. A
+   fault reading those is held to a bigger violation, for longer, and below the floor is not said. */
+test('a fault reading landmarks the model is unsure of needs a bigger violation', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  spec.faults = [{ id: 'bend', label: 'Knee bending', cue: 'Straighten it', tip: 'Keep the leg straight.', severity: 2, metric: { kind: 'angle', pts: ['HIP', 'KNEE', 'ANK'] }, op: '<', threshold: 150, minP: 0, persist: 300 }];
+  const ex = SPEC.compile(spec, K); const f = ex.faults[0];
+  const u = E.settings.fault.unsure;
+  const m = (deg, conf) => ({ p: 1, gates: { bend: true }, conf: { bend: conf }, 'f_bend': deg });
+  /* seen clearly: the threshold is the threshold */
+  assert.equal(f.check(m(149, 1)), true); assert.equal(f.check(m(151, 1)), false);
+  /* unsure: it has to clear the threshold by the margin */
+  const half = (u.vis + u.floor) / 2;
+  assert.equal(f.check(m(149, half)), false, 'just over the line on a limb the model is guessing at');
+  assert.equal(f.check(m(150 - u.margin - 1, half)), true, 'plainly over it, and still said');
+  /* and below the floor the landmarks are invention */
+  assert.equal(f.check(m(10, u.floor - 0.05)), false, 'nothing is said about a limb that cannot be seen');
+  /* it also has to hold longer */
+  assert.ok(f.persistFor, 'the tracker is told how long');
+  assert.equal(f.persistFor(m(140, 1)), 300);
+  assert.equal(f.persistFor(m(140, half)), Math.round(300 * u.persist));
+  /* the near side of a real side-on body sits near 1.0 and the far side near 0.5, so this is the
+     line between them, not a tax on every fault */
+  assert.ok(u.vis > 0.7 && u.floor < u.vis);
 });

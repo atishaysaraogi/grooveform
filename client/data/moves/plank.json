@@ -149,7 +149,7 @@
         { "metric": { "kind": "height", "pts": ["KNEE", "ANK"] }, "op": ">", "threshold": 10 }
       ],
       "persist": 900,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "stack",
@@ -161,7 +161,7 @@
       "op": ">",
       "threshold": 45,
       "persist": 900,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "neck",
@@ -173,7 +173,7 @@
       "op": "<",
       "threshold": 140,
       "persist": 800,
-      "cooldown": 8000
+      "cooldown": 12000
     }
   ],
   "pose": {

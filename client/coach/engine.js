@@ -447,7 +447,9 @@
         if (applies) {
           if (!this.since[f.id]) this.since[f.id] = t;
           const held = t - this.since[f.id];
-          if (held >= f.persist) {
+          /* how long it must hold: a fault whose landmarks the model is unsure of asks for longer
+             (spec.js persistFor), so a far limb flickering in and out does not cue */
+          if (held >= (f.persistFor ? f.persistFor(m) : f.persist)) {
             if (!this.active.has(f.id)) { this.active.add(f.id); this.counts[f.id] = (this.counts[f.id] || 0) + 1; }
             this.timeIn[f.id] = (this.timeIn[f.id] || 0) + dt;
             if (this.due(f, t)) cues.push(f);

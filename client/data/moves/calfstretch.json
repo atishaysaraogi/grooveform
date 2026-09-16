@@ -230,7 +230,7 @@
         }
       ],
       "persist": 1200,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "hands_low",
@@ -250,7 +250,7 @@
         }
       ],
       "persist": 1200,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "front",
@@ -270,7 +270,7 @@
         }
       ],
       "persist": 1200,
-      "cooldown": 8000
+      "cooldown": 12000
     },
     {
       "id": "hinge",

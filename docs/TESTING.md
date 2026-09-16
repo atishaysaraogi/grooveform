@@ -95,6 +95,8 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 28. Lower only half way between reps and rest there: each rep still counts, and a slow lowering to the floor afterwards adds nothing.
 29. A set with three faults: each cue is heard once before any repeats, heaviest first.
 30. Glute bridge: the target line is drawn shoulder to hip to knee and stays put as the hips rise; the arm-anchored line of a squat is unchanged.
+31. Side-on move, a fault written against the far limb (`oKNEE`…): it stays quiet through a take where the near-limb version of the same fault fires, and only speaks on a plainly large violation.
+32. Two faults true at once: the same cue does not repeat inside 8 seconds.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI
