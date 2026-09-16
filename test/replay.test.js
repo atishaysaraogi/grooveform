@@ -93,9 +93,14 @@ test('the replay smooths the recording exactly as the coach smoothed the live pi
     if (t === 660) { frames.push({ t, lm: null }); continue; }                                   // a frame without a person
     frames.push({ t, lm: Array.from({ length: 33 }, (_, i) => [0.3 + i * 0.01 + rnd() * 0.05, 0.4 + rnd() * 0.05, rnd() * 0.1, i % 4 === 0 ? 0.42 : i % 4 === 1 ? 0.7 : 0.99]) });
   }
-  const aspect = 16 / 9; const sm = new E.PoseSmoother(); const want = [];
+  /* then a second of stillness, so the stable points lock, then a shift, so they let go */
+  for (let t = 2000; t < 3000; t += 33) frames.push({ t, lm: Array.from({ length: 33 }, (_, i) => [0.3 + i * 0.01, 0.4, 0, 0.99]) });
+  for (let t = 3000; t < 3400; t += 33) frames.push({ t, lm: Array.from({ length: 33 }, (_, i) => [0.3 + i * 0.01 + 0.1, 0.4 + 0.1, 0, 0.99]) });
+  const stable = [11, 25, 26, 31];
+  const aspect = 16 / 9; const sm = new E.PoseSmoother({ stable }); const want = [];
   for (const f of frames) want.push(f.lm ? sm.update(f.lm.map((l) => ({ x: l[0], y: l[1], z: l[2], visibility: l[3] })), f.t, aspect) : null);
-  const got = Replay.smoothFrames(frames, { aspect });
+  assert.ok(want.some((fr) => fr && fr[25].locked), 'the stable knee locked during the still second');
+  const got = Replay.smoothFrames(frames, { aspect, stable });
   assert.equal(got.length, want.length); assert.equal(got[20], null, 'no person, nothing drawn');
   for (let k = 0; k < frames.length; k++) {
     if (!want[k]) continue;

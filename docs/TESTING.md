@@ -108,6 +108,8 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 41. A move whose target the user picks: the far end follows their choice (a 20° raise and a 40° raise get different far ends from one { delta } value).
 42. Write two faults on the same measurement with the same comparison: step 7 says they read the same number the same way. Write one on the progress measurement: step 7 says it duplicates progress.
 43. A side-on move with the abdominal muscles lit (plank, wall sit) in Settings → Muscles: the abdominal wall is drawn on the belly, not the spine.
+44. Side-on bridge, feet planted: the drawn toe and heel sit still between reps instead of wandering, and a real toe lift is still called; the far foot no longer flails when the hips rise.
+45. A move with `stable` points that no fault watches (a bridge's shoulders): the drawn point holds still once the person has settled and follows again when they shift.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

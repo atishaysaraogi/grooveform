@@ -594,6 +594,23 @@ the floor. Told that, the line is drawn shoulder to hip-target to knee from
 the first frame, holding the target angle exactly. Leave it out and the
 watching heuristic still applies.
 
+`stable` does a second job, on the drawn skeleton. The ends of the limbs are
+the pose model's least certain points: on a real side-on bridge the near toe
+travelled about two pixels a frame while the feet were planted, twice what
+the ankle it hangs off did, and its apparent distance from the ankle swung
+between 9 and 131 pixels — the landmark sliding along the foot, not the foot
+moving. Three things in the smoother answer that, for every move: the hands
+and feet are smoothed harder; a point cannot jump to an implausible distance
+from the joint it hangs off (the ankle-to-toe length is learnt over a second
+and a half, a frame that breaks it is held through, and a change that stays
+for four frames is real and replaces it); and a landmark the move calls
+stable is locked once it has stopped moving, released the moment it plainly
+moves. A point a fault watches for its own movement — a heel that must not
+lift, the shoulders a lean fault reads — is never locked, or the fault could
+never fire; `ex.lockable` is the list that survives that rule. On that bridge
+set the toe's worst frames went from 10 pixels of travel to 4 while the reps
+and the faults counted the same.
+
 ### Still is not the same as ready
 
 The start position is read while the person holds still. Someone who lies

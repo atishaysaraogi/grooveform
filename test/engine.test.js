@@ -399,3 +399,43 @@ test('FaultTracker: a cue not yet said this set is offered before one that has b
   assert.deepEqual(said.slice(0, 3), ['heavy', 'mid', 'light'], 'each is heard once before any repeats: ' + said.join(' '));
   assert.deepEqual(said.slice(3), ['heavy', 'mid', 'light'], 'then heaviest first again, in turn');
 });
+
+/* The ends of the limbs wander even when planted. A toe that jitters around its ankle is calmed, a
+   frame that puts it an impossible distance from the ankle is held through, and a point the move
+   calls stable is locked once still — while a real lift still reads. */
+test('PoseSmoother: a planted toe is held steady, an impossible foot length is held through, a stable point locks', () => {
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
+  const base = (jit, toeDy = 0, toeLen = 0.06) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, visibility: 1 });
+    p[27] = { x: 0.40, y: 0.85, z: 0, visibility: 0.97 };                                              // ankle
+    p[31] = { x: 0.40 + toeLen + rnd() * jit, y: 0.85 - toeDy + rnd() * jit, z: 0, visibility: 0.98 };  // toe: jitter, a lift, a length
+    p[25] = { x: 0.42, y: 0.65, z: 0, visibility: 0.99 }; p[11] = { x: 0.6, y: 0.4, z: 0, visibility: 1 };
+    return p; };
+  const travel = (pts) => { let s = 0; for (let k = 1; k < pts.length; k++) s += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y); return s / (pts.length - 1); };
+  /* 1. a jittering toe on a planted foot: smoothed travel well under raw */
+  const sm = new E.PoseSmoother(); let t = 0; const rawT = [], smT = [];
+  for (let i = 0; i < 90; i++) { t += 33; const f = base(0.012); rawT.push(f[31]); smT.push(sm.update(f, t, 1)[31]); }
+  assert.ok(travel(smT) < travel(rawT) * 0.35, `the toe is calmed: ${travel(smT).toFixed(4)} vs raw ${travel(rawT).toFixed(4)}`);
+  /* 2. a frame that puts the toe 3× as far from the ankle is held through, then the length re-learns if it stays */
+  let held = 0; for (let i = 0; i < 3; i++) { t += 33; const p = sm.update(base(0.001, 0, 0.18), t, 1)[31]; if (p.held) held++; }
+  assert.ok(held >= 2, 'an impossible foot length is held through: ' + held);
+  for (let i = 0; i < 60; i++) { t += 33; sm.update(base(0.001, 0, 0.18), t, 1); }
+  const relearned = sm.update(base(0.001, 0, 0.18), t + 33, 1)[31];
+  assert.ok(!relearned.held && Math.abs(relearned.x - 0.58) < 0.02, 'a length that stays is real and is learnt: ' + JSON.stringify(relearned));
+  /* 3. a real lift reads through the harder smoothing */
+  const sm2 = new E.PoseSmoother(); t = 0; for (let i = 0; i < 60; i++) { t += 33; sm2.update(base(0.003), t, 1); }
+  let lifted; for (let i = 0; i < 20; i++) { t += 33; lifted = sm2.update(base(0.003, 0.05), t, 1)[31]; }
+  assert.ok(0.85 - lifted.y > 0.035, 'a 5 % lift reads as a lift within two thirds of a second: ' + (0.85 - lifted.y).toFixed(3));
+  /* 4. a stable point locks once still and lets go when it plainly moves */
+  const sm3 = new E.PoseSmoother({ stable: [25] }); t = 0; let last;
+  for (let i = 0; i < 30; i++) { t += 33; last = sm3.update(base(0.006), t, 1)[25]; }
+  assert.equal(last.locked, true, 'the knee the move calls stable is locked once still');
+  const lockedAt = { x: last.x, y: last.y };
+  for (let i = 0; i < 5; i++) { t += 33; const f = base(0.006); f[25].y -= 0.004; last = sm3.update(f, t, 1)[25]; }
+  assert.ok(last.locked && last.x === lockedAt.x, 'a wobble does not release it');
+  for (let i = 0; i < 6; i++) { t += 33; const f = base(0.006); f[25].y -= 0.08; last = sm3.update(f, t, 1)[25]; }
+  assert.equal(last.locked, false, 'a real move away releases it');
+  assert.ok(last.y < lockedAt.y - 0.03, 'and it follows: ' + last.y.toFixed(3));
+  /* a point no move called stable never locks */
+  const sm4 = new E.PoseSmoother(); t = 0; for (let i = 0; i < 40; i++) { t += 33; last = sm4.update(base(0.001), t, 1)[25]; }
+  assert.ok(!last.locked);
+});

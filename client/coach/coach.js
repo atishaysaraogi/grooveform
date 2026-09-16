@@ -501,7 +501,7 @@
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
     live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
-    smoother.reset();
+    smoother.reset(); smoother.setStable(ex.lockable || []); live.rec.lockable = ex.lockable || [];
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
       else { overlay('Starting camera…', 'Allow camera access when your browser asks.', { progress: 0.05 }); await startCamera(); applyMirror(); keepAwake(); }
@@ -1297,7 +1297,7 @@
   }
   /* ---------- portal API ---------- */
   /* dest: optional hash to land on instead of the caller's default (used by the "Home" escape). */
-  function exitLive(dest) { cancelAnimationFrame(rafId); voice.stop(); stopCamera(); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); if (onExit) onExit(typeof dest === 'string' ? dest : undefined); }
+  function exitLive(dest) { cancelAnimationFrame(rafId); voice.stop(); stopCamera(); smoother.setStable([]); try { wakeLock?.release(); } catch { } live = null; hideOverlay(); if (onExit) onExit(typeof dest === 'string' ? dest : undefined); }
   function start({ exercise, target, options = {}, file = null, done, exit, keepCameraAfter = false }) {
     current.keepCameraAfter = keepCameraAfter && !file;
     current.ex = exercise; current.target = target || exercise.defaultTarget; current.opts = { ...options }; onDone = done; onExit = exit; lastRec = null;

@@ -96,9 +96,17 @@
   const PARENT = { 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 27, 32: 28 };
   /* frames: [{lm:[[x,y,z,v],...]|null}] in recording order → per frame, the smoothed landmarks as
      [x, y, z, v, seen] (x back in 0..1), or null where there was no person */
-  function smoothFrames(frames, { aspect = 16 / 9, minCutoff = 1.0, beta = 3.0, visFloor = 0.35, jumpLimit = 0.28, sureAt = 0.8, show = 0.5 } = {}) {
-    const filters = [], vis = [], holds = [], prev = [], seenF = [];
-    for (let i = 0; i < 33; i++) { filters.push([new OneEuro(minCutoff, beta), new OneEuro(minCutoff, beta), new OneEuro(minCutoff * 0.6, beta)]); vis.push(0); holds.push(0); prev.push(null); seenF.push(false); }
+  /* The same three extremity rules as engine.js PoseSmoother, kept identical: harder smoothing for
+     hands and feet, a hold through an impossible change in a point's distance from its joint, and a
+     lock on the landmarks the move says stay still. */
+  const EXTREMITY_SCALE = { 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5, 22: 0.5, 29: 0.5, 30: 0.5, 31: 0.5, 32: 0.5 };
+  const BONE = { 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 29: 27, 30: 28, 31: 27, 32: 28 };
+  const BONE_TOL = 0.35, BONE_KEEP = 45, BONE_MIN = 15, BONE_HOLD = 4;
+  const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
+  function smoothFrames(frames, { aspect = 16 / 9, minCutoff = 1.0, beta = 3.0, visFloor = 0.35, jumpLimit = 0.28, sureAt = 0.8, show = 0.5, stable = [] } = {}) {
+    const filters = [], vis = [], holds = [], prev = [], seenF = [], bone = [], boneHold = [], lock = [], stillFor = [], awayFor = []; const still = new Set(stable);
+    for (let i = 0; i < 33; i++) { filters.push([new OneEuro(minCutoff, beta), new OneEuro(minCutoff, beta), new OneEuro(minCutoff * 0.6, beta)]); vis.push(0); holds.push(0); prev.push(null); seenF.push(false); bone.push([]); boneHold.push(0); lock.push(null); stillFor.push(0); awayFor.push(0); }
     const out = [];
     for (const f of frames) {
       if (!f.lm) { out.push(null); continue; }
@@ -113,12 +121,32 @@
           const jump = Math.hypot(x - p[0], y - p[1]);
           if (v < visFloor || (jump > jumpLimit && v < 0.75 && holds[i] < 4)) { useRaw = false; holds[i]++; } else holds[i] = 0;
         }
+        const parent = BONE[i];
+        if (useRaw && parent != null) {
+          const pl = f.lm[parent]; const len = Math.hypot(x - pl[0] * aspect, y - pl[1]);
+          const hist = bone[i]; const known = hist.length >= BONE_MIN ? median(hist) : null;
+          if (known != null && Math.abs(len - known) > BONE_TOL * known && boneHold[i] < BONE_HOLD && p) { useRaw = false; boneHold[i]++; }
+          else { if (boneHold[i] >= BONE_HOLD) hist.length = 0; boneHold[i] = 0; hist.push(len); if (hist.length > BONE_KEEP) hist.shift(); }
+        }
         if (!useRaw) { res[i] = [p[0] / aspect, p[1], p[2], vis[i], seenF[i]]; continue; }
         const k = Math.min(1, Math.max(0.12, (vis[i] - visFloor) / Math.max(1e-3, sureAt - visFloor)));
-        const c = minCutoff * k * k, b = beta * k; const fl = filters[i];
+        const c = minCutoff * k * k * (EXTREMITY_SCALE[i] || 1), b = beta * k; const fl = filters[i];
         fl[0].minCutoff = c; fl[1].minCutoff = c; fl[2].minCutoff = c * 0.6; fl[0].beta = fl[1].beta = fl[2].beta = b;
         const sx = fl[0].filter(x, t), sy = fl[1].filter(y, t), sz = fl[2].filter(z, t);
-        prev[i] = [sx, sy, sz]; res[i] = [sx / aspect, sy, sz, vis[i], seenF[i]];
+        let ox = sx, oy = sy;
+        if (still.has(i)) {
+          const L = lock[i];
+          if (L) {
+            const away = Math.hypot(x - L.x, y - L.y);
+            awayFor[i] = away > RELEASE_STEP ? awayFor[i] + 1 : 0;
+            if (awayFor[i] >= RELEASE_FRAMES) { lock[i] = null; stillFor[i] = 0; } else { ox = L.x; oy = L.y; }
+          } else if (p) {
+            const stepd = Math.hypot(sx - p[0], sy - p[1]);
+            stillFor[i] = stepd < STILL_STEP ? stillFor[i] + 1 : 0;
+            if (stillFor[i] >= STILL_FRAMES) { lock[i] = { x: sx, y: sy }; awayFor[i] = 0; ox = sx; oy = sy; }
+          }
+        }
+        prev[i] = [sx, sy, sz]; res[i] = [ox / aspect, oy, sz, vis[i], seenF[i]];
       }
       out.push(res);
     }
@@ -128,7 +156,7 @@
   function smoothedOf(rec, meta) {
     const cached = smoothed && smoothed.get(rec); if (cached) return cached;
     const sm = (meta && meta.smooth) || {};
-    const out = smoothFrames(rec.frames || [], { aspect: rec.aspect || 16 / 9, minCutoff: sm.minCutoff, beta: sm.beta, show: meta && meta.show });
+    const out = smoothFrames(rec.frames || [], { aspect: rec.aspect || 16 / 9, minCutoff: sm.minCutoff, beta: sm.beta, show: meta && meta.show, stable: rec.lockable || [] });
     if (smoothed) smoothed.set(rec, out); return out;
   }
   function frameIndexAt(frames, t) {

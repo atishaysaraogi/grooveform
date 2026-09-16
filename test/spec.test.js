@@ -417,6 +417,12 @@ test('stable names the landmarks that do not move, and is checked', () => {
   const spec = JSON.parse(JSON.stringify(sideLegRaise)); spec.stable = ['SH', 'KNEE'];
   assert.deepEqual(SPEC.checkSpec(spec), []);
   assert.deepEqual(SPEC.compile(spec, K).stable, ['SH', 'KNEE']);
+  /* which of them the smoother may hold still: both sides, less a point a fault watches for its own movement */
+  const withHeel = JSON.parse(JSON.stringify(spec)); withHeel.stable = ['SH', 'KNEE', 'HEEL'];
+  withHeel.faults.push({ id: 'heel', label: 'Heel lifting', cue: 'Heel down', tip: 'Keep it down.', severity: 2, metric: { kind: 'rise', pts: ['HEEL'] }, rel: 'change', op: '>', threshold: 8 });
+  const lk = SPEC.compile(withHeel, K).lockable;
+  /* the knees lock; the heel is watched by its own fault, and the shoulders by the lean fault (a change from the start), so neither may be held */
+  assert.deepEqual(lk, [25, 26], 'only the knees may be held: ' + JSON.stringify(lk));
   spec.stable = ['ELBOW']; assert.match(SPEC.checkSpec(spec).join(' '), /unknown landmark "ELBOW"/);
   spec.stable = 'SH'; assert.match(SPEC.checkSpec(spec).join(' '), /stable must be a list/);
   delete spec.stable; assert.deepEqual(SPEC.compile(spec, K).stable, []);

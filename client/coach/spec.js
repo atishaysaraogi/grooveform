@@ -647,6 +647,18 @@
       options, required: [...required].sort((a, b) => a - b),
       calibrate, startAgain, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted, repHold: spec.type === 'reps' && spec.repHold ? spec.repHold : 0,
       stable: (spec.stable || []).slice(), cues: spec.cues ? { ...spec.cues } : null,
+      /* the landmarks the smoother may lock once they have stopped moving: both sides of every point
+         the move calls stable, less any point a fault watches for its own movement (a change from
+         the start, a rise, a segment shortening) — a locked toe could never lift, and a fault written
+         on it would never fire. A point that only anchors an angle or a distance stays lockable: the
+         shoulder and knee a bridge is measured against are steadier locked than jittering. */
+      lockable: (() => {
+        const measured = new Set();
+        const watched = (f) => !f.rule && f.metric && (f.rel === 'change' || ['rise', 'ratio', 'rotation'].includes(f.metric.kind));
+        for (const S of ['L', 'R']) for (const f of spec.faults.filter(watched)) { try { metricLandmarks(f.metric, S, k).forEach((i) => measured.add(i)); } catch (e) { } }
+        const out = new Set(); for (const n of spec.stable || []) for (const S of ['L', 'R']) { let i = null; try { i = indexOf(n, S, k); } catch (e) { } if (i != null && !measured.has(i)) out.add(i); }
+        return [...out].sort((a, b) => a - b);
+      })(),
       guide: { surface: spec.guide.surface, stop: spec.guide.stop, cannotSee: spec.guide.cannotSee, regions: spec.guide.regions.filter((r) => r.name && (r.points || []).some((p) => p.t)).map((r) => ({ name: r.name, points: r.points.filter((p) => p.t).map((p) => ({ t: p.t, tracked: !!p.tracked })) })) },
       display: spec.display || null, enterCue: spec.enterCue || null, metrics, iProg, holdConds,
       spec,

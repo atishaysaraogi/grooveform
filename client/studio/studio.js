@@ -234,13 +234,13 @@
      the wrong start position, after which the whole set looks like one long rep. */
   function settleAt(frames, aspect) {
     let ex = null; try { ex = currentExercise(); } catch { ex = null; }
-    const settle = new E.Settle(ex || {}); const sm = new E.PoseSmoother();
+    const settle = new E.Settle(ex || {}); const sm = new E.PoseSmoother({ stable: (ex || {}).lockable });
     for (const [t, lm] of frames) { const pts = lm ? sm.update(toPts(lm), t, aspect) : null; const at = settle.step(pts, t, aspect); if (at != null) return at; }
     return null;
   }
   function simulate(ex, take) {
     if (!ex || !take || !take.frames.length) return null;
-    const smoother = new E.PoseSmoother();
+    const smoother = new E.PoseSmoother({ stable: ex.lockable });
     const work = ex.sided && ex.sided.by === 'pick' ? take.side : null;
     const opts = { target: 999, work };
     for (const o of ex.options || []) if (opts[o.key] === undefined) opts[o.key] = o.default;
@@ -283,7 +283,7 @@
   /* The option values a draft would run with (its defaults), for measurements that flip on an option. */
   function draftOpts(s) { const o = {}; for (const opt of (s && s.options) || []) o[opt.key] = opt.default; return o; }
   function trace(metric, take, S, opts) {
-    const smoother = new E.PoseSmoother(); const aspect = take.aspect || 16 / 9; const out = []; const side = S || take.side || 'L';
+    const smoother = new E.PoseSmoother({ stable: (currentExercise() || {}).lockable }); const aspect = take.aspect || 16 / 9; const out = []; const side = S || take.side || 'L';
     const calT = take.calT ?? 1200; let ref = null; opts = opts || draftOpts(cur());
     for (const fr of take.frames) {
       if (!fr[1]) continue;
@@ -853,7 +853,7 @@
       await new Promise((res, rej) => { video.onloadedmetadata = res; video.onerror = () => rej(new Error('Could not decode this video (try MP4/H.264).')); });
       const W = video.videoWidth, H = video.videoHeight; if (preview) { preview.width = W; preview.height = H; }
       const ctx = preview ? preview.getContext('2d') : null;
-      const frames = []; const dur = video.duration; const clock0 = Math.ceil(performance.now()); const sm = new E.PoseSmoother();
+      const frames = []; const dur = video.duration; const clock0 = Math.ceil(performance.now()); const sm = new E.PoseSmoother({ stable: (currentExercise() || {}).lockable });
       const seek = (t) => new Promise((res) => { if (Math.abs(video.currentTime - t) < 1e-3) return res(); const to = setTimeout(res, 1500); video.onseeked = () => { clearTimeout(to); res(); }; video.currentTime = t; });
       for (let t = 0.001; t < dur; t += FILE_STEP / 1000) {
         await seek(t);
@@ -1142,7 +1142,7 @@
   function stableCard(s) {
     const on = new Set(s.stable || []);
     return `<div class="card"><h3>Which parts stay still</h3>
-      <p class="muted" style="font-size:.85rem;margin-bottom:8px">The points the person is resting on, that do not travel during the movement — the shoulder and knee in a bridge, the hip in a knee extension. The target line is pinned to them. Leave it empty and the coach works it out by watching.</p>
+      <p class="muted" style="font-size:.85rem;margin-bottom:8px">The points the person is resting on, that do not travel during the movement — the shoulder and knee in a bridge, the hip in a knee extension. The target line is pinned to them, and once one has stopped moving the skeleton holds it still instead of letting it jitter (a point a fault watches for its own movement, a heel that must not lift, is never held). Leave it empty and the coach works it out by watching.</p>
       <div class="opts" id="stable-pts">${STABLE_PTS.map((n) => `<button type="button" class="chip small" data-st="${n}" aria-pressed="${on.has(n)}">${esc(LM_WORDS[n] || LM_WORDS[n.slice(1)] && ('other ' + LM_WORDS[n.slice(1)]) || n)}</button>`).join('')}</div></div>`;
   }
   function wireStable(s, root) {

@@ -52,12 +52,35 @@
      the edge of visibility does not flicker (settings.json skeleton.show / skeleton.dim). */
   const SHOW_DFLT = 0.5, DIM_DFLT = 0.7;
   const skel = () => (SETTINGS && SETTINGS.skeleton) || {};
+  /* The ends of the limbs are the model's least certain points: a heel or a toe is a few pixels
+     near the floor, side-on the two feet overlap, and the landmark model reads them off a crop of
+     the whole person that rescales as the body moves. On a real glute-bridge set the near toe
+     travelled twice as far per frame as the ankle it hangs off while the feet were planted, and
+     its apparent distance from the ankle swung between 9 and 131 pixels — the point sliding along
+     the foot, not the foot moving. Three things below are for that, and the same three live in
+     replay.js smoothFrames, which must stay identical (test/replay.test.js holds it to that).
+       1. those points are smoothed harder (EXTREMITY_SCALE);
+       2. a point cannot jump to an implausible distance from the joint it hangs off (BONE):
+          the ankle→toe length is a fact about the person, learnt over a second and a half, and a
+          frame that breaks it is an outlier to hold through, like a low-confidence one;
+       3. a landmark the move says stays still (setStable) is locked once it has stopped moving,
+          and released the moment it plainly moves. */
+  const EXTREMITY_SCALE = { 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5, 22: 0.5, 29: 0.5, 30: 0.5, 31: 0.5, 32: 0.5 };
+  const BONE = { 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 29: 27, 30: 28, 31: 27, 32: 28 };
+  /* the length is the median of the last BONE_KEEP accepted frames (about 1.5 s), enforced only once
+     BONE_MIN of them are in, and a break in it is held through for at most BONE_HOLD frames — after
+     that the new length is real (a foot turning toward the camera) and is learnt */
+  const BONE_TOL = 0.35, BONE_KEEP = 45, BONE_MIN = 15, BONE_HOLD = 4;
+  const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
   class PoseSmoother {
     constructor(opts = {}) {
       this.minCutoff = opts.minCutoff ?? 1.0;
       this.beta = opts.beta ?? 3.0;
       this.visFloor = opts.visFloor ?? 0.35;
       this.jumpLimit = opts.jumpLimit ?? 0.28;
+      this.stable = new Set(opts.stable || []);      // landmark indices the move says do not move
+      this.bone = []; this.boneHold = []; this.lock = []; this.stillFor = []; this.awayFor = [];
       this.sureAt = opts.sureAt ?? 0.8;       // fully trusted from here up; below, the smoothing tightens towards visFloor
       this.show = opts.show ?? skel().show ?? SHOW_DFLT;
       this.filters = []; this.vis = []; this.holds = []; this.prev = []; this.seen = [];
@@ -65,13 +88,16 @@
       for (let i = 0; i < 33; i++) {
         this.filters.push([new OneEuro(this.minCutoff, this.beta), new OneEuro(this.minCutoff, this.beta), new OneEuro(this.minCutoff * 0.6, this.beta)]);
         this.vis.push(0); this.holds.push(0); this.prev.push(null); this.seen.push(false);
+        this.bone.push([]); this.boneHold.push(0); this.lock.push(null); this.stillFor.push(0); this.awayFor.push(0);
       }
     }
+    /* the landmarks this move says stay put (BlazePose indices); they are locked once still */
+    setStable(indices) { this.stable = new Set(indices || []); this.lock.fill(null); this.stillFor.fill(0); this.awayFor.fill(0); }
     setSmoothing(minCutoff, beta) {
       this.minCutoff = minCutoff; this.beta = beta;
       for (const f of this.filters) { f[0].minCutoff = minCutoff; f[1].minCutoff = minCutoff; f[2].minCutoff = minCutoff * 0.6; f[0].beta = f[1].beta = f[2].beta = beta; }
     }
-    reset() { for (const f of this.filters) f.forEach(o => o.reset()); this.pts = null; this.lastT = null; this.prev.fill(null); this.holds.fill(0); this.seen.fill(false); }
+    reset() { for (const f of this.filters) f.forEach(o => o.reset()); this.pts = null; this.lastT = null; this.prev.fill(null); this.holds.fill(0); this.seen.fill(false); for (const b of this.bone) b.length = 0; this.boneHold.fill(0); this.lock.fill(null); this.stillFor.fill(0); this.awayFor.fill(0); }
     // landmarks: array of {x,y,z,visibility} normalized (0..1). aspect = width/height (x is scaled to be isotropic).
     update(landmarks, t, aspect = 1) {
       if (!landmarks) { return this.pts; }
@@ -92,14 +118,47 @@
           if (lowConf || outlier) { useRaw = false; this.holds[i]++; }
           else this.holds[i] = 0;
         }
+        /* 2. the point's distance from the joint it hangs off (raw, this frame) against what that
+           distance has been: an impossible change is held through, and the length is learnt only
+           from frames that kept it */
+        const parent = BONE[i];
+        if (useRaw && parent != null) {
+          const pl = landmarks[parent]; const len = Math.hypot(x - pl.x * aspect, y - pl.y);
+          const hist = this.bone[i];
+          const known = hist.length >= BONE_MIN ? median(hist) : null;
+          if (known != null && Math.abs(len - known) > BONE_TOL * known && this.boneHold[i] < BONE_HOLD && prev) { useRaw = false; this.boneHold[i]++; }
+          else {
+            /* held through BONE_HOLD frames and still there: the new length is real (a foot turning
+               toward the camera) and replaces what was known, rather than outvoting it over seconds */
+            if (this.boneHold[i] >= BONE_HOLD) hist.length = 0;
+            this.boneHold[i] = 0; hist.push(len); if (hist.length > BONE_KEEP) hist.shift();
+          }
+        }
         if (!useRaw) { out[i] = { x: prev.x, y: prev.y, z: prev.z, v: this.vis[i], held: true, seen: this.seen[i] }; continue; }
         const f = this.filters[i];
         /* an unsure joint is smoothed harder: lower cutoff, and speed opens the filter less */
         const k = Math.min(1, Math.max(0.12, (this.vis[i] - this.visFloor) / Math.max(1e-3, this.sureAt - this.visFloor)));
-        const c = this.minCutoff * k * k, b = this.beta * k;
+        const c = this.minCutoff * k * k * (EXTREMITY_SCALE[i] || 1), b = this.beta * k;   /* 1. */
         f[0].minCutoff = c; f[1].minCutoff = c; f[2].minCutoff = c * 0.6; f[0].beta = f[1].beta = f[2].beta = b;
-        out[i] = { x: f[0].filter(x, t), y: f[1].filter(y, t), z: f[2].filter(z, t), v: this.vis[i], held: false, seen: this.seen[i] };
-        this.prev[i] = out[i];
+        const sx = f[0].filter(x, t), sy = f[1].filter(y, t), sz = f[2].filter(z, t);
+        let ox = sx, oy = sy, locked = false;
+        /* 3. a landmark the move says stays still: once it has, hold it there; a decisive move away
+           (further than the release step, for a few frames running) lets it go again */
+        if (this.stable.has(i)) {
+          const L = this.lock[i];
+          if (L) {
+            const away = Math.hypot(x - L.x, y - L.y);
+            this.awayFor[i] = away > RELEASE_STEP ? this.awayFor[i] + 1 : 0;
+            if (this.awayFor[i] >= RELEASE_FRAMES) { this.lock[i] = null; this.stillFor[i] = 0; }
+            else { ox = L.x; oy = L.y; locked = true; }
+          } else if (prev) {
+            const stepd = Math.hypot(sx - prev.x, sy - prev.y);
+            this.stillFor[i] = stepd < STILL_STEP ? this.stillFor[i] + 1 : 0;
+            if (this.stillFor[i] >= STILL_FRAMES) { this.lock[i] = { x: sx, y: sy }; this.awayFor[i] = 0; ox = sx; oy = sy; locked = true; }
+          }
+        }
+        out[i] = { x: ox, y: oy, z: sz, v: this.vis[i], held: false, locked, seen: this.seen[i] };
+        this.prev[i] = { x: sx, y: sy, z: sz };
       }
       this.pts = out; this.lastT = t;
       return out;
