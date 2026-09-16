@@ -598,6 +598,27 @@ the next rise is the next rep, and a descent from that level to the floor is
 not a rep of its own. The "return" rule is where "did not come all the way
 back" belongs; the counter no longer waits forever for it.
 
+### Faults watch the rep, not the pause
+
+Between reps the person shifts, adjusts the mat, rests a hand on the floor.
+None of that is the exercise, and flagging it is the coach talking over a
+pause. A rep move's fault watches the movement unless it says otherwise:
+`phase: "rest"` to watch only between reps, `phase: "any"` for both. A hold's
+faults are unchanged — they watch the held position.
+
+### Said twice, then recalled
+
+A cue is worth hearing twice. The third time it is nagging, and it buries
+whatever else the set needs. `fault.maxCues.perSet` caps every cue at two a
+set; a rule name overrides it (`fast` is capped at one), and a move overrides
+both with `maxCues` on the fault itself.
+
+Counting does not stop when the cue does, so the review still knows the fault
+happened on every rep. A cue that ran out of turns while the fault kept
+happening is marked `capped` in the review and always named in the spoken
+summary, whatever its weight — the set is not the moment to keep making the
+point, and the end of it is.
+
 ### What the coach says, and when
 
 Besides the faults, the coach speaks for itself: the opening brief, the

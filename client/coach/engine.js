@@ -566,7 +566,11 @@
       const ex = this.ex; const faultCounts = {}; const tips = [];
       for (const f of ex.faults) {
         const n = f.onRep ? (this.repFaultCounts[f.id] || 0) : (this.faults.counts[f.id] || 0);
-        if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0 };
+        /* a cue that used up its turns and went quiet while the fault kept happening: the summary
+           owes the person that one, so it is marked here */
+        const said = this.faults.cued[f.id] || 0;
+        const capped = Number.isFinite(f.maxCues) && said >= f.maxCues && n > said;
+        if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0, said, capped };
       }
       let score = 100;
       const out = { exercise: ex.id, name: ex.name, type: ex.type, target: this.target, faults: faultCounts, durationMs: (this.lastT || 0) - (this.startT || 0), trace: this.trace, date: Date.now() };

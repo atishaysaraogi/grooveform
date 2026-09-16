@@ -211,6 +211,16 @@ do not travel. The target line over the camera is pinned to them instead of
 being worked out by watching, which is what makes it sit still from the first
 rep rather than the third.
 
+### Splitting a recording into reps
+
+Each rep becomes its own take, cut as one unbroken slice of the recording:
+the moment before the rep, then the rep. That lead-in is the position the
+person was actually in when *that* rep began, which is what the rep is
+measured from — and because the clip is continuous, playing rep nine shows
+rep nine, rather than the start of the set and then a cut. Reps run back to
+back have no pause between them, and then the lead-in is the bottom of the
+rep before, which is the same position.
+
 ### Guide
 
 Surface, what the camera **cannot** see (required — it is shown to the user so

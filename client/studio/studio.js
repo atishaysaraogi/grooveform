@@ -770,9 +770,20 @@
   function repCuts(take, sim) {
     if (!sim || sim.error || !sim.reps || !sim.reps.length) return null;
     const calT = take.calT ?? 1200, last = take.durationMs;
-    const cuts = sim.reps.map((r) => {
+    const trace = sim.p || [];
+    /* the last moment before `t` that the reading was back at rest, looking no further back than
+       `floor` — the end of the rep before, or a couple of seconds, whichever is nearer */
+    const restBefore = (t, floor) => { for (let i = trace.length - 1; i >= 0; i--) { const [pt, pv] = trace[i]; if (pt >= t) continue; if (pt < floor) return null; if (pv <= E.REST) return pt; } return null; };
+    const cuts = sim.reps.map((r, i) => {
       const dur = (r.rep && r.rep.duration) || 0;
-      return { t0: Math.max(calT, r.t - dur - PAD), t1: Math.min(last, r.t + PAD), full: !!r.full };
+      const prev = i ? sim.reps[i - 1].t : 0;
+      /* Where this rep's clip calibrates: the last moment before it that the reading was back at
+         rest — the position the person was actually in when the rep began. The counter's own t0 is
+         later than that (it latches once the reading has passed the attempt threshold, a third of
+         the way up), and calibrating there would read the rep as shallower and quicker than it was. */
+      const began = Math.max(0, r.t - dur);
+      const cal = restBefore(began, Math.max(prev, began - 2 * STILL_KEEP)) ?? Math.max(prev, began - PAD);
+      return { cal, t0: Math.max(0, Math.min(cal, began - PAD)), t1: Math.min(last, r.t + PAD), full: !!r.full };
     }).filter((c) => c.t1 - c.t0 > 200);
     if (!cuts.length) return null;
     return { cuts, setupMs: Math.max(0, cuts[0].t0 - (sim.calT ?? calT)), tailMs: Math.max(0, last - cuts[cuts.length - 1].t1) };
@@ -781,13 +792,9 @@
     const sim = state.sims[t.id];
     const cut = repCuts(t, sim);
     if (!cut || cut.cuts.length < 2) { if (!quiet) toast(sim && sim.reps && sim.reps.length === 1 ? 'Only one rep found in this take' : 'No reps found yet — set the progress measure in step 4, then split'); return 0; }
-    /* the still hold before the set (the last STILL_KEEP ms before calibration, not the walking-in
-       before it) goes in front of every rep, re-timed to start at 0, so each calibrates as the set did */
-    const calT = t.calT ?? 1200; const still = t.frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
-    if (!still.length) { if (!quiet) toast('This take has no still start to calibrate each rep from'); return 0; }
     const n = cut.cuts.length;
     if (!quiet && !confirm(`Split into ${n} reps? Each becomes its own take for you to describe; the ${(cut.setupMs / 1000).toFixed(1)} s of set-up before the first rep and ${(cut.tailMs / 1000).toFixed(1)} s after the last are dropped. The whole take is replaced.`)) return 0;
-    const kids = cutKids(t, cut.cuts, still);
+    const kids = cutKids(t, cut.cuts);
     if (!kids.length) { if (!quiet) toast('Could not cut the reps out of this take'); return 0; }
     for (const k of kids) await idb.put(k);
     await idb.del(t.id);
@@ -796,18 +803,30 @@
     toast(`${kids.length} reps — now say what each one shows`, 4000);
     return kids.length;
   }
-  /* one take per cut: the still hold, then the rep, re-timed to start at 0 and remembering where it
-     sits in the parent's video */
-  function cutKids(t, cuts, still) {
-    const calT = t.calT ?? 1200, s0 = still[0][0], kidCal = calT - s0, n = cuts.length;
+  /* One take per cut: the moment before the rep, then the rep, as one unbroken slice of the parent,
+     re-timed to start at 0 and remembering where it sits in the parent's video.
+
+     It used to be the still start of the WHOLE set in front of every rep, which is why playing rep
+     nine showed the beginning of the set and then cut to rep nine. Each rep now carries the moment
+     before itself instead: the position the person was actually in when that rep began, which is
+     what the rep is measured from, and — because the lead-in and the rep are one continuous stretch
+     of the recording — the clip plays straight through. Reps run back to back have no pause between
+     them, and then the lead-in is simply the bottom of the rep before, which is the same position. */
+  function cutKids(t, cuts) {
+    const n = cuts.length;
     return cuts.map((c, i) => {
-      const seg = t.frames.filter((f) => f[0] >= c.t0 && f[0] <= c.t1);
-      const frames = [...still.map((f) => [f[0] - s0, f[1]]), ...seg.map((f) => [kidCal + (f[0] - c.t0), f[1]])];
+      const cal = Number.isFinite(c.cal) ? c.cal : c.t0;
+      const from = Math.max(0, Math.min(cal - STILL_KEEP, c.t0));
+      const seg = t.frames.filter((f) => f[0] >= from && f[0] <= c.t1);
+      if (seg.length < 8) return null;
+      const h0 = seg[0][0];
+      const frames = seg.map((f) => [f[0] - h0, f[1]]);
+      const kidCal = Math.max(120, Math.min(cal - h0, frames[frames.length - 1][0] - 200));
       /* a take that already said what it shows keeps saying it; one cut out of a mixed video does not
          pretend to be clean — "not said yet" is excluded from every count until the physio says */
       const labels = !shows(t, 'todo') && t.origin ? labelsOf(t) : (n > 1 ? ['todo'] : labelsOf(t));
-      return { id: uid(), moveId: t.moveId, label: labels[0], labels, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: c.t0, videoS0: s0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
-    }).filter((k) => k.frames.length > still.length + 4);
+      return { id: uid(), moveId: t.moveId, label: labels[0], labels, side: t.side, note: t.note || '', aspect: t.aspect, frames, video: t.video || null, videoT0: cal, videoS0: h0, source: t.source, created: t.created + i + 1, durationMs: frames[frames.length - 1][0], calT: kidCal, origin: { take: t.id, rep: i + 1, of: n, full: c.full } };
+    }).filter(Boolean);
   }
   async function saveTake(frames, aspect, video, source = 'camera') {
     if (frames.length < 10) { toast('Too short — nothing saved'); return; }
@@ -878,9 +897,8 @@
       const settled = settleAt(frames, aspect);
       const whole = { id: 'check_' + uid(), moveId: moveKey(), label: 'check', side: rec.side, note: '', aspect, frames, video: file, source: 'check', created: Date.now(), durationMs: frames[frames.length - 1][0], calT: settled ?? 1200 };
       const sim = simulate(ex, whole);
-      const cut = repCuts(whole, sim); const calT = whole.calT;
-      const still = frames.filter((f) => f[0] < calT && f[0] >= calT - STILL_KEEP);
-      const kids = cut && still.length ? cutKids(whole, cut.cuts, still) : [];
+      const cut = repCuts(whole, sim);
+      const kids = cut ? cutKids(whole, cut.cuts) : [];
       check.whole = { take: whole, sim, settled: settled != null };
       check.reps = kids.map((k) => ({ take: k, sim: simulate(ex, k), say: { label: '', labels: [] } }));
       status(kids.length ? `${kids.length} reps found` : sim && sim.reps && sim.reps.length === 1 ? 'One rep found' : 'No reps found');
@@ -1020,7 +1038,7 @@
   const videoTime = (take, t) => { const calT = take.calT ?? 1200; return take.videoT0 == null ? t : t < calT ? t + (take.videoS0 || 0) : t - calT + take.videoT0; };
   $('pl-scrub').oninput = (e) => { pl.t = (+e.target.value / 1000) * pl.take.durationMs; pl.playing = false; const v = $('pl-video'); if (!v.hidden) { v.pause(); v.currentTime = videoTime(pl.take, pl.t) / 1000; } drawPlayerFrame(); };
   $('pl-play').onclick = () => playerPlay(!pl.playing);
-  function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; const calT = pl.take.calT ?? 1200; const v = $('pl-video'); if (pl.take.videoT0 != null && !v.hidden && pl.t >= calT && pl.t - 40 < calT) v.currentTime = videoTime(pl.take, pl.t) / 1000;   /* jump from the still start to the rep */ if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; v.pause(); } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
+  function playTick(now) { if (!pl.playing) return; pl.t = now - pl.wall; const calT = pl.take.calT ?? 1200; const v = $('pl-video'); /* every rep clip is one unbroken slice of the recording, so it plays straight through: no jump */ if (pl.t >= pl.take.durationMs) { pl.t = pl.take.durationMs; pl.playing = false; $('pl-play').textContent = 'Play'; v.pause(); } $('pl-scrub').value = Math.round(1000 * pl.t / pl.take.durationMs); drawPlayerFrame(); if (pl.playing) pl.raf = requestAnimationFrame(playTick); }
   function drawPlayerFrame() {
     const take = pl.take; const c = $('pl-canvas'); const aspect = take.aspect || 16 / 9; const W = 960, H = Math.round(960 / aspect); if (c.width !== W) { c.width = W; c.height = H; }
     const ctx = c.getContext('2d'); ctx.clearRect(0, 0, W, H);
@@ -1816,5 +1834,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy };
+  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy, repCuts, cutKids, videoTime, STILL_KEEP };
 })();

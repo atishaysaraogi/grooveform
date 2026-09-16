@@ -542,7 +542,8 @@
       /* maxCues caps how often one cue may be spoken in a single set. Told once, "slow it down"
          is advice; told every rep it is nagging that buries the cues that matter. A move may set
          its own; otherwise settings.json caps by rule name. */
-      const cap = Number.isFinite(f.maxCues) ? f.maxCues : (f.rule && (fs.maxCues || {})[f.rule]);
+      const byRule = f.rule ? (fs.maxCues || {})[f.rule] : undefined;
+      const cap = Number.isFinite(f.maxCues) ? f.maxCues : Number.isFinite(byRule) ? byRule : (fs.maxCues || {}).perSet;
       const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates, ...(Number.isFinite(cap) ? { maxCues: cap } : {}) };
       if (f.rule === 'shallow') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
       if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
@@ -568,8 +569,15 @@
       /* the start position, judged once before the set: no progress gate to pass and no held
          position to be in, because neither exists yet — only the measurement and its threshold */
       if (f.phase === 'start') return { ...common, atStart: true, phase: 'start', persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, check: over };
-      /* holds: a fault watches the held position unless it says phase "any" (it is the position itself that is missing) */
-      const phase = f.phase === 'moving' || f.phase === 'rest' ? f.phase : undefined;
+      /* Reps: a fault watches the rep. Between reps the person shifts, adjusts the mat, rests a
+         hand on the floor — none of that is the exercise, and flagging it is the coach talking over
+         a pause. So a rep move's fault watches the movement unless it says otherwise: "rest" to
+         watch only between reps, "any" for both.
+         Holds: a fault watches the held position unless it says "any" (it is the position itself
+         that is missing). */
+      const phase = spec.type === 'reps'
+        ? (f.phase === 'any' ? undefined : f.phase === 'rest' ? 'rest' : 'moving')
+        : (f.phase === 'moving' || f.phase === 'rest' ? f.phase : undefined);
       const needPosition = spec.type === 'hold' && f.phase !== 'any';
       return {
         ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, phase,

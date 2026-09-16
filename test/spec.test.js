@@ -436,3 +436,45 @@ test('cues: a move says which of the coach\'s own moments it wants', () => {
   assert.match(bad({ go: '  ' }), /cues.go/);
   assert.match(bad([]), /cues must be a block/);
 });
+
+/* Between reps the person shifts, adjusts the mat, rests a hand on the floor. None of that is the
+   exercise, and flagging it is the coach talking over a pause. */
+test('a rep move\'s faults watch the rep, not the pause between reps', () => {
+  const mk = (phase) => { const s = JSON.parse(JSON.stringify(sideLegRaise));
+    s.faults = [{ id: 'lean', label: 'Leaning', cue: 'Stay tall', tip: 'Do not tip.', severity: 2, metric: { kind: 'lean', pts: [] }, rel: 'change', op: '<', threshold: -8, minP: 0, persist: 0, ...(phase ? { phase } : {}) }];
+    return SPEC.compile(s, K).faults.find((f) => f.id === 'lean'); };
+  assert.equal(mk().phase, 'moving', 'unstated means during the movement');
+  assert.equal(mk('rest').phase, 'rest', 'or only between reps, if it says so');
+  assert.equal(mk('any').phase, undefined, 'or both');
+  /* and the tracker honours it: leaning while at rest is not a fault of the set */
+  const f = mk(); const tr = new E.FaultTracker([f]);
+  const m = { p: 0, gates: { lean: true }, 'f_lean': -20, conf: { lean: 1 } };
+  for (const t of [1000, 1500, 2000, 2500]) assert.deepEqual(tr.update(m, 'rest', t).map((x) => x.id), [], 'quiet between reps, however long the pause');
+  tr.update(m, 'moving', 3000);
+  assert.deepEqual(tr.update(m, 'moving', 3600).map((x) => x.id), ['lean'], 'and said once a rep is under way');
+  /* a hold is unchanged: its faults watch the held position */
+  const h = JSON.parse(JSON.stringify(sideLegRaise)); h.type = 'hold'; delete h.progress;
+  h.hold = { conditions: [{ metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, min: 20 }] };
+  h.faults = [{ id: 'lean', label: 'Leaning', cue: 'Stay tall', tip: 'Do not tip.', severity: 2, metric: { kind: 'lean', pts: [] }, rel: 'change', op: '<', threshold: -8, persist: 0 }];
+  assert.equal(SPEC.compile(h, K).faults.find((f) => f.id === 'lean').phase, undefined);
+});
+
+/* A cue is said twice and then held back, so the set is not a lecture; what it stopped saying is
+   owed to the person at the end. */
+test('a cue is said at most twice a set, and a capped one is named in the review', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  const ex = SPEC.compile(spec, K);
+  const cap = E.settings.fault.maxCues;
+  assert.equal(cap.perSet, 2);
+  assert.equal(ex.faults.find((f) => f.id === 'hike').maxCues, 2, 'every fault gets the cap');
+  assert.equal(ex.faults.find((f) => f.id === 'fast').maxCues, cap.fast, 'a rule keeps its own');
+  /* five reps that all hike: the cue is offered twice, the count keeps counting */
+  const r = run(ex, takes(30, 5, 20), { rom: 30 });
+  const fc = r.review.faults.hike;
+  assert.ok(fc, 'the fault happened'); assert.ok(fc.n > 2, 'on more reps than it was said: ' + fc.n);
+  assert.equal(fc.said, 2, 'and was said exactly twice');
+  assert.equal(fc.capped, true, 'so the review marks it for the summary');
+  /* one that was said as often as it happened is not marked */
+  const once = run(ex, takes(30, 1, 20), { rom: 30 }).review.faults.hike;
+  if (once) assert.ok(!once.capped, 'nothing owed when it was said every time');
+});

@@ -1245,7 +1245,12 @@
     const sc = (E.settings.score || {}), minW = sc.speakWeight ?? 2, max = sc.speakMax ?? 4;
     const sorted = Object.values(rv.faults || {}).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
     const major = sorted.filter((fc) => fc.fault.weight >= minW).slice(0, max);
-    const fixes = (major.length ? major : sorted.slice(0, 1)).map((fc) => String(fc.fault.cue || fc.fault.label)).map((c) => c[0].toLowerCase() + c.slice(1));
+    /* A cue is said twice and then held back, so the set is not a lecture. What it stopped saying
+       is owed to the person here, where there is time to act on it: a fault that ran out of turns
+       is in the summary whatever its weight. */
+    const capped = sorted.filter((fc) => fc.capped && !major.includes(fc));
+    const pick = (major.length ? major : sorted.slice(0, 1)).concat(capped).slice(0, max + capped.length);
+    const fixes = pick.map((fc) => String(fc.fault.cue || fc.fault.label)).map((c) => c[0].toLowerCase() + c.slice(1));
     const list = fixes.length < 2 ? fixes[0] : fixes.slice(0, -1).join(', ') + ' and ' + fixes[fixes.length - 1];
     s += fixes.length ? `Next set: ${list}.` : 'Nothing to fix — same again.';
     return s;

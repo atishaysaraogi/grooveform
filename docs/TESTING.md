@@ -101,6 +101,9 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 34. Rest half way down between reps: the start does not follow you all the way there (it stops at the drift cap) and the rep still reads as short.
 35. Studio step 4 → Which parts stay still: tick shoulder and knee on a bridge; the target line is drawn shoulder to hip to knee from the first rep and holds its angle as the hips rise.
 36. Studio step 6 → What the coach says: silence "The rep number" and run a set — the reps still count on screen, nothing is spoken; type your own words for "Go" and hear them.
+37. Studio → split a long recording: playing rep nine starts at rep nine's own place in the video and runs straight through, with a moment of the start position in front of it. No clip begins with the start of the set.
+38. Shift, adjust the mat or rest a hand on the floor between reps: nothing is flagged; the same posture during a rep is.
+39. A set where one thing goes wrong on every rep: the cue is spoken twice and then stops, the count still climbs, and the end-of-set summary names it.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

@@ -474,8 +474,12 @@ async function runCoachedSet(page, side = 'right') {
     const kids = await st.evaluate(() => window.OnTrackStudio.state.takes.map((t) => ({ rep: t.origin && t.origin.rep, of: t.origin && t.origin.of, label: t.label, calT: t.calT, videoT0: t.videoT0, videoS0: t.videoS0, frames: t.frames.length })));
     assert.equal(kids.length, 8, JSON.stringify(kids));
     assert.ok(kids.every((k) => k.of === 8 && k.label === 'todo'), JSON.stringify(kids));
-    /* walking in is not the start position: each rep carries the still hold that followed it, not a fixed first second */
-    assert.ok(kids.every((k) => k.videoS0 >= 1200 && k.videoS0 <= 1900 && k.calT >= 1000 && k.calT <= 1600), 'the still hold before the set goes in front of each rep: ' + JSON.stringify(kids));
+    /* Each rep carries the moment before ITSELF, as one unbroken slice: its clip starts at its own
+       place in the recording (never back at the start of the set), and the clock does not jump at
+       calibration, so it plays straight through. */
+    assert.ok(kids.every((k) => k.calT >= 400 && k.calT <= 1700), 'every rep has a moment of the start position in front of it: ' + JSON.stringify(kids));
+    assert.ok(kids.every((k) => k.videoT0 - k.videoS0 === k.calT), 'the lead-in runs straight into the rep: ' + JSON.stringify(kids));
+    for (let i = 1; i < kids.length; i++) assert.ok(kids[i].videoS0 > kids[i - 1].videoS0, `rep ${i + 1} starts later in the video than rep ${i}: ` + JSON.stringify(kids.map((k) => k.videoS0)));
     assert.ok(kids[0].videoT0 >= 2700 && kids[0].videoT0 <= 4000, 'the first rep is cut from where the set began, not from the walk-in: ' + JSON.stringify(kids[0]));
     /* the first rep is already playing for the physio to say what it shows; each answer plays the next */
     await st.waitForFunction(() => !document.getElementById('player').hidden && !document.getElementById('pl-classify').hidden);
@@ -773,6 +777,45 @@ async function runCoachedSet(page, side = 'right') {
     assert.ok(froms.froms.length >= 2, 'reps were counted: ' + JSON.stringify(froms));
     assert.ok(froms.froms[froms.froms.length - 1] > froms.froms[0], `each rep starts from where the leg now rests: ${froms.froms.join(', ')}`);
     await page.close();
+  });
+
+  await step('studio: every rep cut carries the moment before itself, and plays straight through', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'hipabd'));
+    const out = await st.evaluate(() => {
+      const S = window.OnTrackStudio, E = window.FormEngine, ex = window.ExerciseLibrary.all().find((e) => e.id === 'hipabd');
+      /* a made-up side leg raise: a long walk-in, then five raises with a pause between each */
+      const frame = (raise) => { const p = []; for (let i = 0; i < 33; i++) p.push([0.5, 0.5, 0, 1]);
+        const hip = [0.46, 0.55], kn = [hip[0] - Math.sin(raise * Math.PI / 180) * 0.2, hip[1] + Math.cos(raise * Math.PI / 180) * 0.2];
+        p[11] = [0.58, 0.30, 0, 1]; p[12] = [0.42, 0.30, 0, 1]; p[23] = [0.54, 0.55, 0, 1]; p[24] = [hip[0], hip[1], 0, 1];
+        p[25] = [0.54, 0.75, 0, 1]; p[26] = [kn[0], kn[1], 0, 1]; p[27] = [0.54, 0.95, 0, 1]; p[28] = [kn[0], kn[1] + 0.2, 0, 1];
+        for (const i of [7, 8, 29, 30, 31, 32]) p[i] = [0.5, 0.9, 0, 1];
+        return p; };
+      const frames = []; let t = 0;
+      for (let i = 0; i < 90; i++) { frames.push([t, frame(0)]); t += 33; }          // three seconds of standing still
+      for (let r = 0; r < 5; r++) {
+        for (let i = 0; i < 60; i++) { frames.push([t, frame(35 * Math.sin(Math.PI * i / 60))]); t += 33; }   // the raise
+        for (let i = 0; i < 60; i++) { frames.push([t, frame(0)]); t += 33; }        // two seconds of standing between reps
+      }
+      const take = { id: 'probe', moveId: 'hipabd', label: 'todo', labels: ['todo'], side: 'R', note: '', aspect: 16 / 9, frames, video: null, source: 'file', created: Date.now(), durationMs: t - 33, calT: 1200 };
+      const sim = S.simulate(ex, take); const cut = S.repCuts(take, sim);
+      const kids = S.cutKids(take, cut.cuts);
+      return { reps: sim.reps.length, kids: kids.length, rows: kids.map((k) => ({
+        /* where in the parent video this clip starts, and whether its clock jumps at calibration */
+        from: S.videoTime(k, 0), jump: S.videoTime(k, k.calT + 1) - S.videoTime(k, k.calT - 1),
+        lead: k.calT, dur: k.durationMs, reps: (S.simulate(ex, k) || {}).reps.length })) };
+    });
+    assert.ok(out.reps >= 4 && out.kids === out.reps, `five raises cut into ${out.kids} takes from ${out.reps} reps`);
+    for (const [i, r] of out.rows.entries()) {
+      assert.ok(r.jump <= 50, `rep ${i + 1} plays straight through, no cut back to the start of the set (jump ${r.jump} ms)`);
+      assert.ok(r.lead > 300 && r.lead < 1700, `rep ${i + 1} carries the moment before itself: ${r.lead} ms`);
+      assert.equal(r.reps, 1, `rep ${i + 1} holds exactly one rep`);
+      if (i) assert.ok(r.from > out.rows[i - 1].from, `rep ${i + 1} starts later in the video than rep ${i}, not back at the beginning`);
+    }
+    /* each clip starts where its own rep began, not at the set's still start */
+    assert.ok(out.rows[out.rows.length - 1].from > out.rows[0].from + 4000, 'the last rep is seconds into the recording: ' + JSON.stringify(out.rows.map((r) => r.from)));
+    await st.close();
   });
 
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
