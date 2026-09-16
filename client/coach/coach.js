@@ -948,12 +948,16 @@
     ctx.lineWidth = Math.max(3, W / 320); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.globalAlpha = alpha;
     const headStyle = settings.head || (E.settings.skeleton || {}).head || 'face';
+    /* a move that ignores the limb away from the camera does not draw it either: behind the body it
+       is the model's guess, and a guessed limb on the picture reads as the person's own */
+    const hidden = live && live.ex && live.ex.farSide === 'ignore' ? new Set(E.farLimb(live.session ? live.session.side : E.nearSide(pts))) : null;
     const ownHead = drawHead(ctx, pts, X, Y, null, headStyle, lost ? 'rgba(255,243,226,0.45)' : '#fff3e2', ctx.lineWidth = Math.max(3, W / 320));
     // bones
     /* a joint the model is not sure of (the far arm or leg, side-on) is left off rather than drawn
        where it guesses; a fairly sure one is drawn faint (settings.json skeleton.show / dim) */
     for (const [a, b] of E.CONNECTIONS) {
       if (ownHead && E.HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
+      if (hidden && (hidden.has(a) || hidden.has(b))) continue;
       if (!E.seen(pts, a) || !E.seen(pts, b)) continue;
       const p = pts[a], q = pts[b];
       const hot = faulty && (focus.has(a) || focus.has(b));
@@ -964,6 +968,7 @@
     const r = Math.max(4, W / 220);
     for (const i of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
       if (ownHead && i === 0) continue;
+      if (hidden && hidden.has(i)) continue;
       if (!E.seen(pts, i)) continue; const p = pts[i];
       const hot = faulty && focus.has(i);
       ctx.fillStyle = hot ? '#ff2e88' : '#b8f542'; ctx.beginPath(); ctx.arc(X(p), Y(p), hot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
@@ -1198,7 +1203,7 @@
     }
     const side = lastRec.opts && lastRec.opts.work ? `${sideName(lastRec.opts.work)} ${limbWord(ex)}` : lastRec.opts && SIDE_CODE[lastRec.opts.side] ? `${lastRec.opts.side} ${limbWord(ex)}` : '';
     const sk = E.settings.skeleton || {}; const [minCutoff, beta] = SMOOTH[settings.smooth] || SMOOTH.med;
-    return { name: ex.name, type: ex.type, target: rv.target, side, faults, head: settings.head || sk.head || 'face', show: sk.show, dim: sk.dim, smooth: { minCutoff, beta } };
+    return { name: ex.name, type: ex.type, target: rv.target, side, faults, head: settings.head || sk.head || 'face', show: sk.show, dim: sk.dim, smooth: { minCutoff, beta }, hide: ex.farSide === 'ignore' ? E.farLimb(side) : null };
   }
   let replayer = null;
   function renderReplay(rv) {

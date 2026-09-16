@@ -112,6 +112,9 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 45. A move with `stable` points that no fault watches (a bridge's shoulders): the drawn point holds still once the person has settled and follows again when they shift.
 46. A move with a start check (feet too far away, knee already bent): start the set correctly, then drift into the fault mid-set. The cue is said at the next rep boundary, those reps are flagged, and the review says "at the start of N reps".
 47. The same move done correctly throughout: nothing is said and no rep is flagged.
+48. A side-on both-sides move set to ignore the far limb (glute bridge): the drawn skeleton shows one arm and one leg, the far one never appears, and the same is true watching the set back.
+49. Film the same move from the other side: the near limb is still the one drawn, so the choice follows the camera rather than being fixed to left or right.
+50. Studio step 2: the far-limb chip appears only on a side-on move that is not one-sided, and writing a fault on oKNEE with it set to Ignored is refused.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

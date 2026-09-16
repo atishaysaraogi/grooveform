@@ -336,9 +336,18 @@
      facing the right way and big enough for this move. ex may be partial (a Studio draft): with no
      view any orientation passes, with no required list the trunk and legs stand in. */
   const BODY_DFLT = [0, 11, 12, 23, 24, 25, 26, 27, 28];
+  /* Side-on, the arm and leg away from the camera are behind the body: the model guesses at them,
+     and on a move that works both sides together they say nothing the near limb does not. A move
+     that sets farSide "ignore" has them left out — not drawn, not required in frame, and (checked
+     when the move is compiled) not measured. The torso pairs are not "the far side" in this sense:
+     both shoulders and both hips are what the trunk is read from, and both stay visible. */
+  const FAR_LIMB = { L: [13, 15, 17, 19, 21, 25, 27, 29, 31], R: [14, 16, 18, 20, 22, 26, 28, 30, 32] };
+  const farLimb = (nearS) => FAR_LIMB[nearS === 'L' ? 'R' : 'L'];
   function positionCheck(pts, ex, aspect = 1) {
     ex = ex || {};
-    const required = ex.required && ex.required.length ? ex.required : BODY_DFLT;
+    let required = ex.required && ex.required.length ? ex.required : BODY_DFLT;
+    /* a limb the move ignores is not a limb the person has to get into frame */
+    if (ex.farSide === 'ignore') { const far = new Set(farLimb(nearSide(pts))); required = required.filter((i) => !far.has(i)); }
     const visOk = visOf(pts, required) > 0.55;
     const edges = framing(pts, required, aspect); const frameOk = edges.length === 0;
     const o = orientation(pts);
@@ -705,7 +714,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, positionCheck, Settle, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the

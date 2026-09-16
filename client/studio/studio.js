@@ -55,7 +55,7 @@
     return {
       id: '', name: '', clinicalName: '', group: '', type: 'reps', view: 'front', ptType: 'A', sided: null, upperBody: false, icon: '', listed: undefined,
       screen: {}, camera: { height: 'chest', distance: '2.5 m' },
-      summary: '', setup: '', brief: '', why: '', band: false, weight: false, repHold: 0, stable: [], cues: {}, options: [],
+      summary: '', setup: '', brief: '', why: '', band: false, weight: false, repHold: 0, stable: [], cues: {}, farSide: null, options: [],
       defaultTarget: 10, targets: [6, 8, 10, 12, 15],
       calibrationPose: '', showAsk: '',
       progress: { metric: { kind: 'angle', pts: [] }, start: 'calibrated', target: 90, targetIsDelta: false },
@@ -91,7 +91,7 @@
       sourcesText: (raw.sources || []).map((x) => x.url ? x.name + ' | ' + x.url : x.name).join('\n'),
       muscles: { ...((raw.pose && raw.pose.work) || (raw.figure && raw.figure.w) || {}) }, pose: raw.pose ? JSON.parse(JSON.stringify(raw.pose)) : null, figure: raw.figure || null,
       minMs: r.minMs, focus: r.focus, order: raw.order, vetted: !!r.vetted,
-      stable: (r.stable || []).slice(), cues: r.cues ? { ...r.cues } : {},
+      stable: (r.stable || []).slice(), cues: r.cues ? { ...r.cues } : {}, farSide: r.farSide || null,
       _file: 'moves/' + ex.id + '.json', _region: regionOf(ex.file), _replaces: ex.id, _key: ex.id, created: Date.now(),
       _inherited: { camera: !raw.camera, targets: !raw.targets, cannotSee: !(raw.guide && raw.guide.cannotSee), level: !raw.level, equipment: !raw.equipment },
     });
@@ -143,6 +143,7 @@
     if (s.weight !== false && s.weight !== undefined) put('weight', s.weight);
     if (s.type === 'reps' && s.repHold > 0) put('repHold', s.repHold);
     if ((s.stable || []).length) put('stable', s.stable.slice());
+    if (s.farSide && s.view === 'side' && !s.sided) put('farSide', s.farSide);
     if (s.cues && Object.keys(s.cues).length) put('cues', { ...s.cues });
     if (s.minMs) put('minMs', s.minMs); if (s.focus) put('focus', s.focus);
     const tracked = s.tracking !== 'none';
@@ -562,6 +563,7 @@
         ${field('One-sided?', chips('sidedKind', ['none', 'leg', 'arm', 'side'], s.sided ? s.sided.limb : 'none', { none: 'No — both at once', leg: 'One leg', arm: 'One arm', side: 'One side' }), 'A one-sided move offers Left / Right / Both on the page.')}
         ${s.sided ? field('Which limb is working is decided by', chips('sided.by', ['pick', 'camera'], s.sided.by, { pick: 'The person’s choice (front-on)', camera: 'The limb nearest the camera (side-on)' })) : ''}
         ${s.sided && s.sided.by === 'pick' ? field('If no side was chosen', chips('sided.auto', [false, true], !!s.sided.auto, { false: 'Assume the left', true: 'Follow whichever limb moves' })) : ''}
+        ${s.view === 'side' && !s.sided ? field('The limb away from the camera', chips('farSide', ['', 'ignore'], s.farSide || '', { '': 'Watched like the near one', ignore: 'Ignored' }), 'Side-on, the arm and leg behind the body are the pose model’s guess. On a move worked with both sides at once they say nothing the near limb does not, so “Ignored” leaves them off the skeleton, out of the framing check, and out of every measurement — a fault written on oKNEE or oANK is then refused.') : ''}
         ${field('Upper body only', chips('upperBody', [false, true], s.upperBody, { false: 'Legs must be in frame', true: 'Works from the hips up' }), 'Upper-body moves can be done seated at a desk with only the torso in frame.')}
         ${field('What the camera does', chips('tracking', ['form', 'reps', 'none'], s.tracking || 'form', { form: 'Counts and judges', reps: 'Counts only', none: 'Nothing — guide only' }), '“Counts and judges” needs at least one fault with a measurement and a threshold; “counts only” needs the progress measurement; “nothing” lists the guide and the person logs the set by hand.')}
         ${field('Level', chips('level', ['beginner', 'intermediate', 'advanced'], s.level || 'beginner'))}
@@ -600,7 +602,8 @@
       if (k === 'sided.auto' && s.sided && !s.sided.auto) delete s.sided.auto;
       const fm = k.match(/^faults\.(\d+)\.(\w+)$/);
       if (fm) { const f = s.faults[+fm[1]]; if (fm[2] === 'label' && !f.idTouched) f.id = f.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'fault' + fm[1]; if (fm[2] === 'listed') { saveState(); render(); return; } saveState(); return; }
-      if (['sidedKind', 'ptType', 'targetsText', 'type', 'counts', 'view', 'band', 'weight', 'upperBody', 'sided.by', 'tracking'].includes(k)) { saveState(); render(); }
+      if (k === 'farSide' && !s.farSide) s.farSide = null;
+      if (['sidedKind', 'ptType', 'targetsText', 'type', 'counts', 'view', 'band', 'weight', 'upperBody', 'sided.by', 'tracking', 'farSide'].includes(k)) { saveState(); render(); }
       else saveState();
     });
     document.querySelectorAll('#fault-names [data-chips]').forEach((g) => { if (/severity$/.test(g.dataset.chips)) g.dataset.num = ''; });

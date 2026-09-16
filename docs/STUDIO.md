@@ -214,6 +214,14 @@ Rep-level questions the physio answers per fault: does it invalidate the rep
 (rep does not count) or only cost a cue; only once the rep is under way, or at any
 time; how long it must persist before it counts (0.4 s is the usual answer).
 
+### The limb away from the camera
+
+Step 2 offers *The limb away from the camera* on a side-on move worked with
+both sides at once. Set to *Ignored*, the arm and leg behind the body are
+left off the skeleton, out of the framing check and out of every measurement.
+The last of those is enforced: a fault written on the far knee or ankle is
+then refused on the check page, which is the point — it was never readable.
+
 ### What it says, and when
 
 Step 6 lists every moment the coach speaks for itself — the brief, the

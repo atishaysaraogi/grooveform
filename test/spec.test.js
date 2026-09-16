@@ -564,3 +564,44 @@ test('a start check judges the position every rep begins from, not only the set\
   assert.ok(cs.sess.repEvents.every((e) => !(e.rep.startFaults || []).length), 'nothing flagged on a clean set');
   assert.ok(!cs.review.faults.already_out, 'and nothing in the review');
 });
+
+/* Side-on, the arm and leg behind the body are the model's guess. A move worked with both sides at
+   once can say so, and then they are not drawn, not required in frame, and not measured. */
+test('farSide "ignore" leaves the limb away from the camera out of it', () => {
+  const side = JSON.parse(JSON.stringify(sideLegRaise)); side.view = 'side'; delete side.sided;
+  side.progress = { metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, start: 'calibrated', target: 30 };
+  side.faults = side.faults.filter((f) => f.rule);
+  side.faults.push({ id: 'lean', label: 'Leaning', cue: 'Stay tall', tip: 'Do not tip.', severity: 2, metric: { kind: 'lean', pts: [] }, rel: 'change', op: '<', threshold: -8, minP: 0.3, persist: 300 });
+  const on = JSON.parse(JSON.stringify(side)); on.farSide = 'ignore';
+  assert.deepEqual(SPEC.checkSpec(on), []);
+  assert.equal(SPEC.compile(on, K).farSide, 'ignore');
+  assert.equal(SPEC.compile(side, K).farSide, null, 'off unless the move asks');
+  /* what it refuses */
+  const bad = (o) => { const s = JSON.parse(JSON.stringify(on)); Object.assign(s, o); return SPEC.checkSpec(s).join(' | '); };
+  assert.match(bad({ view: 'front' }), /for a side-on move/);
+  assert.match(bad({ sided: { limb: 'leg', by: 'camera' } }), /worked with both sides at once/);
+  assert.match(bad({ farSide: 'hide' }), /the only setting is "ignore"/);
+  const far = JSON.parse(JSON.stringify(on));
+  far.faults.push({ id: 'far', label: 'Far knee', cue: 'Knee in', tip: 'Track it.', severity: 2, metric: { kind: 'angle', pts: ['oHIP', 'oKNEE', 'oANK'] }, op: '<', threshold: 90 });
+  assert.match(SPEC.checkSpec(far).join(' '), /reads the limb away from the camera/);
+  const prog = JSON.parse(JSON.stringify(on)); prog.progress.metric = { kind: 'vertical', pts: ['oHIP', 'oKNEE'] };
+  assert.match(SPEC.checkSpec(prog).join(' '), /progress: reads the limb away/);
+  /* the torso pairs are not the far side: both shoulders and both hips read the trunk */
+  const torso = JSON.parse(JSON.stringify(on));
+  torso.faults.push({ id: 'tilt', label: 'Shoulders', cue: 'Square up', tip: 'Level them.', severity: 2, metric: { kind: 'height', pts: ['SH', 'oSH'] }, op: '>', threshold: 10 });
+  assert.deepEqual(SPEC.checkSpec(torso), [], 'oSH and oHIP stay usable');
+  /* the indices it leaves out, given which side is nearest the lens */
+  assert.deepEqual(E.farLimb('L'), [14, 16, 18, 20, 22, 26, 28, 30, 32]);
+  assert.deepEqual(E.farLimb('R'), [13, 15, 17, 19, 21, 25, 27, 29, 31]);
+  /* and the framing check stops asking for it */
+  const ex = SPEC.compile(on, K);
+  /* positionCheck reads smoothed points, which carry v. A dim room: the near limb is readable but
+     no better, and the far one is lost behind the body. */
+  const body = pose(0).map((p) => ({ ...p, v: 0.62, visibility: 0.62 }));
+  const hide = new Set(E.farLimb(E.nearSide(body)));
+  const dark = body.map((p, i) => hide.has(i) ? { ...p, v: 0, visibility: 0 } : p);
+  assert.equal(E.positionCheck(dark, { ...ex, view: 'front', farSide: null }, 1).visOk, false, 'watched, the lost far limb drags the frame below the line');
+  assert.equal(E.positionCheck(dark, { ...ex, view: 'front' }, 1).visOk, true, 'ignored, only what the move reads is asked for');
+  const bright = pose(0).map((p) => ({ ...p, v: 1, visibility: 1 }));
+  assert.equal(E.positionCheck(bright, { ...ex, view: 'front', farSide: null }, 1).visOk, true, 'and a body fully in frame passes either way');
+});

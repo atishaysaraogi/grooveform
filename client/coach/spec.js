@@ -216,6 +216,20 @@
     need(['reps', 'hold'].includes(spec.type), 'type must be reps or hold');
     if (spec.repHold !== undefined && spec.repHold !== null && spec.repHold !== 0) { need(spec.type === 'reps', 'repHold (a hold at the top of each rep) is for a counted move — a timed move is a hold already'); need(Number.isFinite(spec.repHold) && spec.repHold > 0 && spec.repHold <= 30, 'repHold: seconds, more than 0 and at most 30'); }
     if (spec.weight !== undefined && spec.weight !== false) need(spec.weight === true || spec.weight === 'none' || (Number.isFinite(spec.weight) && spec.weight > 0), 'weight must be true, "none" or a number of kilograms');
+    /* The limb away from the camera, on a move worked with both sides at once. */
+    if (spec.farSide != null && spec.farSide !== '') {      /* a move that leaves it out, or a draft carrying null, is simply watching both */
+      need(spec.farSide === 'ignore', 'farSide: the only setting is "ignore"');
+      need(spec.view === 'side', 'farSide is for a side-on move — face-on, neither limb is the far one');
+      need(!spec.sided, 'farSide is for a move worked with both sides at once — a one-sided move already names the limb it works');
+      /* nothing may be measured from a limb the move has chosen not to look at */
+      const FAR = ['oEL', 'oWR', 'oKNEE', 'oANK', 'oHEEL', 'oFOOT'];
+      const usesFar = (m) => m && (m.pts || []).some((n) => FAR.includes(n)) || (m && Array.isArray(m.per) && m.per.some((n) => FAR.includes(n)));
+      const where = [];
+      if (spec.progress) { if (usesFar(spec.progress.metric)) where.push('progress'); for (const [j, a] of (spec.progress.and || []).entries()) if (usesFar(a.metric)) where.push('progress and[' + j + ']'); }
+      for (const c of (spec.hold && spec.hold.conditions) || []) if (usesFar(c.metric)) where.push('a hold condition');
+      for (const f of spec.faults || []) { if (usesFar(f.metric)) where.push('fault "' + (f.label || f.id) + '"'); for (const w of f.when || []) if (typeof w === 'object' && usesFar(w.metric)) where.push('fault "' + (f.label || f.id) + '" (when)'); }
+      for (const w of where) need(false, w + ': reads the limb away from the camera, which farSide "ignore" says not to look at');
+    }
     if (spec.stable !== undefined) {
       if (!Array.isArray(spec.stable)) problems.push('stable must be a list of landmark names');
       else for (const n of spec.stable) if (!LM_ALL.includes(n)) problems.push('stable: unknown landmark "' + n + '"');
@@ -646,7 +660,7 @@
       defaultTarget: spec.defaultTarget, targets: spec.targets.slice(),
       options, required: [...required].sort((a, b) => a - b),
       calibrate, startAgain, measure, checkStart, faults, tracking: spec.tracking || 'form', vetted: !!spec.vetted, repHold: spec.type === 'reps' && spec.repHold ? spec.repHold : 0,
-      stable: (spec.stable || []).slice(), cues: spec.cues ? { ...spec.cues } : null,
+      stable: (spec.stable || []).slice(), cues: spec.cues ? { ...spec.cues } : null, farSide: spec.farSide || null,
       /* the landmarks the smoother may lock once they have stopped moving: both sides of every point
          the move calls stable, less any point a fault watches for its own movement (a change from
          the start, a rise, a segment shortening) — a locked toe could never lift, and a fault written

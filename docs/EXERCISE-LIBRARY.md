@@ -698,6 +698,25 @@ otherwise take turns for the whole set and a third is never heard. The
 cooldown itself — how long before the same cue may repeat — is
 `fault.cooldown` in `settings.json`.
 
+### Ignoring the limb the camera cannot see
+
+The section below holds back a fault whose landmarks the model is unsure of.
+A move filmed side-on and worked with both sides at once can go further and
+say the far limb is not part of the exercise at all: `farSide: "ignore"`.
+
+Then it is not drawn on the skeleton, not required in frame before a set can
+start, and not measured — that last one is checked when the move is compiled,
+so a progress metric, hold condition or fault naming `oKNEE`, `oANK`,
+`oHEEL`, `oFOOT`, `oEL` or `oWR` is refused rather than quietly ignored. The
+torso pairs are not the far side in this sense: both shoulders and both hips
+are what the trunk is read from and both stay visible, so `oSH` and `oHIP`
+remain yours to use.
+
+It is refused on a face-on move, where neither limb is the far one, and on a
+one-sided move, which already names the limb it works. The glute bridge sets
+it. Which physical side is far is decided at run time from the pose, so a set
+filmed from either side behaves the same.
+
 ### The limb the camera cannot see
 
 Filmed side-on, the far arm and leg are behind the body. The pose model

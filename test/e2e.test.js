@@ -905,6 +905,49 @@ async function runCoachedSet(page, side = 'right') {
     await page.close();
   });
 
+  await step('a side-on move can ignore the limb away from the camera', async () => {
+    const page = await newPage();
+    await page.goto(base + '/?mock=1#/exercise/hipabd'); await page.waitForSelector('#do-start');
+    const out = await page.evaluate(() => {
+      const E = window.FormEngine, SPEC = window.MoveSpec, K = window.ExerciseLibrary.kinematics;
+      const bridge = window.ExerciseLibrary.all().find((e) => e.id === 'glute_bridge');
+      /* which indices are dropped depends on which side the lens sees, not on left or right */
+      const res = { set: bridge.farSide, nearL: E.farLimb('L'), nearR: E.farLimb('R') };
+      /* a fault on the far limb is refused when the move says to ignore it */
+      const spec = JSON.parse(JSON.stringify(bridge.spec)); spec.id = 'probe';
+      spec.faults.push({ id: 'far_knee', label: 'Far knee', cue: 'Knee in', tip: 'Track it.', severity: 2, metric: { kind: 'angle', pts: ['oHIP', 'oKNEE', 'oANK'] }, op: '<', threshold: 90 });
+      res.refused = SPEC.checkSpec(spec).join(' ');
+      /* and one on the torso pair is not */
+      const ok = JSON.parse(JSON.stringify(bridge.spec)); ok.id = 'probe2';
+      ok.faults.push({ id: 'sh', label: 'Shoulders', cue: 'Square up', tip: 'Level them.', severity: 2, metric: { kind: 'height', pts: ['SH', 'oSH'] }, op: '>', threshold: 10 });
+      res.torso = SPEC.checkSpec(ok).length;
+      return res;
+    });
+    assert.equal(out.set, 'ignore', 'the bridge ignores it');
+    assert.deepEqual(out.nearL, [14, 16, 18, 20, 22, 26, 28, 30, 32], 'nearest on the left, the right limb is dropped');
+    assert.deepEqual(out.nearR, [13, 15, 17, 19, 21, 25, 27, 29, 31], 'and the other way round');
+    assert.match(out.refused, /reads the limb away from the camera/);
+    assert.equal(out.torso, 0, 'the shoulder pair is still measurable');
+    await page.close();
+
+    /* the Studio chip: only on a side-on move worked with both sides at once */
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'glute_bridge'));
+    await st.selectOption('#move-select', 'glute_bridge'); await st.waitForSelector('[data-chips="farSide"]');
+    assert.equal(await st.$eval('[data-chips="farSide"] .chip[aria-pressed="true"]', (e) => e.dataset.v), 'ignore');
+    await st.click('[data-chips="farSide"] [data-v=""]');
+    await st.waitForFunction(() => !window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide);
+    assert.equal(await st.evaluate(() => 'farSide' in window.OnTrackStudio.regionWith(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current], 'hip').entry), false, 'watched is the default and writes nothing');
+    await st.click('[data-chips="farSide"] [data-v="ignore"]');
+    await st.waitForFunction(() => window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide === 'ignore');
+    assert.equal(await st.evaluate(() => window.OnTrackStudio.regionWith(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current], 'hip').entry.farSide), 'ignore');
+    /* a face-on move is not offered it */
+    await st.evaluate(() => { const S = window.OnTrackStudio; S.state.moves[S.state.current].view = 'front'; S.render(); });
+    assert.equal(await st.$('[data-chips="farSide"]'), null, 'face-on, neither limb is the far one');
+    await st.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');

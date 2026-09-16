@@ -53,6 +53,7 @@
     "group": "Optional. The heading the move is listed under; default = the file's group at the top.",
     "region": "Optional. The body region for filtering; default = the file's region.",
     "icon": "Optional short label used where an icon is expected. Default \"move\".",
-    "order": "Optional. Position in the list; default = the file's order + position in this file."
+    "order": "Optional. Position in the list; default = the file's order + position in this file.",
+    "farSide": "Optional, side-on moves worked with both sides at once: \"ignore\" leaves the arm and leg away from the camera out of it. Behind the body they are a guess, and on a move that works both sides together they say nothing the near limb does not. Ignored, they are not drawn on the skeleton, not required in frame before a set can start, and — checked when the move is compiled — not measured: a progress metric, hold condition or fault naming oKNEE, oANK, oHEEL, oFOOT, oEL or oWR is refused. The torso pairs are not the far side in this sense: both shoulders and both hips are what the trunk is read from and both stay visible, so oSH and oHIP are still yours to use. Good: a bridge, a plank, a squat filmed side-on. Bad: on a one-sided move (it already names the limb it works) or a face-on one (neither limb is the far one)."
   }
 }

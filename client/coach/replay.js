@@ -171,8 +171,9 @@
   /* lm: smoothed landmarks [x, y, z, v, seen] (raw [x, y, z, v] also draw, judged on v alone). A joint
      the model is unsure of stays off the picture, and so does everything hanging off it — no far foot
      floating without its leg; a fairly sure one draws faint (show / dim, from settings.json). */
-  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1, head = 'face', show = 0.5, dim = 0.7 } = {}) {
+  function drawSkeleton(ctx, lm, W, H, { hot = new Set(), mirror = false, alpha = 1, head = 'face', show = 0.5, dim = 0.7, hide = null } = {}) {
     if (!lm) return;
+    const hidden = hide && hide.length ? new Set(hide) : null;   /* the limb a farSide "ignore" move leaves out */
     const X = (p) => (mirror ? 1 - p[0] : p[0]) * W, Y = (p) => p[1] * H, V = (p) => (p[3] == null ? 1 : p[3]);
     const seenOne = (p) => !!p && (p[4] != null ? !!p[4] : V(p) >= show);
     const seen = (i) => { for (let j = i; j != null; j = PARENT[j]) if (!seenOne(lm[j])) return false; return true; };
@@ -189,6 +190,7 @@
     }
     for (const [a, b] of BONES) {
       if (h && HEAD_LINKS.some(([c, d]) => c === a && d === b)) continue;
+      if (hidden && (hidden.has(a) || hidden.has(b))) continue;
       if (!seen(a) || !seen(b)) continue; const p = lm[a], q = lm[b];
       const isHot = hot.has(a) || hot.has(b);
       ctx.strokeStyle = isHot ? C.hot : (!sure(a) || !sure(b)) ? C.boneDim : C.bone;
@@ -197,6 +199,7 @@
     const r = Math.max(4, W / 220);
     for (const i of JOINTS) {
       if (h && i === 0) continue;
+      if (hidden && hidden.has(i)) continue;
       if (!seen(i)) continue; const p = lm[i];
       const isHot = hot.has(i); ctx.fillStyle = isHot ? C.hot : C.joint;
       ctx.beginPath(); ctx.arc(X(p), Y(p), isHot ? r * 1.6 : r, 0, Math.PI * 2); ctx.fill();
@@ -221,7 +224,7 @@
       ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(0, 0, W, H);   /* the skeleton has to stay readable over it */
     }
     const hot = new Set(); for (const id of f.f || []) for (const i of ((meta.faults || {})[id] || {}).landmarks || []) hot.add(i);
-    drawSkeleton(ctx, lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35, head: meta.head || 'face', show: meta.show, dim: meta.dim });
+    drawSkeleton(ctx, lm, W, H, { hot, mirror, alpha: f.lm ? 1 : 0.35, head: meta.head || 'face', show: meta.show, dim: meta.dim, hide: meta.hide });
     const fs = Math.max(12, Math.round(H / 18)); ctx.font = `800 ${fs}px system-ui, sans-serif`; ctx.textBaseline = 'top';
     const done = tl.reps.filter((r) => r.t1 <= t && r.full).length;
     const label = meta.type === 'hold' ? `${Math.max(0, (t - tl.t0) / 1000).toFixed(0)} s` : `${done} / ${meta.target || '–'}`;

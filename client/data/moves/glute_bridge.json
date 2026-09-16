@@ -15,6 +15,7 @@
   "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
   "progress": { "metric": "hip_open", "start": "calibrated", "target": 160 },
   "stable": ["SH", "KNEE"],
+  "farSide": "ignore",
   "faults": [
     {
       "id": "shallow",
