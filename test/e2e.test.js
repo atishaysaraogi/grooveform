@@ -520,7 +520,7 @@ async function runCoachedSet(page, side = 'right') {
         const a = JSON.stringify(canon(strip(ex))), b = JSON.stringify(canon(strip({ ...rebuilt, order: ex.order })));
         if (a !== b) out.changed.push(ex.id);
         /* and the file itself: saving a move you did not touch must not rewrite its entry */
-        const { _studio, ...written } = entry; const { _note, ...original } = ex.entry;
+        const { _studio, ...written } = entry; const { _note, _studio: _was, ...original } = ex.entry;   /* the Studio's own stamp (who, when) is not the move */
         if (JSON.stringify(canon(written)) !== JSON.stringify(canon(original))) out.rewritten.push(ex.id + ' ' + JSON.stringify(canon(written)).slice(0, 80));
         out.checked++;
       }

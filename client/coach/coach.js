@@ -499,7 +499,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
     smoother.reset();
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -781,6 +781,9 @@
     setStatus(lost ? 'bad' : 'ok', lost ? 'Lost you' : (settings.fps === 'on' ? fps + ' fps' : 'Tracking'));
     if (lost && now - (live.lastLostCue || 0) > 5000) { live.lastLostCue = now; showCue('Can\'t see you — step back into frame', 'info'); }
     const r = s.step(pts, now);
+    /* the start position was read again where the person actually settled (see SetSession.rebaseIfSettled):
+       the target line and the readout follow the new baselines, and the file says it happened */
+    if (r.rebased) { live.ghost = null; showCue('Start position read again', 'info'); recEvent('recalibrate', { side: s.side, ref: { base: s.ref.base, start: s.ref.start, target: s.ref.target } }); }
     /* the engine followed the limb that was actually moving: say so, and record it, so the review
        and the history name the limb that did the work */
     if (s.ref && s.ref.switched && s.ref.switched !== live.sideSwitched) {
@@ -978,7 +981,7 @@
     let q; try { q = metric.pts.map((n) => MoveSpec.resolve(n, ref.pts0, S, E)); } catch (e) { return null; }
     if (!q || q.some((p) => !p)) return null;
     const bear = (p, o) => Math.atan2(p.y - o.y, p.x - o.x);
-    live.ghost = { key, a0: bear(q[0], q[1]), c0: bear(q[2], q[1]), a: 0, c: 0, cross: 0, sense: 1 };
+    live.ghost = { key, a0: bear(q[0], q[1]), c0: bear(q[2], q[1]), a: 0, c: 0, cross: 0, sense: 1, q0: q, dA: 0, dB: 0, dC: 0, vcross: 0, vsense: 1 };
     return live.ghost;
   }
   function ghostFor(ex, m, ref, pts) {
@@ -1008,6 +1011,26 @@
       if (g) {
         g.a = Math.max(g.a, Math.abs(wrap(bear(A, B) - g.a0)));
         g.c = Math.max(g.c, Math.abs(wrap(bear(C, B) - g.c0)));
+        g.dA = Math.max(g.dA, E.dist(A, g.q0[0])); g.dB = Math.max(g.dB, E.dist(B, g.q0[1])); g.dC = Math.max(g.dC, E.dist(C, g.q0[2]));
+      }
+      /* In a bridge the joint itself is what travels: the hip rises between a shoulder and a knee
+         that stay put, so a target drawn from the hip travels with it. When the joint has moved
+         further than either end, the ends are the reference: the joint's place at the target
+         angle is found from them (two sides and the angle between fix the triangle) and the target
+         is drawn end to joint to end. Which side of the line the joint bends to is latched from
+         the frame where it was clearest, like the sense below. */
+      if (g && g.dB > 0.02 && g.dB > 1.3 * Math.max(g.dA, g.dC)) {
+        const [S1, S2] = g.dA <= g.dC ? [A, C] : [C, A];
+        const L = E.dist(S1, B), D = E.dist(S1, S2), th = rad(target);
+        const vc = (S2.x - S1.x) * (B.y - S1.y) - (S2.y - S1.y) * (B.x - S1.x);
+        if (Math.abs(vc) > g.vcross) { g.vcross = Math.abs(vc); g.vsense = vc >= 0 ? 1 : -1; }
+        const disc = D * D - L * L * Math.sin(th) * Math.sin(th);
+        if (L > 1e-3 && D > 1e-3 && disc >= 0) {
+          const b = L * Math.cos(th) + Math.sqrt(disc);
+          const alpha = Math.acos(E.clamp((L * L + D * D - b * b) / (2 * L * D), -1, 1));
+          const a = bear(S2, S1) + g.vsense * alpha;
+          return [S1, { x: S1.x + Math.cos(a) * L, y: S1.y + Math.sin(a) * L }, S2];
+        }
       }
       /* the sense is which way round the joint bends; near lock-out the cross product is ~0 and its
          sign is noise, so the one from the most open frame so far is kept */

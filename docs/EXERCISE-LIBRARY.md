@@ -540,6 +540,33 @@ test over recorded frames, so a phone video dropped into the Studio calibrates
 where the person went still rather than at a fixed moment — walking in and
 lying down are not the start position.
 
+### Still is not the same as ready
+
+The start position is read while the person holds still. Someone who lies
+down with the knees pulled up, is read there, then settles into the real
+start reads half a rep up before they have moved — and never comes back
+below the resting threshold, so no rep ever closes (a real glute-bridge set:
+seventeen bridges, none counted). Two things now catch that.
+
+Before the first rep, a reading that has sat still for a second and a half
+somewhere well above the start (between 20 % and 75 % of the way to the
+target) is taken to be the start: the baselines are read again there, the
+counter begins from it, the readout and target line follow, and the
+diagnostics carry a `recalibrate` event. Only before the first rep, and not
+when the person demonstrated the target, which lives on those baselines.
+
+After that, a rep that comes part of the way back and settles there for a
+second is over where it settled: it counts (full if the top was reached),
+the next rise is the next rep, and a descent from that level to the floor is
+not a rep of its own. The "return" rule is where "did not come all the way
+back" belongs; the counter no longer waits forever for it.
+
+### Which cue is said
+
+The heaviest due cue is said first — but a fault that has not been said yet
+in this set comes before one that has, however heavy. Two faults on cooldown
+otherwise take turns for the whole set and a third is never heard.
+
 ### Is the foot on the floor?
 
 Yes — it is a `rise` reading of the heel, the toes or the whole foot since

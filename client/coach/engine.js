@@ -379,6 +379,11 @@
       this.minRep = opts.minRep ?? 600; this.turnHyst = opts.turnHyst ?? 0.12;
       /* a rep with a hold: the top only counts once p has stayed at or above `full` for holdMs */
       this.holdMs = opts.holdMs || 0; this.topMs = 0; this.lastT = null; this.holdDone = false;
+      /* A rep is over when the reading comes back below `rest`. It is also over when the reading
+         settles: the person who lowers to half way and rests there has finished the rep, and the
+         next rise is the next rep. `floor` is the level a rep was closed at, so the rise that
+         follows is judged from there and a descent from it is not a rep of its own. */
+      this.stillMs = opts.stillMs ?? 1000; this.stillTol = opts.stillTol ?? 0.04; this.stillP = null; this.stillSince = 0; this.floor = 0; this.pEnter = 0;
       this.state = 'rest'; this.p = 0; this.peak = 0; this.t0 = 0; this.tPeak = 0; this.trough = 0; this.tTrough = 0;
       this.count = 0; this.partials = 0; this.reps = []; this.faultsThisRep = new Set();
       this.alpha = 0.4;
@@ -389,9 +394,12 @@
       const p = this.p; let ev = null;
       const dt = this.lastT === null ? 0 : Math.min(Math.max(0, t - this.lastT), 200); this.lastT = t;
       if (this.holdMs && this.state !== 'rest') { if (p >= this.full) { this.topMs += dt; if (!this.holdDone && this.topMs >= this.holdMs) { this.holdDone = true; ev = { type: 'held', ms: this.topMs }; } } }
+      if (this.stillP === null || Math.abs(p - this.stillP) > this.stillTol) { this.stillP = p; this.stillSince = t; }
+      const settled = t - this.stillSince >= this.stillMs;
       switch (this.state) {
         case 'rest':
-          if (p > this.attempt) { this.state = 'out'; this.t0 = t; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false; }
+          if (p < this.rest) this.floor = 0;
+          if (p > this.attempt) { this.state = 'out'; this.t0 = t; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false; this.pEnter = this.floor; }
           break;
         case 'out':
           if (p > this.peak) { this.peak = p; this.tPeak = t; }
@@ -400,20 +408,25 @@
         case 'back':
           if (p < this.trough) { this.trough = p; this.tTrough = t; }
           if (p > this.peak + 0.05) { this.state = 'out'; this.peak = p; this.tPeak = t; }
-          else if (p < this.rest) { ev = this._finish(t, 'rest'); }
+          else if (p < this.rest) { ev = this._finish(t, 'rest'); this.floor = 0; }
           else if (this.trough < this.attempt && p > this.trough + this.turnHyst) {
             // bounced at the bottom without fully resting (e.g. no lock-out) — close the rep at the trough and start the next
-            ev = this._finish(this.tTrough, 'out'); this.t0 = this.tTrough; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false;
+            ev = this._finish(this.tTrough, 'out'); this.floor = this.trough; this.pEnter = this.floor; this.t0 = this.tTrough; this.peak = p; this.tPeak = t; this.faultsThisRep = new Set(); this.topMs = 0; this.holdDone = false;
+          }
+          else if (settled && p < this.full - this.turnHyst && p <= this.trough + this.stillTol) {
+            // came part of the way back and stayed there: the rep is over where it settled
+            ev = this._finish(this.tTrough, 'rest', true); this.floor = p;
           }
           break;
       }
       return ev;
     }
-    _finish(t, next) {
+    _finish(t, next, sure) {
       const duration = t - this.t0, reached = this.peak >= this.full, held = !this.holdMs || this.topMs >= this.holdMs, full = reached && held;
       const rep = { n: 0, full, peak: this.peak, endP: this.p, duration, tDown: this.tPeak - this.t0, tUp: t - this.tPeak, t, faults: [...this.faultsThisRep], topMs: Math.round(this.topMs), shortHold: reached && !held };
       this.state = next;
-      if (duration < this.minRep) return null;
+      if (duration < this.minRep && !sure) return null;              /* a second's settle says the rep was real, however quick the rise */
+      if (this.peak < this.pEnter + this.turnHyst) return null;     /* never rose from where the last rep was closed: a descent, not a rep */
       if (full) { this.count++; rep.n = this.count; } else this.partials++;
       this.reps.push(rep); return { type: 'rep', full, rep };
     }
@@ -441,7 +454,10 @@
           }
         } else { this.since[f.id] = 0; this.active.delete(f.id); }
       }
-      cues.sort((a, b) => b.weight - a.weight);
+      /* The heaviest cue first — but a fault that has not been said yet in this set comes before
+         one that has, however heavy: two faults on cooldown otherwise take turns for the whole
+         set and a third is never heard. */
+      cues.sort((a, b) => ((this.cued[a.id] || 0) - (this.cued[b.id] || 0)) || (b.weight - a.weight));
       return cues;
     }
     /* A cue is due when it has not been spoken inside its own cooldown and has not already been
@@ -463,8 +479,27 @@
       this.faults = new FaultTracker(exercise.faults);
       this.startT = null; this.lastT = null; this.holdMs = 0; this.goodMs = 0; this.lostMs = 0; this.frames = 0;
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
+      this.pHist = []; this.calT = null; this.rebases = 0;
     }
-    calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); }
+    calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); this.calT = this.lastT; this.pHist = []; }
+    /* The start position was read while the person was still, but still is not the same as ready:
+       someone who lies down with the knees pulled up, is read there, then settles into the real
+       start reads half a rep up before they have moved — and never comes back below the resting
+       threshold, so no rep ever closes. Before the first rep, a reading that has sat still for a
+       second and a half somewhere well above the start is that start; the baselines are read again
+       there and the counter begins from it. Only before the first rep: after one, a level the
+       person rests at between reps is the "return" rule's business, not a new start. */
+    rebaseIfSettled(pts, p, t) {
+      if (!this.counter || this.counter.reps.length || this.rebases >= 2 || (this.ref && this.ref.shown != null)) return false;   /* a demonstrated target lives on the ref and would be lost */
+      if (this.calT === null) this.calT = t;                       /* calibrated before the first step: the clock starts here */
+      this.pHist.push([t, p]); while (this.pHist.length && t - this.pHist[0][0] > 1500) this.pHist.shift();
+      if (t - this.calT < 1500 || this.pHist.length < 5 || t - this.pHist[0][0] < 1400) return false;
+      let lo = Infinity, hi = -Infinity; for (const [, q] of this.pHist) { lo = Math.min(lo, q); hi = Math.max(hi, q); }
+      if (hi - lo > 0.06 || lo < 0.2 || hi > this.counter.full - 0.1) return false;
+      this.calibrate(pts, this.side); this.calT = t; this.rebases++;
+      this.counter = new RepCounter(this.ex.repHold ? { holdMs: this.ex.repHold * 1000 } : {});
+      return true;
+    }
     /* The start position, judged before the set starts (see spec.js checkStart). The coach calls
        this while the person is holding still; what it finds is said then, not during the reps. */
     startCheck(pts, side) { return this.ex.checkStart ? this.ex.checkStart(pts, side || this.side, this.opts) : []; }
@@ -477,7 +512,10 @@
       if (this.startT === null) this.startT = t;
       const dt = this.lastT ? Math.min(t - this.lastT, 200) : 0; this.lastT = t; this.frames++;
       if (!pts) { this.lostMs += dt; return { m: this.m, cues: [], repEvent: null, done: false }; }
-      const m = this.ex.measure(pts, this.side, this.ref); this.m = m;
+      let m = this.ex.measure(pts, this.side, this.ref);
+      const rebased = this.counter && this.rebaseIfSettled(pts, m.p, t);
+      if (rebased) m = this.ex.measure(pts, this.side, this.ref);
+      this.m = m;
       let repEvent = null, held = null, phase = 'hold';
       if (this.counter) {
         repEvent = this.counter.update(m.p, t); phase = this.counter.phase;
@@ -502,7 +540,7 @@
       const repCues = repEvent
         ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
-      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, done: this.complete };
+      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, done: this.complete };
     }
     review() {
       const ex = this.ex; const faultCounts = {}; const tips = [];

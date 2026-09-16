@@ -91,6 +91,10 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 24. A dumbbell move (goblet squat): the Weight bubble cycles none → 1 kg → 2 kg → 5 kg → Other…; Other… opens a box, typing 7.5 puts "7.5 kg" on the bubble and the coach's title line; an empty box falls back to no weight.
 25. Settings → Your height defaults to 5'11" (180 cm); a fault measured "% of their height" read in inches (Studio step 5 → % of → their height → read in inches) shows inches in the Studio's threshold field and its chart, and a shorter height in Settings makes the same movement read fewer inches.
 26. Exercise page → The move: the Stick figure / Muscles toggle beside the heading swaps the animation on the spot and Settings → The move's animation follows it. Studio step 7: Vetted can be turned on while the tuning report is red; the toast names the failing faults and the export carries them under `_studio.tuned.override`.
+27. Calibrate in one pose, then settle into the real start and hold it (a bridge with the knees pulled up first): after a second and a half "Start position read again" shows, the readout drops to 0 and the reps then count; the diagnostics file carries a `recalibrate` event and the move's `spec`.
+28. Lower only half way between reps and rest there: each rep still counts, and a slow lowering to the floor afterwards adds nothing.
+29. A set with three faults: each cue is heard once before any repeats, heaviest first.
+30. Glute bridge: the target line is drawn shoulder to hip to knee and stays put as the hips rise; the arm-anchored line of a squat is unchanged.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

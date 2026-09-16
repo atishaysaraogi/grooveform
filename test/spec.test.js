@@ -333,3 +333,23 @@ test('per: "height" reads a share of stature, and unit turns it into inches or c
   s.faults[0].metric.per = 'height'; assert.deepEqual(SPEC.checkSpec(s), []);
   s.faults[0].metric.unit = 'ft'; assert.match(SPEC.checkSpec(s).join(' '), /unit must be "in" or "cm"/);
 });
+
+/* Still is not the same as ready: read in one pose and then settled in another before the first
+   rep, the person would read half a rep up and never come back to rest. The start is read again
+   where they settled. */
+test('the start position is read again when the person settles somewhere else before the first rep', () => {
+  const ex = SPEC.compile(sideLegRaise, K);
+  const frames = []; for (let i = 0; i < 40; i++) frames.push(pose(0));            // calibrated with the leg hanging
+  for (let i = 0; i < 70; i++) frames.push(pose(12));                             // then settles with it out 12° and stays
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 90; i++) frames.push(pose(12 + 30 * Math.sin(Math.PI * i / 90)));   // three 30° raises from there
+  for (let i = 0; i < 20; i++) frames.push(pose(12));
+  const { sess, review } = run(ex, frames, { rom: 30 });
+  assert.equal(sess.rebases, 1, 'read again once');
+  assert.ok(Math.abs(sess.ref.start - 12) < 2, 'the new start is the settled pose: ' + sess.ref.start);
+  assert.equal(review.reps, 3, 'and the raises from there are full reps'); assert.equal(review.partials, 0);
+  /* after the first rep a level the person rests at is not a new start */
+  const later = []; for (let i = 0; i < 40; i++) later.push(pose(0));
+  for (let i = 0; i < 90; i++) later.push(pose(30 * Math.sin(Math.PI * i / 90)));
+  for (let i = 0; i < 70; i++) later.push(pose(12));
+  assert.equal(run(ex, later, { rom: 30 }).sess.rebases, 0);
+});

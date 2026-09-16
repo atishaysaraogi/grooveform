@@ -373,3 +373,29 @@ test('RepCounter with holdMs: the top has to be held, and says when it has been'
   const none = play(300, 0);
   assert.equal(none.evs[0].full, true, 'without a hold the rep counts as before'); assert.ok(!none.evs[0].rep.shortHold);
 });
+
+/* A rep that comes part of the way back and stays there is over where it settled; the next rise
+   is the next rep, and a descent from that level is not a rep of its own. */
+test('RepCounter: a rep closes where the person settles, not only below rest', () => {
+  const c = new E.RepCounter(); c.alpha = 1; let t = 0; const evs = [];
+  const feed = (p, ms) => { for (let k = 0; k < ms / 50; k++) { t += 50; const ev = c.update(p, t); if (ev && ev.type === 'rep') evs.push(ev); } };
+  feed(0, 300); feed(0.6, 300); feed(1.0, 300); feed(0.55, 1300);          // up, and rests half way down
+  assert.equal(evs.length, 1, 'closed on the plateau'); assert.equal(evs[0].full, true); assert.ok(Math.abs(evs[0].rep.endP - 0.55) < 0.01);
+  feed(1.0, 300); feed(0.55, 1300);                                        // the next rise from there is a second rep
+  assert.equal(evs.length, 2); assert.equal(c.count, 2);
+  feed(0.3, 300); feed(0, 400);                                           // then all the way down: no rep in a descent
+  assert.equal(evs.length, 2, 'a descent from the closing level is not a rep'); assert.equal(c.partials, 0);
+  feed(0.6, 300); feed(1.0, 300); feed(0, 400);
+  assert.equal(c.count, 3, 'and from the floor the counter is as it was');
+});
+
+/* Two faults on cooldown otherwise alternate for the whole set and a third is never heard. */
+test('FaultTracker: a cue not yet said this set is offered before one that has been', () => {
+  const f = (id, weight) => ({ id, weight, persist: 0, cooldown: 4000, check: () => true });
+  const tr = new E.FaultTracker([f('heavy', 3), f('mid', 2), f('light', 1)]);
+  let t = 1000; const said = [];
+  const round = () => { const cues = tr.update({}, 'moving', t); if (cues.length) { tr.ack(cues[0].id, t); said.push(cues[0].id); } t += 1500; };
+  for (let i = 0; i < 6; i++) round();
+  assert.deepEqual(said.slice(0, 3), ['heavy', 'mid', 'light'], 'each is heard once before any repeats: ' + said.join(' '));
+  assert.deepEqual(said.slice(3), ['heavy', 'mid', 'light'], 'then heaviest first again, in turn');
+});
