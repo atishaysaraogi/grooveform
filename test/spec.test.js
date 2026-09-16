@@ -530,3 +530,37 @@ test('tilt is signed', () => {
   const level = frame({ 11: [0.4, 0.45], 12: [0.4, 0.45], 23: [0.6, 0.45], 24: [0.6, 0.45] });
   assert.ok(Math.abs(SPEC.evalMetric(m, level, 'R', K)) < 1, 'level is 0');
 });
+
+/* A set-up fault is not only a thing about the beginning of a set. Feet creep out, a knee is
+   already bent by the sixth rep and was not on the first. The same checks run on the position each
+   rep starts from, and the rep is flagged. */
+test('a start check judges the position every rep begins from, not only the set\'s', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  spec.faults.push({ id: 'already_out', label: 'Leg already out', cue: 'Bring the leg back', tip: 'Start with it hanging.', severity: 2, phase: 'start', metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, op: '>', threshold: 6 });
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  const ex = SPEC.compile(spec, K);
+  /* three reps from a hanging leg, then a set-up that has crept out to 9° and three more from there */
+  const frames = []; for (let i = 0; i < 40; i++) frames.push(pose(0));
+  const reps = (from) => { for (let r = 0; r < 3; r++) {
+    for (let i = 0; i < 60; i++) frames.push(pose(from + 34 * Math.sin(Math.PI * i / 60)));
+    for (let i = 0; i < 45; i++) frames.push(pose(from));
+  } };
+  reps(0); for (let i = 0; i < 45; i++) frames.push(pose(9)); reps(9);
+  const { sess, review } = run(ex, frames, { rom: 30, work: 'R' });
+  const flagged = sess.repEvents.map((e) => (e.rep.startFaults || []).includes('already_out'));
+  assert.equal(flagged.length, 6, 'six reps: ' + flagged.length);
+  assert.deepEqual(flagged.slice(0, 3), [false, false, false], 'the first three started from a hanging leg');
+  assert.deepEqual(flagged.slice(3), [true, true, true], 'the last three did not: ' + JSON.stringify(flagged));
+  /* the review counts it once per rep it was true of, and says how many */
+  const fc = review.faults.already_out;
+  assert.ok(fc, 'the review names it'); assert.equal(fc.startReps, 3, 'on three reps: ' + fc.startReps);
+  assert.equal(fc.n, 3);
+  /* it is never raised mid-rep, only at the boundary */
+  assert.ok(!run(ex, frames, { rom: 30, work: 'R' }).fired.has('already_out'), 'never a live cue during the movement');
+  /* a set whose set-up never drifts is never flagged */
+  const clean = []; for (let i = 0; i < 40; i++) clean.push(pose(0));
+  for (let r = 0; r < 3; r++) { for (let i = 0; i < 60; i++) clean.push(pose(34 * Math.sin(Math.PI * i / 60))); for (let i = 0; i < 45; i++) clean.push(pose(0)); }
+  const cs = run(ex, clean, { rom: 30, work: 'R' });
+  assert.ok(cs.sess.repEvents.every((e) => !(e.rep.startFaults || []).length), 'nothing flagged on a clean set');
+  assert.ok(!cs.review.faults.already_out, 'and nothing in the review');
+});

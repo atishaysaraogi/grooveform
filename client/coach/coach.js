@@ -829,14 +829,17 @@
       if (ex.repHold && r.holding !== null) { const left = ex.repHold * 1000 - r.holding; $('phase').textContent = left > 0 ? 'hold ' + (Math.ceil(left / 100) / 10).toFixed(1) + 's' : 'held ✓'; }
       if (r.held) { voice.beep(1100, 0.1); recEvent('held', { ms: r.held.ms }); }
       if (r.repEvent) {
-        const rep = r.repEvent.rep; recEvent('rep', { full: r.repEvent.full, n: rep.n, peak: +rep.peak.toFixed(3), duration: Math.round(rep.duration), faults: rep.faults });
+        const rep = r.repEvent.rep; recEvent('rep', { full: r.repEvent.full, n: rep.n, peak: +rep.peak.toFixed(3), duration: Math.round(rep.duration), faults: rep.faults, ...(rep.startFaults && rep.startFaults.length ? { startFaults: rep.startFaults } : {}) });
         /* One cue per rep. A live fault (leaning) and a rep rule (too fast) can both be due at the
            same moment: on a full rep the heavier one is said, on a half rep the rep rule wins
            because it is the reason the rep did not count. Whichever loses keeps its turn and is
            said on a later frame rather than being dropped. */
-        const pick = r.repEvent.full
+        /* A set-up that has drifted — feet crept out, a knee already bent on this rep — is said at
+           the rep boundary, where there is a pause to fix it in. It outranks the others: a rep done
+           from the wrong position is not going to be fixed by a cue about the rep. */
+        const pick = r.startCues[0] || (r.repEvent.full
           ? [r.cues[0], r.repCues[0]].filter(Boolean).sort((a, b) => b.weight - a.weight)[0]
-          : (r.repCues[0] || r.cues[0]);
+          : (r.repCues[0] || r.cues[0]));
         if (r.repEvent.full) {
           $('count').textContent = s.counter.count; voice.beep(880, 0.1);
           const n = cueOn(ex, 'count') ? String(s.counter.count) : '';
@@ -1280,7 +1283,8 @@
     const fl = $('rv-faults');
     const items = Object.values(rv.faults).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
     fl.innerHTML = items.length
-      ? items.map((fc) => `<li><span class="n">×${fc.n}</span><span class="s">${escT(fc.fault.cue || fc.fault.label)}</span><span class="t">${escT(fc.fault.tip)}</span></li>`).join('')
+      /* a set-up check says which reps began from the wrong position, not just how many times */
+      ? items.map((fc) => `<li><span class="n">×${fc.n}</span><span class="s">${escT(fc.fault.cue || fc.fault.label)}${fc.startReps ? ` <span class="meta">at the start of ${fc.startReps} rep${fc.startReps > 1 ? 's' : ''}</span>` : ''}</span><span class="t">${escT(fc.fault.tip)}</span></li>`).join('')
       : '<li class="empty">Nothing to fix. Same again next set — or add a couple of reps.</li>';
     const spk = $('btn-speak-review'); if (spk) spk.onclick = () => { voice.unlock(); voice.say(spokenSummary(rv), { priority: 2 }); };
     renderReplay(rv);

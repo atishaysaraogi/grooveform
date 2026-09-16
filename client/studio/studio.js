@@ -246,7 +246,7 @@
     for (const o of ex.options || []) if (opts[o.key] === undefined) opts[o.key] = o.default;
     const session = new E.SetSession(ex, opts);
     const aspect = take.aspect || 16 / 9;
-    const out = { p: [], values: [], active: [], reps: [], faultSpans: {}, faultFrames: {}, startFired: [], calT: null, frames: 0, lost: 0 };
+    const out = { p: [], values: [], active: [], reps: [], faultSpans: {}, faultFrames: {}, startFired: [], startReps: {}, calT: null, frames: 0, lost: 0 };
     const CAL_AT = take.calT ?? 1200;
     let calibrated = false; const open = {};
     for (const fr of take.frames) {
@@ -263,7 +263,9 @@
       const r = session.step(pts, t);
       const m = r.m || {};
       out.p.push([t, m.p ?? 0]); out.values.push([t, m.v ?? m.value ?? (m.inPosition ? 1 : 0)]);
-      if (r.repEvent) out.reps.push({ t, full: r.repEvent.full, rep: r.repEvent.rep });
+      if (r.repEvent) { out.reps.push({ t, full: r.repEvent.full, rep: r.repEvent.rep });
+        /* which reps began from a position a set-up check did not like */
+        for (const id of r.repEvent.rep.startFaults || []) (out.startReps[id] = out.startReps[id] || []).push(out.reps.length); }
       for (const f of ex.faults) {
         if (f.onRep) continue;
         const on = session.faults.active.has(f.id);
@@ -1386,9 +1388,9 @@
 
   /* ===================== 5 · faults ===================== */
   const wc = (t) => (t || '').trim() ? t.trim().split(/\s+/).length : 0;
-  const START_HELP = 'A start check is read once, on the position being held, and said while it can still be fixed — heels too far away, knee already bent, the band already taut. It cannot measure the change from the start, because that is the position it is judging.';
+  const START_HELP = 'A start check is read on the position being held before the set, and again on the position each rep starts from, so a set-up that drifts — feet creeping out, a knee already bent by the sixth rep — is caught and the rep is flagged. It is said while it can still be fixed — heels too far away, knee already bent, the band already taut. It cannot measure the change from the start, because that is the position it is judging.';
   function fireReport(f) {
-    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = shows(t, 'fault:' + f.id) ? 'this fault' : labelOf(t); const fired = f.phase === 'start' ? (sim.startFired || []).includes(f.id) : f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
+    const groups = {}; for (const t of state.takes.filter(usable)) { const sim = state.sims[t.id]; if (!sim || sim.error) continue; const g = shows(t, 'fault:' + f.id) ? 'this fault' : labelOf(t); const fired = f.phase === 'start' ? ((sim.startFired || []).includes(f.id) || ((sim.startReps || {})[f.id] || []).length > 0) : f.rule ? (sim.repFaults[f.id] || 0) > 0 : !!(sim.faultSpans[f.id] && sim.faultSpans[f.id].length); groups[g] = groups[g] || [0, 0]; groups[g][1]++; if (fired) groups[g][0]++; }
     const order = ['clean', 'this fault', 'borderline', 'fault', 'setup', 'other'];
     return `<div class="fires">${order.filter((g) => groups[g]).map((g) => { const [a, b] = groups[g]; const cls = g === 'clean' ? (a === 0 ? 'ok' : 'bad') : g === 'this fault' ? (a === b ? 'ok' : 'bad') : ''; return `<span class="${cls}">fires on ${a}/${b} ${g === 'fault' ? 'other-fault' : g} takes</span>`; }).join('') || '<span>no takes yet</span>'}${f.phase === 'start' ? '<span>judged on the start position</span>' : ''}</div>`;
   }

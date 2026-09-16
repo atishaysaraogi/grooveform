@@ -866,6 +866,45 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('a set-up check judges every rep\'s start, not only the set\'s', async () => {
+    const page = await newPage();
+    await page.goto(base + '/?mock=1#/exercise/hipabd'); await page.waitForSelector('#do-start');
+    const out = await page.evaluate(() => {
+      const E = window.FormEngine, SPEC = window.MoveSpec, K = window.ExerciseLibrary.kinematics;
+      const spec = JSON.parse(JSON.stringify(window.ExerciseLibrary.all().find((e) => e.id === 'hipabd').spec));
+      spec.id = 'probe';
+      spec.faults.push({ id: 'already_out', label: 'Leg already out', cue: 'Bring the leg back', tip: 'Start hanging.', severity: 2, phase: 'start', metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, op: '>', threshold: 6 });
+      const ex = SPEC.compile(spec, K);
+      const frame = (raise) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, v: 1, visibility: 1 });
+        const hip = [0.46, 0.55], kn = [hip[0] - Math.sin(raise * Math.PI / 180) * 0.2, hip[1] + Math.cos(raise * Math.PI / 180) * 0.2];
+        p[11] = { x: 0.58, y: 0.30, z: 0, v: 1 }; p[12] = { x: 0.42, y: 0.30, z: 0, v: 1 };
+        p[23] = { x: 0.54, y: 0.55, z: 0, v: 1 }; p[24] = { x: hip[0], y: hip[1], z: 0, v: 1 };
+        p[25] = { x: 0.54, y: 0.75, z: 0, v: 1 }; p[26] = { x: kn[0], y: kn[1], z: 0, v: 1 };
+        p[27] = { x: 0.54, y: 0.95, z: 0, v: 1 }; p[28] = { x: kn[0], y: kn[1] + 0.2, z: 0, v: 1 };
+        for (const i of [7, 8, 29, 30, 31, 32]) p[i] = { x: 0.5, y: 0.9, z: 0, v: 1 };
+        return p; };
+      const frames = []; for (let i = 0; i < 40; i++) frames.push(frame(0));
+      const reps = (from) => { for (let r = 0; r < 3; r++) { for (let i = 0; i < 60; i++) frames.push(frame(from + 34 * Math.sin(Math.PI * i / 60))); for (let i = 0; i < 45; i++) frames.push(frame(from)); } };
+      reps(0); for (let i = 0; i < 45; i++) frames.push(frame(9)); reps(9);      // the set-up creeps out mid-set
+      const sess = new E.SetSession(ex, { target: 100, rom: 30, work: 'R' }); const sm = new E.PoseSmoother();
+      let t = 0; sess.calibrate(sm.update(frames[0], t, 1), 'R');
+      let spoken = 0;
+      for (const f of frames) { t += 1000 / 30; const r = sess.step(sm.update(f, t, 1), t);
+        for (const c of r.cues) sess.ackCue(c.id, t);
+        if ((r.startCues || []).length) { spoken++; sess.ackCue(r.startCues[0].id, t); } }
+      const rv = sess.review();
+      return { flags: sess.repEvents.map((e) => (e.rep.startFaults || []).includes('already_out')), spoken,
+        startReps: (rv.faults.already_out || {}).startReps, n: (rv.faults.already_out || {}).n };
+    });
+    assert.equal(out.flags.length, 6, 'six reps: ' + JSON.stringify(out.flags));
+    assert.deepEqual(out.flags.slice(0, 3), [false, false, false], 'the reps before the drift are clean');
+    assert.deepEqual(out.flags.slice(3), [true, true, true], 'the reps after it are flagged: ' + JSON.stringify(out.flags));
+    assert.equal(out.startReps, 3, 'the review says how many reps began wrong: ' + out.startReps);
+    assert.equal(out.n, 3);
+    assert.ok(out.spoken > 0 && out.spoken <= 3, 'it is offered at the rep boundary, capped: ' + out.spoken);
+    await page.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');

@@ -461,6 +461,28 @@ In the Studio the phase is a chip row on the fault ("during the set" / "at the
 start position"), and the fire report judges a start fault on each take's start
 position rather than on its spans.
 
+### A set-up check runs on every rep
+
+`phase: "start"` used to mean "read once, before the count-in". That misses
+everything that drifts: feet creep out, a heel shifts, a knee is already bent
+by the sixth rep and was not on the first.
+
+The same checks now run again on the position each rep starts from — the
+still moment before it, which is the frame that rep is measured from anyway.
+What they find is attached to the rep as `rep.startFaults`, counted once per
+rep it was true of, and reported in the review as "at the start of 3 reps".
+The Studio's firing strip counts those reps too, so a start check is tuned
+against reps rather than against one frame.
+
+It is judged once per pause rather than once per frame — `checkStart`
+calibrates a throwaway reference of its own, and the answer cannot change
+while the person is still — and judged again whenever the rep's start moves,
+because a drift during the pause is exactly the case worth catching.
+
+Live, it is spoken at the rep boundary, where there is a pause to act in, and
+it outranks the other rep cues: a rep done from the wrong position is not
+going to be fixed by a cue about the rep.
+
 ### A target the person shows you
 
 Some targets are a number that only means something on the body in front of the

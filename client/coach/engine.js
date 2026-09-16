@@ -542,6 +542,9 @@
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
       this.pHist = []; this.calT = null; this.rebases = 0;
       this.restP = null; this.restSince = 0; this.restarts = 0;
+      /* the set-up faults true of the position the NEXT rep starts from, and whether they have
+         already been counted (the check before the count-in counts its own) */
+      this.startPend = []; this.startPendCounted = false; this.startChecked = false; this.restFrom = 0;
     }
     calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); this.calT = this.lastT; this.pHist = []; }
     /* The start position was read while the person was still, but still is not the same as ready:
@@ -566,8 +569,28 @@
        this while the person is holding still; what it finds is said then, not during the reps. */
     startCheck(pts, side) { return this.ex.checkStart ? this.ex.checkStart(pts, side || this.side, this.opts) : []; }
     /* A set-up fault that was still true when the set began belongs in the review like any other,
-       so it is counted here — once, whatever the coach had to say about it beforehand. */
-    noteStart(ids, t) { for (const id of ids || []) { this.faults.counts[id] = (this.faults.counts[id] || 0) + 1; this.startFaults = [...new Set([...(this.startFaults || []), id])]; } }
+       so it is counted here — once, whatever the coach had to say about it beforehand. It is also
+       what the first rep starts from, so it is carried forward as that rep's start, already counted. */
+    noteStart(ids, t) {
+      for (const id of ids || []) { this.faults.counts[id] = (this.faults.counts[id] || 0) + 1; this.startFaults = [...new Set([...(this.startFaults || []), id])]; }
+      this.startPend = [...(ids || [])]; this.startPendCounted = true; this.startChecked = true;
+    }
+    /* ---------- the position each rep starts from ----------
+       A set-up fault is not only a thing about the beginning of a set. Feet creep out, a heel
+       shifts, a knee is already bent on the sixth rep and was not on the first — and read once,
+       before the count-in, none of that is ever seen. So the same checks run again on the position
+       each rep actually starts from: the still moment before it, which is the frame that rep is
+       measured from anyway. What they find is attached to that rep, so the review and the Studio
+       can say which reps began wrong rather than only that the set did.
+
+       Checked once per pause, not once per frame: checkStart calibrates a throwaway reference of
+       its own, which is real work, and the answer cannot change while the person is still. */
+    checkRepStart(pts, t) {
+      if (!this.counter || !this.ex.checkStart || this.startChecked) return;
+      this.startChecked = true;
+      let ids = []; try { ids = this.startCheck(pts, this.side).map((f) => f.id); } catch (e) { return; }
+      this.startPend = ids; this.startPendCounted = false;
+    }
     ackCue(id, t) { this.faults.ack(id, t); }
     // returns { m, cues:[fault], repEvent, done }
     step(pts, t) {
@@ -587,10 +610,20 @@
           if (this.restP === null || Math.abs(m.p - this.restP) > 0.04) { this.restP = m.p; this.restSince = t; }
           if (t - this.restSince >= (cfg.still ?? 400)) {
             restarted = this.ex.startAgain(this.ref, pts, this.side, cfg);
-            if (restarted) { this.restarts++; this.restSince = t; this.restP = null; m = this.ex.measure(pts, this.side, this.ref); this.counter.p = m.p; }
+            /* the position this rep begins from has moved, so whatever the start checks made of
+               the old one no longer applies: judge the new one */
+            if (restarted) { this.restarts++; this.restSince = t; this.restP = null; this.startChecked = false; m = this.ex.measure(pts, this.side, this.ref); this.counter.p = m.p; }
           }
         }
       } else if (this.counter && this.counter.state !== 'rest') { this.restP = null; }
+      /* The still moment between reps is the next rep's start position, so judge it there, once.
+         It keeps its own clock: startAgain pushes restSince forward every time it moves the start,
+         and a gate hung off that one never opens. */
+      if (this.counter) {
+        if (this.counter.state !== 'rest') this.restFrom = 0;
+        else if (!this.restFrom) this.restFrom = t;
+        else if (t - this.restFrom >= (((settingsOr().rep || {}).startAgain || {}).still ?? 400)) this.checkRepStart(pts, t);
+      }
       if (rebased) m = this.ex.measure(pts, this.side, this.ref);
       this.m = m;
       let repEvent = null, held = null, phase = 'hold';
@@ -600,6 +633,10 @@
         if (repEvent) {
           /* what this rep was measured from, so the review and the diagnostics can say so */
           repEvent.rep.from = this.ref && Number.isFinite(this.ref.start) ? +this.ref.start.toFixed(2) : undefined;
+          /* and what was wrong with the position it started from (see checkRepStart) */
+          repEvent.rep.startFaults = [...this.startPend];
+          if (!this.startPendCounted) for (const id of this.startPend) { this.faults.counts[id] = (this.faults.counts[id] || 0) + 1; this.startFaults = [...new Set([...(this.startFaults || []), id])]; }
+          this.startPendCounted = true; this.startChecked = false;   /* the next pause is checked afresh */
           for (const f of this.ex.faults.filter(f => f.onRep)) if (f.check(repEvent.rep)) { repEvent.rep.faults.push(f.id); }
           for (const id of repEvent.rep.faults) this.repFaultCounts[id] = (this.repFaultCounts[id] || 0) + 1;
           this.repEvents.push(repEvent);
@@ -619,17 +656,24 @@
       const repCues = repEvent
         ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
-      return { m, cues, repCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, restarted, done: this.complete };
+      /* a set-up that has drifted is worth saying at the rep boundary, where there is a pause to
+         fix it in; it takes its turn with the rep rules and obeys the same cap and cooldown */
+      const startCues = repEvent
+        ? (repEvent.rep.startFaults || []).map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
+        : [];
+      return { m, cues, repCues, startCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, restarted, done: this.complete };
     }
     review() {
       const ex = this.ex; const faultCounts = {}; const tips = [];
       for (const f of ex.faults) {
         const n = f.onRep ? (this.repFaultCounts[f.id] || 0) : (this.faults.counts[f.id] || 0);
+        /* which reps began from a position this fault was true of */
+        const startReps = f.atStart ? this.repEvents.filter((e) => (e.rep.startFaults || []).includes(f.id)).length : 0;
         /* a cue that used up its turns and went quiet while the fault kept happening: the summary
            owes the person that one, so it is marked here */
         const said = this.faults.cued[f.id] || 0;
         const capped = Number.isFinite(f.maxCues) && said >= f.maxCues && n > said;
-        if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0, said, capped };
+        if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0, said, capped, ...(f.atStart ? { startReps } : {}) };
       }
       let score = 100;
       const out = { exercise: ex.id, name: ex.name, type: ex.type, target: this.target, faults: faultCounts, durationMs: (this.lastT || 0) - (this.startT || 0), trace: this.trace, date: Date.now() };
