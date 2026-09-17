@@ -708,19 +708,23 @@ async function runCoachedSet(page, side = 'right') {
     const st = await newPage();
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
     await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'glute_bridge'));
-    /* the bridge names the points the person rests on, and it survives the round trip */
-    const stable = await st.evaluate(() => window.ExerciseLibrary.all().find((e) => e.id === 'glute_bridge').stable);
-    assert.deepEqual(stable, ['SH', 'KNEE'], 'the bridge says the shoulder and knee stay put');
+    /* The control, not any one move's data: whatever the bridge currently says, ticking a point
+       adds it in a fixed order and unticking takes it away again. A test that demanded the bridge
+       name particular points would break the moment someone edits the bridge, which is the whole
+       purpose of the library being data. */
     await st.selectOption('#move-select', 'glute_bridge'); await st.waitForSelector('#steps [data-step="measure"]');
     await st.click('#steps [data-step="measure"]'); await st.waitForSelector('#stable-pts');
-    assert.equal(await st.$eval('[data-st="SH"]', (e) => e.getAttribute('aria-pressed')), 'true');
-    assert.equal(await st.$eval('[data-st="KNEE"]', (e) => e.getAttribute('aria-pressed')), 'true');
+    const was = await st.evaluate(() => (window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).slice());
+    for (const n of was) assert.equal(await st.$eval(`[data-st="${n}"]`, (e) => e.getAttribute('aria-pressed')), 'true', n + ' is ticked because the move says so');
+    assert.ok(!was.includes('WR'), 'the wrist is not one of them to begin with');
     assert.equal(await st.$eval('[data-st="WR"]', (e) => e.getAttribute('aria-pressed')), 'false');
     await st.click('[data-st="WR"]');
     await st.waitForFunction(() => (window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).includes('WR'));
-    assert.deepEqual(await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'hip').entry.stable; }), ['SH', 'WR', 'KNEE'], 'written in a fixed order, head to toe');
+    const withWrist = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'hip').entry.stable; });
+    assert.deepEqual(withWrist, ['SH', 'EL', 'WR', 'HIP', 'KNEE', 'ANK', 'HEEL', 'FOOT', 'oSH', 'oHIP', 'oKNEE', 'oANK'].filter((n) => n === 'WR' || was.includes(n)), 'written head to toe, whatever the move already named: ' + JSON.stringify(withWrist));
     await st.click('[data-st="WR"]');
     await st.waitForFunction(() => !(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).includes('WR'));
+    assert.deepEqual(await st.evaluate(() => (window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].stable || []).slice()), was, 'and unticking puts it back as it was');
     /* and step 6 says what the coach says at each moment */
     await st.click('#steps [data-step="guide"]'); await st.waitForSelector('[data-cueon="count"]');
     assert.equal(await st.$eval('[data-cueon="count"]', (e) => e.textContent.trim()), 'says it');
@@ -909,25 +913,28 @@ async function runCoachedSet(page, side = 'right') {
     const page = await newPage();
     await page.goto(base + '/?mock=1#/exercise/hipabd'); await page.waitForSelector('#do-start');
     const out = await page.evaluate(() => {
-      const E = window.FormEngine, SPEC = window.MoveSpec, K = window.ExerciseLibrary.kinematics;
+      const E = window.FormEngine, SPEC = window.MoveSpec;
       const bridge = window.ExerciseLibrary.all().find((e) => e.id === 'glute_bridge');
       /* which indices are dropped depends on which side the lens sees, not on left or right */
-      const res = { set: bridge.farSide, nearL: E.farLimb('L'), nearR: E.farLimb('R') };
-      /* a fault on the far limb is refused when the move says to ignore it */
-      const spec = JSON.parse(JSON.stringify(bridge.spec)); spec.id = 'probe';
-      spec.faults.push({ id: 'far_knee', label: 'Far knee', cue: 'Knee in', tip: 'Track it.', severity: 2, metric: { kind: 'angle', pts: ['oHIP', 'oKNEE', 'oANK'] }, op: '<', threshold: 90 });
-      res.refused = SPEC.checkSpec(spec).join(' ');
-      /* and one on the torso pair is not */
-      const ok = JSON.parse(JSON.stringify(bridge.spec)); ok.id = 'probe2';
-      ok.faults.push({ id: 'sh', label: 'Shoulders', cue: 'Square up', tip: 'Level them.', severity: 2, metric: { kind: 'height', pts: ['SH', 'oSH'] }, op: '>', threshold: 10 });
-      res.torso = SPEC.checkSpec(ok).length;
+      const res = { nearL: E.farLimb('L'), nearR: E.farLimb('R') };
+      /* the setting under test is the mechanism, not one move's data: the probe declares it either
+         way rather than reading it off the library, which is the editors' to change */
+      const probe = (farSide, extra) => { const s = JSON.parse(JSON.stringify(bridge.spec)); s.id = 'probe';
+        if (farSide) s.farSide = farSide; else delete s.farSide;
+        s.faults.push(JSON.parse(JSON.stringify(extra))); return SPEC.checkSpec(s).join(' '); };
+      const far = { id: 'far_knee', label: 'Far knee', cue: 'Knee in', tip: 'Track it.', severity: 2, metric: { kind: 'angle', pts: ['oHIP', 'oKNEE', 'oANK'] }, op: '<', threshold: 90 };
+      /* a fault on the far limb is refused when the move says to ignore it, and allowed when it does not */
+      res.refused = probe('ignore', far);
+      res.watched = probe(null, far);
+      /* and one on the torso pair is fine either way */
+      res.torso = probe('ignore', { id: 'sh', label: 'Shoulders', cue: 'Square up', tip: 'Level them.', severity: 2, metric: { kind: 'height', pts: ['SH', 'oSH'] }, op: '>', threshold: 10 });
       return res;
     });
-    assert.equal(out.set, 'ignore', 'the bridge ignores it');
     assert.deepEqual(out.nearL, [14, 16, 18, 20, 22, 26, 28, 30, 32], 'nearest on the left, the right limb is dropped');
     assert.deepEqual(out.nearR, [13, 15, 17, 19, 21, 25, 27, 29, 31], 'and the other way round');
     assert.match(out.refused, /reads the limb away from the camera/);
-    assert.equal(out.torso, 0, 'the shoulder pair is still measurable');
+    assert.equal(out.watched, '', 'left unset, both limbs are watched: ' + out.watched);
+    assert.equal(out.torso, '', 'the shoulder pair is still measurable: ' + out.torso);
     await page.close();
 
     /* the Studio chip: only on a side-on move worked with both sides at once */
@@ -935,13 +942,15 @@ async function runCoachedSet(page, side = 'right') {
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
     await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'glute_bridge'));
     await st.selectOption('#move-select', 'glute_bridge'); await st.waitForSelector('[data-chips="farSide"]');
-    assert.equal(await st.$eval('[data-chips="farSide"] .chip[aria-pressed="true"]', (e) => e.dataset.v), 'ignore');
-    await st.click('[data-chips="farSide"] [data-v=""]');
-    await st.waitForFunction(() => !window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide);
-    assert.equal(await st.evaluate(() => 'farSide' in window.OnTrackStudio.regionWith(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current], 'hip').entry), false, 'watched is the default and writes nothing');
+    /* whatever the bridge carries today, the chip shows that and the round trip writes and clears it */
+    const held = () => st.evaluate(() => window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide || '');
+    assert.equal(await st.$eval('[data-chips="farSide"] .chip[aria-pressed="true"]', (e) => e.dataset.v), await held(), 'the chip shows what the move carries');
     await st.click('[data-chips="farSide"] [data-v="ignore"]');
     await st.waitForFunction(() => window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide === 'ignore');
     assert.equal(await st.evaluate(() => window.OnTrackStudio.regionWith(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current], 'hip').entry.farSide), 'ignore');
+    await st.click('[data-chips="farSide"] [data-v=""]');
+    await st.waitForFunction(() => !window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current].farSide);
+    assert.equal(await st.evaluate(() => 'farSide' in window.OnTrackStudio.regionWith(window.OnTrackStudio.state.moves[window.OnTrackStudio.state.current], 'hip').entry), false, 'watched is the default and writes nothing');
     /* a face-on move is not offered it */
     await st.evaluate(() => { const S = window.OnTrackStudio; S.state.moves[S.state.current].view = 'front'; S.render(); });
     assert.equal(await st.$('[data-chips="farSide"]'), null, 'face-on, neither limb is the far one');
