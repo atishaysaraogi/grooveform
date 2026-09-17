@@ -654,7 +654,7 @@
       let simText = '';
       if (sim && !sim.error && ex) simText = ex.type === 'reps' ? `<b>${sim.full}</b> reps${sim.partial ? ` · ${sim.partial} partial` : ''}` : `<b>${(sim.holdMs / 1000).toFixed(1)} s</b> in position`;
       else if (sim && sim.error) simText = `<span class="muted">rule error: ${esc(sim.error)}</span>`;
-      const fired = sim && !sim.error ? Object.keys(sim.faultSpans).concat(Object.keys(sim.repFaults || {})) : [];
+      const fired = sim && !sim.error ? firedOf(sim) : [];
       const canSplit = ex && ex.type === 'reps' && sim && !sim.error && sim.reps.length >= 2 && !t.origin;
       return `<div class="take" data-id="${t.id}"><button type="button" class="lbl ${labelOf(t)}" data-act="say" aria-label="What this take shows — tap to change">${esc(saidText(t))}</button>
         <div><div class="meta">${t.origin ? `rep ${t.origin.rep} of ${t.origin.of}${t.origin.full === false ? ' (partial)' : ''} · ` : ''}${t.side ? (t.side === 'L' ? 'left' : 'right') + ' · ' : ''}${(t.durationMs / 1000).toFixed(1)} s · ${t.frames.length} frames${t.video ? ' · video' : ''}${t.note ? ' · ' + esc(t.note) : ''}</div><div class="sim">${simText}${fired.length ? ` · fired: ${fired.map(esc).join(', ')}` : sim && !sim.error ? ' · no faults' : ''}</div></div>
@@ -893,7 +893,14 @@
   /* Nothing here is saved: the reps and their verdicts live in memory for this session, so a
      physio can throw a fresh video at the finished move and see whether the coach agrees with them. */
   const check = { name: '', whole: null, reps: [], busy: false, status: '' };
-  const firedOf = (sim) => !sim || sim.error ? [] : [...new Set(Object.keys(sim.faultSpans || {}).filter((id) => sim.faultSpans[id].length).concat(Object.keys(sim.repFaults || {}).filter((id) => sim.repFaults[id] > 0)))];
+  /* Every fault the coach found on a take: the live ones, the rep rules, and the set-up checks —
+     the position the take starts from, and the position each rep in it starts from. Left out, a
+     start check was the one kind of fault the Studio computed and never showed. */
+  const firedOf = (sim) => !sim || sim.error ? [] : [...new Set(
+    Object.keys(sim.faultSpans || {}).filter((id) => sim.faultSpans[id].length)
+      .concat(Object.keys(sim.repFaults || {}).filter((id) => sim.repFaults[id] > 0))
+      .concat(sim.startFired || [])
+      .concat(Object.keys(sim.startReps || {}).filter((id) => (sim.startReps[id] || []).length)))];
   async function checkFile(file) {
     const status = (t) => { check.status = t; const el = $('check-status'); if (el) el.textContent = t; };
     const ex = currentExercise(); if (!ex) { toast('The move does not compile yet — fix the problems above first'); return; }
@@ -1925,5 +1932,5 @@
     catch (e) { $('main').innerHTML = `<div class="card"><h2>The exercise files did not load</h2><p class="problems">${esc(e.message)}</p><p class="muted">Fix the file under <code>client/data/</code> and reload.</p></div>`; console.error(e); return; }
     await loadTakes(); render();
   })();
-  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy, repCuts, cutKids, videoTime, STILL_KEEP, measurementNotes, farEndFault };
+  window.OnTrackStudio = { state, simulate, trace, buildFigure, moveFileSource, render, entryToSpec, specToEntry, regionWith, catalogProblems, editCopy, repCuts, cutKids, videoTime, STILL_KEEP, measurementNotes, farEndFault, firedOf };
 })();

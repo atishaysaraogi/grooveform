@@ -948,6 +948,55 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('studio: a set-up check is judged on every rep the recording is broken into, and shown', async () => {
+    const st = await newPage();
+    await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');
+    await st.waitForFunction(() => window.ExerciseLibrary && window.ExerciseLibrary.all().some((e) => e.id === 'glute_bridge'));
+    const out = await st.evaluate(() => {
+      const S = window.OnTrackStudio, E = window.FormEngine;
+      const lib = window.ExerciseLibrary.all().find((e) => e.id === 'glute_bridge');
+      /* a set-up check certain to be true of the position every rep begins from: lying down, the
+         shoulder–hip–knee angle is well under 150° between reps */
+      const spec = JSON.parse(JSON.stringify(lib.spec)); spec.id = 'probe';
+      spec.faults.push({ id: 'probe_start', label: 'Probe', cue: 'Straighten up', tip: 'Probe.', severity: 2, phase: 'start', metric: { kind: 'angle', pts: ['SH', 'HIP', 'KNEE'] }, op: '<', threshold: 150 });
+      const ex = window.MoveSpec.compile(spec, window.ExerciseLibrary.kinematics);
+      /* a supine body whose hips rise and fall: four bridges with a pause between */
+      /* resting, the shoulder–hip–knee angle is about 112°, so the probe is true; at the top the
+         hips rise until it is about 174°, which is what the bridge counts as a rep */
+      const frame = (lift) => { const p = []; for (let i = 0; i < 33; i++) p.push([0.5, 0.5, 0, 1]);
+        const hipY = 0.72 - lift * 0.14;
+        p[11] = [0.66, 0.60, 0, 1]; p[12] = [0.66, 0.61, 0, 1];
+        p[23] = [0.46, hipY, 0, 1]; p[24] = [0.46, hipY + 0.01, 0, 1];
+        p[25] = [0.30, 0.60, 0, 1]; p[26] = [0.30, 0.61, 0, 1];
+        p[27] = [0.28, 0.76, 0, 1]; p[28] = [0.28, 0.77, 0, 1];
+        for (const i of [7, 8]) p[i] = [0.72, 0.58, 0, 1];
+        for (const i of [29, 30]) p[i] = [0.30, 0.78, 0, 1];
+        for (const i of [31, 32]) p[i] = [0.24, 0.78, 0, 1];
+        return p; };
+      const frames = []; let t = 0;
+      for (let i = 0; i < 60; i++) { frames.push([t, frame(0)]); t += 33; }
+      for (let r = 0; r < 4; r++) {
+        for (let i = 0; i < 60; i++) { frames.push([t, frame(Math.sin(Math.PI * i / 60))]); t += 33; }
+        for (let i = 0; i < 45; i++) { frames.push([t, frame(0)]); t += 33; }
+      }
+      const take = { id: 'probe', moveId: 'glute_bridge', label: 'todo', labels: ['todo'], side: 'L', note: '', aspect: 16 / 9, frames, video: null, source: 'file', created: Date.now(), durationMs: t - 33, calT: 1200 };
+      const sim = S.simulate(ex, take);
+      if (!sim || sim.error || sim.reps.length < 2) return { error: sim && sim.error, reps: sim && sim.reps.length };
+      const kids = S.cutKids(take, S.repCuts(take, sim).cuts);
+      return { reps: sim.reps.length,
+        wholePerRep: (sim.startReps || {}).probe_start ? sim.startReps.probe_start.length : 0,
+        kids: kids.length,
+        kidStart: kids.map((k) => (S.simulate(ex, k).startFired || []).includes('probe_start')),
+        kidShown: kids.map((k) => S.firedOf(S.simulate(ex, k)).includes('probe_start')) };
+    });
+    assert.ok(!out.error, 'the probe move simulates: ' + JSON.stringify(out));
+    assert.ok(out.reps >= 2, 'the recording holds several reps: ' + out.reps);
+    assert.equal(out.wholePerRep, out.reps, 'every rep of the whole take is judged on its own start');
+    assert.ok(out.kids >= 2 && out.kidStart.every(Boolean), 'and every rep broken out is judged on its own: ' + JSON.stringify(out.kidStart));
+    assert.ok(out.kidShown.every(Boolean), 'and the Studio shows it, rather than computing it and saying nothing: ' + JSON.stringify(out.kidShown));
+    await st.close();
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');

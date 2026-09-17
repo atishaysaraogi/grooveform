@@ -115,6 +115,7 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 48. A side-on both-sides move set to ignore the far limb (glute bridge): the drawn skeleton shows one arm and one leg, the far one never appears, and the same is true watching the set back.
 49. Film the same move from the other side: the near limb is still the one drawn, so the choice follows the camera rather than being fixed to left or right.
 50. Studio step 2: the far-limb chip appears only on a side-on move that is not one-sided, and writing a fault on oKNEE with it set to Ignored is refused.
+51. Studio: record a take whose set-up is wrong throughout, split it into reps, and each rep take names the start fault in its row; the same fault appears per rep in the Check against another video table, and labelling a rep with it counts as agreement.
 12. After the set, Watch it back: play, scrub, tap the timeline; Download report opens as a page on its own with the replay working; Download video produces a playable file (Chrome, Android; Safari may hide the button).
 
 ## CI

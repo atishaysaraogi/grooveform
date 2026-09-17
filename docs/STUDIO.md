@@ -214,6 +214,16 @@ Rep-level questions the physio answers per fault: does it invalidate the rep
 (rep does not count) or only cost a cue; only once the rep is under way, or at any
 time; how long it must persist before it counts (0.4 s is the usual answer).
 
+### A set-up check on every rep
+
+A rep clip calibrates on its own start, so a set-up check is judged there
+rather than only on the first rep of the recording — and within a whole take,
+on the position each rep begins from. Both were already computed; neither was
+shown, because the list of what the coach found left start checks out. It
+does not now: a take's row, the *Check against another video* table and the
+agreement count all include them, so you can label a rep "feet too close" and
+see whether the coach agrees.
+
 ### The limb away from the camera
 
 Step 2 offers *The limb away from the camera* on a side-on move worked with
