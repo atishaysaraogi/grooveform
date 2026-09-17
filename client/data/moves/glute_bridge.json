@@ -12,17 +12,17 @@
   "setup": "Lie on your back, side-on to the phone at floor level, knees bent, feet flat and hip-width. Push through the heels and squeeze the buttocks to lift the hips, pause at the top, lower slowly.",
   "brief": "Lie on your back, knees bent, feet flat and hip-width. Push through the heels and squeeze the buttocks to lift the hips, pause at the top, lower slowly.",
   "why": "From the side the shoulder–hip–knee angle opens from bent to straight as the hips rise, which counts each bridge. Ribs flaring and the back arching are hard to see side-on, so they are listed, not judged.",
+  "calibrationPose": "Lie with your knees bent, about 4-6inches from your hips.",
   "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
-  "progress": { "metric": "hip_open", "start": "calibrated", "target": 160 },
   "stable": ["SH", "KNEE"],
-  "farSide": "ignore",
+  "progress": { "metric": "hip_open", "start": "calibrated", "target": 170, "max": 190 },
   "faults": [
     {
       "id": "shallow",
       "label": "Not reaching the target",
       "cue": "All the way",
       "tip": "Take each rep through the full range you set — half reps count as partials.",
-      "severity": 1,
+      "severity": 2,
       "rule": "shallow"
     },
     {
@@ -32,7 +32,7 @@
       "tip": "Control both directions; momentum takes the work away from the muscle.",
       "severity": 1,
       "rule": "fast",
-      "minMs": 1500
+      "minMs": 600
     },
     {
       "id": "arch",
@@ -40,22 +40,22 @@
       "cue": "Squeeze glutes instead of lower back",
       "tip": "Height should come from the buttocks, not from pushing the ribs or back up. Stop where the body is straight.",
       "severity": 2,
-      "metric": { "kind": "height", "pts": ["HIP", "KNEE"] },
-      "rel": "change",
+      "metric": { "kind": "height", "pts": ["HIP", "KNEE"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 33.5,
+      "threshold": -40.5,
+      "minP": 0.5,
       "persist": 250
     },
     {
-      "id": "push",
-      "label": "Pushing through the toes",
+      "id": "heels_rising",
+      "label": "Heels rising",
       "cue": "Heels on the ground",
       "tip": "Heel pressure puts the work in the glutes; toe pressure sends it to the hamstrings and calves.",
       "severity": 2,
       "metric": { "kind": "height", "pts": ["HEEL", "FOOT"], "per": ["KNEE", "ANK"] },
       "rel": "change",
       "op": ">",
-      "threshold": 4
+      "threshold": 1.5
     },
     {
       "id": "feet",
@@ -65,15 +65,8 @@
       "severity": 2,
       "metric": { "kind": "dist", "pts": ["HEEL", "HIP"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 75,
-      "persist": 250
-    },
-    {
-      "id": "ham",
-      "label": "Hamstrings cramping",
-      "cue": "Feet closer, squeeze the glutes",
-      "tip": "Cramp at the back of the thigh means the feet are too far away and the hamstrings are leading.",
-      "severity": 1
+      "threshold": 100,
+      "phase": "start"
     },
     {
       "id": "toes_rising",
@@ -81,10 +74,9 @@
       "cue": "Keep toes down",
       "tip": "Keep toes on the ground",
       "severity": 2,
-      "metric": "toes_lift",
-      "rel": "change",
+      "metric": { "kind": "height", "pts": ["FOOT", "HEEL"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 5,
+      "threshold": 5.5,
       "persist": 250
     },
     {
@@ -93,9 +85,9 @@
       "cue": "Walk heels farther",
       "tip": "Keep feet a little away from hips",
       "severity": 2,
-      "metric": { "kind": "angle", "pts": ["FOOT", "HEEL", "KNEE"], "per": ["KNEE", "ANK"] },
+      "metric": { "kind": "dist", "pts": ["HEEL", "HIP"], "per": ["KNEE", "ANK"] },
       "op": "<",
-      "threshold": 90,
+      "threshold": 60,
       "persist": 250,
       "phase": "start"
     }
@@ -141,16 +133,17 @@
       "ft": [226, 161],
       "el": [329, 153],
       "wr": [294, 156],
-      "knF": [254, 96],
-      "anF": [250, 152],
-      "ftF": [227, 159],
-      "elF": [326, 154],
-      "wrF": [295, 158]
+      "knF": [262, 102],
+      "anF": [252, 145],
+      "ftF": [232, 150],
+      "elF": [375, 123],
+      "wrF": [380, 136]
     },
     "hold": false,
     "side": "both",
     "flip": true,
-    "w": { "glute": 1, "ham": 0.5, "abs": 0.3 }
+    "w": { "glute": 1, "ham": 0.5, "abs": 0.3 },
+    "from": { "take": "3rbrj3if", "tA": 1490, "tB": 3250 }
   },
   "tempo": "Up 2 s, squeeze 2 s, down 3 s.",
   "dosage": "3 × 12.",
