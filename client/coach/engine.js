@@ -30,13 +30,18 @@
       this.x = null; this.dx = 0; this.t = null;
     }
     static alpha(cutoff, dt) { const tau = 1 / (2 * Math.PI * cutoff); return 1 / (1 + tau / dt); }
-    filter(x, t) {
+    /* `cap` limits the speed the filter is allowed to read off itself before it opens up. A point
+       whose own reading is mostly noise (a toe) reads that noise as speed, opens its own filter and
+       lets the next frame of noise straight through; capping it at what the joint it hangs off is
+       actually doing breaks that loop. */
+    filter(x, t, cap) {
       if (this.x === null || this.t === null) { this.x = x; this.t = t; this.dx = 0; return x; }
       let dt = (t - this.t) / 1000; if (dt <= 0) dt = 1 / 30; this.t = t;
       const dxRaw = (x - this.x) / dt;
       const aD = OneEuro.alpha(this.dCutoff, dt);
       this.dx = aD * dxRaw + (1 - aD) * this.dx;
-      const cutoff = this.minCutoff + this.beta * Math.abs(this.dx);
+      const speed = Number.isFinite(cap) ? Math.min(Math.abs(this.dx), cap) : Math.abs(this.dx);
+      const cutoff = this.minCutoff + this.beta * speed;
       const a = OneEuro.alpha(cutoff, dt);
       this.x = a * x + (1 - a) * this.x;
       return this.x;
@@ -71,6 +76,13 @@
      BONE_MIN of them are in, and a break in it is held through for at most BONE_HOLD frames — after
      that the new length is real (a foot turning toward the camera) and is learnt */
   const BONE_TOL = 0.35, BONE_KEEP = 45, BONE_MIN = 15, BONE_HOLD = 4;
+  /* 4. how fast a hand or foot point is allowed to believe it is moving: what the joint it hangs
+     off is doing, times FOLLOW (the end of a limb swings further than the joint does), plus FLOOR
+     for what it can do on its own — a foot pitching about a still ankle, a hand turning at a still
+     wrist. FLOOR is in frame heights per second: a heel genuinely coming off the floor moves about
+     0.02 of the frame in a second, while the toe landmark's own jitter reads six times that, so the
+     honest movement still opens the filter and the jitter no longer does. */
+  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02;
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
   class PoseSmoother {
@@ -140,7 +152,12 @@
         const k = Math.min(1, Math.max(0.12, (this.vis[i] - this.visFloor) / Math.max(1e-3, this.sureAt - this.visFloor)));
         const c = this.minCutoff * k * k * (EXTREMITY_SCALE[i] || 1), b = this.beta * k;   /* 1. */
         f[0].minCutoff = c; f[1].minCutoff = c; f[2].minCutoff = c * 0.6; f[0].beta = f[1].beta = f[2].beta = b;
-        const sx = f[0].filter(x, t), sy = f[1].filter(y, t), sz = f[2].filter(z, t);
+        /* the joint this one hangs off is filtered first (every parent has the lower index), so its
+           speed is this frame's */
+        const pf = parent != null ? this.filters[parent] : null;
+        const capx = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[0].dx) : undefined;
+        const capy = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[1].dx) : undefined;
+        const sx = f[0].filter(x, t, capx), sy = f[1].filter(y, t, capy), sz = f[2].filter(z, t, capy);
         let ox = sx, oy = sy, locked = false;
         /* 3. a landmark the move says stays still: once it has, hold it there; a decisive move away
            (further than the release step, for a few frames running) lets it go again */
@@ -551,6 +568,8 @@
       this.repEvents = []; this.repFaultCounts = {}; this.complete = false; this.m = null; this.trace = [];
       this.pHist = []; this.calT = null; this.rebases = 0;
       this.restP = null; this.restSince = 0; this.restarts = 0;
+      /* what each measurement does on its own while the person is still (see noteQuiet) */
+      this.quiet = []; this.pauses = []; this.noise = null; this.qP = null; this.qSince = 0;
       /* the set-up faults true of the position the NEXT rep starts from, and whether they have
          already been counted (the check before the count-in counts its own) */
       this.startPend = []; this.startPendCounted = false; this.startChecked = false; this.restFrom = 0;
@@ -599,6 +618,66 @@
       this.startChecked = true;
       let ids = []; try { ids = this.startCheck(pts, this.side).map((f) => f.id); } catch (e) { return; }
       this.startPend = ids; this.startPendCounted = false;
+    }
+    /* ---------- what a measurement is worth ----------
+       A threshold is only meaningful against a reading that holds still when the body does. Some
+       do: a hip angle read off shoulder, hip and knee sits within half a degree between reps. Some
+       do not: the heel and toe landmarks are a few pixels each, near the floor, on a foot the body
+       half hides, and the pitch read off them wanders a couple of percent of the shin with the
+       feet flat on the mat — so a fault set to fire at 1.5 fires on a still foot, every rep, and
+       spends the set's cues on nothing. Filtering does not reach it: the wander is slower than a
+       second, so a low-pass tight enough to remove it would lag a real heel lift by as long.
+       What does work is knowing it. Between reps the body is still by definition, so every reading
+       is sampled there, and the spread of those samples is that measurement's own wobble. A fault
+       then has to clear its threshold AND the wobble (spec.js `over`), which leaves a clean
+       measurement judged exactly as before and stops a noisy one from inventing faults.
+       Rep moves only: a hold has no still moment that is not the exercise itself. */
+    noteQuiet(m, t, resting) {
+      const cfg = (settingsOr().fault || {}).noise; if (!cfg) return;
+      if (!resting || !m || !m.readings) { this.closeQuiet(cfg); return; }
+      /* resting is not the same as still: the rep's descent passes through it. The clock restarts
+         every time the reading moves, so what is sampled is a body that has stopped. */
+      if (this.qP == null || Math.abs((m.p ?? 0) - this.qP) > (cfg.move ?? 0.02)) { this.qP = m.p ?? 0; this.qSince = t; this.quiet.length = 0; return; }
+      if (t - this.qSince < (cfg.settle ?? 400)) return;
+      this.quiet.push([t, m.readings]);
+      while (this.quiet.length > 1 && t - this.quiet[0][0] > (cfg.still ?? 4000)) this.quiet.shift();
+      const spread = this.spreadOf(cfg);
+      if (spread) this.noise = this.pauses.length ? this.middleOf(this.pauses.concat([spread])) : spread;
+    }
+    /* the pause is over: what it measured joins the last few, and the figure the faults are judged
+       against is the middle one of those. One pause on its own is whatever that half-second
+       happened to do; the median of several is the reading's own wobble, and it does not grow just
+       because the person's feet genuinely moved between one rep and the next. */
+    closeQuiet(cfg) {
+      const spread = this.spreadOf(cfg); this.quiet.length = 0; this.qP = null;
+      if (!spread) return;
+      this.pauses.push(spread);
+      while (this.pauses.length > (cfg.pauses ?? 6)) this.pauses.shift();
+      this.noise = this.middleOf(this.pauses);
+    }
+    /* the middle 80% of what each reading did over this pause, halved: a ± figure in its own
+       units. The ends are left out so one dropped frame is not the answer. */
+    spreadOf(cfg) {
+      const min = cfg.min ?? 20; if (this.quiet.length < min) return null;
+      const n = this.quiet[this.quiet.length - 1][1].length, out = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) {
+        const col = [];
+        for (const [, vals] of this.quiet) { const v = vals[i]; if (Number.isFinite(v)) col.push(v); }
+        if (col.length < min) continue;
+        col.sort((a, b) => a - b);
+        out[i] = (col[Math.floor(col.length * 0.9)] - col[Math.floor(col.length * 0.1)]) / 2;
+      }
+      return out;
+    }
+    /* column by column, the middle of several pauses' spreads (not the module's `median`, which
+       takes one list of numbers) */
+    middleOf(list) {
+      const n = Math.max(...list.map((r) => r.length)), out = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) {
+        const col = list.map((r) => r[i]).filter(Number.isFinite).sort((a, b) => a - b);
+        if (col.length) out[i] = col[Math.floor(col.length / 2)];
+      }
+      return out;
     }
     ackCue(id, t) { this.faults.ack(id, t); }
     // returns { m, cues:[fault], repEvent, done }
@@ -655,6 +734,10 @@
         if (m.inPosition) { this.holdMs += dt; if (this.faults.active.size === 0) this.goodMs += dt; }
         if (this.holdMs >= this.target * 1000) this.complete = true;
       }
+      /* the pause between reps: once the body has stopped there, what the readings still do is
+         their own noise (noteQuiet) */
+      if (this.counter) this.noteQuiet(m, t, this.counter.state === 'rest');
+      if (this.noise) m.noise = this.noise;
       const cues = this.faults.update(m, phase, t);
       if (this.counter) for (const id of this.faults.active) this.counter.noteFault(id);
       if (this.frames % 3 === 0) this.trace.push([Math.round(t - this.startT), +(m.p ?? 0).toFixed(2)]);
@@ -673,7 +756,7 @@
       return { m, cues, repCues, startCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, restarted, done: this.complete };
     }
     review() {
-      const ex = this.ex; const faultCounts = {}; const tips = [];
+      const ex = this.ex; const faultCounts = {}; const wobble = {}; const tips = [];
       for (const f of ex.faults) {
         const n = f.onRep ? (this.repFaultCounts[f.id] || 0) : (this.faults.counts[f.id] || 0);
         /* which reps began from a position this fault was true of */
@@ -682,10 +765,14 @@
            owes the person that one, so it is marked here */
         const said = this.faults.cued[f.id] || 0;
         const capped = Number.isFinite(f.maxCues) && said >= f.maxCues && n > said;
+        /* what this fault's own reading did while the person was still, in the reading's units.
+           Kept beside the faults rather than among them: it is true of every fault, fired or not,
+           and it is what says whether a threshold is small enough to be measurement noise. */
+        if (this.noise && f.iRead != null && this.noise[f.iRead]) wobble[f.id] = +this.noise[f.iRead].toFixed(2);
         if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0, said, capped, ...(f.atStart ? { startReps } : {}) };
       }
       let score = 100;
-      const out = { exercise: ex.id, name: ex.name, type: ex.type, target: this.target, faults: faultCounts, durationMs: (this.lastT || 0) - (this.startT || 0), trace: this.trace, date: Date.now() };
+      const out = { exercise: ex.id, name: ex.name, type: ex.type, target: this.target, faults: faultCounts, wobble, durationMs: (this.lastT || 0) - (this.startT || 0), trace: this.trace, date: Date.now() };
       if (ex.type === 'reps') {
         const reps = this.counter.reps; const full = reps.filter(r => r.full);
         out.reps = this.counter.count; out.partials = this.counter.partials;

@@ -605,14 +605,27 @@
       /* what the reading has to beat: the threshold, or the threshold plus a flat margin in the
          reading's own units when the landmarks are guesses */
       const pad = unsure ? (unsure.margin ?? 8) : 0;
+      /* and what it has to clear on top, because the reading is not perfectly still even when the
+         person is: the measurement's own wobble, measured between reps (engine.js noteQuiet) and
+         handed over on m.noise. A reading compared with where it was at the start of the rep is
+         two samples, so it carries the wobble twice. Nothing is widened where nothing was
+         measured, so a Studio trace or a test that supplies no noise reads exactly as before. */
+      const noiseK = (fs.noise || {}).clear ?? 1;
+      const iRead = (liveFaults.find((x) => x.id === f.id) || {}).i;      /* which reading this fault is on */
+      common.iRead = iRead;
+      const wobble = (m) => {
+        if (!m.noise || iRead == null) return 0;
+        const n = m.noise[iRead]; if (!Number.isFinite(n) || n <= 0) return 0;
+        return noiseK * n * (f.rel === 'change' ? 2 : 1);
+      };
       const over = (m) => {
         if (!m.gates[f.id]) return false;
-        const v = m['f_' + f.id], c = confOf(m);
+        const v = m['f_' + f.id], c = confOf(m), w = wobble(m);
         if (unsure && c < (unsure.vis ?? 0.75)) {
           if (c < (unsure.floor ?? 0.4)) return false;
-          return f.op === '>' ? v > f.threshold + pad : v < f.threshold - pad;
+          return f.op === '>' ? v > f.threshold + pad + w : v < f.threshold - pad - w;
         }
-        return f.op === '>' ? v > f.threshold : v < f.threshold;
+        return f.op === '>' ? v > f.threshold + w : v < f.threshold - w;
       };
       /* and how long it has to hold: longer while the landmarks are unsure */
       const persistFor = unsure ? (m) => (confOf(m) < (unsure.vis ?? 0.75) ? Math.round((f.persist || fs.persist) * (unsure.persist ?? 2.5)) : (f.persist || fs.persist)) : null;

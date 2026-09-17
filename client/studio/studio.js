@@ -1243,7 +1243,7 @@
      reads the progress metric is one end of the range wearing a disguise. Both are easy to write by
      accident, and both show up as a rule that fires whenever its twin does. */
   const sameMetric = (a, b) => a && b && a.kind === b.kind && (a.pts || []).join() === (b.pts || []).join() && JSON.stringify(a.per || null) === JSON.stringify(b.per || null);
-  function measurementNotes(s) {
+  function measurementNotes(s, sims) {
     /* a measurement is complete when it has the points its kind needs — which for a trunk lean or a
        pelvis tilt is none at all, so "has any points" would quietly skip exactly those */
     const whole = (m) => m && SPEC.KINDS[m.kind] && (m.pts || []).length >= SPEC.KINDS[m.kind].n;
@@ -1260,6 +1260,20 @@
     }
     for (const f of live) if ((f.rel || 'abs') === 'abs' && ['dist', 'angle'].includes(f.metric.kind)) {
       notes.push(`“${f.label || f.id}” compares an absolute ${f.metric.kind === 'dist' ? 'distance' : 'angle'}, so the person’s own build is inside the threshold. “Change from start” is usually what you mean.`);
+    }
+    /* A threshold is only worth what the measurement can hold still. Every simulated take reports
+       what each reading did between reps, when the body had stopped, and a change measured against
+       a threshold smaller than that fires on the measurement rather than on the person — which is
+       what a heel-to-toe height at 1.5 does on a glute bridge: fourteen reps, fourteen firings,
+       the feet flat on the mat throughout. */
+    for (const f of live) {
+      if ((f.rel || 'abs') !== 'change' || !Number.isFinite(f.threshold)) continue;
+      const seen = [];
+      for (const id in (sims || {})) { const w = sims[id] && !sims[id].error && sims[id].review && sims[id].review.wobble; if (w && Number.isFinite(w[f.id])) seen.push(w[f.id]); }
+      if (!seen.length) continue;
+      seen.sort((a, b) => a - b); const wob = seen[Math.floor(seen.length / 2)];
+      if (Math.abs(f.threshold) > 2 * wob) continue;
+      notes.push(`“${f.label || f.id}” reads a number that moves by ±${wob.toFixed(1)} on its own, between reps, with the person still — and its threshold is ${f.threshold}. Nothing that small can be told from the measurement; raise it above ${(2 * wob).toFixed(1)}, or measure something steadier.`);
     }
     return notes;
   }
@@ -1833,7 +1847,7 @@
     if (!s.figure && !s.pose) warn.push('No demo figure — the page will show nothing in “The move”. Build one in step 6.');
     if (!Object.keys(s.muscles).length) warn.push('No muscles chosen for the figure.');
     /* two faults reading the same number, or one that duplicates the progress measurement */
-    for (const n of measurementNotes(s)) warn.push(n);
+    for (const n of measurementNotes(s, state.sims)) warn.push(n);
     if (farEndFault(s) && !state.takes.some((t) => shows(t, 'fault:past_range'))) warn.push('No take showing someone going past the range — its far end has not been checked against a body.');
     const tune = tuningReport(s);
     let preview = ''; try { preview = C.format(regionWith(s, region).entry); } catch (e) { preview = e.message; }

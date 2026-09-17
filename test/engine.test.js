@@ -439,3 +439,47 @@ test('PoseSmoother: a planted toe is held steady, an impossible foot length is h
   const sm4 = new E.PoseSmoother(); t = 0; for (let i = 0; i < 40; i++) { t += 33; last = sm4.update(base(0.001), t, 1)[25]; }
   assert.ok(!last.locked);
 });
+/* ---- A threshold is only worth what the measurement can hold still. ----
+   Heel and toe landmarks are a few pixels each, near the floor, on a foot the body half hides, and
+   the height read between them wanders a couple of percent of the shin with the feet flat on the
+   mat. A fault told to fire at less than that fires on the measurement: on a real glute-bridge set
+   "heels rising" came up on fourteen reps out of fourteen and took two of the set's cues with it.
+   So the session measures what each reading does between reps, where the body has stopped, and a
+   fault has to clear that as well as its threshold. Here the same wobble is put into a heel that
+   never leaves the floor: it carries the reading well past the threshold, and the fault stays
+   quiet — while a heel that genuinely lifts, clear of the wobble, still speaks. */
+{
+  const SPEC = require('../client/coach/spec.js'), LIB = require('../client/coach/exercise-library.js');
+  const probe = SPEC.compile({
+    id: 'probe', name: 'Probe', type: 'reps', view: 'side', tracking: 'form', level: 'beginner',
+    summary: 'x', setup: 'x', brief: 'x', why: 'x', equipment: ['none'], muscles: { primary: ['gluteus maximus'] },
+    camera: { height: 'floor', distance: '2 m', posture: 'lying' },
+    progress: { metric: { kind: 'angle', pts: ['SH', 'HIP', 'KNEE'] }, start: 'calibrated', target: 170 },
+    faults: [{ id: 'heel', label: 'Heel up', cue: 'Heel down', tip: 'Keep it down.', severity: 2, threshold: 2, op: '>', rel: 'change', metric: { kind: 'height', pts: ['HEEL', 'FOOT'], per: ['KNEE', 'ANK'] } }],
+    guide: { surface: 'x', stop: 'x', cannotSee: 'x', regions: [{ name: 'Hips', points: [{ t: 'x', tracked: true }] }] },
+  }, LIB.kinematics, { lenient: true });
+  /* supine, head to image right: the shoulder–hip–knee angle opens as the hips rise */
+  const lying = (rise, heel) => frame({ 11: [0.66, 0.60], 12: [0.66, 0.61], 23: [0.46, 0.72 - rise * 0.14], 24: [0.46, 0.73 - rise * 0.14],
+    25: [0.30, 0.60], 26: [0.30, 0.61], 27: [0.28, 0.76], 28: [0.28, 0.77],
+    29: [0.30, 0.765 - heel], 30: [0.30, 0.775 - heel], 31: [0.24, 0.765], 32: [0.24, 0.775] });
+  const set = (lift) => {
+    const frames = []; let i = 0;
+    /* a slow, uneven wobble on the heel landmark — the pose model's, not the person's */
+    const noise = () => 0.022 * (Math.sin(i / 20) * 0.6 + Math.sin(i / 8.6 + 1.7) * 0.4);
+    const push = (rise) => { frames.push(lying(rise, noise() + (lift && rise > 0.3 ? lift : 0))); i++; };
+    for (let k = 0; k < 50; k++) push(0);
+    for (let r = 0; r < 5; r++) { for (let k = 0; k < 45; k++) push(Math.sin(Math.PI * k / 45)); for (let k = 0; k < 35; k++) push(0); }
+    const sess = new E.SetSession(probe, { target: 100 }); const sm = new E.PoseSmoother({ stable: probe.lockable });
+    let t = 0, peak = 0; sess.calibrate(sm.update(frames[0], t, 1), 'L');
+    for (const f of frames) { t += 1000 / 30; const r = sess.step(sm.update(f, t, 1), t); for (const c of r.cues) sess.ackCue(c.id, t); if (r.m && Number.isFinite(r.m.f_heel)) peak = Math.max(peak, r.m.f_heel); }
+    const rv = sess.review();
+    return { n: rv.faults.heel ? rv.faults.heel.n : 0, reps: rv.reps, wobble: (rv.wobble || {}).heel, peak: +peak.toFixed(1) };
+  };
+  const quiet = set(0), real = set(0.03);
+  console.log('a measurement that will not hold still:', { quiet, real });
+  assert(quiet.wobble > 2, 'the reading moves more on its own than the threshold asks for: ' + quiet.wobble);
+  assert(quiet.peak > 2, 'and carries past the threshold, so only the wobble keeps it quiet: ' + quiet.peak);
+  assert.strictEqual(quiet.n, 0, 'a heel that never leaves the floor is not a fault: ' + quiet.n);
+  assert(real.n >= 3, 'a heel that genuinely lifts still is: ' + real.n);
+  assert.strictEqual(quiet.reps, 5, 'and the reps are counted either way: ' + quiet.reps);
+}

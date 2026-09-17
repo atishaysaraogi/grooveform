@@ -633,6 +633,46 @@ never fire; `ex.lockable` is the list that survives that rule. On that bridge
 set the toe's worst frames went from 10 pixels of travel to 4 while the reps
 and the faults counted the same.
 
+A fourth thing was added later, for the same points. The One Euro filter under
+all of this opens up with speed, so a fast limb is not smeared — and it reads
+that speed off the point itself, which for a toe is mostly noise: the noise
+opens the filter, the open filter passes the next frame of noise. A hand or
+foot point is therefore capped at what the joint it hangs off is doing, plus a
+little for what it can do on its own (a foot pitching about a still ankle). On
+the same set that took another 9 % off the toe's frame-to-frame travel.
+
+### What a threshold is worth
+
+A threshold is only meaningful against a reading that holds still when the body
+does. A hip angle read off shoulder, hip and knee sits within a fraction of a
+degree between reps. Heel-to-toe height does not: the two landmarks are a few
+pixels apart, near the floor, on a foot the body half hides, and the height
+between them wanders a couple of percent of the shin with the feet flat on the
+mat. On a real bridge set a "heels rising" written to fire at 1.5 fired on
+fourteen reps out of fourteen and took two of the set's cues with it.
+
+Filtering does not reach that. The wander is slower than a second, so a
+low-pass tight enough to remove it would lag a real heel lift by as long —
+measured on the recording, a rigid-foot fit and a half-second median both left
+it where it was.
+
+Knowing it does. Between reps the body has stopped, so the session samples
+every reading there (`SetSession.noteQuiet`) and the middle 80 % of what a
+reading did, halved, is that reading's own **wobble**, in its own units. A
+fault has to clear its threshold *and* the wobble — twice over for a fault
+measured as a change from the start of the rep, which is two samples and
+carries it twice. `fault.noise` in `settings.json` tunes it; a clean
+measurement wobbles near zero and is judged exactly as it always was. One
+pause is whatever that half-second happened to do, so the figure used is the
+middle one of the last few, which also stops it growing when the feet
+genuinely move between reps. Rep moves only: a hold has no still moment that
+is not the exercise itself.
+
+The end-of-set review carries the figure per fault (`review.wobble`), and the
+Studio's check step says so outright when a change threshold is smaller than
+the wobble the takes measured — the tuning answer is to raise the threshold
+above it or to measure something steadier, not to lower it further.
+
 ### Still is not the same as ready
 
 The start position is read while the person holds still. Someone who lies

@@ -112,3 +112,44 @@ test('the replay smooths the recording exactly as the coach smoothed the live pi
   }
   assert.equal(Replay.frameIndexAt(frames, 700), frames.findIndex((f) => f.t === 693));
 });
+
+/* ---------------------------------------------------------------------------
+   The exported video runs on the wall clock.
+   MediaRecorder stamps every frame it is handed by the clock, and the set's own
+   video plays underneath on that same clock, so the skeleton has to be on it
+   too. Counting timer ticks instead — t += one frame each time the timer fires
+   — makes the skeleton's clock run at whatever rate the drawing manages: a real
+   glute-bridge export took 74.8 s of wall time to draw 63.3 s of skeleton, and
+   the picture ended eleven seconds ahead of the figure standing on it. Drawn
+   slower than real time, the export must drop frames, not slow down.
+   --------------------------------------------------------------------------- */
+test('the exported video keeps the skeleton on the clock, dropping frames when the drawing is slow', async () => {
+  const { rec } = fakeRec();
+  const tl = Replay.timeline(rec);
+  const SLOW = 50;                                  // ms of work per drawn frame, against a 33 ms frame
+  const burn = (ms) => { const until = Date.now() + ms; while (Date.now() < until); };
+  let draws = 0;
+  const ctx = new Proxy({}, { get: (_, k) => {
+    if (k === 'measureText') return () => ({ width: 10 });
+    if (k === 'canvas') return { width: 0, height: 0 };
+    return () => { };
+  }, set: () => true });
+  const track = { requestFrame: () => { draws++; burn(SLOW); } };
+  const saved = { MediaRecorder: global.MediaRecorder, document: global.document };
+  global.MediaRecorder = class {
+    static isTypeSupported() { return true; }
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; if (this.onstop) this.onstop(); }
+  };
+  global.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ getVideoTracks: () => [track] }) }) };
+  global.Blob = global.Blob || class { constructor(parts, o) { this.type = o && o.type; } };
+  const seen = [];
+  try {
+    await Replay.record(rec, { name: 'Test', type: 'reps', target: 3, faults: {} }, { width: 320, fps: 30, onProgress: (p) => seen.push(p) });
+  } finally { global.MediaRecorder = saved.MediaRecorder; global.document = saved.document; }
+  const nominal = (tl.duration + 800) / (1000 / 30);
+  assert.ok(seen[seen.length - 1] >= 1, 'it still plays the set out to the end: ' + seen[seen.length - 1]);
+  assert.ok(draws < nominal * 0.8, `drawn at ${SLOW} ms a frame it drops frames rather than stretching the set — ${draws} drawn, ${Math.round(nominal)} would be one per tick`);
+  assert.ok(draws > 4, 'and it still draws: ' + draws);
+});

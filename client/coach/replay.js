@@ -86,22 +86,25 @@
      the figure the person saw without needing anything from the app. Kept in step by test/replay.test.js. */
   function OneEuro(minCutoff, beta) { this.minCutoff = minCutoff; this.beta = beta; this.dCutoff = 1; this.x = null; this.dx = 0; this.t = null; }
   OneEuro.alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff) / dt);
-  OneEuro.prototype.filter = function (x, t) {
+  OneEuro.prototype.filter = function (x, t, cap) {
     if (this.x === null || this.t === null) { this.x = x; this.t = t; this.dx = 0; return x; }
     let dt = (t - this.t) / 1000; if (dt <= 0) dt = 1 / 30; this.t = t;
     const aD = OneEuro.alpha(this.dCutoff, dt); this.dx = aD * ((x - this.x) / dt) + (1 - aD) * this.dx;
-    const a = OneEuro.alpha(this.minCutoff + this.beta * Math.abs(this.dx), dt);
+    const speed = Number.isFinite(cap) ? Math.min(Math.abs(this.dx), cap) : Math.abs(this.dx);
+    const a = OneEuro.alpha(this.minCutoff + this.beta * speed, dt);
     this.x = a * x + (1 - a) * this.x; return this.x;
   };
   const PARENT = { 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 27, 32: 28 };
   /* frames: [{lm:[[x,y,z,v],...]|null}] in recording order → per frame, the smoothed landmarks as
      [x, y, z, v, seen] (x back in 0..1), or null where there was no person */
-  /* The same three extremity rules as engine.js PoseSmoother, kept identical: harder smoothing for
-     hands and feet, a hold through an impossible change in a point's distance from its joint, and a
-     lock on the landmarks the move says stay still. */
+  /* The same four extremity rules as engine.js PoseSmoother, kept identical: harder smoothing for
+     hands and feet, a hold through an impossible change in a point's distance from its joint, a
+     lock on the landmarks the move says stay still, and a cap on how fast a hand or foot point may
+     believe it is moving (what the joint it hangs off is doing, plus a little of its own). */
   const EXTREMITY_SCALE = { 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5, 22: 0.5, 29: 0.5, 30: 0.5, 31: 0.5, 32: 0.5 };
   const BONE = { 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 29: 27, 30: 28, 31: 27, 32: 28 };
   const BONE_TOL = 0.35, BONE_KEEP = 45, BONE_MIN = 15, BONE_HOLD = 4;
+  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02;
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
   function smoothFrames(frames, { aspect = 16 / 9, minCutoff = 1.0, beta = 3.0, visFloor = 0.35, jumpLimit = 0.28, sureAt = 0.8, show = 0.5, stable = [] } = {}) {
@@ -132,7 +135,10 @@
         const k = Math.min(1, Math.max(0.12, (vis[i] - visFloor) / Math.max(1e-3, sureAt - visFloor)));
         const c = minCutoff * k * k * (EXTREMITY_SCALE[i] || 1), b = beta * k; const fl = filters[i];
         fl[0].minCutoff = c; fl[1].minCutoff = c; fl[2].minCutoff = c * 0.6; fl[0].beta = fl[1].beta = fl[2].beta = b;
-        const sx = fl[0].filter(x, t), sy = fl[1].filter(y, t), sz = fl[2].filter(z, t);
+        const pf = parent != null ? filters[parent] : null;
+        const capx = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[0].dx) : undefined;
+        const capy = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[1].dx) : undefined;
+        const sx = fl[0].filter(x, t, capx), sy = fl[1].filter(y, t, capy), sz = fl[2].filter(z, t, capy);
         let ox = sx, oy = sy;
         if (still.has(i)) {
           const L = lock[i];
@@ -209,6 +215,11 @@
 
   /* where in the set's video a moment of the recording sits */
   const videoTimeOf = (rec, t) => (t + (rec.videoOffset || 0)) / 1000;
+  /* how far the video under the skeleton may drift before it is put back. A seek costs a frame or
+     two of decoding, so it is not worth doing for a slip nobody can see; a third of a second is
+     about where a limb and its bone visibly come apart. */
+  const VIDEO_SLIP = 0.3;
+  const now = () => (root.performance && root.performance.now ? root.performance.now() : Date.now());
   /* one frame of the stage: the camera's own picture where there is one, then the skeleton over it,
      the rep count, the cue that was being said, the range bar */
   function drawStage(ctx, rec, meta, tl, t, W, H, videoEl) {
@@ -304,10 +315,16 @@
       drawTimeline(tctx, tl, meta, t, w, 64);
       seek.value = String(Math.round(t - tl.t0)); time.textContent = ((t - tl.t0) / 1000).toFixed(1) + ' s';
     }
-    function tick(now) {
+    function tick(at) {
       if (!playing) return;
-      const dt = last ? now - last : 0; last = now; t += dt;
+      const dt = last ? at - last : 0; last = at; t += dt;
       if (t >= tl.t1) { t = tl.t1; pause(); render(); return; }
+      /* the video plays on its own clock: a stall or a slow decode and it is no longer under the
+         skeleton it belongs to, so it is put back whenever it has visibly slipped */
+      if (videoEl && videoEl.readyState >= 2 && !videoEl.seeking) {
+        const want = Math.max(0, videoTimeOf(rec, t));
+        if (Math.abs(videoEl.currentTime - want) > VIDEO_SLIP) { try { videoEl.currentTime = want; } catch (e) { } }
+      }
       render(); raf = root.requestAnimationFrame(tick);
     }
     function seekVideo() { if (!videoEl) return; try { videoEl.currentTime = Math.max(0, videoTimeOf(rec, t)); } catch (e) { } }
@@ -336,7 +353,7 @@
       mr.onerror = (e) => reject(e.error || new Error('Recording failed'));
       mr.onstop = () => resolve(new Blob(chunks, { type: mime || 'video/webm' }));
       let t = tl.t0; const step = 1000 / fps; const t0 = tl.t0, t1 = tl.t1;
-      /* the set's own video, played in step with the render (which runs in real time anyway) */
+      /* the set's own video, played under the skeleton */
       let videoEl = null, videoUrl = null;
       if (rec.video) { try { videoUrl = URL.createObjectURL(rec.video); videoEl = root.document.createElement('video'); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.currentTime = Math.max(0, videoTimeOf(rec, t)); videoEl.play().catch(() => { }); } catch (e) { videoEl = null; } }
       const done = () => { if (videoUrl) { try { videoEl.pause(); } catch (e) { } URL.revokeObjectURL(videoUrl); } };
@@ -346,9 +363,19 @@
         if (stream.getVideoTracks()[0] && stream.getVideoTracks()[0].requestFrame) stream.getVideoTracks()[0].requestFrame();
       };
       draw(); mr.start(250);
-      /* real time: MediaRecorder stamps frames by the clock, so the file plays at the pace the set was done */
+      /* MediaRecorder stamps every frame by the wall clock, and so does the video element playing
+         underneath, so the skeleton has to be on the wall clock too. Counting ticks instead — t +=
+         step each time the timer fires — makes the file's own clock run at whatever rate the
+         drawing manages: one glute-bridge set took 74.8 s of real time to draw 63.3 s of skeleton,
+         and the picture finished eleven seconds ahead of the figure standing on it. So the time to
+         draw is read off the clock, and the video is nudged back whenever it slips. */
+      const wall = now(); const at = () => t0 + (now() - wall);
       const timer = setInterval(() => {
-        t += step; draw(); onProgress(Math.min(1, (t - t0) / ((t1 - t0) || 1)));
+        t = at(); draw(); onProgress(Math.min(1, (t - t0) / ((t1 - t0) || 1)));
+        if (videoEl && videoEl.readyState >= 2 && !videoEl.seeking) {
+          const want = Math.max(0, videoTimeOf(rec, t));
+          if (Math.abs(videoEl.currentTime - want) > VIDEO_SLIP) { try { videoEl.currentTime = want; } catch (e) { } }
+        }
         if (t >= t1 + 800) { clearInterval(timer); done(); setTimeout(() => mr.stop(), 300); }
       }, step);
     });
