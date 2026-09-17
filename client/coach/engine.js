@@ -82,7 +82,15 @@
      wrist. FLOOR is in frame heights per second: a heel genuinely coming off the floor moves about
      0.02 of the frame in a second, while the toe landmark's own jitter reads six times that, so the
      honest movement still opens the filter and the jitter no longer does. */
-  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02;
+  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02, LIMB_STILL = 0.2;
+  /* LIMB_STILL: below this, the joint it hangs off is not moving, and the point's speed term is
+     switched off altogether — the filter is then a plain low pass at its own cutoff, which is what
+     a planted foot wants. Measured on a side-on bridge, against the toe trailing a genuinely moving
+     ankle: off at 0.05 the heel-to-toe reading's spread over a still second was 1.42 % of shin and
+     the trail 6.1 %; at 0.2, 1.21 and 6.2; switched off for good, 1.10 and 19.0. A Kalman filter
+     was tried here too and lost on both counts (2.6-3.1 spread): its velocity state feeds on the
+     noise. It is the better tracker for a joint that really moves — through these reps it followed
+     the hip to 2.4 % against One Euro's 3.6 — which is a separate question from this one. */
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
   class PoseSmoother {
@@ -155,8 +163,9 @@
         /* the joint this one hangs off is filtered first (every parent has the lower index), so its
            speed is this frame's */
         const pf = parent != null ? this.filters[parent] : null;
-        const capx = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[0].dx) : undefined;
-        const capy = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[1].dx) : undefined;
+        const ps = pf ? Math.hypot(pf[0].dx, pf[1].dx) : 0;
+        const cap = (dx) => ps < LIMB_STILL ? 0 : LIMB_FLOOR + LIMB_FOLLOW * Math.abs(dx);
+        const capx = pf ? cap(pf[0].dx) : undefined, capy = pf ? cap(pf[1].dx) : undefined;
         const sx = f[0].filter(x, t, capx), sy = f[1].filter(y, t, capy), sz = f[2].filter(z, t, capy);
         let ox = sx, oy = sy, locked = false;
         /* 3. a landmark the move says stays still: once it has, hold it there; a decisive move away

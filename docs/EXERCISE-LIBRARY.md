@@ -420,7 +420,7 @@ same footing as the first:
 Each gets its own start and target and its own 0–1. `combine` says how they
 become the one number the rep counter runs on: `min` (the default — the rep is
 only as far through as its least-finished part), `mean`, or `max`. The first
-measurement stays the one the live readout shows, the one the target line is
+measurement stays the one the live readout shows, the one the aim arrow is
 drawn for, and the one a demonstrated pose replaces; `m.parts` carries all of
 them for the review and the Studio charts.
 
@@ -600,9 +600,30 @@ floor, and a baseline that crept up with it every rep would quietly stop
 saying so. A demonstrated target is left alone entirely. Each rep records the
 value it was measured from, so the diagnostics show the drift.
 
+### Which way to move
+
+Over the camera the coach draws one arrow, on the joint that has to travel,
+pointing where it has to go — the target on the way out, the position the rep
+began from on the way back, green both ways because both are the exercise being
+done. While a fault is up it is not drawn at all: the red arrow at the fault is
+the only thing to do then, and two arrows saying different things is worse than
+one. A ring marks where the moving point belongs, with the number beside it.
+
+What replaced it was a line drawn where the limb should end up, which asks the
+person to compare two shapes and work out the difference for themselves. The
+geometry is the same either way (`coach.js` `ghostFor`), so every move that had
+a line has an arrow: an angle's swinging arm, a joint that travels between two
+still ends (a bridge's hip), a segment at a target tilt, a forearm rotated out
+— and now also `offset`, `dist`, `gap`, `height` and `rise`, which had no line
+at all. For those the reference length is read back off the measurement rather
+than re-derived: the engine's number for this frame is the current geometry
+over that length, so the geometry at the target is the current geometry times
+target over now. A reading sitting at zero draws nothing rather than something
+wrong.
+
 ### The parts that stay still
 
-The target line drawn over the camera has to know which end of the movement
+The arrow drawn over the camera has to know which end of the movement
 is the anchor. It can work that out by watching which end has travelled
 furthest — but not on the first rep, and not when the whole body shifts. On
 the reported bridge set it never worked it out at all: the person moved
@@ -612,9 +633,9 @@ on the arm that rides up with the hips.
 `stable` says it outright: the landmarks that do not move during this
 exercise, named the way a measurement names them. A bridge is
 `["SH", "KNEE"]` — the hip rises between a shoulder and a knee that stay on
-the floor. Told that, the line is drawn shoulder to hip-target to knee from
-the first frame, holding the target angle exactly. Leave it out and the
-watching heuristic still applies.
+the floor. Told that, the arrow sits on the hip from the first frame and points
+at where the hip belongs. Leave it out and the watching heuristic still
+applies.
 
 `stable` does a second job, on the drawn skeleton. The ends of the limbs are
 the pose model's least certain points: on a real side-on bridge the near toe
@@ -638,8 +659,41 @@ all of this opens up with speed, so a fast limb is not smeared — and it reads
 that speed off the point itself, which for a toe is mostly noise: the noise
 opens the filter, the open filter passes the next frame of noise. A hand or
 foot point is therefore capped at what the joint it hangs off is doing, plus a
-little for what it can do on its own (a foot pitching about a still ankle). On
-the same set that took another 9 % off the toe's frame-to-frame travel.
+little for what it can do on its own (a foot pitching about a still ankle), and
+below `LIMB_STILL` — the joint plainly not moving — the speed term is switched
+off altogether, which leaves a plain low pass at the point's own cutoff. On the
+recorded bridge set that took the toe's frame-to-frame travel down by 28 % and
+the heel-to-toe reading's spread over a still second from 1.59 to 1.21 % of
+shin.
+
+Two other filters were measured on that recording before settling on this,
+because a filter that wins on jitter and loses on lag has not won. Both numbers
+were taken against the same ground truth: the signal run forwards and backwards
+through a low pass, which has no lag and which no causal filter can beat.
+
+| on a planted foot | 1 s spread | vs truth while moving |
+| --- | --- | --- |
+| raw | 3.14 | 1.40 |
+| One Euro, as shipped before | 1.59 | 1.13 |
+| EMA, alpha 0.08 | 1.34 | 0.99 |
+| Kalman, constant velocity, tuned | 2.64 | 1.41 |
+| One Euro with the speed term off | **1.19** | 1.15 |
+
+A heavy fixed EMA beats One Euro on a foot that is not moving — and on the hip
+through the same reps it is 2.3 times worse (error 8.15 against 3.58), because
+it cannot tell the difference. A Kalman filter loses on the foot for a reason
+worth writing down: its velocity state feeds on the noise, predicts forward on
+it and overshoots. On the hip it is the best of the lot (2.40 against One Euro's
+3.58, with less jitter than raw) — which is a real option for the progress
+measurement, and a different question from this one.
+
+The floor was tried as a reference too: after levelling, a side-on floor move
+puts heel, toe, ankle and shoulder on one horizontal line, and its height over
+the whole set is an average of hundreds of frames. Judging the heel against it
+came out 35 % noisier than judging the heel against the toe (1.89 against 1.40),
+because the difference between two points on the same foot cancels the body's
+own drift and a fixed line does not. Its one real advantage is that it would see
+a whole foot lift off, which heel-to-toe is blind to by construction.
 
 ### What a threshold is worth
 
@@ -684,7 +738,7 @@ seventeen bridges, none counted). Two things now catch that.
 Before the first rep, a reading that has sat still for a second and a half
 somewhere well above the start (between 20 % and 75 % of the way to the
 target) is taken to be the start: the baselines are read again there, the
-counter begins from it, the readout and target line follow, and the
+counter begins from it, the readout and the aim arrow follow, and the
 diagnostics carry a `recalibrate` event. Only before the first rep, and not
 when the person demonstrated the target, which lives on those baselines.
 

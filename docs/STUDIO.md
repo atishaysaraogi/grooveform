@@ -106,7 +106,7 @@ own target, its own 0–1. A squat is the knee bending *and* the hip folding, an
 a rep that does one without the other is not the exercise. The chips below say
 when a rep counts as through — every measurement (the default, so the rep is
 only as deep as its shallowest part), the average, or any one of them. The first
-measurement stays the one the live readout shows and the target line is drawn
+measurement stays the one the live readout shows and the aim arrow is drawn
 for.
 
 **A fault can be checked on the start position instead.** The chip row on each
@@ -241,8 +241,8 @@ written on step 5 are one of those moments too, so a move can be counted
 without being corrected.
 
 Step 4 has *Which parts stay still*: the points the person is resting on that
-do not travel. The target line over the camera is pinned to them instead of
-being worked out by watching, which is what makes it sit still from the first
+do not travel. The arrow over the camera is anchored to them instead of being
+worked out by watching, which is what puts it on the right joint from the first
 rep rather than the third.
 
 ### Splitting a recording into reps

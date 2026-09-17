@@ -14,8 +14,15 @@
   "why": "From the side the shoulder–hip–knee angle opens from bent to straight as the hips rise, which counts each bridge. Ribs flaring and the back arching are hard to see side-on, so they are listed, not judged.",
   "calibrationPose": "Lie with your knees bent, about 4-6inches from your hips.",
   "camera": { "height": "floor", "distance": "2 m", "posture": "lying" },
+  "weight": "none",
   "stable": ["SH", "KNEE"],
-  "progress": { "metric": "hip_open", "start": "calibrated", "target": 170, "max": 190 },
+  "farSide": "ignore",
+  "progress": {
+    "metric": { "kind": "offset", "pts": ["KNEE", "SH", "HIP"], "per": ["KNEE", "ANK"] },
+    "start": "calibrated",
+    "target": 5,
+    "max": { "delta": 10 }
+  },
   "faults": [
     {
       "id": "shallow",
@@ -42,9 +49,8 @@
       "severity": 2,
       "metric": { "kind": "height", "pts": ["HIP", "KNEE"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": -40.5,
-      "minP": 0.5,
-      "persist": 250
+      "threshold": -30,
+      "minP": 0.5
     },
     {
       "id": "heels_rising",
@@ -63,9 +69,9 @@
       "cue": "Walk the heels closer",
       "tip": "If the hamstrings cramp, walk the heels in until the shins are near vertical at the top.",
       "severity": 2,
-      "metric": { "kind": "dist", "pts": ["HEEL", "HIP"], "per": ["KNEE", "ANK"] },
+      "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 100,
+      "threshold": 55,
       "phase": "start"
     },
     {
@@ -75,8 +81,9 @@
       "tip": "Keep toes on the ground",
       "severity": 2,
       "metric": { "kind": "height", "pts": ["FOOT", "HEEL"], "per": ["KNEE", "ANK"] },
+      "rel": "change",
       "op": ">",
-      "threshold": 5.5,
+      "threshold": 8.5,
       "persist": 250
     },
     {
@@ -85,9 +92,9 @@
       "cue": "Walk heels farther",
       "tip": "Keep feet a little away from hips",
       "severity": 2,
-      "metric": { "kind": "dist", "pts": ["HEEL", "HIP"], "per": ["KNEE", "ANK"] },
+      "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"], "per": ["KNEE", "ANK"] },
       "op": "<",
-      "threshold": 60,
+      "threshold": 35,
       "persist": 250,
       "phase": "start"
     }
@@ -154,7 +161,7 @@
     "screen": { "big": true, "across": true, "visible": true, "home": true, "geometry": true, "helps": true },
     "ptType": "A",
     "notes": "",
-    "edited": "2026-09-16",
+    "edited": "2026-09-17",
     "by": "Test",
     "tuned": {
       "date": "2026-09-16",

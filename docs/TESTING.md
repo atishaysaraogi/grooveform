@@ -81,7 +81,7 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 14. Studio step 4 → the landmark list appears over the slot you tap, moves to the next empty slot, and closes on Escape or a tap outside; nothing stands open while the measurement is complete.
 15. Studio → a rep with two faults: both chips stay lit, Next rep moves on, the row reads "Fault: A + Fault: B", and the coverage panel counts it under both.
 16. The Moves list offers the shortlist, not the whole library; a move hidden from it still opens by link and still runs inside a routine. Settings → The move's animation switches between the stick figure and the anatomical one, and the second draws muscle warming through the movement.
-17. A move with two progress measurements: the live readout still shows the first; a rep that satisfies one but not the other does not count with "every measurement"; the target line stays put through the descent instead of sweeping round.
+17. A move with two progress measurements: the live readout still shows the first; a rep that satisfies one but not the other does not count with "every measurement"; the aim arrow stays on the same joint through the descent instead of sweeping round.
 18. Settings → Voice: the named voice is a natural one, not the device default; Hear this voice plays it; Speaking speed changes it audibly; the choice survives a reload. On a second device the name differs but the character does not.
 19. Studio step 6 → Edit the poses: dragging a joint keeps every limb the length it was; the faint figure behind is the other keyframe; a note pinned to a joint is drawn on the exercise page's animation with a line to that joint, and a note tied to the end fades in at the end.
 20. A move with a start-position fault: the overlay says what is wrong with the set-up and the count-in waits; fixing it starts the set; Start anyway appears after six seconds and the fault is listed in the review.
@@ -94,12 +94,12 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 27. Calibrate in one pose, then settle into the real start and hold it (a bridge with the knees pulled up first): after a second and a half "Start position read again" shows, the readout drops to 0 and the reps then count; the diagnostics file carries a `recalibrate` event and the move's `spec`.
 28. Lower only half way between reps and rest there: each rep still counts, and a slow lowering to the floor afterwards adds nothing.
 29. A set with three faults: each cue is heard once before any repeats, heaviest first.
-30. Glute bridge: the target line is drawn shoulder to hip to knee and stays put as the hips rise; the arm-anchored line of a squat is unchanged.
+30. Glute bridge: the aim arrow sits on the hip and points at the ring between shoulder and knee, green on the way up and green again pointing back down after the top; it disappears while a fault is up and the red fault arrow shows instead. The arm-anchored arrow of a squat is unchanged.
 31. Side-on move, a fault written against the far limb (`oKNEE`…): it stays quiet through a take where the near-limb version of the same fault fires, and only speaks on a plainly large violation.
 32. Two faults true at once: the same cue does not repeat inside 8 seconds.
 33. A bridge where you lie down slightly differently each rep: every rep still counts, and the diagnostics show each rep's own start drifting a few degrees while the calibrated one stays put.
 34. Rest half way down between reps: the start does not follow you all the way there (it stops at the drift cap) and the rep still reads as short.
-35. Studio step 4 → Which parts stay still: tick shoulder and knee on a bridge; the target line is drawn shoulder to hip to knee from the first rep and holds its angle as the hips rise.
+35. Studio step 4 → Which parts stay still: tick shoulder and knee on a bridge; the aim arrow sits on the hip from the first rep rather than on a shoulder that happened to travel further.
 36. Studio step 6 → What the coach says: silence "The rep number" and run a set — the reps still count on screen, nothing is spoken; type your own words for "Go" and hear them.
 37. Studio → split a long recording: playing rep nine starts at rep nine's own place in the video and runs straight through, with a moment of the start position in front of it. No clip begins with the start of the set.
 38. Shift, adjust the mat or rest a hand on the floor between reps: nothing is flagged; the same posture during a rep is.

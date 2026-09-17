@@ -957,6 +957,50 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('the coach points: an arrow on the joint that has to move, to the target and then back to the start', async () => {
+    const page = pro;                      /* already signed in and subscribed, so the bridge opens */
+    await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');
+    /* a supine body side-on to the lens, head to image right: two frames lifted straight out of a
+       real recorded bridge — the resting position and the top of a rep — with the set morphing
+       between them, so the framing, the orientation and the set-up checks all see a real body */
+    await page.evaluate(() => {
+      const REST = { 0: [0.852, 0.576], 7: [0.871, 0.642], 8: [0.865, 0.576], 11: [0.786, 0.650], 12: [0.772, 0.584], 13: [0.632, 0.654], 14: [0.616, 0.605], 15: [0.474, 0.682], 16: [0.485, 0.623], 23: [0.467, 0.590], 24: [0.470, 0.532], 25: [0.374, 0.301], 26: [0.358, 0.284], 27: [0.297, 0.644], 28: [0.285, 0.570], 29: [0.318, 0.687], 30: [0.296, 0.633], 31: [0.203, 0.685], 32: [0.182, 0.593] };
+      const TOP = { 0: [0.862, 0.560], 7: [0.880, 0.633], 8: [0.875, 0.574], 11: [0.786, 0.648], 12: [0.786, 0.568], 13: [0.626, 0.672], 14: [0.626, 0.573], 15: [0.457, 0.691], 16: [0.491, 0.567], 23: [0.522, 0.443], 24: [0.532, 0.382], 25: [0.322, 0.267], 26: [0.339, 0.244], 27: [0.295, 0.650], 28: [0.313, 0.587], 29: [0.318, 0.691], 30: [0.344, 0.646], 31: [0.196, 0.704], 32: [0.216, 0.644] };
+      const lying = (k) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 });
+        for (const id in REST) { const a = REST[id], b = TOP[id]; p[+id] = { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, z: 0, visibility: 0.95 }; }
+        return p; };
+      window.__mockPose = (t) => { if (t < 10500) return lying(0); const tt = t - 10500, rep = Math.floor(tt / 3000), ph = (tt % 3000) / 3000;
+        return rep >= 12 ? lying(0) : lying(Math.sin(Math.PI * ph)); };
+    });
+    await page.click('#do-start');
+    await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 20000 });
+    /* watch the aim through a rep: on the way out it points up the picture, on the way back down,
+       and it always starts at the hip — the joint that travels between a still shoulder and knee */
+    const seen = await page.evaluate(async () => {
+      const C = window.OnTrackCoach, out = [];
+      for (let i = 0; i < 260; i++) {
+        await new Promise((r) => setTimeout(r, 40));
+        const L = C.live; if (!L || L.state !== 'active' || !L.session.m || !L.session.ref) continue;
+        if (!L.pts) continue;
+        const a = C.aimFor(L.ex, L.session.m, L.session.ref, L.pts, L.session);
+        if (!a) continue;
+        const hip = L.pts[23];
+        out.push({ home: !!a.home, dy: a.to.y - a.from.y, atHip: hip ? Math.hypot(a.from.x - hip.x, a.from.y - hip.y) : null, state: L.session.counter.state, p: +(L.session.m.p || 0).toFixed(2) });
+      }
+      return out;
+    });
+    assert.ok(seen.length > 20, 'the aim was there to read: ' + seen.length);
+    /* short of the target and on the way there, it points up the picture; past it, back down —
+       which is the same instruction either way: go to where the ring is */
+    const outward = seen.filter((s) => !s.home && s.p < 0.8), past = seen.filter((s) => !s.home && s.p > 1.05);
+    const home = seen.filter((s) => s.home);
+    assert.ok(outward.length && outward.every((s) => s.dy < 0), 'short of the target it points up the picture: ' + JSON.stringify(outward.filter((s) => s.dy >= 0).slice(0, 3)));
+    assert.ok(!past.length || past.every((s) => s.dy > 0), 'past it, back down to where the hip belongs: ' + JSON.stringify(past.filter((s) => s.dy <= 0).slice(0, 3)));
+    assert.ok(home.length && home.every((s) => s.dy > 0), 'and on the way back it points at the position the rep began from: ' + JSON.stringify(home.slice(0, 3)));
+    const far = seen.map((s) => s.atHip).filter((x) => x != null).sort((a, b) => b - a)[0];
+    assert.ok(far != null && far < 0.02, 'it always starts at the hip, not at a target drawn somewhere else: ' + far);
+  });
+
   await step('studio: a set-up check is judged on every rep the recording is broken into, and shown', async () => {
     const st = await newPage();
     await st.goto(base + '/studio/?mock=1'); await st.waitForSelector('#move-select');

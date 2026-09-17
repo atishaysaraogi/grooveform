@@ -616,6 +616,7 @@
     if (raw === undefined) return; // no new frame
     fpsCount++; if (now - fpsT > 1000) { fps = fpsCount; fpsCount = 0; fpsT = now; }
     const pts = raw ? smoother.update(raw, now, aspect) : null;
+    live.pts = pts;                        /* the smoothed frame the overlay is drawn from */
     if (raw) live.lastPoseT = now;
     record(raw, now, aspect);
     const lost = now - live.lastPoseT > 400;
@@ -944,7 +945,7 @@
     const focus = new Set(live?.session?.m?.focus || []);
     const faulty = live?.state === 'active' && live.session.faults.active.size > 0;
     const alpha = lost ? 0.35 : 1;
-    if (live?.state === 'active' && live.session.m) drawGhost(pts, X, Y, W, H);
+    if (live?.state === 'active' && live.session.m) drawAim(pts, X, Y, W, H);
     ctx.lineWidth = Math.max(3, W / 320); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.globalAlpha = alpha;
     const headStyle = settings.head || (E.settings.skeleton || {}).head || 'face';
@@ -995,16 +996,6 @@
   }
 
 
-  /* ---------- ghost target pose: where the limb should be, readable from across the room ---------- */
-  function ghostPath(points, X, Y, state) {
-    const W = canvas.width; const color = state === 'good' ? 'rgba(184,245,66,0.85)' : state === 'bad' ? 'rgba(255,46,136,0.75)' : 'rgba(255,243,226,0.35)';
-    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = color; ctx.lineWidth = Math.max(10, W / 60); ctx.beginPath();
-    points.forEach((p, i) => { const x = X(p), y = Y(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
-    // end marker
-    const e = points[points.length - 1]; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(e), Y(e), Math.max(9, W / 70), 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  }
   /* the landmarks a measurement reads, resolved on this frame for the working side */
   function metricPoints(metric, pts, S) { try { return (metric.pts || []).map((n) => MoveSpec.resolve(n, pts, S, E)); } catch { return null; } }
   /* A target pose for the measurement that defines the move: the limb drawn where it should be at
@@ -1021,15 +1012,18 @@
     live.ghost = { key, a0: bear(q[0], q[1]), c0: bear(q[2], q[1]), a: 0, c: 0, cross: 0, sense: 1, q0: q, dA: 0, dB: 0, dC: 0, vcross: 0, vsense: 1 };
     return live.ghost;
   }
-  function ghostFor(ex, m, ref, pts) {
+  /* `aim` overrides where the movement is going: the target on the way out, the start on the way
+     back. Everything else is the same geometry, so the arrow home is the arrow out reversed. */
+  function ghostFor(ex, m, ref, pts, aim) {
     const S = m.side || ref.side || 'L';
-    let metric, target;
-    if (ex.type === 'reps' && ex.iProg >= 0) { metric = ex.metrics[ex.iProg]; target = ref.target; }
+    let metric, target, now;
+    if (ex.type === 'reps' && ex.iProg >= 0) { metric = ex.metrics[ex.iProg]; target = Number.isFinite(aim) ? aim : ref.target; now = (m.readings || [])[ex.iProg]; }
     else if (ex.holdConds && ex.holdConds.length) {
       const d = ex.display || {}; const c = ex.holdConds[Math.min(d.condition ?? 0, ex.holdConds.length - 1)]; metric = c.metric;
       const both = Number.isFinite(c.min) && Number.isFinite(c.max);
       target = both ? (c.min + c.max) / 2 : Number.isFinite(c.min) ? (metric.kind === 'angle' ? 180 : c.min) : (metric.kind === 'tilt' ? 0 : c.max);
       if (c.rel === 'change') target += (m.base && m.base[c.i]) || 0;
+      now = (m.readings || [])[c.i];
     }
     if (!metric || !Number.isFinite(target)) return null;
     const P = metricPoints(metric, pts, S); if (!P || P.some((p) => !p || p.v < 0.3)) return null;
@@ -1073,7 +1067,9 @@
           const b = L * Math.cos(th) + Math.sqrt(disc);
           const alpha = Math.acos(E.clamp((L * L + D * D - b * b) / (2 * L * D), -1, 1));
           const a = bear(S2, S1) + g.vsense * alpha;
-          return [S1, { x: S1.x + Math.cos(a) * L, y: S1.y + Math.sin(a) * L }, S2];
+          const to = { x: S1.x + Math.cos(a) * L, y: S1.y + Math.sin(a) * L };
+          /* the joint itself is what travels, so it is the point the arrow starts at */
+          return { line: [S1, to, S2], from: B, to };
         }
       }
       /* the sense is which way round the joint bends; near lock-out the cross product is ~0 and its
@@ -1087,34 +1083,107 @@
       const [still, moving] = swingA ? [C, A] : [A, C];
       const L = E.dist(B, moving);
       const a = bear(still, B) + (swingA ? -sense : sense) * rad(target);
-      return [still, B, { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L }];
+      const to = { x: B.x + Math.cos(a) * L, y: B.y + Math.sin(a) * L };
+      return { line: [still, B, to], from: moving, to };
     }
     if (metric.kind === 'vertical' || metric.kind === 'tilt') {   /* the segment at the target angle, on the side it already points to */
       /* it pivots about its first point, unless the move says that is the end that moves */
       const [A, B] = fixed[1] && !fixed[0] ? [P[1], P[0]] : [P[0], P[1]];
       const L = E.dist(A, B); const dir = Math.sign(B.x - A.x) || 1;
       const a = metric.kind === 'vertical' ? rad(target) : rad(90 - target);
-      return [A, { x: A.x + Math.sin(a) * dir * L, y: A.y + Math.cos(a) * L }];
+      const to = { x: A.x + Math.sin(a) * dir * L, y: A.y + Math.cos(a) * L };
+      return { line: [A, to], from: B, to };
     }
     if (metric.kind === 'rotation') {                    /* forearm swung out to the target, drawn flat */
       const [Pt, Q] = P; const L = E.dist(Pt, Q); const outward = metric.sign === 'forward' ? (ref.fwd ? ref.fwd[S] : 1) : E.outward(pts, S);
       const t = target + (metric.flip && ref.opts && [].concat(metric.flip.when).includes(ref.opts[metric.flip.option]) ? 0 : 0);
-      return [Q, { x: Q.x + Math.sin(rad(t)) * outward * Math.max(L, 0.05), y: Q.y + 0.02 }];
+      const to = { x: Q.x + Math.sin(rad(t)) * outward * Math.max(L, 0.05), y: Q.y + 0.02 };
+      return { line: [Q, to], from: Pt, to };
+    }
+    if (metric.kind === 'offset') {
+      /* the third point has to come within `target` of the line through the first two — a bridge's
+         hip between its knee and its shoulder. The reading is already a share of that line's own
+         length, so no reference segment is needed. Its sign says below, so the normal is taken
+         pointing down the picture. */
+      const [A, C, Q] = P; const vx = C.x - A.x, vy = C.y - A.y, L = Math.hypot(vx, vy);
+      if (L < 1e-6) return null;
+      const t = ((Q.x - A.x) * vx + (Q.y - A.y) * vy) / (L * L);
+      const foot = { x: A.x + t * vx, y: A.y + t * vy };
+      let nx = -vy / L, ny = vx / L; if (ny < 0) { nx = -nx; ny = -ny; }
+      const off = target / 100 * L;
+      const to = { x: foot.x + nx * off, y: foot.y + ny * off };
+      return { line: [A, to, C], from: Q, to };
+    }
+    /* The rest are readings scaled by some reference length — a shin, a torso. Rather than work
+       out which, the scale is read back off the measurement itself: the engine's number for this
+       frame is the current geometry over that length, so the geometry at the target is the current
+       geometry times target over now. It needs a reading with some size to it, which is why a
+       frame sitting at zero draws nothing rather than something wrong. */
+    if (!Number.isFinite(now) || Math.abs(now) < 1) return null;
+    const scale = target / now;
+    if (metric.kind === 'dist') {                      /* the first point at the target distance from the second */
+      const [Q, B] = fixed[0] && !fixed[1] ? [P[1], P[0]] : [P[0], P[1]];
+      return (() => { const to = { x: B.x + (Q.x - B.x) * scale, y: B.y + (Q.y - B.y) * scale }; return { line: [B, to], from: Q, to }; })();
+    }
+    if (metric.kind === 'gap') {                       /* sideways only: how far in front of the other point */
+      const [Q, B] = P; const to = { x: B.x + (Q.x - B.x) * scale, y: Q.y };
+      return { line: [B, to], from: Q, to };
+    }
+    if (metric.kind === 'height') {                    /* the first point at the target height above the second */
+      const [Q, B] = P; const to = { x: Q.x, y: B.y - (B.y - Q.y) * scale };
+      return { line: [B, to], from: Q, to };
+    }
+    if (metric.kind === 'rise' && ref && ref.pts0) {   /* the point that far above where it started */
+      const Q = P[0]; let p0; try { p0 = MoveSpec.resolve(metric.pts[0], ref.pts0, S, E); } catch (e) { return null; }
+      if (!p0) return null;
+      const to = { x: Q.x, y: p0.y - (p0.y - Q.y) * scale };
+      return { line: [{ x: Q.x, y: p0.y }, to], from: Q, to };
     }
     return null;
   }
-  function drawGhost(pts, X, Y, W, H) {
+  /* ---------- the aim: one arrow, from the point that has to move ----------
+     A line drawn where the limb should end up asks the person to compare two shapes and work out
+     the difference. An arrow on the joint that has to travel, pointing the way, is the instruction
+     itself. Where it points is the same geometry the line used, so it is right for any move: the
+     target on the way out, and the position the rep began from on the way back. It is green both
+     ways, because both are the exercise being done. It is not drawn at all while a fault is up:
+     then the red arrow at the fault is the only thing to do, and two arrows saying different
+     things is worse than one.
+     `to` is where the moving point belongs; `from` is where it is. */
+  function aimFor(ex, m, ref, pts, session) {
+    if (!ex || !m || !ref) return null;
+    const home = ex.type === 'reps' && session && session.counter && session.counter.state === 'back';
+    const g = ghostFor(ex, m, ref, pts, home ? ref.start : undefined);
+    if (!g || !g.from || !g.to) return null;
+    return { from: g.from, to: g.to, home, d: E.dist(g.from, g.to) };
+  }
+  /* an arrow shorter than this says nothing an arrowhead could show, and its direction is noise */
+  const AIM_MIN = 0.03;
+  function drawAim(pts, X, Y, W, H) {
     const ex = live.ex, m = live.session.m, ref = live.session.ref, act = live.session.faults.active;
-    const state = act.size ? 'bad' : (ex.type === 'reps' ? (m.p >= E.FULL ? 'good' : 'target') : (m.inPosition ? 'good' : 'target'));
-    const g = ghostFor(ex, m, ref, pts); if (g) ghostPath(g, X, Y, state);
+    if (act.size) return;                        /* the fault's own arrow is the instruction now */
+    if (ex.type === 'hold' && m.inPosition) return;
+    const a = aimFor(ex, m, ref, pts, live.session); if (!a) return;
+    const x0 = X(a.from), y0 = Y(a.from), x1 = X(a.to), y1 = Y(a.to);
+    const px = Math.hypot(x1 - x0, y1 - y0);
+    /* a ring where the point belongs, whether or not the arrow is worth drawing */
+    ctx.save();
+    ctx.strokeStyle = 'rgba(184,245,66,0.9)'; ctx.lineWidth = Math.max(3, W / 240);
+    ctx.beginPath(); ctx.arc(x1, y1, Math.max(7, W / 90), 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    if (a.d < AIM_MIN) return;
+    /* long enough to read from across the room, never longer than the distance left to travel */
+    arrow(x0, y0, x1 - x0, y1 - y0, 'rgba(184,245,66,' + (0.7 + 0.3 * pulse()).toFixed(2) + ')',
+      Math.min(px * 0.8, Math.max(36, W / 7)), Math.max(7, W / 96));
   }
   /* ---------- on-video guides (ideal lines, targets, arrows) ---------- */
   const GUIDE = { ok: 'rgba(78,225,193,0.55)', warn: '#FFB454', bad: '#FF5C6C' };
   function dashed(ax, ay, bx, by, color, w = Math.max(3, canvas.width / 200)) { ctx.save(); ctx.setLineDash([10, 8]); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.restore(); }
-  function arrow(x, y, dx, dy, color, len = 40) {
+  function arrow(x, y, dx, dy, color, len = 40, w) {
     const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n; const ex = x + dx * len, ey = y + dy * len;
-    const s = Math.max(1, canvas.width / 640); ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 6 * s; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ex + dx * 16 * s, ey + dy * 16 * s); ctx.lineTo(ex - dy * 11 * s, ey + dx * 11 * s); ctx.lineTo(ex + dy * 11 * s, ey - dx * 11 * s); ctx.closePath(); ctx.fill(); ctx.restore();
+    const s = Math.max(1, canvas.width / 640); ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 6 * s; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+    const h = Math.max(11 * s, (w || 6 * s) * 1.8);
+    ctx.beginPath(); ctx.moveTo(ex + dx * h * 1.45, ey + dy * h * 1.45); ctx.lineTo(ex - dy * h, ey + dx * h); ctx.lineTo(ex + dy * h, ey - dx * h); ctx.closePath(); ctx.fill(); ctx.restore();
   }
   function pulse() { return 0.6 + 0.4 * Math.sin(performance.now() / 180); }
   function label(x, y, text) {
@@ -1159,9 +1228,12 @@
       if (metric.kind === 'lean') at = E.mid(pts[11], pts[12]); if (metric.kind === 'headTilt') at = pts[0]; if (metric.kind === 'pelvis') at = MoveSpec.resolve('HIP', pts, S, E);
       arrow(X(at), Y(at), d.dx * (stage.classList.contains('mirror') ? 1 : 1), d.dy, GUIDE.bad, L * 0.8);
     }
-    /* the target itself, for a reps move: a dashed line to where the moving point should reach */
-    const g = ghostFor(ex, m, ref, pts);
-    if (g && ex.type === 'reps' && ex.iProg >= 0) { const a = g[g.length - 2], b = g[g.length - 1]; dashed(X(a), Y(a), X(b), Y(b), m.p >= E.FULL ? GUIDE.ok : GUIDE.warn); const r = readoutFor(ex, m, live.session); label(X(b) + 6, Y(b), r.tgt.replace(/^\/ /, '').split(' · ')[0]); }
+    /* what the target is, in numbers, beside the ring the aim arrow points at */
+    const a = aimFor(ex, m, ref, pts, live.session);
+    if (a && ex.type === 'reps' && ex.iProg >= 0 && !act.size) {
+      const r = readoutFor(ex, m, live.session);
+      label(X(a.to) + Math.max(12, W / 70), Y(a.to), a.home ? 'back to the start' : r.tgt.replace(/^\/ /, '').split(' · ')[0]);
+    }
     ctx.restore();
   }
   function angleLabel(ex, m) {
@@ -1225,6 +1297,8 @@
       saveFile(recName('html'), Replay.reportHtml(lastRec, meta, review, src), 'text/html', st);
     };
     const bv = $('btn-video'); bv.hidden = !Replay.canRecord();
+    /* say which file it will be: MP4 where the browser can write one, WebM where it cannot */
+    const kind = Replay.videoKind(); if (kind) bv.textContent = 'Download video (' + kind.toUpperCase() + ')';
     bv.onclick = async () => {
       bv.disabled = true; const tl = replayer.timeline; const secs = Math.round(tl.duration / 1000);
       st.textContent = `Recording the replay — about ${secs} s, it renders in real time…`;
@@ -1320,5 +1394,5 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll: mountFigures, stopAll() { if (muscleFig) try { muscleFig.stopAll(); } catch (e) { } }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
-  window.OnTrackCoach = { start, exitLive, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, cueAt, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackCoach = { start, exitLive, aimFor, ghostFor, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, cueAt, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
 })();

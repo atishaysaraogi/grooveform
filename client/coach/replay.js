@@ -104,7 +104,15 @@
   const EXTREMITY_SCALE = { 17: 0.5, 18: 0.5, 19: 0.5, 20: 0.5, 21: 0.5, 22: 0.5, 29: 0.5, 30: 0.5, 31: 0.5, 32: 0.5 };
   const BONE = { 17: 15, 18: 16, 19: 15, 20: 16, 21: 15, 22: 16, 29: 27, 30: 28, 31: 27, 32: 28 };
   const BONE_TOL = 0.35, BONE_KEEP = 45, BONE_MIN = 15, BONE_HOLD = 4;
-  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02;
+  const LIMB_FOLLOW = 1.5, LIMB_FLOOR = 0.02, LIMB_STILL = 0.2;
+  /* LIMB_STILL: below this, the joint it hangs off is not moving, and the point's speed term is
+     switched off altogether — the filter is then a plain low pass at its own cutoff, which is what
+     a planted foot wants. Measured on a side-on bridge, against the toe trailing a genuinely moving
+     ankle: off at 0.05 the heel-to-toe reading's spread over a still second was 1.42 % of shin and
+     the trail 6.1 %; at 0.2, 1.21 and 6.2; switched off for good, 1.10 and 19.0. A Kalman filter
+     was tried here too and lost on both counts (2.6-3.1 spread): its velocity state feeds on the
+     noise. It is the better tracker for a joint that really moves — through these reps it followed
+     the hip to 2.4 % against One Euro's 3.6 — which is a separate question from this one. */
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
   function smoothFrames(frames, { aspect = 16 / 9, minCutoff = 1.0, beta = 3.0, visFloor = 0.35, jumpLimit = 0.28, sureAt = 0.8, show = 0.5, stable = [] } = {}) {
@@ -136,8 +144,9 @@
         const c = minCutoff * k * k * (EXTREMITY_SCALE[i] || 1), b = beta * k; const fl = filters[i];
         fl[0].minCutoff = c; fl[1].minCutoff = c; fl[2].minCutoff = c * 0.6; fl[0].beta = fl[1].beta = fl[2].beta = b;
         const pf = parent != null ? filters[parent] : null;
-        const capx = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[0].dx) : undefined;
-        const capy = pf ? LIMB_FLOOR + LIMB_FOLLOW * Math.abs(pf[1].dx) : undefined;
+        const ps = pf ? Math.hypot(pf[0].dx, pf[1].dx) : 0;
+        const cap = (dx) => ps < LIMB_STILL ? 0 : LIMB_FLOOR + LIMB_FOLLOW * Math.abs(dx);
+        const capx = pf ? cap(pf[0].dx) : undefined, capy = pf ? cap(pf[1].dx) : undefined;
         const sx = fl[0].filter(x, t, capx), sy = fl[1].filter(y, t, capy), sz = fl[2].filter(z, t, capy);
         let ox = sx, oy = sy;
         if (still.has(i)) {
@@ -215,6 +224,19 @@
 
   /* where in the set's video a moment of the recording sits */
   const videoTimeOf = (rec, t) => (t + (rec.videoOffset || 0)) / 1000;
+  /* What the replay is written as, best first. MP4/H.264 goes everywhere — a phone's own gallery,
+     a message, a slide, Safari, QuickTime — and WebM does not, so it is asked for first even though
+     browsers came to it later (Chrome 126, Safari, Edge; Firefox still only offers WebM). Nothing
+     is re-encoded if it is missing: MediaRecorder is the only encoder here, so the fallback is
+     WebM and the file is named for whatever came back. */
+  const VIDEO_MIMES = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=h264', 'video/mp4',
+    'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  /* which of them this browser can actually write, for the button to say so before it is pressed */
+  function videoKind() {
+    if (typeof root.MediaRecorder === 'undefined' || !root.MediaRecorder.isTypeSupported) return '';
+    const m = VIDEO_MIMES.find((x) => root.MediaRecorder.isTypeSupported(x)) || '';
+    return m.includes('mp4') ? 'mp4' : m ? 'webm' : '';
+  }
   /* how far the video under the skeleton may drift before it is put back. A seek costs a frame or
      two of decoding, so it is not worth doing for a slip nobody can see; a third of a second is
      about where a limb and its bone visibly come apart. */
@@ -347,7 +369,7 @@
       const tl = timeline(rec); const aspect = rec.aspect || 16 / 9; const W = width, SH = Math.round(W / aspect), TH = 64, H = SH + TH;
       const canvas = root.document.createElement('canvas'); canvas.width = W; canvas.height = H; const ctx = canvas.getContext('2d');
       const stream = canvas.captureStream(fps);
-      const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((m) => root.MediaRecorder.isTypeSupported && root.MediaRecorder.isTypeSupported(m)) || '';
+      const mime = VIDEO_MIMES.find((m) => root.MediaRecorder.isTypeSupported && root.MediaRecorder.isTypeSupported(m)) || '';
       const mr = new root.MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 2500000 } : undefined);
       const chunks = []; mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
       mr.onerror = (e) => reject(e.error || new Error('Recording failed'));
@@ -425,6 +447,6 @@
 </body></html>`;
   }
 
-  const Replay = { timeline, frameAt, frameIndexAt, smoothFrames, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, reportHtml, headShape, BONES, HEAD_LINKS };
+  const Replay = { timeline, frameAt, frameIndexAt, smoothFrames, drawSkeleton, drawStage, drawTimeline, videoTimeOf, mount, record, canRecord, videoKind, VIDEO_MIMES, reportHtml, headShape, BONES, HEAD_LINKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = Replay; else root.Replay = Replay;
 })(typeof window !== 'undefined' ? window : globalThis);

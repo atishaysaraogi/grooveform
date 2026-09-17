@@ -1258,6 +1258,16 @@
         notes.push(`“${live[i].label || live[i].id}” and “${live[j].label || live[j].id}” read the same number the same way — whichever threshold is nearer fires first and the other never speaks on its own.`);
       }
     }
+    /* a reference length on a reading that is already a ratio does nothing — the number is the
+       same on every body with or without it, so it reads as a setting that is having an effect */
+    const SCALE_FREE = ['angle', 'vertical', 'tilt', 'rotation', 'lean', 'headTilt', 'pelvis', 'offset', 'ratio'];
+    const withPer = (m) => m && m.per && (Array.isArray(m.per) ? m.per.length : true);
+    for (const f of live) if (SCALE_FREE.includes(f.metric.kind) && withPer(f.metric)) {
+      notes.push(`“${f.label || f.id}” names a reference length, and a ${f.metric.kind === 'offset' ? 'line offset' : f.metric.kind} does not use one — ${f.metric.kind === 'offset' ? 'it is already a share of its own line' : 'it is an angle'}. Harmless, but it is not doing what it looks like it is doing.`);
+    }
+    if (s.type === 'reps' && s.progress && SCALE_FREE.includes((s.progress.metric || {}).kind) && withPer(s.progress.metric)) {
+      notes.push(`The progress measurement names a reference length, and a ${s.progress.metric.kind} does not use one. Harmless, but it is not doing what it looks like it is doing.`);
+    }
     for (const f of live) if ((f.rel || 'abs') === 'abs' && ['dist', 'angle'].includes(f.metric.kind)) {
       notes.push(`“${f.label || f.id}” compares an absolute ${f.metric.kind === 'dist' ? 'distance' : 'angle'}, so the person’s own build is inside the threshold. “Change from start” is usually what you mean.`);
     }
