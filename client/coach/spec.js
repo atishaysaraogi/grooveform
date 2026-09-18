@@ -600,7 +600,12 @@
       if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };
       /* the top was reached but not held for the move's repHold seconds */
       if (f.rule === 'shortHold') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => !!rep.shortHold };
-      const gate = f.minP == null ? 0 : f.minP;
+      /* A fault that watches the movement sits at or above the start position by default. One that
+         says `phase: "any"` or `"rest"` has opted out of watching the movement, so it is judged
+         wherever the person is — including below the start, which is exactly where a leg swinging
+         the wrong way is. Gated at zero, such a fault could never fire at all: its reading is on
+         the far side of the start precisely when it is true. */
+      const gate = f.minP == null ? (f.phase === 'any' || f.phase === 'rest' ? -Infinity : 0) : f.minP;
       const confOf = (m) => (m.conf && m.conf[f.id] !== undefined) ? m.conf[f.id] : 1;
       /* what the reading has to beat: the threshold, or the threshold plus a flat margin in the
          reading's own units when the landmarks are guesses */

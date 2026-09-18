@@ -606,3 +606,106 @@ test('PoseSmoother: a planted toe is held steady, an impossible foot length is h
   console.log('a set-up still wrong when the rep starts:', { starts: kept.starts, counted: kept.rv.faults.setup ? kept.rv.faults.setup.n : 0 });
   assert.ok(kept.starts.slice(1).filter((s) => s === 'setup').length >= 2, 'that one belongs to the rep: ' + JSON.stringify(kept.starts));
 }
+
+/* ---- The banded kicks and the clamshell -------------------------------------------------------
+   Four moves that had no footage to tune against: the backward and forward banded kicks (standing
+   hip extension and flexion), the seated banded kick (seated knee extension) and the clamshell.
+   Their thresholds were set on synthetic bodies carrying real MediaPipe residuals; what that rig
+   can be held to here, without the recordings it lifted the noise from, is the part that has to
+   stay true whatever the noise: a clean set of each counts its reps and names nothing, and each
+   fault take names its own fault and no other. A body is built from joint angles, so a take says
+   what the person did rather than where 33 points went.                                          */
+{
+  const D = Math.PI / 180;
+  const SEG = { torso: 0.26, upper: 0.14, fore: 0.13, thigh: 0.22, shin: 0.21, foot: 0.07, heel: 0.03, neck: 0.06 };
+  const step = (p, ang, len) => [p[0] + Math.cos(ang * D) * len, p[1] + Math.sin(ang * D) * len];
+  /* angles in degrees, 0 = image right, 90 = straight down */
+  function stick({ hip = [0.9, 0.5], trunk = -90, hipSplit = 0.02, shSplit = 0.02,
+    thighL = 90, thighR = 90, kneeL = 0, kneeR = 0, armL = -60, armR = -55, elbowL = 20, elbowR = 25 }) {
+    const m = {}, hipL = [hip[0] - hipSplit / 2, hip[1]], hipR = [hip[0] + hipSplit / 2, hip[1]];
+    m[23] = hipL; m[24] = hipR;
+    const neck = step(hip, trunk, SEG.torso); m[11] = [neck[0] - shSplit / 2, neck[1]]; m[12] = [neck[0] + shSplit / 2, neck[1]];
+    const head = step(neck, trunk, SEG.neck); m[0] = head; m[7] = [head[0] - 0.02, head[1] + 0.01]; m[8] = [head[0] + 0.02, head[1] + 0.01];
+    const arm = (sh, a, e) => { const el = step(sh, a, SEG.upper); return [el, step(el, a + e, SEG.fore)]; };
+    const [elL, wrL] = arm(m[11], armL, elbowL), [elR, wrR] = arm(m[12], armR, elbowR);
+    m[13] = elL; m[15] = wrL; m[14] = elR; m[16] = wrR;
+    const leg = (h, th, kn) => { const knee = step(h, th, SEG.thigh), ank = step(knee, th + kn, SEG.shin), toe = th + kn + 90;
+      return [knee, ank, step(ank, toe + 165, SEG.heel), step(ank, toe, SEG.foot)]; };
+    const [knL, anL, heL, ftL] = leg(hipL, thighL, kneeL), [knR, anR, heR, ftR] = leg(hipR, thighR, kneeR);
+    m[25] = knL; m[27] = anL; m[29] = heL; m[31] = ftL; m[26] = knR; m[28] = anR; m[30] = heR; m[32] = ftR;
+    return frame(m);
+  }
+  /* standing side-on, working (left) leg nearest: dir -1 swings it behind, +1 in front */
+  const kick = (deg, { lean = 0, knee = 0, dir = -1 } = {}) => stick({
+    hip: [0.95, 0.5], trunk: -90 + lean * dir, thighL: 90 + dir * deg, kneeL: -knee * dir, thighR: 90 });
+  /* sitting side-on: the shin swings from hanging to level */
+  const sit = (ext, { leanBack = 0, thighLift = 0 } = {}) => stick({
+    hip: [0.75, 0.62], trunk: -90 + leanBack, thighL: -thighLift, kneeL: 90 - ext,
+    thighR: -thighLift * 0.2, kneeR: 90 - ext * 0.15, armL: 20, armR: 25, elbowL: 30, elbowR: 30 });
+  /* side-lying facing the lens: the top knee lifts toward the ceiling, the feet stay together */
+  const clam = (open, { roll = 0, feetApart = 0 } = {}) => {
+    const pts = stick({ hip: [0.95, 0.62], trunk: 175, hipSplit: 0.01 + roll * 0.09, shSplit: 0.02 + roll * 0.1,
+      thighL: 160 + open, kneeL: 85, thighR: 160, kneeR: 85, armL: 165, armR: 170, elbowL: -35, elbowR: -30 });
+    if (!feetApart) for (const [a, b] of [[27, 28], [29, 30], [31, 32]]) pts[a] = { ...pts[b] };
+    return pts;
+  };
+  /* a set: still, then reps with an optional pause at the top, then still */
+  const set = (pose, { reps = 6, up = 60, top = 0, down = 60, rest = 45, peak = 1, fault = {}, from = 99 } = {}) => {
+    const out = []; for (let i = 0; i < 180; i++) out.push(pose(0, {}));
+    for (let r = 0; r < reps; r++) { const f = r >= from ? fault : {};
+      for (let i = 0; i < up; i++) out.push(pose(peak * Math.sin(Math.PI / 2 * i / up), f));
+      for (let i = 0; i < top; i++) out.push(pose(peak, f));
+      for (let i = 0; i < down; i++) out.push(pose(peak * Math.cos(Math.PI / 2 * i / down), f));
+      for (let i = 0; i < rest; i++) out.push(pose(0, {}));
+    }
+    for (let i = 0; i < 40; i++) out.push(pose(0, {}));
+    return out;
+  };
+  /* `also` is for a fault that genuinely comes with another: a knee that bends pulls the ankle in
+     toward the hip, so the swing the camera measures really is shorter and the rep really is a
+     partial. Naming both is right; naming a third thing is not. */
+  const only = (rv, id, what, also = []) => { const f = faultsOf(rv);
+    assert.ok(f[id], what + ': ' + id + ' was not named — ' + JSON.stringify(f));
+    const extra = Object.keys(f).filter((k) => k !== id && !also.includes(k));
+    assert.deepStrictEqual(extra, [], what + ': nothing else should be named — ' + JSON.stringify(f)); };
+  const clean = (rv, what, reps = 6) => { assert.strictEqual(rv.reps, reps, what + ': reps ' + rv.reps);
+    assert.deepStrictEqual(faultsOf(rv), {}, what + ': ' + JSON.stringify(faultsOf(rv))); };
+
+  /* backward banded kick */
+  { const e = ex('standing_hip_ext'), W = { work: 'L' };
+    clean(run(e, set((k, f) => kick(20 * k, f)), W).review, 'backward kick, 20°');
+    only(run(e, set((k, f) => kick(20 * k, f), { fault: { lean: 14 }, from: 2 }), W).review, 'lean', 'backward kick leaning forward');
+    only(run(e, set((k, f) => kick(20 * k, f), { fault: { knee: 35 }, from: 2 }), W).review, 'knee', 'backward kick with a bent knee', ['shallow']);
+    only(run(e, set((k, f) => kick(45 * k, f)), W).review, 'past_range', 'backward kick swung way back');
+    only(run(e, set((k, f) => kick(7 * k, f)), W).review, 'shallow', 'backward kick barely moving');
+    const wrong = run(e, set((k, f) => kick(25 * k, { ...f, dir: 1 })), W).review;
+    console.log('backward kick, kicked forward instead:', { reps: wrong.reps, faults: faultsOf(wrong) });
+    assert.strictEqual(wrong.reps, 0, 'a forward swing is not a backward kick'); assert.ok(faultsOf(wrong).wrongway, 'and it is said so');
+  }
+  /* forward banded kick */
+  { const e = ex('standing_hip_flex'), W = { work: 'L' }; const fwd = (d, o) => kick(d, { ...o, dir: 1 });
+    clean(run(e, set((k, f) => fwd(35 * k, f)), W).review, 'forward kick, 35°');
+    only(run(e, set((k, f) => fwd(35 * k, f), { fault: { lean: 14 }, from: 2 }), W).review, 'leanback', 'forward kick leaning back');
+    only(run(e, set((k, f) => fwd(35 * k, f), { fault: { knee: 35 }, from: 2 }), W).review, 'knee', 'forward kick with a bent knee', ['shallow']);
+    const back = run(e, set((k, f) => kick(25 * k, f)), W).review;
+    assert.strictEqual(back.reps, 0, 'a backward swing is not a forward kick'); assert.ok(faultsOf(back).wrongway, 'and it is said so');
+  }
+  /* seated banded kick: the top has to be held for the rep to be full */
+  { const e = ex('seated_knee_ext'), W = { work: 'L' }, tempo = { up: 60, top: 70, down: 90, rest: 75 };
+    clean(run(e, set((k, f) => sit(85 * k, f), tempo), W).review, 'seated kick, level');
+    only(run(e, set((k, f) => sit(85 * k, f), { ...tempo, fault: { leanBack: 16 }, from: 2 }), W).review, 'leanback', 'seated kick leaning back');
+    only(run(e, set((k, f) => sit(85 * k, f), { ...tempo, fault: { thighLift: 16 }, from: 2 }), W).review, 'thigh', 'seated kick with the thigh lifting');
+    const rushed = run(e, set((k, f) => sit(85 * k, f), { up: 14, down: 14, rest: 14 }), W).review;
+    console.log('seated kick rushed:', { reps: rushed.reps, partials: rushed.partials, faults: faultsOf(rushed) });
+    assert.strictEqual(rushed.reps, 0, 'a rep with no pause at the top is a partial'); assert.ok(faultsOf(rushed).hold && faultsOf(rushed).fast);
+  }
+  /* clamshell */
+  { const e = ex('clamshell'), W = { work: 'L' };
+    clean(run(e, set((k, f) => clam(35 * k, f)), W).review, 'clamshell, 35°');
+    only(run(e, set((k, f) => clam(35 * k, f), { fault: { roll: 0.6 }, from: 2 }), W).review, 'roll', 'clamshell rolling the pelvis back');
+    only(run(e, set((k, f) => clam(35 * k, f), { fault: { feetApart: 1 }, from: 2 }), W).review, 'feet', 'clamshell with the feet coming apart');
+    only(run(e, set((k, f) => clam(75 * k, f)), W).review, 'past_range', 'clamshell opened too far');
+    only(run(e, set((k, f) => clam(14 * k, f)), W).review, 'shallow', 'clamshell barely opening');
+  }
+  console.log('BANDED KICKS AND CLAMSHELL TESTS PASSED');
+}

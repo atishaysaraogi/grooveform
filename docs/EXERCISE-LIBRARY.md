@@ -1,6 +1,6 @@
 # The exercise library
 
-The library is **data**. Every one of the 144 moves — the ten vetted ones
+The library is **data**. Every one of the 145 moves — the fifteen vetted ones
 included — is its own JSON file at `client/data/moves/<id>.json`, and
 `_about.json` beside it explains every field a move may contain: what it means,
 what good and bad input look like. Edit the file, reload the page, and the move
@@ -24,7 +24,7 @@ client/data/
     hip.json  …          ids it holds, in the order the app shows them
   moves/
     wallsit.json         one exercise, one file, named by its id
-    seated_knee_ext.json  quad_set.json  …  (144 of them)
+    seated_knee_ext.json  quad_set.json  …  (145 of them)
 client/coach/
   exercise-library.js    the registry: define(), validation, lookup
   engine.js              kinematics, smoothing, rep counting, set review
@@ -80,7 +80,7 @@ people (`"_note": "physio wants this re-checked"`) and is ignored.
 Things that are **not** per move live in `settings.json`: when a rep counts
 (`rep`), how long a fault must hold before it is spoken (`fault`), the standard
 rep and hold choices, the band colours, the score. Its `_about` explains each.
-A change there moves all 144 moves at once; restart the server to pick it up.
+A change there moves all 145 moves at once; restart the server to pick it up.
 
 ## The measurement language
 
@@ -163,6 +163,16 @@ still misbehaves, but it does not withhold the flag; a move vetted over a
 failing report carries the failing faults under `_studio.tuned.override`. Every move is listed; the
 vetted ones simply sort into the first group. The exercise page, the move
 list and the routine builder all name the tier in the move's meta line.
+
+Four of the fifteen were tuned without recordings of their own: the backward and
+forward banded kicks (`standing_hip_ext`, `standing_hip_flex`), the seated banded
+kick (`seated_knee_ext`) and the clamshell. Their thresholds come from the
+geometry of the movement, checked on synthetic bodies replaying real MediaPipe
+residuals — the frame-to-frame wander lifted off the recorded sets in this
+project — so a clean take counts its reps and names nothing and each fault take
+names its own fault and no other. That is not the same as a rep-by-rep check
+against footage of these four movements, which is the thing to do next;
+`test/engine.test.js` carries the takes, so a change that breaks one is caught.
 
 Validation follows the tier: a `none` move has no `calibrate`/`measure` and its
 faults have no `check`; a `reps` move's faults may be documentation only
@@ -658,6 +668,16 @@ the person had been at rest after calibration was tried and dropped: someone
 who starts the first rep the moment the count-in ends never trips it, so their
 first rep would go unjudged, and on the recorded set it would not have helped
 anyway — the person was briefly at rest, sitting up.)
+
+The rebase itself has a rule about when it may fire, and it is a long wait: the
+reading has to sit inside `rep.reread.band` for `rep.reread.still` — three
+seconds — before the start is read again. A rep's top looks exactly like a body
+that has settled. Someone whose reps fall short of the target, which is what the
+`shallow` rule is there for, tops out part way up, and half the library asks for
+a pause up there; read again at that top, the start becomes the top of rep one,
+every reading after it is negative and the set counts nothing. The asymmetry
+decides the number: a body that really has settled stays settled, so waiting
+costs it a second and a half of a set that was going to be read wrong anyway.
 
 A video file run through the coach now waits as long as the camera does before
 the count-in (`still.file`); the shorter wait it used to have is how a bridge

@@ -339,11 +339,12 @@ test('per: "height" reads a share of stature, and unit turns it into inches or c
 
 /* Still is not the same as ready: read in one pose and then settled in another before the first
    rep, the person would read half a rep up and never come back to rest. The start is read again
-   where they settled. */
+   where they settled — but only after it has stayed there longer than a rep pauses at its top,
+   which is the other thing that holds a reading still well above the start. */
 test('the start position is read again when the person settles somewhere else before the first rep', () => {
   const ex = SPEC.compile(sideLegRaise, K);
   const frames = []; for (let i = 0; i < 40; i++) frames.push(pose(0));            // calibrated with the leg hanging
-  for (let i = 0; i < 70; i++) frames.push(pose(12));                             // then settles with it out 12° and stays
+  for (let i = 0; i < 110; i++) frames.push(pose(12));                            // then settles with it out 12° and stays
   for (let r = 0; r < 3; r++) for (let i = 0; i < 90; i++) frames.push(pose(12 + 30 * Math.sin(Math.PI * i / 90)));   // three 30° raises from there
   for (let i = 0; i < 20; i++) frames.push(pose(12));
   const { sess, review } = run(ex, frames, { rom: 30 });
@@ -355,6 +356,29 @@ test('the start position is read again when the person settles somewhere else be
   for (let i = 0; i < 90; i++) later.push(pose(30 * Math.sin(Math.PI * i / 90)));
   for (let i = 0; i < 70; i++) later.push(pose(12));
   assert.equal(run(ex, later, { rom: 30 }).sess.rebases, 0);
+});
+
+/* The other thing that holds a reading still well above the start is the top of a rep. Someone
+   whose raises fall short of the target — the case the `shallow` rule exists for — tops out part
+   way up, and half the library asks for a pause up there. Read again at that top, the start would
+   become the top of rep one, every reading after it would be negative, and the set would count
+   nothing. So the wait is longer than anyone pauses for, and a body that really has settled
+   somewhere else is still read again, a second and a half later than it used to be. */
+test('a shallow slow set is not re-read from the top of its first rep', () => {
+  const ex = SPEC.compile(sideLegRaise, K);
+  const frames = []; for (let i = 0; i < 60; i++) frames.push(pose(0));
+  /* 20° of a 30° target, with a two-second pause at the top */
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 45; i++) frames.push(pose(20 * i / 45));
+    for (let i = 0; i < 60; i++) frames.push(pose(20));
+    for (let i = 0; i < 45; i++) frames.push(pose(20 * (1 - i / 45)));
+    for (let i = 0; i < 20; i++) frames.push(pose(0));
+  }
+  const { sess, review } = run(ex, frames, { rom: 30 });
+  assert.equal(sess.rebases, 0, 'the top of a rep is not a new start');
+  assert.ok(Math.abs(sess.ref.start) < 3, 'the start is still where the leg hung: ' + sess.ref.start);
+  assert.equal(review.reps, 0, 'none of them reached the target');
+  assert.equal(review.partials, 4, 'and all four are counted as partials: ' + review.partials);
 });
 
 /* Filmed side-on, the far arm and leg are behind the body and the pose model guesses at them. A

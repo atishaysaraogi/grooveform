@@ -117,7 +117,7 @@ test('every declared contact holds still between the keyframes', () => {
 test('every catalogue move is complete, honest about tracking, and has a figure', () => {
   assert.ok(catalogue.length >= 130, `expected the whole library as data, found ${catalogue.length}`);
   const vetted = catalogue.filter((e) => e.vetted);
-  assert.ok(vetted.length >= 10, 'the ten vetted moves are data too');
+  assert.ok(vetted.length >= 15, 'the vetted moves are data too');
   for (const e of vetted) assert.equal(e.tracking, 'form', e.id + ': a vetted move is coached on form');
   const figures = new Set((globalThis.__pendingFigures || []).map((f) => f[0]));
   for (const ex of catalogue) {

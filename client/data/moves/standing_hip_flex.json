@@ -1,0 +1,141 @@
+{
+  "region": "hip",
+  "id": "standing_hip_flex",
+  "name": "Standing hip flexion",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "vetted": true,
+  "level": "beginner",
+  "equipment": ["wall or chair", "band (optional)"],
+  "band": "none",
+  "muscles": { "primary": ["iliopsoas"], "secondary": ["rectus femoris", "abdominals"] },
+  "sided": { "limb": "leg", "by": "camera" },
+  "summary": "Holding a wall, bring one straight leg forward from the hip without leaning back — the forward banded kick.",
+  "setup": "Stand side-on to the phone, one hand on a wall beside you, working leg nearest the phone. Keeping the knee straight and the trunk upright, bring the leg forward to about 35–45°, then lower it under control. With a band, loop it around the working ankle and anchor it behind you.",
+  "brief": "Stand side-on with one hand on a wall. Keeping the knee straight and the trunk upright, bring the working leg forward, then lower it under control.",
+  "why": "Side-on, the working ankle travels forward past the hip and how far it gets — as a share of the thigh — counts the rep. Leaning back to swing higher takes the shoulders behind the same hip, which is the same reading on the trunk, and a bent knee or a leg going the wrong way are both read directly.",
+  "calibrationPose": "Stand tall, feet together, one hand on the wall beside you.",
+  "camera": { "height": "hip", "distance": "2.5 m", "posture": "standing" },
+  "stable": ["oANK", "oKNEE"],
+  "progress": {
+    "metric": { "kind": "gap", "pts": ["ANK", "HIP"], "per": ["HIP", "KNEE"], "sign": "forward" },
+    "start": "calibrated",
+    "target": 110,
+    "targetIsDelta": true,
+    "max": { "delta": 60 },
+    "overLabel": "Swinging the leg too high",
+    "overCue": "Not so high — keep it controlled",
+    "overTip": "Past about 60° the pelvis tucks under and the lower back takes over from the hip flexors."
+  },
+  "tempo": "Forward 2 s, pause, lower 2 s.",
+  "dosage": "3 × 12 each leg.",
+  "progression": "Band around the ankle anchored behind; a heavier colour.",
+  "regression": "Smaller swing; both hands on the wall.",
+  "contraindications": "Pinching at the front of the hip, or low-back pain on the swing.",
+  "faults": [
+    {
+      "id": "leanback",
+      "label": "Leaning back to swing higher",
+      "cue": "Stand tall — do not lean back",
+      "tip": "Leaning back makes the leg look higher without the hip flexors doing more, and loads the lower back.",
+      "severity": 3,
+      "metric": { "kind": "gap", "pts": ["SH", "HIP"], "per": ["HIP", "KNEE"], "sign": "forward" },
+      "rel": "change",
+      "op": "<",
+      "threshold": -14,
+      "minP": 0.3,
+      "persist": 300
+    },
+    {
+      "id": "knee",
+      "label": "Bending the knee",
+      "cue": "Keep the leg straight",
+      "tip": "A bent knee shortens the lever and the swing the camera sees; keep the leg long.",
+      "severity": 2,
+      "metric": "knee",
+      "op": "<",
+      "threshold": 160,
+      "phase": "any"
+    },
+    {
+      "id": "wrongway",
+      "label": "Swinging the leg backward",
+      "cue": "Take the leg in front of you",
+      "tip": "This one goes forward only. Swinging backward is a different exercise and the band is pulling the wrong way.",
+      "severity": 2,
+      "metric": { "kind": "gap", "pts": ["KNEE", "HIP"], "per": ["HIP", "KNEE"], "sign": "forward" },
+      "rel": "change",
+      "op": "<",
+      "threshold": -30,
+      "persist": 600,
+      "phase": "any"
+    },
+    {
+      "id": "shallow",
+      "label": "Not reaching the target",
+      "cue": "All the way",
+      "tip": "Take each rep through the full range you set — half reps count as partials.",
+      "severity": 1,
+      "rule": "shallow"
+    },
+    {
+      "id": "fast",
+      "label": "Too fast",
+      "cue": "Slow it down",
+      "tip": "Control both directions; a swung leg is momentum, not the hip flexors.",
+      "severity": 1,
+      "rule": "fast",
+      "minMs": 1500
+    },
+    {
+      "id": "tuck",
+      "label": "Tucking the pelvis under",
+      "cue": "Ribs down, pelvis level",
+      "tip": "At the top of the swing the pelvis tries to tuck under to gain height. Keep it level and accept less range.",
+      "severity": 2
+    }
+  ],
+  "guide": {
+    "surface": "Firm floor and a wall or chair within reach of one hand.",
+    "stop": "Pinching at the front of the hip, or low-back pain.",
+    "cannotSee": "The pelvis tucking under at the top, and how hard the band is pulling.",
+    "regions": [
+      {
+        "name": "Working leg",
+        "points": [
+          { "t": "Straight knee throughout — a bent one is flagged.", "tracked": true },
+          { "t": "Travels forward only, to about 35–45°.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "points": [
+          {
+            "t": "Upright and still; the shoulders going behind the hip is leaning back, not flexing.",
+            "tracked": true
+          },
+          { "t": "Ribs down and the pelvis level — the camera cannot see this one.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Stance leg",
+        "points": [
+          { "t": "Stays put; it is what the coach measures the swing against.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Breathing & tempo",
+        "points": [
+          { "t": "Forward 2 s, pause, lower 2 s. No swinging.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "pose": {
+    "A": { "preset": "standing", "uarm": 60, "farm": 60 },
+    "B": { "face": "right", "torso": 0, "thigh": 40, "shin": 40, "foot": 20, "uarm": 60, "farm": 60 },
+    "work": { "quad": 1, "abs": 0.4 },
+    "wall": "ahead"
+  }
+}

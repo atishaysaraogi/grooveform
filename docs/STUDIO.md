@@ -207,8 +207,10 @@ takes it fired on. Green means: quiet on every clean take, fires on every take o
 that fault. Anything else, adjust and look again. This is where a textbook number
 meets a real body, and the body wins.
 
-Built-in rules that need no measurement: *not reaching the target* and *too
-fast*.
+Built-in rules that need no measurement: *not reaching the target*, *too fast*,
+*not returning fully*, and — on a move that asks for a hold at the top — *no
+pause at the top*, which turns a rep that comes straight back down into a
+partial.
 
 Rep-level questions the physio answers per fault: does it invalidate the rep
 (rep does not count) or only cost a cue; only once the rep is under way, or at any

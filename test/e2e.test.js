@@ -530,7 +530,7 @@ async function runCoachedSet(page, side = 'right') {
       }
       return out;
     });
-    assert.equal(rt.checked, 144, 'every move, the ten vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
+    assert.equal(rt.checked, 145, 'every move, the vetted ones included, is data'); assert.deepEqual(rt.problems, []); assert.deepEqual(rt.changed, [], 'a move must come back from the Studio exactly as it went in');
     assert.deepEqual(rt.rewritten, [], 'an untouched move must be written back as the same entry');
     /* the flow a physio sees: pick a move, edit a copy, change a number, check, download */
     /* the list is alphabetical and the search box narrows it */
@@ -546,8 +546,13 @@ async function runCoachedSet(page, side = 'right') {
     await st.waitForSelector('[data-k="name"]'); assert.equal(await st.$eval('[data-k="name"]', (e) => e.value), 'Seated knee extension');
     assert.equal(await st.$eval('[data-chips="tracking"] [aria-pressed="true"]', (e) => e.dataset.v), 'form');
     await st.click('#steps [data-step="faults"]'); await st.waitForSelector('[data-k="faults.0.threshold"]');
-    assert.equal(await st.$eval('[data-k="faults.0.threshold"]', (e) => e.value), '68');
-    await st.fill('[data-k="faults.0.threshold"]', '62'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
+    assert.equal(await st.$eval('[data-k="faults.0.threshold"]', (e) => e.value), '-12');
+    await st.fill('[data-k="faults.0.threshold"]', '-15'); await st.dispatchEvent('[data-k="faults.0.threshold"]', 'input');
+    /* the move asks for a pause at the top, so its "no pause" fault is a built-in rule with no
+       measurement of its own — the editor has to render it rather than look for a metric */
+    const holdAt = await st.evaluate(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].faults.findIndex((f) => f.rule === 'shortHold'); });
+    assert.ok(holdAt >= 0, 'the hold rule survived the round trip');
+    assert.match(await st.$eval(`.fault-card[data-fi="${holdAt}"] .notice`, (e) => e.textContent), /Built-in rule: the top was reached but not held/);
     /* a fault with no measurement shows as person-watched — find it by id, not by position */
     const listedAt = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return s.faults.findIndex((f) => f.id === 'drop'); });
     assert.ok(listedAt >= 0, 'the drop fault survived the round trip');
@@ -571,7 +576,8 @@ async function runCoachedSet(page, side = 'right') {
     assert.equal(saved.rel, 'moves/seated_knee_ext.json', 'one exercise, one file');
     assert.equal(saved.isNew, false, 'replaces, does not add');
     const m = saved.json.moves.find((x) => x.id === 'seated_knee_ext'); assert.equal(saved.json.moves.filter((x) => x.id === 'seated_knee_ext').length, 1, 'replaces, does not duplicate');
-    assert.equal(m.faults[0].threshold, 62); assert.equal(m.faults[1].metric, undefined); assert.ok(m._studio && m._studio.edited, 'the Studio leaves its provenance as a note');
+    assert.equal(m.faults[0].threshold, -15); assert.equal(m.faults.find((f) => f.rule === 'shallow').metric, undefined, 'a built-in rule keeps no measurement');
+    assert.ok(m._studio && m._studio.edited, 'the Studio leaves its provenance as a note');
     assert.equal(m.region, 'knee', 'the move file says which region it belongs to');
     await st.screenshot({ path: path.join(SHOTS, 'studio-edit-copy.png'), fullPage: true });
     await st.close();

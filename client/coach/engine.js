@@ -357,9 +357,16 @@
     return { x: c.x, y: c.y, r, neck: { x: neck.x, y: neck.y } };
   }
 
-  function bodyHeight(pts) {
-    let miny = 1, maxy = 0; for (const i of [0, 11, 12, 23, 24, 25, 26, 27, 28]) { miny = Math.min(miny, pts[i].y); maxy = Math.max(maxy, pts[i].y); }
-    return maxy - miny;
+  /* How much of the frame the body takes up, so a person too far away can be told to come closer.
+     The larger of the two extents, not the height: a standing body is tall and the two agree, but
+     someone lying on their side for a clamshell is wide and barely a fifth of the frame high, and
+     measured down the frame alone they read as standing across the room. x is in the same units as
+     y by the time it gets here — PoseSmoother has already put the aspect back. */
+  function bodySpan(pts) {
+    let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
+    for (const i of [0, 11, 12, 23, 24, 25, 26, 27, 28]) { const q = pts[i];
+      minx = Math.min(minx, q.x); maxx = Math.max(maxx, q.x); miny = Math.min(miny, q.y); maxy = Math.max(maxy, q.y); }
+    return Math.max(maxx - minx, maxy - miny);
   }
   /* The coach's positioning checks, without the words: is the body seen well enough, in frame,
      facing the right way and big enough for this move. ex may be partial (a Studio draft): with no
@@ -382,7 +389,7 @@
     const o = orientation(pts);
     const accept = !ex.view ? [o.view] : ex.camera && ex.camera.posture === 'sidelying' ? [ex.view, 'unclear'] : [ex.view];
     const orientOk = accept.includes(o.view);
-    const size = ex.upperBody ? dist(pts[0], mid(pts[23], pts[24])) : bodyHeight(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22);
+    const size = ex.upperBody ? dist(pts[0], mid(pts[23], pts[24])) : bodySpan(pts); const sizeOk = size > (ex.upperBody ? 0.28 : 0.22);
     return { ok: visOk && frameOk && orientOk && sizeOk, visOk, frameOk, edges, orientOk, view: o.view, ratio: o.ratio, sizeOk };
   }
   /* When a recording is ready to calibrate: the body has passed positionCheck and the hips have
@@ -618,17 +625,28 @@
     /* The start position was read while the person was still, but still is not the same as ready:
        someone who lies down with the knees pulled up, is read there, then settles into the real
        start reads half a rep up before they have moved — and never comes back below the resting
-       threshold, so no rep ever closes. Before the first rep, a reading that has sat still for a
-       second and a half somewhere well above the start is that start; the baselines are read again
+       threshold, so no rep ever closes. Before the first rep, a reading that has sat still for
+       `rep.reread.still` somewhere well above the start is that start; the baselines are read again
        there and the counter begins from it. Only before the first rep: after one, a level the
-       person rests at between reps is the "return" rule's business, not a new start. */
+       person rests at between reps is the "return" rule's business, not a new start.
+
+       That wait is three seconds, not the second and a half it used to be, because the top of a
+       rep looks exactly like a body that has settled. Someone whose reps fall short of the target
+       — which is most of the point of the `shallow` rule — tops out part way up, and a slow rep
+       holds that top within a few hundredths for well over a second on the way through it. Read
+       again there, the start becomes the top of rep one, every reading for the rest of the set is
+       negative, and nothing counts. The asymmetry decides the number: a body that really did
+       settle stays settled, so waiting costs it a second and a half of a set it was going to have
+       read wrong anyway, while reading a rep's top as the start costs the whole set. */
     rebaseIfSettled(pts, p, t) {
-      if (!this.counter || this.counter.reps.length || this.rebases >= 2 || (this.ref && this.ref.shown != null)) return false;   /* a demonstrated target lives on the ref and would be lost */
+      const cfg = (settingsOr().rep || {}).reread || {};
+      const win = cfg.still ?? 3000, band = cfg.band ?? 0.06, most = cfg.max ?? 2;
+      if (!this.counter || this.counter.reps.length || this.rebases >= most || (this.ref && this.ref.shown != null)) return false;   /* a demonstrated target lives on the ref and would be lost */
       if (this.calT === null) this.calT = t;                       /* calibrated before the first step: the clock starts here */
-      this.pHist.push([t, p]); while (this.pHist.length && t - this.pHist[0][0] > 1500) this.pHist.shift();
-      if (t - this.calT < 1500 || this.pHist.length < 5 || t - this.pHist[0][0] < 1400) return false;
+      this.pHist.push([t, p]); while (this.pHist.length && t - this.pHist[0][0] > win) this.pHist.shift();
+      if (t - this.calT < win || this.pHist.length < 5 || t - this.pHist[0][0] < win * 0.93) return false;
       let lo = Infinity, hi = -Infinity; for (const [, q] of this.pHist) { lo = Math.min(lo, q); hi = Math.max(hi, q); }
-      if (hi - lo > 0.06 || lo < 0.2 || hi > this.counter.full - 0.1) return false;
+      if (hi - lo > band || lo < 0.2 || hi > this.counter.full - 0.1) return false;
       this.calibrate(pts, this.side); this.calT = t; this.rebases++;
       this.counter = new RepCounter(this.ex.repHold ? { holdMs: this.ex.repHold * 1000 } : {});
       return true;
@@ -854,7 +872,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Stillness, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Stillness, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodySpan, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the
