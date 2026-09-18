@@ -528,22 +528,37 @@ test('PoseSmoother: a planted toe is held steady, an impossible foot length is h
     const rv = sess.review();
     return { rv, below, judged, repAt, beganAt, starts: sess.repEvents.map((e) => (e.rep.startFaults || []).join('+') || '-') };
   }
-  /* four reps that come down and dwell at a quarter of the way up — the rep is still open there,
-     because the counter does not close it until the reading is back under rest — and the heel
-     comes up during exactly that dwell */
+  /* four reps, and after each one the heel comes up while the hips are down and the person is
+     lining up the next one — the counter has closed the rep, and what is left is the pause */
   const dwell = [];
   for (let i = 0; i < 50; i++) dwell.push([0, 0]);
   for (let r = 0; r < 4; r++) {
-    for (let i = 0; i < 25; i++) dwell.push([Math.sin(Math.PI / 2 * i / 25), 0]);       // up
-    for (let i = 0; i < 25; i++) dwell.push([Math.cos(Math.PI / 2 * i / 25) * 0.8 + 0.2, 0]);  // down to about a fifth
-    for (let i = 0; i < 20; i++) dwell.push([0.22, 0.03]);                              // and the heel lifts there
+    for (let i = 0; i < 45; i++) dwell.push([Math.sin(Math.PI * i / 45), 0]);
+    for (let i = 0; i < 10; i++) dwell.push([0, 0]);
+    for (let i = 0; i < 20; i++) dwell.push([0.05, 0.03]);                              // heel up, hips down, adjusting
     for (let i = 0; i < 30; i++) dwell.push([0, 0]);
+    /* and on the way up to the next one, before the counter has called a rep, a heel that is
+       still finding its place */
+    for (let i = 0; i < 12; i++) dwell.push([0.2 * i / 12, 0.03]);
+    for (let i = 0; i < 12; i++) dwell.push([0.2 - 0.2 * i / 12, 0]);
   }
   const low = play(move(HEEL_UP), dwell);
-  console.log('a heel lifted at the bottom of the descent:', { counted: low.rv.faults.heel ? low.rv.faults.heel.n : 0, reps: low.rv.reps, fired: low.below });
+  console.log('a heel lifted between reps:', { counted: low.rv.faults.heel ? low.rv.faults.heel.n : 0, reps: low.rv.reps, fired: low.below });
   assert.ok(low.rv.reps >= 3, 'the reps still count: ' + low.rv.reps);
-  assert.ok(!low.rv.faults.heel, 'a heel lifted below the attempt line is the person adjusting, not a fault: ' + JSON.stringify(low.below));
-  assert.ok(low.below.every((b) => b.p >= 0.32), 'nothing fires under the attempt line at all: ' + JSON.stringify(low.below));
+  assert.ok(!low.rv.faults.heel, 'a heel lifted while the hips are down and the next rep has not begun is the person adjusting, not a fault: ' + JSON.stringify(low.below));
+  /* but a heel that comes up as the hips land — the rep still open, the reading on its way back
+     under the rest line — is the exercise going wrong, and counts */
+  const landing = [];
+  for (let i = 0; i < 50; i++) landing.push([0, 0]);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 25; i++) landing.push([Math.sin(Math.PI / 2 * i / 25), 0]);
+    for (let i = 0; i < 60; i++) { const k = Math.cos(Math.PI / 2 * i / 60); landing.push([k, k < 0.6 && k > 0.18 ? 0.03 : 0]); }   // a slow descent, the heel up through the last part of it
+    for (let i = 0; i < 45; i++) landing.push([0, 0]);
+  }
+  const land = play(move(HEEL_UP), landing);
+  console.log('a heel lifted as the hips land:', { counted: land.rv.faults.heel ? land.rv.faults.heel.n : 0, reps: land.rv.reps, fired: land.below });
+  assert.ok(land.rv.faults.heel && land.rv.faults.heel.n >= 3, 'that is the rep going wrong, and counts: ' + JSON.stringify(land.below));
+  assert.ok(land.below.every((b) => b.state === 'back' && b.p >= 0.15), 'judged on the way down, above the rest line: ' + JSON.stringify(land.below));
   /* the same fault, the same size, at the top of the rep: still a fault */
   const top = [];
   for (let i = 0; i < 50; i++) top.push([0, 0]);

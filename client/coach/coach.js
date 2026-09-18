@@ -500,7 +500,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false, stillness: null, showStillness: null, waitedToStart: false };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing: file ? 'environment' : facing,   /* a file is never mirrored */ ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false, stillness: null, showStillness: null, waitedToStart: false };
     smoother.reset(); smoother.setStable(ex.lockable || []); live.rec.lockable = ex.lockable || [];
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -598,7 +598,15 @@
   let lastRec = null;
   function record(raw, now, aspect) {
     const rec = live.rec; if (!rec) return;
-    if (!rec.t0) { rec.t0 = now; rec.videoOffset = vid.mr ? Math.max(0, Math.round(now - vid.startedAt)) : 0; }   /* where rec time 0 sits in the video */
+    if (!rec.t0) {
+      rec.t0 = now; rec.videoOffset = vid.mr ? Math.max(0, Math.round(now - vid.startedAt)) : 0;   /* where rec time 0 sits in the video */
+      /* A file being analysed is the set's video already — nothing is captured, so nothing was
+         ever attached, and the replay and the exported video drew the skeleton on a dark stage.
+         The file goes on the recording as it is, and time 0 of the recording is wherever the
+         file had got to on its first analysed frame. It never enters the diagnostics JSON, like
+         a captured video (recJson strips it). */
+      if (live.file) { rec.video = live.file; rec.videoMime = live.file.type || 'video/mp4'; rec.videoOffset = Math.max(0, Math.round((video.currentTime || 0) * 1000)); }
+    }
     const f = { t: Math.round(now - rec.t0), s: live.state, lm: raw ? raw.map(l => [+l.x.toFixed(4), +l.y.toFixed(4), +(l.z ?? 0).toFixed(3), +(l.visibility ?? 1).toFixed(2)]) : null };
     if (live.state === 'active' && live.session.m) { f.p = +(live.session.m.p ?? 0).toFixed(3); if (live.session.counter) f.rs = live.session.counter.state; if (live.session.faults.active.size) f.f = [...live.session.faults.active]; }
     rec.frames.push(f); rec.aspect = aspect;

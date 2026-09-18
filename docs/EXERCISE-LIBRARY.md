@@ -642,16 +642,16 @@ to be held.
 ### Only during the rep
 
 A fault that watches the movement is judged only while a rep is actually under
-way: on a rep move, once the reading has cleared `rep.attempt`, the same line
-the counter uses to decide a rep has started. Below it the person is at or
+way. On the way up that means once the reading has cleared `rep.attempt`, the
+line the counter uses to decide a rep has started: below it the person is at or
 around their start position — settling, shifting, walking a heel back in,
 lifting a toe to put it down straighter — and none of that is the exercise.
-Counting it fills the review with things they did on purpose.
-
-The leak this closed was the tail of a descent. The counter keeps a rep open
-until the reading is back under `rep.rest`, so the last stretch of the way down
-was still "in the rep" while the person was already home: on a recorded bridge
-set, one firing in fourteen was a toe lifted at 30 % of the way down.
+Counting it fills the review with things they did on purpose. On the way down
+the rep is the counter's until it closes it, at `rep.rest` or where the reading
+settles: a toe that comes up as the hips land is the exercise going wrong, not
+an adjustment. On a recorded bridge set the biggest toe lift of the set, 25 %
+of shin, was at 18 % of the way up with the hips coming down, and a floor at
+the attempt line on both legs of the rep threw it away.
 
 What happens at the start position is not unjudged — it belongs to the start
 checks, and they are judged **through** the pause rather than latched on the
@@ -777,9 +777,10 @@ it where it was.
 Knowing it does. Between reps the body has stopped, so the session samples
 every reading there (`SetSession.noteQuiet`) and the middle 80 % of what a
 reading did, halved, is that reading's own **wobble**, in its own units. A
-fault has to clear its threshold *and* the wobble — twice over for a fault
-measured as a change from the start of the rep, which is two samples and
-carries it twice. `fault.noise` in `settings.json` tunes it; a clean
+fault has to clear its threshold *and* the wobble — once, even for a fault
+measured as a change from the start of the rep: the start is read from a body
+that has stopped (see **Has the body stopped?**), so it sits near the middle of
+its own wobble and does not add a whole second one. `fault.noise` in `settings.json` tunes it; a clean
 measurement wobbles near zero and is judged exactly as it always was. One
 pause is whatever that half-second happened to do, so the figure used is the
 middle one of the last few, which also stops it growing when the feet

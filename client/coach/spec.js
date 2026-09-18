@@ -608,7 +608,9 @@
       /* and what it has to clear on top, because the reading is not perfectly still even when the
          person is: the measurement's own wobble, measured between reps (engine.js noteQuiet) and
          handed over on m.noise. A reading compared with where it was at the start of the rep is
-         two samples, so it carries the wobble twice. Nothing is widened where nothing was
+         two samples — but the start is read from a body that has stopped (coach.js waits for
+         that before calibrating), so it sits near the middle of its own wobble and does not add
+         a whole second one; the wobble counts once. Nothing is widened where nothing was
          measured, so a Studio trace or a test that supplies no noise reads exactly as before. */
       const noiseK = (fs.noise || {}).clear ?? 1;
       const iRead = (liveFaults.find((x) => x.id === f.id) || {}).i;      /* which reading this fault is on */
@@ -616,7 +618,7 @@
       const wobble = (m) => {
         if (!m.noise || iRead == null) return 0;
         const n = m.noise[iRead]; if (!Number.isFinite(n) || n <= 0) return 0;
-        return noiseK * n * (f.rel === 'change' ? 2 : 1);
+        return noiseK * n;
       };
       const over = (m) => {
         if (!m.gates[f.id]) return false;
@@ -652,16 +654,25 @@
          has the rep open — it does not close until the reading is back under `rep.rest` — but the
          person is already home. On a recorded bridge set that was one firing in fourteen: a toe
          lifted at 30 % of the way down.
+         On the way down the rep is the counter's: it stays open until the reading is back under
+         the rest line or has settled, and a toe that comes up as the hips land is the exercise
+         going wrong, not an adjustment — on a recorded bridge set the biggest toe lift of the set,
+         25 % of shin, was at 18 % of the way up with the hips coming down, and a floor at the
+         attempt line on both legs of the rep threw it away. So the floor is the attempt line on
+         the way up (below it the counter has not called a rep yet and the person is settling into
+         one) and the rest line on the way back (below it the counter closes the rep, and what
+         follows is the pause).
          What happens at the start position is not unjudged, it is judged by the start checks
          (`phase: "start"`), which run through the pause and mark the rep with the position it
          actually began from. A move that means to watch outside the rep says so — `phase: "rest"`
          for the pause, `phase: "any"` for both — and those are left alone here. `minP` stays what
          it was: an author's extra "not until this far in", on top of this. */
-      const floor = spec.type === 'reps' && phase === 'moving' ? Math.max(gate, ATTEMPT) : gate;
+      const REST = k.REST;
+      const floorAt = (m) => spec.type === 'reps' && phase === 'moving' ? Math.max(gate, m.repState === 'back' ? REST : ATTEMPT) : gate;
       return {
         ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, phase,
         ...(persistFor ? { persistFor } : {}),        /* the tracker asks per frame: unsure landmarks hold longer */
-        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= floor) && m.gates[f.id] && over(m),
+        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= floorAt(m)) && m.gates[f.id] && over(m),
       };
     });
 

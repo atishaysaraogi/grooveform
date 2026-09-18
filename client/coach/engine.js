@@ -790,6 +790,7 @@
          their own noise (noteQuiet) */
       if (this.counter) this.noteQuiet(m, t, this.counter.state === 'rest');
       if (this.noise) m.noise = this.noise;
+      m.repState = this.counter ? this.counter.state : null;      /* which way the rep is going (spec.js floor) */
       const cues = this.faults.update(m, phase, t);
       if (this.counter) for (const id of this.faults.active) this.counter.noteFault(id);
       if (this.frames % 3 === 0) this.trace.push([Math.round(t - this.startT), +(m.p ?? 0).toFixed(2)]);

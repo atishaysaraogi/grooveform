@@ -1006,6 +1006,33 @@ async function runCoachedSet(page, side = 'right') {
     if (await page.$('#rv-submit')) { await page.click('#rv-submit'); await page.waitForFunction(() => !document.querySelector('#coach:not([hidden])')); }
   });
 
+  await step('a video file analysed is the set\'s own video: the replay and the export get the picture', async () => {
+    const page = pro;
+    await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-file-input', { state: 'attached' });
+    await page.evaluate(() => {
+      const REST = { 0: [0.852, 0.576], 7: [0.871, 0.642], 8: [0.865, 0.576], 11: [0.786, 0.650], 12: [0.772, 0.584], 13: [0.632, 0.654], 14: [0.616, 0.605], 15: [0.474, 0.682], 16: [0.485, 0.623], 23: [0.467, 0.590], 24: [0.470, 0.532], 25: [0.374, 0.301], 26: [0.358, 0.284], 27: [0.297, 0.644], 28: [0.285, 0.570], 29: [0.318, 0.687], 30: [0.296, 0.633], 31: [0.203, 0.685], 32: [0.182, 0.593] };
+      const TOP = { 0: [0.862, 0.560], 7: [0.880, 0.633], 8: [0.875, 0.574], 11: [0.786, 0.648], 12: [0.786, 0.568], 13: [0.626, 0.672], 14: [0.626, 0.573], 15: [0.457, 0.691], 16: [0.491, 0.567], 23: [0.522, 0.443], 24: [0.532, 0.382], 25: [0.322, 0.267], 26: [0.339, 0.244], 27: [0.295, 0.650], 28: [0.313, 0.587], 29: [0.318, 0.691], 30: [0.344, 0.646], 31: [0.196, 0.704], 32: [0.216, 0.644] };
+      const lying = (k) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 });
+        for (const id in REST) { const a = REST[id], b = TOP[id]; p[+id] = { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, z: 0, visibility: 0.95 }; } return p; };
+      window.__mockPose = (t) => { if (t < 5000) return lying(0); const tt = t - 5000, ph = (tt % 3000) / 3000; return lying(Math.sin(Math.PI * ph)); };
+    });
+    /* the page's own "Analyze a video…" path, with the 36 s fixture; the pose stream is the mock */
+    await page.setInputFiles('#do-file-input', path.join(__dirname, 'fixtures', 'blank-36s.webm'));
+    await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 30000 });
+    const early = await page.evaluate(() => { const r = window.OnTrackCoach.live.rec; return { hasVideo: r.video instanceof Blob, mime: r.videoMime, offset: r.videoOffset, facing: r.facing, source: r.source && r.source.name }; });
+    assert.ok(early.hasVideo, 'the file is on the recording from the first analysed frame: ' + JSON.stringify(early));
+    assert.equal(early.facing, 'environment', 'and is never mirrored');
+    assert.ok(Number.isFinite(early.offset) && early.offset >= 0, 'time 0 of the recording sits somewhere in the file: ' + JSON.stringify(early));
+    /* the file ends before the set does, which finishes it */
+    await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.OnTrackCoach.restActive(), null, { timeout: 60000 });
+    const out = await page.evaluate(() => { const r = window.OnTrackCoach.lastRec;
+      const j = JSON.parse(window.OnTrackCoach.recJson());
+      return { hasVideo: r.video instanceof Blob, reps: r.review.reps, jsonHasVideo: 'video' in j, replayHasVideo: !!document.querySelector('#rv-replay canvas.rp-stage') }; });
+    assert.ok(out.hasVideo && out.reps >= 3, 'the set ran on the file and kept it: ' + JSON.stringify(out));
+    assert.equal(out.jsonHasVideo, false, 'the diagnostics still carry landmarks only');
+    if (await page.$('#rv-submit')) { await page.click('#rv-submit'); await page.waitForFunction(() => !document.querySelector('#coach:not([hidden])')); }
+  });
+
   await step('the coach points: an arrow on the joint that has to move, to the target and then back to the start', async () => {
     const page = pro;                      /* already signed in and subscribed, so the bridge opens */
     await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');
