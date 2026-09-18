@@ -93,6 +93,9 @@
      the hip to 2.4 % against One Euro's 3.6 — which is a separate question from this one. */
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
   const STILL_STEP = 0.004, STILL_FRAMES = 10, RELEASE_STEP = 0.025, RELEASE_FRAMES = 3;
+  /* how far the progress reading may wander and still count as a body that has stopped, as a share
+     of the rep's range — the same tolerance the per-rep start uses */
+  const STILL_P = 0.04;
   class PoseSmoother {
     constructor(opts = {}) {
       this.minCutoff = opts.minCutoff ?? 1.0;
@@ -581,7 +584,7 @@
       this.quiet = []; this.pauses = []; this.noise = null; this.qP = null; this.qSince = 0;
       /* the set-up faults true of the position the NEXT rep starts from, and whether they have
          already been counted (the check before the count-in counts its own) */
-      this.startPend = []; this.startPendCounted = false; this.startChecked = false; this.restFrom = 0;
+      this.startPend = []; this.startPendCounted = false; this.startChecked = false; this.startCheckT = 0; this.restFrom = 0; this.restQ = null;
     }
     calibrate(pts, side) { this.side = side; this.ref = this.ex.calibrate(pts, side, this.opts); this.calT = this.lastT; this.pHist = []; }
     /* The start position was read while the person was still, but still is not the same as ready:
@@ -623,8 +626,15 @@
        Checked once per pause, not once per frame: checkStart calibrates a throwaway reference of
        its own, which is real work, and the answer cannot change while the person is still. */
     checkRepStart(pts, t) {
-      if (!this.counter || !this.ex.checkStart || this.startChecked) return;
-      this.startChecked = true;
+      if (!this.counter || !this.ex.checkStart) return;
+      /* Judged over and over through the pause, not once: what a rep should be marked with is the
+         position it actually began from, and a pause is where people fix things. Someone whose
+         feet were too close, who then walks them out and settles, has started that rep correctly
+         — a check that latched on the first still moment would say otherwise for the rest of the
+         set. The last answer before the rep starts is the one the rep carries. */
+      const still = ((settingsOr().rep || {}).startAgain || {}).still ?? 400;
+      if (this.startChecked && t - this.startCheckT < still) return;
+      this.startChecked = true; this.startCheckT = t;
       let ids = []; try { ids = this.startCheck(pts, this.side).map((f) => f.id); } catch (e) { return; }
       this.startPend = ids; this.startPendCounted = false;
     }
@@ -713,13 +723,18 @@
           }
         }
       } else if (this.counter && this.counter.state !== 'rest') { this.restP = null; }
-      /* The still moment between reps is the next rep's start position, so judge it there, once.
-         It keeps its own clock: startAgain pushes restSince forward every time it moves the start,
-         and a gate hung off that one never opens. */
+      /* The still moment between reps is the next rep's start position, so judge it there. Its own
+         clock, because startAgain pushes restSince forward every time it moves the start and a
+         gate hung off that one never opens — and a clock that measures stillness, not just the
+         counter's opinion. The counter smooths the reading before it decides a rep has begun, so
+         for a few tenths of a second after the person has started moving it still says "rest":
+         judging the start position there reads the first part of the rep as the position it began
+         from. The clock restarts whenever the reading moves. */
       if (this.counter) {
-        if (this.counter.state !== 'rest') this.restFrom = 0;
-        else if (!this.restFrom) this.restFrom = t;
-        else if (t - this.restFrom >= (((settingsOr().rep || {}).startAgain || {}).still ?? 400)) this.checkRepStart(pts, t);
+        const cfg = (settingsOr().rep || {}).startAgain || {};
+        if (this.counter.state !== 'rest') { this.restFrom = 0; this.restQ = null; }
+        else if (this.restQ == null || Math.abs((m.p ?? 0) - this.restQ) > STILL_P) { this.restQ = m.p ?? 0; this.restFrom = t; }
+        else if (t - this.restFrom >= (cfg.still ?? 400)) this.checkRepStart(pts, t);
       }
       if (rebased) m = this.ex.measure(pts, this.side, this.ref);
       this.m = m;

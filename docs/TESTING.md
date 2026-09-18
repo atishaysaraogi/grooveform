@@ -121,3 +121,4 @@ CHROMIUM_PATH=/usr/bin/chromium NODE_PATH=$(npm root -g) npm run test:e2e
 ## CI
 
 `.github/workflows/ci.yml` runs unit + API tests, then the browser suite with Playwright's Chromium, then a Docker build, on every push; pushes to `main` that pass deploy to Fly.
+52. Between reps on a bridge, lift a toe and put it down while the hips are still on the floor, and again at the very bottom of a descent: neither is counted or cued. Lift it at the top of a rep: counted. Walk the heels in until “feet too close” shows, then walk them back out and start the rep: that rep is not marked with it; leave them in and start: it is.

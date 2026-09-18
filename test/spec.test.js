@@ -454,10 +454,13 @@ test('a rep move\'s faults watch the rep, not the pause between reps', () => {
   assert.equal(mk('any').phase, undefined, 'or both');
   /* and the tracker honours it: leaning while at rest is not a fault of the set */
   const f = mk(); const tr = new E.FaultTracker([f]);
-  const m = { p: 0, gates: { lean: true }, 'f_lean': -20, conf: { lean: 1 } };
-  for (const t of [1000, 1500, 2000, 2500]) assert.deepEqual(tr.update(m, 'rest', t).map((x) => x.id), [], 'quiet between reps, however long the pause');
-  tr.update(m, 'moving', 3000);
-  assert.deepEqual(tr.update(m, 'moving', 3600).map((x) => x.id), ['lean'], 'and said once a rep is under way');
+  const at = (p) => ({ p, gates: { lean: true }, 'f_lean': -20, conf: { lean: 1 } });
+  for (const t of [1000, 1500, 2000, 2500]) assert.deepEqual(tr.update(at(0.9), 'rest', t).map((x) => x.id), [], 'quiet between reps, however long the pause');
+  /* nor is it one at the bottom of a descent, where the counter still has the rep open but the
+     person is back at the position they started from — that is the start checks' ground */
+  for (const t of [3000, 3500, 4000]) assert.deepEqual(tr.update(at(0.2), 'moving', t).map((x) => x.id), [], 'or under the attempt line, whatever the counter still calls it');
+  tr.update(at(0.9), 'moving', 5000);
+  assert.deepEqual(tr.update(at(0.9), 'moving', 5600).map((x) => x.id), ['lean'], 'and said once a rep is under way');
   /* a hold is unchanged: its faults watch the held position */
   const h = JSON.parse(JSON.stringify(sideLegRaise)); h.type = 'hold'; delete h.progress;
   h.hold = { conditions: [{ metric: { kind: 'vertical', pts: ['HIP', 'KNEE'] }, min: 20 }] };

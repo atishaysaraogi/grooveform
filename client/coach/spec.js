@@ -642,10 +642,26 @@
         ? (f.phase === 'any' ? undefined : f.phase === 'rest' ? 'rest' : 'moving')
         : (f.phase === 'moving' || f.phase === 'rest' ? f.phase : undefined);
       const needPosition = spec.type === 'hold' && f.phase !== 'any';
+      /* ---------- a fault is about the rep ----------
+         A fault that watches the movement is only judged while a rep is actually under way, which
+         on a rep move means the reading has cleared the attempt line — the same line the counter
+         uses to decide a rep has started. Below it the person is at or around their start
+         position: settling, shifting, walking a heel back in, lifting a toe to put it down
+         straighter. None of that is the exercise, and counting it fills the review with things
+         they did on purpose. It matters most at the tail of a descent, where the counter still
+         has the rep open — it does not close until the reading is back under `rep.rest` — but the
+         person is already home. On a recorded bridge set that was one firing in fourteen: a toe
+         lifted at 30 % of the way down.
+         What happens at the start position is not unjudged, it is judged by the start checks
+         (`phase: "start"`), which run through the pause and mark the rep with the position it
+         actually began from. A move that means to watch outside the rep says so — `phase: "rest"`
+         for the pause, `phase: "any"` for both — and those are left alone here. `minP` stays what
+         it was: an author's extra "not until this far in", on top of this. */
+      const floor = spec.type === 'reps' && phase === 'moving' ? Math.max(gate, ATTEMPT) : gate;
       return {
         ...common, persist: f.persist || fs.persist, cooldown: f.cooldown || fs.cooldown, phase,
         ...(persistFor ? { persistFor } : {}),        /* the tracker asks per frame: unsure landmarks hold longer */
-        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= gate) && m.gates[f.id] && over(m),
+        check: (m) => (needPosition ? m.inPosition !== false : (m.p ?? 0) >= floor) && m.gates[f.id] && over(m),
       };
     });
 

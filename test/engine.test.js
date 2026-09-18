@@ -483,3 +483,111 @@ test('PoseSmoother: a planted toe is held steady, an impossible foot length is h
   assert(real.n >= 3, 'a heel that genuinely lifts still is: ' + real.n);
   assert.strictEqual(quiet.reps, 5, 'and the reps are counted either way: ' + quiet.reps);
 }
+/* ---- A fault is about the rep, and a pause is not the rep. ----
+   Between reps people adjust: a heel walked in, a toe lifted and put down, a shoulder shrugged
+   back into place. None of that is the exercise, and counting it fills the review with things the
+   person did on purpose. Two rules together make that true: a live fault is only judged once the
+   reading has cleared the attempt line, which is where the counter itself says a rep has started
+   (the leak was the tail of a descent — the rep stays open until the reading is back under
+   `rep.rest`, so a toe lifted at 30 % of the way down was counted); and a set-up check is judged
+   over and over through the pause, so what a rep carries is the position it actually began from
+   rather than whatever was true the moment the person first went still. */
+{
+  const SPEC = require('../client/coach/spec.js'), LIB = require('../client/coach/exercise-library.js');
+  const move = (fault) => SPEC.compile({
+    id: 'probe2', name: 'Probe', type: 'reps', view: 'side', tracking: 'form', level: 'beginner',
+    summary: 'x', setup: 'x', brief: 'x', why: 'x', equipment: ['none'], muscles: { primary: ['gluteus maximus'] },
+    camera: { height: 'floor', distance: '2 m', posture: 'lying' },
+    progress: { metric: { kind: 'angle', pts: ['SH', 'HIP', 'KNEE'] }, start: 'calibrated', target: 170 },
+    faults: [fault],
+    guide: { surface: 'x', stop: 'x', cannotSee: 'x', regions: [{ name: 'Hips', points: [{ t: 'x', tracked: true }] }] },
+  }, LIB.kinematics, { lenient: true });
+  const HEEL_UP = { id: 'heel', label: 'Heel up', cue: 'Heel down', tip: 'Down.', severity: 2, threshold: 6, op: '>',
+    metric: { kind: 'height', pts: ['HEEL', 'FOOT'], per: ['KNEE', 'ANK'] } };
+  const lying = (rise, heel) => frame({ 11: [0.66, 0.60], 12: [0.66, 0.61], 23: [0.46, 0.72 - rise * 0.14], 24: [0.46, 0.73 - rise * 0.14],
+    25: [0.30, 0.60], 26: [0.30, 0.61], 27: [0.28, 0.76], 28: [0.28, 0.77],
+    29: [0.30, 0.765 - heel], 30: [0.30, 0.775 - heel], 31: [0.24, 0.765], 32: [0.24, 0.775] });
+  /* run a profile of [rise, heel] pairs, one frame each at 30 fps, recording every time the
+     start position was judged and what it said */
+  function play(ex, profile) {
+    const sess = new E.SetSession(ex, { target: 100 }); const sm = new E.PoseSmoother({ stable: ex.lockable });
+    const judged = []; const inner = ex.checkStart;
+    if (inner) ex.checkStart = function (pts, S, o) { const out = inner.call(ex, pts, S, o); judged.push({ t: at, ids: out.map((f) => f.id).join('+') || '-' }); return out; };
+    let t = 0, at = 0, was = 'rest'; sess.calibrate(sm.update(lying(profile[0][0], profile[0][1]), t, 1), 'L');
+    const below = []; const repAt = [], beganAt = [];
+    for (const [rise, heel] of profile) {
+      t += 1000 / 30; at = t; const before = new Set(sess.faults.active);
+      const r = sess.step(sm.update(lying(rise, heel), t, 1), t);
+      for (const id of sess.faults.active) if (!before.has(id)) below.push({ id, p: +sess.counter.p.toFixed(2), state: sess.counter.state });
+      if (was === 'rest' && sess.counter.state !== 'rest') beganAt.push(t);       /* the rep left the start position here */
+      was = sess.counter.state;
+      if (r.repEvent) repAt.push(t);
+      for (const c of r.cues) sess.ackCue(c.id, t);
+    }
+    if (inner) ex.checkStart = inner;
+    const rv = sess.review();
+    return { rv, below, judged, repAt, beganAt, starts: sess.repEvents.map((e) => (e.rep.startFaults || []).join('+') || '-') };
+  }
+  /* four reps that come down and dwell at a quarter of the way up — the rep is still open there,
+     because the counter does not close it until the reading is back under rest — and the heel
+     comes up during exactly that dwell */
+  const dwell = [];
+  for (let i = 0; i < 50; i++) dwell.push([0, 0]);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 25; i++) dwell.push([Math.sin(Math.PI / 2 * i / 25), 0]);       // up
+    for (let i = 0; i < 25; i++) dwell.push([Math.cos(Math.PI / 2 * i / 25) * 0.8 + 0.2, 0]);  // down to about a fifth
+    for (let i = 0; i < 20; i++) dwell.push([0.22, 0.03]);                              // and the heel lifts there
+    for (let i = 0; i < 30; i++) dwell.push([0, 0]);
+  }
+  const low = play(move(HEEL_UP), dwell);
+  console.log('a heel lifted at the bottom of the descent:', { counted: low.rv.faults.heel ? low.rv.faults.heel.n : 0, reps: low.rv.reps, fired: low.below });
+  assert.ok(low.rv.reps >= 3, 'the reps still count: ' + low.rv.reps);
+  assert.ok(!low.rv.faults.heel, 'a heel lifted below the attempt line is the person adjusting, not a fault: ' + JSON.stringify(low.below));
+  assert.ok(low.below.every((b) => b.p >= 0.32), 'nothing fires under the attempt line at all: ' + JSON.stringify(low.below));
+  /* the same fault, the same size, at the top of the rep: still a fault */
+  const top = [];
+  for (let i = 0; i < 50; i++) top.push([0, 0]);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 45; i++) { const k = Math.sin(Math.PI * i / 45); top.push([k, k > 0.6 ? 0.03 : 0]); }
+    for (let i = 0; i < 30; i++) top.push([0, 0]);
+  }
+  const high = play(move(HEEL_UP), top);
+  console.log('the same heel lift at the top:', { counted: high.rv.faults.heel ? high.rv.faults.heel.n : 0, reps: high.rv.reps });
+  assert.ok(high.rv.faults.heel && high.rv.faults.heel.n >= 3, 'that one is the exercise going wrong: ' + JSON.stringify(high.rv.faults.heel));
+  /* a set-up check, put right during the pause: the rep that follows began from a good position */
+  const START = { ...HEEL_UP, id: 'setup', label: 'Heel up to start', phase: 'start' };
+  const fixed = [];
+  for (let i = 0; i < 50; i++) fixed.push([0, 0]);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 45; i++) fixed.push([Math.sin(Math.PI * i / 45), 0]);
+    for (let i = 0; i < 25; i++) fixed.push([0, 0.03]);     // heel up while resting…
+    for (let i = 0; i < 40; i++) fixed.push([0, 0]);        // …and walked back down before the next rep
+  }
+  const put = play(move(START), fixed);
+  /* judged right up to the moment the rep starts, not latched on the first still moment of the
+     pause — how stale the answer a rep carries is, in milliseconds */
+  const stale = put.beganAt.slice(1).map((b) => { const last = put.judged.filter((j) => j.t <= b).pop(); return last ? Math.round(b - last.t) : null; });
+  /* and how many times it was judged in each pause: a 2.2 s pause at a 400 ms cadence is five or
+     six, where latching on the first still moment gives one or two */
+  const perPause = put.beganAt.slice(1).map((b, i) => put.judged.filter((j) => j.t > put.repAt[i] && j.t <= b).length);
+  console.log('a set-up put right during the pause:', { starts: put.starts, counted: put.rv.faults.setup ? put.rv.faults.setup.n : 0, staleMs: stale, judgedPerPause: perPause });
+  assert.ok(stale.length && stale.every((ms) => ms != null && ms < 600), 'what a rep carries was judged just before it began: ' + JSON.stringify(stale));
+  assert.ok(perPause.every((n) => n >= 4), 'the pause is judged through, not once: ' + JSON.stringify(perPause));
+  assert.ok(put.starts.slice(1).every((s) => s === '-'), 'no rep carries a set-up the person had already fixed: ' + JSON.stringify(put.starts));
+  /* and what a rep carries is the last answer before it, not the first */
+  for (let i = 1; i < put.beganAt.length; i++) {
+    const last = put.judged.filter((j) => j.t <= put.beganAt[i]).pop();
+    if (last) assert.strictEqual(put.starts[i], last.ids, 'and it is that answer, not an earlier one');
+  }
+  /* and one that goes wrong late in the pause and is still wrong when the rep starts: carried */
+  const broke = [];
+  for (let i = 0; i < 50; i++) broke.push([0, 0]);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 45; i++) broke.push([Math.sin(Math.PI * i / 45), 0]);
+    for (let i = 0; i < 25; i++) broke.push([0, 0]);
+    for (let i = 0; i < 40; i++) broke.push([0, 0.03]);     // and it is still wrong when the next rep starts
+  }
+  const kept = play(move(START), broke);
+  console.log('a set-up still wrong when the rep starts:', { starts: kept.starts, counted: kept.rv.faults.setup ? kept.rv.faults.setup.n : 0 });
+  assert.ok(kept.starts.slice(1).filter((s) => s === 'setup').length >= 2, 'that one belongs to the rep: ' + JSON.stringify(kept.starts));
+}

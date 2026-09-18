@@ -114,8 +114,9 @@ from the body's midline, or `"forward"` the way the toes point), `"abs"` and
 | `pelvis` | 0 | pelvis tilt seen from the front |
 
 A fault is a measurement, `"op"` and `"threshold"`, with `"rel": "change"` to
-compare against the calibrated start, `"minP"` to wait until the rep is under
-way, `"persist"` before it is spoken, and — where a plain threshold is not
+compare against the calibrated start, `"minP"` to wait until further into the
+rep than the default (see **Only during the rep** below), `"persist"` before it
+is spoken, and — where a plain threshold is not
 enough — `"when"` (gates: an option value, another measurement's comparison,
 `"inPosition"` / `"notInPosition"`), `"phase"` (`"moving"`, `"rest"`,
 `"any"` for a hold fault that must fire while the person is *out* of position,
@@ -599,6 +600,31 @@ not: a heel that has been off the floor since the first rep is still off the
 floor, and a baseline that crept up with it every rep would quietly stop
 saying so. A demonstrated target is left alone entirely. Each rep records the
 value it was measured from, so the diagnostics show the drift.
+
+### Only during the rep
+
+A fault that watches the movement is judged only while a rep is actually under
+way: on a rep move, once the reading has cleared `rep.attempt`, the same line
+the counter uses to decide a rep has started. Below it the person is at or
+around their start position — settling, shifting, walking a heel back in,
+lifting a toe to put it down straighter — and none of that is the exercise.
+Counting it fills the review with things they did on purpose.
+
+The leak this closed was the tail of a descent. The counter keeps a rep open
+until the reading is back under `rep.rest`, so the last stretch of the way down
+was still "in the rep" while the person was already home: on a recorded bridge
+set, one firing in fourteen was a toe lifted at 30 % of the way down.
+
+What happens at the start position is not unjudged — it belongs to the start
+checks, and they are judged **through** the pause rather than latched on the
+first still moment, so what a rep is marked with is the position it actually
+began from. Someone whose feet were too close, who walks them out and settles,
+has started that rep correctly; on the same recorded set that took "feet too
+close" from seven reps to three, and moved "feet too far" onto the first rep,
+where it belonged. A move that means to watch outside the rep says so —
+`"phase": "rest"` for the pause, `"phase": "any"` for both — and those are left
+alone. `minP` is unchanged: an author's extra "not until this far in", on top
+of this.
 
 ### Which way to move
 
