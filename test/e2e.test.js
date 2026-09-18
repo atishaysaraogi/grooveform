@@ -560,12 +560,13 @@ async function runCoachedSet(page, side = 'right') {
     await st.click('#steps [data-step="export"]'); await st.waitForSelector('#dl-file');
     await st.waitForFunction(() => /Ready to ship/.test(document.body.innerText));
     assert.equal(await st.$eval('[data-k="_region"]', (e) => e.value), 'knee', 'stays in the region it came from');
-    /* whether the move is offered for browsing, and that a choice is only written when it differs from vetted */
+    /* whether the move is offered for browsing, and that a choice is only written when it differs
+       from vetted — this move is vetted, so the choice that has to be written down is "hidden" */
     assert.equal(await st.$eval('[data-chips="listed"] .chip[aria-pressed="true"]', (e) => e.dataset.v), 'auto');
-    await st.click('[data-chips="listed"] [data-v="yes"]');
-    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].listed === true; });
+    await st.click('[data-chips="listed"] [data-v="no"]');
+    await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].listed === false; });
     const withFlag = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return S.regionWith(s, 'knee').entry.listed; });
-    assert.equal(withFlag, true, 'a move shown although it is not vetted says so in its file');
+    assert.equal(withFlag, false, 'a move kept out of the lists although it is vetted says so in its file');
     await st.click('[data-chips="listed"] [data-v="auto"]');
     await st.waitForFunction(() => { const S = window.OnTrackStudio; return S.state.moves[S.state.current].listed === undefined; });
     const noFlag = await st.evaluate(() => { const S = window.OnTrackStudio; const s = S.state.moves[S.state.current]; return 'listed' in S.regionWith(s, 'knee').entry; });
