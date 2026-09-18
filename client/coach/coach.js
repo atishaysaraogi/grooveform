@@ -500,7 +500,7 @@
        move the limb nearest the lens is the one being worked, so the pose decides and the
        choice only tells you how to lie or stand (checked during positioning). */
     current.opts.work = ex.sided && ex.sided.by === 'pick' ? SIDE_CODE[current.opts.side] || null : null;
-    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, steadySince: 0, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false };
+    live = { ex, target, file, session: new E.SetSession(ex, { target, ...current.opts, heightIn: settings.heightIn }), state: 'loading', rec: { version: 1, exercise: ex.id, spec: ex.spec || null, target, opts: { ...current.opts }, source: file ? { name: file.name, size: file.size, type: file.type } : 'camera', settings: { ...settings }, facing, ua: navigator.userAgent, started: new Date().toISOString(), t0: 0, aspect: 0, frames: [], events: [] }, badSince: 0, countdownAt: 0, lastCountSpoken: 0, holdSpoken: {}, lastPoseT: 0, cueTimer: 0, lastP: 0, corr: null, turnedSince: 0, lastTurnCue: 0, sideSwitched: 0, shownDone: false, showPts: null, ghost: null, startAt: 0, startBad: [], startSince: 0, lastStartCue: 0, startSkip: false, stillness: null, showStillness: null, waitedToStart: false };
     smoother.reset(); smoother.setStable(ex.lockable || []); live.rec.lockable = ex.lockable || [];
     try {
       if (file) { overlay('Opening video…', file.name, { progress: 0.05 }); await startFile(file); stage.classList.remove('mirror'); }
@@ -688,9 +688,26 @@
      second rather than every frame — the check calibrates a throwaway reference each time — and
      what they find is spoken once, then repeated on the usual cooldown. */
   const START_SKIP = [{ label: 'Start anyway', cls: 'ghost', fn: () => { if (live) { live.startSkip = true; live.startBad = []; } } }];
+  /* How long the body has to have stopped before the start position is judged at all. Someone
+     lowering themselves onto a mat passes through every wrong position on the way to the right
+     one — heels miles from the hips, one knee still straight — and a check that reads those says
+     so out loud while they are still on their way down. Nothing is assessed until they have
+     arrived: a shade under the settle the count-in waits for, so the verdict is in before the set
+     would have started, and any cue is about where they have actually come to rest. */
+  const STILL = () => E.settings.still || {};
+  /* one tracker for the whole set-up: positioning, the count-in, and the wait before the start
+     position is judged all mean the same thing by "still" */
+  function still() { if (!live.stillness) live.stillness = new E.Stillness(); return live.stillness; }
+  /* the shown end position is a different pose held at a different time, so it keeps its own */
+  function showStill() { if (!live.showStillness) live.showStillness = new E.Stillness(); return live.showStillness; }
   function startStep(pts, now, held) {
     const none = { bad: [], checks: [], actions: null };
     if (!live || live.startSkip || !live.session || !live.ex.faults.some((f) => f.atStart)) return none;
+    if (held < (live.file ? (STILL().file ?? 400) * 0.6 : (STILL().judge ?? 800))) {
+      /* still arriving: no verdict, nothing said, and the next one is taken fresh */
+      live.startBad = []; live.startSince = 0; live.startAt = 0;
+      return { bad: [], checks: [{ label: 'Settling into the start position', ok: null }], actions: null };
+    }
     if (!live.startAt || now - live.startAt > 250) {
       live.startAt = now;
       live.startBad = live.session.startCheck(E.Camera.correctPts(pts, live.corr || cameraCorrection(pts)), wantedSide() || E.nearSide(pts));
@@ -712,11 +729,9 @@
     const c = checksFor(lost ? null : pts, aspect);
     setStatus(c.ok ? 'ok' : 'warn', c.ok ? 'Tracking' : 'Positioning'); setFrame(c.ok ? 'ok' : 'bad');
     if (c.ok) {
-      // must also be still: mid-hip speed
-      const hip = E.mid(pts[23], pts[24]);
-      const moving = live.prevHip && E.dist(hip, live.prevHip) > (live.file ? 0.03 : 0.012); live.prevHip = hip;
-      if (moving) live.steadySince = now; else if (!live.steadySince) live.steadySince = now;
-      const held = now - live.steadySince;
+      /* and it must have stopped — how far the hip has travelled over the last few hundred
+         milliseconds, not how far it moved between two frames (E.Stillness) */
+      const held = still().step(pts, now);
       /* The start position itself, judged by the move's own "start" faults: heels too far away,
          knee already bent, band already taut. Said here, where it can still be fixed, rather than
          counted against every rep of the set. The set waits for it — but never forever: after a
@@ -726,16 +741,16 @@
       const tilt = !live.file && levelSensor.seen >= 5 && levelSensor.roll != null && Math.abs(levelSensor.roll) >= 3 && Math.abs(levelSensor.roll) <= ((E.settings.camera || {}).maxRoll || 25) ? ` · phone tilted ${Math.round(Math.abs(levelSensor.roll))}°, corrected` : '';
       overlay(start.bad.length ? 'Fix the start position' : 'Hold your start position',
         start.bad.length ? start.bad[0].cue : live.ex.type === 'reps' ? 'Stay still for a moment — the coach is measuring your start position.' : 'Get into position and hold still.',
-        { checks: c.checks.concat(start.checks), progress: Math.min(1, held / 1200), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt, actions: start.actions });
-      if (held > (live.file ? 400 : 1200) && !start.bad.length) {
+        { checks: c.checks.concat(start.checks), progress: Math.min(1, held / (live.file ? STILL().file ?? 400 : STILL().hold ?? 1200)), note: (live.ex.upperBody ? 'Head to hips visible · ' : 'Whole body visible · ') + (live.ex.view === 'front' ? 'facing the camera' : 'side-on') + tilt, actions: start.actions });
+      if (held >= (live.file ? STILL().file ?? 400 : STILL().hold ?? 1200) && !start.bad.length) {
         /* Some moves ask for the end of the range once, before the set, so the target is measured on
            this body rather than assumed (see showStep). Asked once per exercise, not once per set. */
-        if (live.ex.show && !live.shownDone && !live.file && current.shownFor !== live.ex.id) { live.state = 'show'; live.showAt = now; live.showSteady = 0; live.showHip = null; live.showSpoken = false; return; }
+        if (live.ex.show && !live.shownDone && !live.file && current.shownFor !== live.ex.id) { live.state = 'show'; live.showAt = now; showStill().reset(); live.showSpoken = false; return; }
         /* The side was chosen before the set, so there is nothing to identify — start counting in. */
         live.state = 'countdown'; live.countdownAt = now - (live.file ? 2000 : 0); live.lastCountSpoken = 0;
       }
     } else {
-      live.steadySince = 0;
+      still().reset();
       if (now - (live.lastPosCue || 0) > 6000 && c.msg && cueOn(live.ex, 'position')) { live.lastPosCue = now; voice.say(c.msg, { priority: 1 }); }
       /* Always offer a way out: if the camera cannot see the whole body the set never starts,
          and without these the overlay is a dead end. */
@@ -749,29 +764,42 @@
      once, held still, with the equipment slack, and measures it. What was demonstrated becomes the
      target for the set; the file's number stays as the fallback if the pose cannot be read. */
   const SHOW_EXITS = [
-    { label: 'Skip — use the usual target', cls: 'ghost', fn: () => { if (!live) return; live.shownDone = true; live.showPts = null; live.state = 'position'; live.steadySince = 0; } },
+    { label: 'Skip — use the usual target', cls: 'ghost', fn: () => { if (!live) return; live.shownDone = true; live.showPts = null; live.state = 'position'; still().reset(); } },
     { label: '← Back to setup', cls: 'ghost', fn: () => exitLive() },
   ];
   function showStep(pts, now, lost) {
     const ask = live.ex.show.ask;
     if (!live.showSpoken) { live.showSpoken = true; const w = cueAt(live.ex, 'show', `First, show me: ${ask}. Hold it there.`); if (w) voice.say(w, { priority: 2 }); }
     const note = 'No band or weight for this — the coach is measuring what the end of the range looks like on you.';
-    if (lost || !pts) { live.showSteady = 0; overlay('Show me the end position', ask, { note, actions: SHOW_EXITS }); return; }
-    const hip = E.mid(pts[23], pts[24]);
-    const moving = live.showHip && E.dist(hip, live.showHip) > 0.014; live.showHip = hip;
-    if (moving) live.showSteady = 0; else if (!live.showSteady) live.showSteady = now;
-    const held = live.showSteady ? now - live.showSteady : 0, waited = now - live.showAt;
-    overlay('Show me the end position', ask, { progress: Math.min(1, waited < 2500 ? 0 : held / 1200), note, actions: SHOW_EXITS });
+    if (lost || !pts) { showStill().reset(); overlay('Show me the end position', ask, { note, actions: SHOW_EXITS }); return; }
+    /* held still by the same measure as everything else in the set-up */
+    const hold = STILL().hold ?? 1200;
+    const held = showStill().step(pts, now), waited = now - live.showAt;
+    overlay('Show me the end position', ask, { progress: Math.min(1, waited < 2500 ? 0 : held / hold), note, actions: SHOW_EXITS });
     /* a couple of seconds to get there, then a moment held still */
-    if (waited > 2500 && held > 1200) {
+    if (waited > 2500 && held >= hold) {
       live.showPts = pts.map((p) => ({ ...p })); live.shownDone = true;
-      live.state = 'position'; live.steadySince = 0; live.prevHip = null;
+      live.state = 'position'; still().reset();
       voice.say('Got it. Back to the start position.', { priority: 2 });
     }
   }
+  /* The count-in is three seconds of getting ready, and people use them: a last shuffle, a breath,
+     a heel walked in. Everything the set is measured against is read at the end of it — the
+     baselines, the target, the set-up check that is counted against the whole set — so it is read
+     from a body that has stopped, not from whichever frame the count happened to land on. If they
+     are still moving the count waits, up to a point, because a person who cannot hold still should
+     not be locked out of their own set. */
   function countdownStep(pts, now) {
     const elapsed = now - live.countdownAt; const n = 3 - Math.floor(elapsed / 1000);
     if (n !== live.lastCountSpoken && n > 0) { live.lastCountSpoken = n; if (cueOn(live.ex, 'countIn')) voice.say(String(n), { priority: 2 }); voice.beep(660, 0.06); }
+    if (elapsed >= 3000) {
+      const held = still().step(pts, now);
+      if (held < (STILL().ready ?? 400) && elapsed < 3000 + (STILL().readyWait ?? 2500)) {
+        overlay('', 'Hold still — reading your start position…', { count: 'GO' });
+        if (!live.waitedToStart) { live.waitedToStart = true; recEvent('waitingToStart', {}); }
+        return;
+      }
+    }
     overlay('', 'Get ready…', { count: n > 0 ? n : 'GO' });
     if (elapsed >= 3000) {
       /* A 'pick' move works the limb the person chose; otherwise the side the lens can see. */

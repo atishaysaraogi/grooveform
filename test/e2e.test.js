@@ -957,6 +957,55 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('nothing about the start position is said while the person is still getting into it', async () => {
+    const page = pro;
+    await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');
+    /* Six seconds of arriving — shuffling into place with the heels miles from the hips, which is
+       what "feet too far away" is written to catch — and then they settle, correctly, and bridge.
+       Nothing about the start position should be named while they are on their way there. */
+    await page.evaluate(() => {
+      const REST = { 0: [0.852, 0.576], 7: [0.871, 0.642], 8: [0.865, 0.576], 11: [0.786, 0.650], 12: [0.772, 0.584], 13: [0.632, 0.654], 14: [0.616, 0.605], 15: [0.474, 0.682], 16: [0.485, 0.623], 23: [0.467, 0.590], 24: [0.470, 0.532], 25: [0.374, 0.301], 26: [0.358, 0.284], 27: [0.297, 0.644], 28: [0.285, 0.570], 29: [0.318, 0.687], 30: [0.296, 0.633], 31: [0.203, 0.685], 32: [0.182, 0.593] };
+      const TOP = { 0: [0.862, 0.560], 7: [0.880, 0.633], 8: [0.875, 0.574], 11: [0.786, 0.648], 12: [0.786, 0.568], 13: [0.626, 0.672], 14: [0.626, 0.573], 15: [0.457, 0.691], 16: [0.491, 0.567], 23: [0.522, 0.443], 24: [0.532, 0.382], 25: [0.322, 0.267], 26: [0.339, 0.244], 27: [0.295, 0.650], 28: [0.313, 0.587], 29: [0.318, 0.691], 30: [0.344, 0.646], 31: [0.196, 0.704], 32: [0.216, 0.644] };
+      const pose = (k, footOut, jitter) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 });
+        for (const id in REST) { const a = REST[id], b = TOP[id];
+          let x = a[0] + (b[0] - a[0]) * k, y = a[1] + (b[1] - a[1]) * k;
+          if (footOut && [27, 28, 29, 30, 31, 32].includes(+id)) x -= footOut;    /* feet walked away from the hips */
+          p[+id] = { x: x + jitter, y: y + jitter, z: 0, visibility: 0.95 }; }
+        return p; };
+      window.__mockPose = (t) => {
+        if (t < 6000) return pose(0, 0.09, Math.sin(t / 25) * 0.03);   /* arriving: feet out, and shuffling about */
+        if (t < 12500) return pose(0, 0, 0);                            /* arrived, and still */
+        const tt = t - 12500, rep = Math.floor(tt / 3000), ph = (tt % 3000) / 3000;
+        return rep >= 12 ? pose(0, 0, 0) : pose(Math.sin(Math.PI * ph), 0, 0);
+      };
+    });
+    await page.click('#do-start');
+    /* while they are arriving, the coach holds its tongue: no verdict, and the overlay says so */
+    await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'position', null, { timeout: 15000 });
+    const arriving = await page.evaluate(async () => {
+      const C = window.OnTrackCoach, seen = [];
+      for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 50)); const L = C.live; if (!L) break;
+        if (L.state !== 'position') break;
+        seen.push({ bad: (L.startBad || []).length, held: L.steadySince ? 1 : 0 }); }
+      return { seen, said: (C.live && C.live.rec.events || []).filter((e) => e.type === 'startFault').length };
+    });
+    assert.ok(arriving.seen.length > 10, 'there was time to watch them arrive: ' + arriving.seen.length);
+    assert.ok(arriving.seen.every((s) => s.bad === 0), 'no set-up verdict while they are still moving into place');
+    assert.equal(arriving.said, 0, 'and nothing said about it');
+    await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 25000 });
+    await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.OnTrackCoach.restActive(), null, { timeout: 60000 });
+    const out = await page.evaluate(() => { const r = window.OnTrackCoach.lastRec;
+      return { faults: Object.keys(r.review.faults || {}), said: r.events.filter((e) => e.type === 'startFault').length,
+        noted: r.events.filter((e) => e.type === 'startFaults').length, reps: r.review.reps }; });
+    assert.equal(out.said, 0, 'nothing about the start position was ever spoken: ' + JSON.stringify(out));
+    assert.equal(out.noted, 0, 'and none was counted against the set: ' + JSON.stringify(out));
+    assert.ok(!out.faults.includes('feet'), 'the feet they arrived with are not a fault of the set: ' + JSON.stringify(out));
+    assert.ok(out.reps >= 5, 'and the set ran: ' + JSON.stringify(out));
+    /* hand the page back the way it was found: the review is a full-screen panel, and the next
+       step opens the same URL, which the router treats as no navigation at all */
+    if (await page.$('#rv-submit')) { await page.click('#rv-submit'); await page.waitForFunction(() => !document.querySelector('#coach:not([hidden])')); }
+  });
+
   await step('the coach points: an arrow on the joint that has to move, to the target and then back to the start', async () => {
     const page = pro;                      /* already signed in and subscribed, so the bridge opens */
     await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');

@@ -389,15 +389,43 @@
      been still for holdMs — the coach's positioning step, one smoothed frame at a time. step()
      returns the time it settled at, once; null before and after. A phone video starts wherever the
      phone did (walking in, lying down), so a take from one calibrates here, not at a fixed moment. */
+  /* ---------------- Has the body stopped? ----------------
+     Not "did it move between these two frames". At 55 frames a second a person lowering themselves
+     onto a mat moves the mid-hip about four thousandths of the frame from one frame to the next,
+     and the tolerance this used to carry was twelve — so on a real recorded bridge set the test
+     never once said "moving", not even in the middle of a rep, and "still" meant no more than "in
+     frame". What separates is how far the hip has travelled over a window. On that same set, over
+     400 ms: 0.003 of the frame while the person lay settled, 0.006 between reps, 0.035 through the
+     count-in (they were still getting comfortable), 0.064 in the middle of a rep.
+     `still(pts, t)` returns how long the body has been still, in ms, or 0. */
+  class Stillness {
+    constructor(opts = {}) { const c = (SETTINGS && SETTINGS.still) || {};
+      this.window = opts.window ?? c.window ?? 400; this.move = opts.move ?? c.move ?? 0.02;
+      this.buf = []; this.since = 0; }
+    reset() { this.buf.length = 0; this.since = 0; }
+    /* how far the hip has been from where it is now, at its furthest, over the window */
+    step(pts, t) {
+      if (!pts || !pts[23] || !pts[24]) { this.reset(); return 0; }
+      const hip = mid(pts[23], pts[24]);
+      this.buf.push([t, hip]);
+      while (this.buf.length > 1 && t - this.buf[0][0] > this.window) this.buf.shift();
+      if (t - this.buf[0][0] < this.window * 0.8) return 0;        /* not enough history to say yet */
+      let far = 0; for (const [, h] of this.buf) far = Math.max(far, dist(hip, h));
+      if (far > this.move) { this.since = 0; return 0; }
+      /* it has been still since the oldest frame in the window, not since the window filled —
+         otherwise every reading of "still for a second" costs a spare window on top */
+      if (!this.since) this.since = this.buf[0][0];
+      return Math.max(1, t - this.since);
+    }
+  }
   class Settle {
-    constructor(ex, { holdMs = 1200, moveTol = 0.012 } = {}) { this.ex = ex; this.holdMs = holdMs; this.moveTol = moveTol; this.since = 0; this.prevHip = null; this.at = null; }
+    constructor(ex, { holdMs, still } = {}) { this.ex = ex;
+      this.holdMs = holdMs ?? ((SETTINGS && SETTINGS.still) || {}).hold ?? 1200;
+      this.still = new Stillness(still); this.at = null; }
     step(pts, t, aspect = 1) {
       if (this.at != null) return null;
-      if (!pts || !positionCheck(pts, this.ex, aspect).ok) { this.since = 0; this.prevHip = null; return null; }
-      const hip = mid(pts[23], pts[24]);
-      const moving = this.prevHip && dist(hip, this.prevHip) > this.moveTol; this.prevHip = hip;
-      if (moving || !this.since) this.since = t;
-      if (t - this.since >= this.holdMs) { this.at = t; return t; }
+      if (!pts || !positionCheck(pts, this.ex, aspect).ok) { this.still.reset(); return null; }
+      if (this.still.step(pts, t) >= this.holdMs) { this.at = t; return t; }
       return null;
     }
   }
@@ -825,7 +853,7 @@
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Stillness, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodyHeight, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the

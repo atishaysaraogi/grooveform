@@ -601,6 +601,44 @@ floor, and a baseline that crept up with it every rep would quietly stop
 saying so. A demonstrated target is left alone entirely. Each rep records the
 value it was measured from, so the diagnostics show the drift.
 
+### Has the body stopped?
+
+Not "did it move between these two frames". At 55 frames a second a person
+lowering themselves onto a mat moves the mid-hip about four thousandths of the
+frame from one frame to the next, and the tolerance the coach carried was
+twelve — so on a real recorded bridge set the test never once said "moving",
+not even in the middle of a rep, and "still" meant no more than "in frame".
+Everything hung off it inherited that: the count-in started a second and a bit
+after the framing checks passed, whatever the person was doing, and the set-up
+check ran while they were still shuffling into place and named faults they were
+on their way to fixing.
+
+What separates is how far the hip has travelled over a window
+(`FormEngine.Stillness`, `settings.json` → `still`). On that same set, over
+400 ms: 0.003 of the frame lying settled, 0.006 between reps, 0.035 through the
+count-in — they were still getting comfortable — and 0.064 mid-rep. The
+tolerance is 0.02. The clock runs from the oldest frame in the window rather
+than from the moment the window filled, so "still for a second" still means a
+second and does not quietly cost a spare window on top.
+
+Three things wait on it, and they are the answer to "don't assess anything
+until the person is in position":
+
+- the **count-in** starts after `still.hold` (1200 ms) of it, as before;
+- the **start position is not judged at all** until `still.judge` (800 ms) of
+  it — shorter than the hold, so the verdict is in before the set would begin,
+  and nothing is named while the person is on their way there;
+- the **count-in waits at zero** for `still.ready` (400 ms) of it before
+  calibrating, because everything the set is measured against is read at that
+  instant — the baselines, the target, the set-up check counted against the
+  whole set — and it should be read from a body that has stopped rather than
+  from whichever frame the count landed on. It waits at most `still.readyWait`,
+  because someone who cannot hold still should not be locked out of their set.
+
+The same measure decides where a recorded video settles (`FormEngine.Settle`,
+which the Studio calibrates from) and how long a demonstrated end position has
+to be held.
+
 ### Only during the rep
 
 A fault that watches the movement is judged only while a rep is actually under
