@@ -711,7 +711,7 @@
   function startStep(pts, now, held) {
     const none = { bad: [], checks: [], actions: null };
     if (!live || live.startSkip || !live.session || !live.ex.faults.some((f) => f.atStart)) return none;
-    if (held < (live.file ? (STILL().file ?? 400) * 0.6 : (STILL().judge ?? 800))) {
+    if (held < (STILL().judge ?? 800)) {
       /* still arriving: no verdict, nothing said, and the next one is taken fresh */
       live.startBad = []; live.startSince = 0; live.startAt = 0;
       return { bad: [], checks: [{ label: 'Settling into the start position', ok: null }], actions: null };

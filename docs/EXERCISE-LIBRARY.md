@@ -639,6 +639,30 @@ The same measure decides where a recorded video settles (`FormEngine.Settle`,
 which the Studio calibrates from) and how long a demonstrated end position has
 to be held.
 
+### Nothing until the person has arrived
+
+A start read while the person was still sitting up puts the resting body most
+of the way to the target from the first frame: the counter calls a rep at once,
+and the faults judge the person lying down as the exercise. On a recorded bridge
+set "heels on the ground" was said with the person lying still, four seconds
+before the real start was found by the rebase — and the calibration frame
+showed them sitting up with their arms round their knees.
+
+Stillness cannot tell sitting-still from lying-still. What can is a start check
+that names the start position: for a bridge, the shoulder–hip–knee angle is 55°
+sitting and 120–130° lying, and a `phase: "start"` fault at 100° holds the
+count-in until the person has lain back. A move whose start position can be
+mistaken for another posture should carry one — it is the only thing that
+makes "settled" mean settled *there*. (A gate that held every fault back until
+the person had been at rest after calibration was tried and dropped: someone
+who starts the first rep the moment the count-in ends never trips it, so their
+first rep would go unjudged, and on the recorded set it would not have helped
+anyway — the person was briefly at rest, sitting up.)
+
+A video file run through the coach now waits as long as the camera does before
+the count-in (`still.file`); the shorter wait it used to have is how a bridge
+came to be calibrated on a person still sitting up.
+
 ### Only during the rep
 
 A fault that watches the movement is judged only while a rep is actually under

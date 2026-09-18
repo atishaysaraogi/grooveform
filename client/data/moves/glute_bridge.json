@@ -25,6 +25,17 @@
   },
   "faults": [
     {
+      "id": "sitting",
+      "label": "Shoulders not on the floor",
+      "cue": "Lie back — shoulders on the floor",
+      "tip": "Start lying flat. The bridge is measured from shoulders and knees that stay on the mat; calibrated sitting up, every rep reads wrong.",
+      "severity": 3,
+      "metric": "hip_open",
+      "op": "<",
+      "threshold": 100,
+      "phase": "start"
+    },
+    {
       "id": "shallow",
       "label": "Not reaching the target",
       "cue": "All the way",
@@ -53,15 +64,15 @@
       "minP": 0.5
     },
     {
-      "id": "heels_rising",
-      "label": "Heels rising",
-      "cue": "Heels on the ground",
-      "tip": "Heel pressure puts the work in the glutes; toe pressure sends it to the hamstrings and calves.",
+      "id": "foot_lifting",
+      "label": "Foot coming off the floor",
+      "cue": "Keep the whole foot flat",
+      "tip": "Heel and toes both stay down — drive through the whole foot. Side-on, the camera cannot tell a heel lifting from toes lifting, so this catches either.",
       "severity": 2,
-      "metric": { "kind": "height", "pts": ["HEEL", "FOOT"], "per": ["KNEE", "ANK"] },
-      "rel": "change",
+      "metric": "toes_lift",
       "op": ">",
-      "threshold": 1.5
+      "threshold": 10,
+      "persist": 250
     },
     {
       "id": "feet",
@@ -73,18 +84,6 @@
       "op": ">",
       "threshold": 55,
       "phase": "start"
-    },
-    {
-      "id": "toes_rising",
-      "label": "Toes rising",
-      "cue": "Keep toes down",
-      "tip": "Keep toes on the ground",
-      "severity": 2,
-      "metric": { "kind": "height", "pts": ["FOOT", "HEEL"], "per": ["KNEE", "ANK"] },
-      "rel": "change",
-      "op": ">",
-      "threshold": 8.5,
-      "persist": 250
     },
     {
       "id": "feet_too_close",
@@ -161,13 +160,13 @@
     "screen": { "big": true, "across": true, "visible": true, "home": true, "geometry": true, "helps": true },
     "ptType": "A",
     "notes": "",
-    "edited": "2026-09-17",
+    "edited": "2026-09-18",
     "by": "Test",
     "tuned": {
       "date": "2026-09-16",
       "by": "Test",
       "takes": 44,
-      "faults": ["arch", "push", "feet", "toes_rising", "feet_too_close"],
+      "faults": ["arch", "feet", "feet_too_close", "foot_lifting", "sitting"],
       "override": ["arch", "feet", "feet_too_close"]
     }
   },
