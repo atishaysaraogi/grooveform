@@ -313,13 +313,42 @@ try {
     assert.ok(said.length > 10, 'and there was plenty of it: ' + said.length);
   });
 
-  await step('a plank wants a wide frame, and says so when it does not have one', async () => {
+  await step('the plank canvas is wide, and the picture fills it without being stretched', async () => {
+    const shot = await page.evaluate(() => {
+      const c = document.getElementById('view'), v = document.getElementById('cam');
+      return { cw: c.width, ch: c.height, vw: v.videoWidth, vh: v.videoHeight };
+    });
+    assert.ok(shot.cw > shot.ch, 'the canvas is on its side: ' + shot.cw + 'x' + shot.ch);
+    assert.ok(Math.abs(shot.cw / shot.ch - shot.vw / shot.vh) < 0.01,
+      `and it is the frame's own shape, so nothing is squashed: canvas ${shot.cw}x${shot.ch}, frame ${shot.vw}x${shot.vh}`);
+    /* the box on screen has to be the same shape as the canvas in it, or the picture
+       is stretched on the way to the eye even though the recording is right */
+    const box = await page.evaluate(() => {
+      const c = document.getElementById('view'), b = c.getBoundingClientRect();
+      return { w: b.width, h: b.height, cw: c.width, ch: c.height };
+    });
+    assert.ok(Math.abs(box.w / box.h - box.cw / box.ch) < 0.01,
+      `the box on screen is the canvas's shape: ${Math.round(box.w)}x${Math.round(box.h)} for ${box.cw}x${box.ch}`);
+  });
+
+  await step('a frame the wrong way round is bordered, not squashed, and is asked to be turned', async () => {
     assert.equal(await page.isVisible('#orient'), false, 'nothing to say about a landscape frame');
-    /* stand the frame up under it: the next painted frame should notice */
+    /* stand the canvas up under a landscape frame: the picture must keep its own
+       proportions and sit in the middle, which is the squash this was reported as */
     await page.evaluate(() => { const c = document.getElementById('view'); c.width = 720; c.height = 1280; });
     await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
     assert.match(await page.textContent('#orient'), /turn the phone on its side/i);
     await heard('turn the phone on its side');
+    const bands = await page.evaluate(() => {
+      const c = document.getElementById('view'), x = c.getContext('2d');
+      const lit = (y) => { const d = x.getImageData(2, y, c.width - 4, 1).data;
+        let sum = 0; for (let i = 0; i < d.length; i += 4) sum += d[i] + d[i + 1] + d[i + 2]; return sum / (d.length / 4); };
+      return { top: lit(Math.round(c.height * 0.08)), middle: lit(Math.round(c.height * 0.5)),
+        bottom: lit(Math.round(c.height * 0.92)), w: c.width, h: c.height };
+    });
+    assert.ok(bands.middle > bands.top + 20 && bands.middle > bands.bottom + 20,
+      'the picture sits in a band across the middle with borders above and below, rather than filling a shape that is not its own: '
+      + JSON.stringify(bands));
     await page.evaluate(() => { const c = document.getElementById('view'); c.width = 1280; c.height = 720; });
     await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
   });

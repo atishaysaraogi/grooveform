@@ -28,6 +28,22 @@ of pixels are not worth reading. So the plank asks for the phone on its side,
 asks the camera for a wide frame, and if what arrives is taller than it is wide
 it says so — on screen and out loud — until it is turned.
 
+**Nothing is ever stretched.** The canvas takes the shape the move wants, and the
+camera frame is fitted inside it whole: all of the picture, none of it distorted,
+with bars at the edges when the two shapes differ. Filling the canvas by
+stretching would be worse than a border, because a squashed body reads squashed
+angles and every threshold here is an angle. The skeleton is drawn into that
+fitted rectangle rather than the whole canvas, and the angles are worked out in
+the camera frame's own proportions, so the numbers do not move when the shapes
+do. The box on screen is the canvas's shape, so what you watch and what
+downloads are the same picture.
+
+**Turning the phone mid-session.** Laying the phone down changes the frame the
+camera gives. Between sets the canvas follows it, which is how turning the phone
+takes effect. During a set it does not: a recording that changes shape halfway
+through is not a file most players will take, so the canvas is held and the
+fitting absorbs the change instead.
+
 **Out loud.** Every cue is spoken as well as written. Three things make a
 browser swallow speech quietly, and all three are handled rather than left to
 chance: Safari only begins speaking from inside a user gesture, so the engine is

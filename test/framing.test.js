@@ -45,3 +45,40 @@ test('every move opens by saying where to put the phone and to get into frame', 
     assert.ok(m.start.length < 120, m.id + ' keeps it short enough to be spoken: ' + m.start.length);
   }
 });
+
+/* ---------- the shape of the canvas, and what goes in it ---------- */
+
+test('a move that wants a wide picture gets one whichever way the phone is lying', () => {
+  assert.deepEqual(Core.canvasSize('wide', 1280, 720), { w: 1280, h: 720 }, 'already on its side');
+  assert.deepEqual(Core.canvasSize('wide', 720, 1280), { w: 1280, h: 720 }, 'and stood up, it is still made wide');
+  assert.deepEqual(Core.canvasSize('tall', 1280, 720), { w: 720, h: 1280 });
+  assert.deepEqual(Core.canvasSize(null, 720, 1280), { w: 720, h: 1280 }, 'asking for nothing takes what comes');
+  assert.equal(Core.canvasSize('wide', 0, 0), null, 'and a frame of no size decides nothing');
+});
+
+test('the picture is fitted into the canvas whole, and never stretched to it', () => {
+  const same = Core.fitRect(1280, 720, 1280, 720);
+  assert.deepEqual(same, { x: 0, y: 0, w: 1280, h: 720 }, 'a matching frame fills it exactly');
+
+  /* the case that was squashing the plank: a portrait frame in a landscape canvas */
+  const tall = Core.fitRect(720, 1280, 1280, 720);
+  assert.equal(tall.h, 720, 'it is as tall as the canvas');
+  assert.ok(Math.abs(tall.w / tall.h - 720 / 1280) < 1e-9, 'and keeps its own proportions');
+  assert.ok(tall.x > 0 && Math.abs(tall.x - (1280 - tall.w) / 2) < 1e-9, 'centred, with bars either side');
+
+  const wide = Core.fitRect(1280, 720, 720, 1280);
+  assert.equal(wide.w, 720);
+  assert.ok(Math.abs(wide.w / wide.h - 1280 / 720) < 1e-9, 'the other way round, likewise');
+  assert.ok(wide.y > 0, 'bars above and below');
+});
+
+test('whatever the frame and whatever the canvas, the proportions come through untouched', () => {
+  for (const [vw, vh] of [[1280, 720], [720, 1280], [640, 480], [1080, 1080], [1920, 816]]) {
+    for (const [W, H] of [[1280, 720], [720, 1280], [800, 800]]) {
+      const f = Core.fitRect(vw, vh, W, H);
+      assert.ok(Math.abs(f.w / f.h - vw / vh) < 1e-9, `${vw}x${vh} into ${W}x${H} came out ${f.w}x${f.h}`);
+      assert.ok(f.w <= W + 1e-9 && f.h <= H + 1e-9, 'and all of it is inside the canvas');
+      assert.ok(Math.abs(f.w - W) < 1e-9 || Math.abs(f.h - H) < 1e-9, 'touching at least one pair of edges');
+    }
+  }
+});

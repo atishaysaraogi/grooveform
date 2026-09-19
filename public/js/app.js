@@ -250,26 +250,48 @@
     video.srcObject = stream;
     await video.play();
     await new Promise((r) => (video.videoWidth ? r() : (video.onloadedmetadata = r)));
-    canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720;
-    $('stage').style.aspectRatio = `${canvas.width}/${canvas.height}`;
+    sizeCanvas(true);
+  }
+
+  /* The canvas is the recording, so its size is chosen once and then left alone
+     while a set is running: a file that changes shape halfway through is not one
+     most players will take. Between sets it follows the camera, which is how
+     turning the phone over takes effect. */
+  function sizeCanvas(force) {
+    const want = Core.canvasSize(move.camera, video.videoWidth || 1280, video.videoHeight || 720);
+    if (!want) return;
+    if (!force && rec && rec.mr && rec.mr.state === 'recording') return;
+    if (canvas.width === want.w && canvas.height === want.h) return;
+    canvas.width = want.w; canvas.height = want.h;
+    $('stage').style.aspectRatio = `${want.w}/${want.h}`;
   }
   function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; } video.srcObject = null; }
 
   /* ---------- drawing ---------- */
   function drawFrame(reading, verdict, out) {
     const W = canvas.width, H = canvas.height, m = cfg().mirror;
+    const vw = video.videoWidth || W, vh = video.videoHeight || H;
+    /* All of the picture, none of it stretched. A squashed body reads squashed
+       angles, and every threshold in this app is an angle, so filling the canvas
+       by distorting the frame would quietly corrupt every number on the screen.
+       Bars at the sides are the honest answer. */
+    const fit = Core.fitRect(vw, vh, W, H);
     ctx.save();
     if (m) { ctx.translate(W, 0); ctx.scale(-1, 1); }
-    ctx.drawImage(video, 0, 0, W, H);
-    if (reading && reading.ok) drawBody(reading, verdict, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(video, fit.x, fit.y, fit.w, fit.h);
+    if (reading && reading.ok) drawBody(reading, verdict, vw / vh, fit);
     ctx.restore();
     drawHud(reading, verdict, out, W, H);
   }
 
-  /* points come back in square space (x already × aspect), so undo that to paint */
-  function drawBody(r, v, W, H) {
-    const A = W / H;
-    const at = (p) => [(p.x / A) * W, p.y * H];
+  /* The points are in the VIDEO's square space (x already × the video's aspect),
+     and the video occupies `fit` inside the canvas — so they are painted into that
+     rectangle, not the whole canvas. Sizes scale with the picture rather than the
+     canvas too, so a pillarboxed frame gets a skeleton that fits it. */
+  function drawBody(r, v, A, fit) {
+    const at = (p) => [fit.x + (p.x / A) * fit.w, fit.y + p.y * fit.h];
+    const W = fit.w, H = fit.h;
     const s = Math.max(2, W / 320);
     const rad = Math.max(18, W * 0.045);
     const fs = Math.max(14, W * 0.032);
@@ -298,13 +320,13 @@
       plumb(p, share) {
         const [x, y] = at(p);
         ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - H * share); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - fit.h * share); ctx.stroke(); ctx.setLineDash([]);
       },
       /* a dashed floor line through a point */
       floor(p) {
         const [x, y] = at(p);
         ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-        ctx.beginPath(); ctx.moveTo(x - r.facing * W * 0.05, y); ctx.lineTo(x + r.facing * W * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x - r.facing * fit.w * 0.05, y); ctx.lineTo(x + r.facing * fit.w * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
       },
       /* the straight line a joint is judged against, drawn end to end */
       guide(a, b, ok) {
@@ -432,8 +454,11 @@
       try { const res = landmarker.detectForVideo(video, ts); lm = res.landmarks && res.landmarks[0] ? res.landmarks[0] : null; }
       catch { return; }
     }
+    sizeCanvas();
     showFraming();
-    const aspect = canvas.width / canvas.height;
+    /* the landmarks are shares of the VIDEO frame, so that is the space an angle
+       has to be worked out in — the canvas may be a different shape entirely */
+    const aspect = (video.videoWidth || canvas.width) / (video.videoHeight || canvas.height);
     const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
     const out = coach.step(reading, now - t0);
     if (out.cue) fire(out.cue);
@@ -606,7 +631,7 @@
     /* a move that wants a different shape of frame gets the camera asked again */
     if (running && (move.camera || null) !== camShape) {
       unschedule(); startCamera().catch(() => { }).then(() => { framingNote = undefined; if (running) schedule(); });
-    }
+    } else sizeCanvas(true);
   };
   $('flip').onclick = async () => {
     camFacing = camFacing === 'user' ? 'environment' : 'user';
@@ -642,6 +667,10 @@
       ...s.log.map((c2) => `${(c2.t / 1000).toFixed(1)}s\t${c2.text}`)].join('\n');
     save(new Blob([body], { type: 'text/plain' }), `${move.id}-${stamp()}.txt`);
   };
+  /* turning the phone over changes the frame the camera gives, and the browser
+     reports it here rather than through any event on the stream */
+  video.addEventListener('resize', () => { sizeCanvas(); framingNote = undefined; });
+  window.addEventListener('orientationchange', () => setTimeout(() => { sizeCanvas(); framingNote = undefined; }, 300));
   window.addEventListener('pagehide', () => { unschedule(); stopCamera(); });
 
   loadSettings();

@@ -130,6 +130,29 @@
     return null;
   }
 
+  /* The shape to make the canvas, given the shape the move wants and the frame the
+     camera is handing over. A move that wants a wide picture gets one whichever way
+     the phone happens to be lying, because the canvas is what is recorded and a file
+     that changes shape halfway through is not a file most players will take. */
+  function canvasSize(want, vw, vh) {
+    if (!vw || !vh) return null;
+    const lo = Math.min(vw, vh), hi = Math.max(vw, vh);
+    if (want === 'wide') return { w: hi, h: lo };
+    if (want === 'tall') return { w: lo, h: hi };
+    return { w: vw, h: vh };
+  }
+
+  /* Where to put a vw×vh picture inside a W×H canvas so that all of it shows and
+     none of it is stretched. Stretching to fill is the one thing that must not
+     happen: a squashed body reads squashed angles, and every threshold here is an
+     angle. Bars at the sides are honest; a distorted picture is not. */
+  function fitRect(vw, vh, W, H) {
+    if (!vw || !vh || !W || !H) return { x: 0, y: 0, w: W || 0, h: H || 0 };
+    const s = Math.min(W / vw, H / vh);
+    const w = vw * s, h = vh * s;
+    return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+  }
+
   /* Said by every move, so they live here rather than in each one. */
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
@@ -277,5 +300,5 @@
   }
 
   return { SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
-    lineBend, visOf, pickSide, frame, framing, Coach, Smoother };
+    lineBend, visOf, pickSide, frame, framing, canvasSize, fitRect, Coach, Smoother };
 });
