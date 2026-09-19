@@ -29,13 +29,16 @@ test('a frame of no size is not complained about, because there is nothing to ju
   assert.equal(Core.framing('wide', 1280, 0), null);
 });
 
-test('the plank asks for a wide frame and says so in the words it opens with', () => {
-  assert.equal(Moves.plank.camera, 'wide', 'a plank is long and low');
+test('each move asks for the frame its body needs, and says so in the words it opens with', () => {
+  /* a plank is long and low; the other two are standing bodies and want the height */
+  assert.equal(Moves.plank.camera, 'wide');
   assert.match(Moves.plank.start, /on its side/i, 'and the instruction says which way to lay the phone');
   assert.match(Moves.plank.hint, /on its side/i);
-  /* the wall sit is a standing body and is happy either way, so it asks for nothing */
-  assert.equal(Moves.wallsit.camera, undefined);
-  assert.match(Moves.wallsit.start, /camera on the floor/i);
+  for (const m of [Moves.wallsit, Moves.kneeraise]) {
+    assert.equal(m.camera, 'tall', m.id + ' is a standing body');
+    assert.match(m.start, /stand the phone up/i, m.id + ' says to stand the phone up');
+    assert.match(m.hint, /standing up|stood up/i, m.id + ' hint: ' + m.hint);
+  }
 });
 
 test('every move opens by saying where to put the phone and how to stand to it', () => {

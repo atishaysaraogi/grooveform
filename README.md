@@ -57,7 +57,7 @@ instead of the page just being silent.
 
 ## What it measures
 
-**Wall sit** — side on, back against a wall.
+**Wall sit** — side on, back against a wall, phone stood up.
 
 | | |
 |---|---|
@@ -65,22 +65,29 @@ instead of the page just being silent.
 | **Shin** | the angle the knee→heel line makes with the floor. Plumb is 90° and the band is **85–95°**. Past 95° the heels are ahead of the knees, under 85° they are behind them, so one number carries both the fault and the direction the feet have to move. |
 | **Back** | how far the hip→shoulder line leans off vertical, allowed **±12°**. |
 
-**Elbow plank** — side on, forearms down.
+**Elbow plank** — side on, forearms down, phone on its side.
 
 | | |
 |---|---|
 | **Arm** | the upper arm's lean off vertical, which is where the shoulder sits over the elbow. Allowed from **5° behind to 15° in front**: the band is not symmetric because a shoulder behind the elbow is the joint taking the load at its weakest, while a little in front is normal. |
 | **Hip** | how far the hip sits off the straight line from shoulder to ankle, as the angle the body bends at the hip. Allowed **±5°**. Above the line the hips are piked and are told to come down; below it they are sagging and are told to lift. |
 
-**Standing knee raise** — side on, standing tall, one knee up.
+**Standing knee raise** — side on, standing tall, one knee up, phone stood up.
 
 | | |
 |---|---|
 | **Knee** | the angle at the raised knee, between hip and ankle. A right angle, **85–95°**. |
-| **Ankle** | the angle at that ankle, between knee and toe. A right angle too, **85–95°**: the foot square to the shin, neither pointed nor over-pulled. |
+| **Foot** | the angle at that heel, between the toe and the knee — the foot's own line against the shin's. Allowed **85–110°**. Past 110° the foot is pointing away and the toes come up; under 85° they are pulled too far. |
 
 Ten seconds held, lowered slowly, and the rep counts when you are back to
 standing. Ten reps.
+
+The foot is measured at the **heel** rather than the ankle, because the heel is
+where the foot meets the floor and is the end of the segment being measured. It
+is a different number from the angle at the ankle, and where a comfortable foot
+falls within it depends on where the pose model puts your heel relative to your
+ankle — so the band is a setting. Watch the reading on yourself for a rep and
+move the band if it sits off.
 
 *One thing worth saying about this one.* Those two right angles do not by
 themselves describe a knee raise: a heel tucked up behind makes both of them
@@ -89,8 +96,10 @@ raise from standing still and from the next rep starting, and it is not marked
 or coached — the two angles asked for stay the only things being judged. Widen
 or narrow it in the settings; make it a band of its own if you want it called.
 
-The plank wants the phone on its side, the knee raise wants it stood up, and the
-wall sit takes it either way.
+**Which way the phone goes.** The plank wants it on its side; the wall sit and
+the knee raise are standing bodies and want it stood up. Each asks the camera for
+that shape, says so in the words it opens with, and says so again — on screen and
+out loud — if what arrives is the other way round.
 
 Every threshold is a setting. Both numbers are on screen, on a meter with the
 target band marked, and burnt into the recording.
@@ -123,7 +132,7 @@ the other rather than on top of each other.
 | hips ahead of the shoulders | *Bring your hips under your shoulders* |
 | shoulders behind the elbows | *Bring your shoulders over your elbows* |
 | knee not at a right angle | *Bend your knee more* / *Open your knee a little* |
-| toes pointed | *Pull your toes up* |
+| foot pointing away | *Pull your toes up* |
 | toes pulled too far up | *Ease your toes down* |
 | a rep held to the end | *Lower slowly*, then the count |
 | a knee dropped early | *Hold it to the end of the count next time* |

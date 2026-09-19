@@ -27,8 +27,9 @@
   const wallsit = {
     id: 'wallsit',
     name: 'Wall sit',
-    hint: 'Side on, back against a wall, whole body in frame.',
-    start: 'Place the camera on the floor and step into the frame, side on, back against the wall.',
+    hint: 'Phone standing up on the floor, side on to you, whole body in frame.',
+    start: 'Stand the phone up on the floor, then step into the frame, side on, back against the wall.',
+    camera: 'tall',                 // a standing body needs the height, not the width
 
     defaults: {
       kneeMin: 85,          // below this the legs are too bent — too low
@@ -213,7 +214,11 @@
 
     defaults: {
       kneeMin: 85, kneeMax: 95,     // the angle at the knee, hip to ankle: a right angle, 5° either way
-      ankleMin: 85, ankleMax: 95,   // the angle at the ankle, knee to toe: likewise
+      /* The foot, taken at the heel between the toe and the knee — the foot's own
+         line against the shin's. The heel rather than the ankle because the heel is
+         where the foot meets the floor and is the end of the segment being measured.
+         The band is not centred on a right angle and is not meant to be. */
+      footMin: 85, footMax: 110,
       /* Where the thigh has to get to before this counts as a raise, and where it
          has to come back to before the rep is finished. These are not coached and
          are not judged — they are how the phases are told apart, and they are wide
@@ -228,21 +233,21 @@
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
             { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 }],
 
-    joints: ['shoulder', 'hip', 'knee', 'ankle', 'toe'],
-    needed: ['hip', 'knee', 'ankle', 'toe'],
+    joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
+    needed: ['hip', 'knee', 'ankle', 'heel', 'toe'],
     bones: [['shoulder', 'hip'], ['hip', 'knee'], ['knee', 'ankle'], ['ankle', 'heel'], ['ankle', 'toe'], ['heel', 'toe']],
-    dots: ['shoulder', 'hip', 'knee', 'ankle', 'toe'],
-    limb: { 'hip|knee': 'knee', 'knee|ankle': 'knee', 'ankle|toe': 'ankle', 'ankle|heel': 'ankle', 'heel|toe': 'ankle' },
+    dots: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
+    limb: { 'hip|knee': 'knee', 'knee|ankle': 'knee', 'ankle|toe': 'foot', 'ankle|heel': 'foot', 'heel|toe': 'foot' },
 
     bands: [
       { key: 'knee', of: 'knee', label: 'knee angle', hud: 'KNEE', note: 'target',
         lo: 'kneeMin', hi: 'kneeMax', scale: [40, 180],
         set: [{ key: 'kneeMin', label: 'Knee angle, lowest', min: 40, max: 175 },
               { key: 'kneeMax', label: 'Knee angle, highest', min: 45, max: 180 }] },
-      { key: 'ankle', of: 'ankle', label: 'ankle angle', hud: 'FOOT', note: 'target',
-        lo: 'ankleMin', hi: 'ankleMax', scale: [50, 170],
-        set: [{ key: 'ankleMin', label: 'Ankle angle, lowest', min: 50, max: 165 },
-              { key: 'ankleMax', label: 'Ankle angle, highest', min: 55, max: 170 }] },
+      { key: 'foot', of: 'foot', label: 'toe, heel, knee', hud: 'FOOT', note: 'target',
+        lo: 'footMin', hi: 'footMax', scale: [40, 170],
+        set: [{ key: 'footMin', label: 'Foot angle, lowest', min: 40, max: 165 },
+              { key: 'footMax', label: 'Foot angle, highest', min: 45, max: 170 }] },
     ],
 
     faults: ['lost', 'raise', 'kneeOpen', 'kneeShut', 'toesDown', 'toesUp'],
@@ -252,8 +257,8 @@
       kneeOpen: { text: 'Bend your knee more', deep: 'Bend your knee to a right angle' },
       kneeShut: { text: 'Open your knee a little', deep: 'Open your knee out to a right angle' },
       /* the ankle angle grows as the toes point away and shrinks as they come up */
-      toesDown: { text: 'Pull your toes up', deep: 'Pull your toes up — foot square to your shin' },
-      toesUp: { text: 'Ease your toes down', deep: 'Ease your toes down — foot square to your shin' },
+      toesDown: { text: 'Pull your toes up', deep: 'Pull your toes up — your foot is pointing away' },
+      toesUp: { text: 'Ease your toes down', deep: 'Ease your toes down — your toes are pulled too far up' },
       lower: { text: 'Lower slowly' },
       early: { text: 'Hold it to the end of the count next time' },
       lost: { text: 'Step into the camera, side on' },
@@ -284,27 +289,27 @@
       const facing = Math.sign(P.toe.x - P.heel.x) || 1;
       return {
         ok: true, side: pick.side, vis: pick.vis, facing, points: P,
-        angles: ['knee', 'ankle', 'thigh'],
+        angles: ['knee', 'foot', 'thigh'],
         knee: angleAt(P.hip, P.knee, P.ankle),     // hip → knee → ankle
-        ankle: angleAt(P.knee, P.ankle, P.toe),    // knee → ankle → toe
+        foot: angleAt(P.toe, P.heel, P.knee),      // toe → heel → knee
         thigh: pick.thigh,                          // 0 standing, 90 thigh level
       };
     },
 
     judge(r, cfg) {
-      if (!r || !r.ok || r.knee == null || r.ankle == null) {
+      if (!r || !r.ok || r.knee == null || r.foot == null) {
         return { ok: false, inPosition: false, raised: false, atStart: false, good: {}, faults: {} };
       }
       const faults = {}, good = {};
       good.knee = inBand(r.knee, cfg.kneeMin, cfg.kneeMax);
       if (r.knee > cfg.kneeMax) faults.kneeOpen = r.knee - cfg.kneeMax;
       else if (r.knee < cfg.kneeMin) faults.kneeShut = cfg.kneeMin - r.knee;
-      good.ankle = inBand(r.ankle, cfg.ankleMin, cfg.ankleMax);
-      if (r.ankle > cfg.ankleMax) faults.toesDown = r.ankle - cfg.ankleMax;
-      else if (r.ankle < cfg.ankleMin) faults.toesUp = cfg.ankleMin - r.ankle;
+      good.foot = inBand(r.foot, cfg.footMin, cfg.footMax);
+      if (r.foot > cfg.footMax) faults.toesDown = r.foot - cfg.footMax;
+      else if (r.foot < cfg.footMin) faults.toesUp = cfg.footMin - r.foot;
       const raised = r.thigh >= cfg.raiseAt, atStart = r.thigh <= cfg.downAt;
       return { ok: true, good, faults, raised, atStart,
-        inPosition: raised && good.knee && good.ankle };
+        inPosition: raised && good.knee && good.foot };
     },
 
     /* The two angles where they are measured, and the thigh against straight down —
@@ -314,7 +319,7 @@
       d.plumb(r.points.hip, -0.16);
       if (r.thigh != null) d.angleTo(r.points.hip, r.points.knee, 'down', r.thigh, null, 0.55);
       if (r.knee != null) d.angleAt(r.points.knee, r.points.hip, r.points.ankle, r.knee, v.good.knee, 1);
-      if (r.ankle != null) d.angleAt(r.points.ankle, r.points.knee, r.points.toe, r.ankle, v.good.ankle, 0.7);
+      if (r.foot != null) d.angleAt(r.points.heel, r.points.toe, r.points.knee, r.foot, v.good.foot, 0.7);
     },
   };
 

@@ -43,7 +43,7 @@
      bumped whenever a default moves, and a store written under an older one is
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
-  const SETTINGS_V = 4;
+  const SETTINGS_V = 5;
   const COMMON_KEYS = ['cool', 'model', 'mirror'];
   /* One input each, but the value belongs to the exercise: a plank is held for a
      minute and a knee raise for ten seconds a rep, and neither should inherit the

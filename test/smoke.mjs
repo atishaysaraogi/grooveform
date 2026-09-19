@@ -29,11 +29,11 @@ function aspect() {
 const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
                R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
 window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0,
-                  thigh: 0, kneeUp: 180, ankle: 90, vis: 0.95 };
+                  thigh: 0, kneeUp: 180, foot: 90, vis: 0.95 };
 
 function wallsitBody(o, f) {
   const thigh = 0.2, shinLen = 0.22, torso = 0.26;
-  const knee = { x: 0.75, y: 0.55 };
+  const knee = { x: 0.34, y: 0.48 };      // placed for the tall frame this move asks for
   const u = { x: -f * Math.cos(o.shin * D), y: Math.sin(o.shin * D) };
   const heel = { x: knee.x + shinLen * u.x, y: knee.y + shinLen * u.y };
   const ankle = { x: knee.x + shinLen * 0.86 * u.x, y: knee.y + shinLen * 0.86 * u.y };
@@ -62,24 +62,24 @@ function plankBody(o, f) {
     ear: { x: shoulder.x + f * 0.05, y: shoulder.y - 0.04 } };
 }
 function kneeraiseBody(o, f) {
-  const thighLen = 0.17, shinLen = 0.16, foot = 0.07, torso = 0.22, hipAt = [0.22, 0.42];
-  const leg = (lift, bend, ank) => {
+  const thighLen = 0.17, shinLen = 0.16, heelDrop = 0.03, footLen = 0.08, torso = 0.22, hipAt = [0.22, 0.42];
+  const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
+  const leg = (lift, bend, ang) => {
     const hip = { x: hipAt[0], y: hipAt[1] };
     const dir = { x: f * Math.sin(lift * D), y: Math.cos(lift * D) };
     const knee = { x: hip.x + thighLen * dir.x, y: hip.y + thighLen * dir.y };
-    const b = (180 - bend) * D * f;
-    const sd = { x: dir.x * Math.cos(b) - dir.y * Math.sin(b), y: dir.x * Math.sin(b) + dir.y * Math.cos(b) };
+    const sd = rot(dir, (180 - bend) * D * f);
     const ankle = { x: knee.x + shinLen * sd.x, y: knee.y + shinLen * sd.y };
-    const c = -(180 - ank) * D * f;
-    const fd = { x: sd.x * Math.cos(c) - sd.y * Math.sin(c), y: sd.x * Math.sin(c) + sd.y * Math.cos(c) };
-    return { hip, knee, ankle, toe: { x: ankle.x + foot * fd.x, y: ankle.y + foot * fd.y },
-      heel: { x: ankle.x - f * 0.018, y: ankle.y + 0.012 } };
+    const heel = { x: ankle.x + heelDrop * sd.x, y: ankle.y + heelDrop * sd.y };
+    const fd = rot({ x: -sd.x, y: -sd.y }, ang * D * f);
+    return { hip, knee, ankle, heel,
+      toe: { x: heel.x + footLen * fd.x, y: heel.y + footLen * fd.y } };
   };
   const shoulder = { x: hipAt[0], y: hipAt[1] - torso };
   const top = { shoulder, ear: { x: shoulder.x + f * 0.012, y: shoulder.y - 0.06 } };
   /* two legs, not one copied: the raised one and the one holding him up. That is
      what makes the app's choice of which leg to measure a real choice here. */
-  return { R: Object.assign({}, top, leg(o.thigh, o.kneeUp, o.ankle)),
+  return { R: Object.assign({}, top, leg(o.thigh, o.kneeUp, o.foot)),
     L: Object.assign({}, top, leg(0, 180, 90)) };
 }
 window.__poseSource = function () {
@@ -154,9 +154,9 @@ try {
     await page.waitForFunction(() => document.getElementById('veil').hidden, null, { timeout: 20000 });
     /* no second tap: the set is already running and recording */
     assert.equal(await page.textContent('#startstop'), 'Finish the set');
-    assert.match(await cue(), /camera on the floor/i, 'and the instruction is on screen');
+    assert.match(await cue(), /stand the phone up on the floor/i, 'and the instruction is on screen');
     assert.match(await cue(), /step into the frame/i);
-    await heard('camera on the floor');   // and said out loud, not only written
+    await heard('stand the phone up');   // and said out loud, not only written
     await page.waitForFunction(() => document.getElementById('v-knee').textContent !== '—', null, { timeout: 10000 });
     const knee = await page.textContent('#v-knee');
     assert.ok(Math.abs(Number(knee) - 90) <= 1, 'a body posed at 90° reads 90° on screen, not ' + knee);
@@ -357,14 +357,10 @@ try {
     assert.ok(shot.cw > shot.ch, 'the canvas is on its side: ' + shot.cw + 'x' + shot.ch);
     assert.ok(Math.abs(shot.cw / shot.ch - shot.vw / shot.vh) < 0.01,
       `and it is the frame's own shape, so nothing is squashed: canvas ${shot.cw}x${shot.ch}, frame ${shot.vw}x${shot.vh}`);
-    /* the box on screen has to be the same shape as the canvas in it, or the picture
-       is stretched on the way to the eye even though the recording is right */
-    const box = await page.evaluate(() => {
-      const c = document.getElementById('view'), b = c.getBoundingClientRect();
-      return { w: b.width, h: b.height, cw: c.width, ch: c.height };
-    });
-    assert.ok(Math.abs(box.w / box.h - box.cw / box.ch) < 0.01,
-      `the box on screen is the canvas's shape: ${Math.round(box.w)}x${Math.round(box.h)} for ${box.cw}x${box.ch}`);
+    /* and on the way to the eye it is fitted into whatever box the page gives it,
+       never stretched to fill one of a different shape */
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('view')).objectFit),
+      'contain', 'the canvas is fitted into its box on screen, not stretched to it');
   });
 
   await step('a frame the wrong way round is bordered, not squashed, and is asked to be turned', async () => {
@@ -390,11 +386,11 @@ try {
   });
 
   await step('the knee raise counts reps rather than holding one position', async () => {
-    await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, ankle: 90 });
+    await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 95 });
     await page.selectOption('#move', 'kneeraise');
     await page.waitForSelector('#read-reps');
     assert.equal(await page.textContent('#band-knee'), '85\u201395', 'a right angle at the knee, five either way');
-    assert.equal(await page.textContent('#band-ankle'), '85\u201395', 'and at the ankle');
+    assert.equal(await page.textContent('#band-foot'), '85\u2013110', 'and the foot, taken at the heel');
     /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
        plank was just using */
     assert.equal(await page.inputValue('#cfg-target'), '10');
@@ -413,33 +409,33 @@ try {
   });
 
   await step('a rep is counted on the way back down, not at the top', async () => {
-    await set({ thigh: 88, kneeUp: 90, ankle: 90 });
+    await set({ thigh: 88, kneeUp: 90, foot: 95 });
     /* no "that is it" asserted here: these reps are two seconds so the coach can
        finish a set inside a test, and a two second hold has no room to say hold and
        then count it down. The unit tests cover that at the real ten. */
     await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
     await heard('lower slowly');
     assert.equal(await page.textContent('#rep-v'), '0', 'the top of the rep is not the end of it');
-    await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+    await set({ thigh: 0, kneeUp: 180, foot: 90 });
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
   });
 
   await step('a knee held out of line is corrected, and the knee before the foot', async () => {
-    await set({ thigh: 88, kneeUp: 130, ankle: 140 });
+    await set({ thigh: 88, kneeUp: 130, foot: 140 });
     await saw('bend your knee');
     await heard('bend your knee');
-    await set({ thigh: 88, kneeUp: 90, ankle: 140 });
+    await set({ thigh: 88, kneeUp: 90, foot: 140 });
     await saw('pull your toes up');
     await heard('pull your toes up');
   });
 
   await step('the set ends when the reps are done', async () => {
     for (let i = 0; i < 3; i++) {
-      await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+      await set({ thigh: 0, kneeUp: 180, foot: 90 });
       await wait(900);
-      await set({ thigh: 88, kneeUp: 90, ankle: 90 });
+      await set({ thigh: 88, kneeUp: 90, foot: 95 });
       await wait(3400);
-      await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+      await set({ thigh: 0, kneeUp: 180, foot: 90 });
       await wait(900);
       if (await page.textContent('#rep-v') === '3') break;
     }
