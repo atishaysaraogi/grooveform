@@ -4,7 +4,13 @@
    against a body posed to exactly that number. Run: npm test */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const W = require('../public/js/wallsit.js');
+const Core = require('../public/js/core.js');
+const M = require('../public/js/moves.js').wallsit;
+/* the wall sit's own read/judge, and the shared clock told which move it is coaching */
+const W = { read: (lm, a, c) => M.read(lm, a, Object.assign({}, Core.COMMON, M.defaults, c)),
+  judge: (r, c) => M.judge(r, Object.assign({}, Core.COMMON, M.defaults, c)),
+  Coach: function (cfg) { return new Core.Coach(M, cfg); },
+  Smoother: Core.Smoother, SIDE: Core.SIDE };
 
 const D = Math.PI / 180;
 const ASPECT = 16 / 9;
@@ -71,12 +77,13 @@ test('it reads the same angle on a body facing the other way', () => {
   }
 });
 
-test('a heel off the shin line reads a different angle from the ankle, which is why the ankle is judged', () => {
-  const clean = readOf({ knee: 90 });
-  assert.ok(Math.abs(clean.kneeHeel - clean.knee) < 0.01, 'a heel on the line reads the same');
-  const real = readOf({ knee: 90, heelOff: [-0.03, 0.012] });
-  assert.ok(Math.abs(real.kneeHeel - real.knee) > 2, 'a heel behind and below does not: ' + real.kneeHeel.toFixed(1));
-  assert.ok(Math.abs(real.knee - 90) < 0.01, 'and the judged angle is untouched by where the heel is');
+test('the knee angle is taken to the ankle, so where the heel sits does not move it', () => {
+  const clean = readOf({ knee: 90, shin: 90 });
+  const real = readOf({ knee: 90, shin: 90, heelOff: [-0.03, 0.012] });
+  assert.ok(Math.abs(real.knee - clean.knee) < 1e-9, 'the knee reading is untouched by the heel');
+  /* the shin is the reading that does depend on it, and it moves as the heel moves */
+  assert.ok(Math.abs(real.shin - clean.shin) > 2, 'the shin reading follows the heel: '
+    + clean.shin.toFixed(1) + ' → ' + real.shin.toFixed(1));
 });
 
 test('torso lean is signed: + when the shoulders go the way the knees point', () => {
@@ -96,7 +103,7 @@ test('a hidden or out-of-shot body is not judged', () => {
 });
 
 test('the band is 85 to 110 degrees, inclusive of what sits inside it', () => {
-  const depth = (knee) => W.judge(readOf({ knee })).depth;
+  const depth = (knee) => { const v = W.judge(readOf({ knee })); return v.faults.high != null ? 'high' : v.faults.low != null ? 'low' : 'good'; };
   assert.equal(depth(84), 'low', 'below 85 is too deep');
   assert.equal(depth(86), 'good');
   assert.equal(depth(90), 'good', 'the textbook wall sit');
@@ -120,7 +127,7 @@ test('the shin is read against the floor, plumb at ninety, and the side of ninet
 });
 
 test('the shin band is 85 to 95 degrees', () => {
-  const feet = (shin) => W.judge(readOf({ shin })).feet;
+  const feet = (shin) => { const v = W.judge(readOf({ shin })); return v.faults.feetback != null ? 'out' : v.faults.feetfwd != null ? 'in' : 'good'; };
   assert.equal(feet(65), 'in', 'heels well behind the knees');
   assert.equal(feet(84), 'in');
   assert.equal(feet(86), 'good');
@@ -131,20 +138,20 @@ test('the shin band is 85 to 95 degrees', () => {
 });
 
 test('heels ahead of the knees are told to bring the feet back, heels behind to bring them forward', () => {
-  const out = play(new W.Coach(), { shin: 112 }, 1200).said;
+  const out = play(W.Coach(), { shin: 112 }, 1200).said;
   assert.equal(out[0].id, 'feetback', 'said: ' + JSON.stringify(out.map((x) => x.text)));
   assert.match(out[0].text, /feet back/i);
-  const inn = play(new W.Coach(), { shin: 68 }, 1200).said;
+  const inn = play(W.Coach(), { shin: 68 }, 1200).said;
   assert.equal(inn[0].id, 'feetfwd');
   assert.match(inn[0].text, /feet forward/i);
   /* and a long way out gets the stronger words, as the other faults do */
-  const far = play(new W.Coach(), { shin: 125 }, 1200).said;
+  const far = play(W.Coach(), { shin: 125 }, 1200).said;
   assert.match(far[0].text, /well ahead of your knees/i, 'twenty-five degrees out is not a nudge');
 });
 
 test('faults are corrected in the order of the chain: feet, then knee, then back', () => {
   const first = (opts) => {
-    const said = play(new W.Coach(), opts, 1200).said;
+    const said = play(W.Coach(), opts, 1200).said;
     assert.ok(said.length, 'nothing was said for ' + JSON.stringify(opts));
     return said[0].id;
   };
@@ -169,7 +176,7 @@ test('an untrusted heel hands the shin over to the ankle rather than guessing', 
 });
 
 test('the back is judged against vertical, to twelve degrees either way', () => {
-  const back = (tilt) => W.judge(readOf({ tilt })).back;
+  const back = (tilt) => { const v = W.judge(readOf({ tilt })); return v.faults.forward != null ? 'forward' : v.faults.back != null ? 'back' : 'good'; };
   assert.equal(back(0), 'good'); assert.equal(back(10), 'good'); assert.equal(back(-10), 'good');
   assert.equal(back(20), 'forward'); assert.equal(back(-20), 'back');
 });
@@ -196,7 +203,7 @@ function play(coach, opts, ms, t0 = 0) {
 }
 
 test('a cue waits until the fault has held, then is not repeated while it is fresh', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const a = play(c, { knee: 122 }, 400);
   assert.deepEqual(a.said, [], 'nothing in the first four-tenths of a second');
   const b = play(c, { knee: 122 }, 600, 400);
@@ -209,27 +216,27 @@ test('a cue waits until the fault has held, then is not repeated while it is fre
 });
 
 test('not deep enough by a long way gets the stronger words, as being too deep does', () => {
-  const said = play(new W.Coach(), { knee: 135 }, 1200).said;
+  const said = play(W.Coach(), { knee: 135 }, 1200).said;
   assert.equal(said[0].id, 'high');
   assert.match(said[0].text, /slide further down/i, 'twenty-five degrees short is not a nudge');
 });
 
 test('too deep is told to come up, and a long way out gets the stronger words', () => {
-  const near = play(new W.Coach(), { knee: 78 }, 1200).said;
+  const near = play(W.Coach(), { knee: 78 }, 1200).said;
   assert.equal(near[0].id, 'low'); assert.match(near[0].text, /come up/i);
-  const far = play(new W.Coach(), { knee: 50 }, 1200).said;
+  const far = play(W.Coach(), { knee: 50 }, 1200).said;
   assert.match(far[0].text, /too deep/i, 'thirty-five degrees past the line is not a nudge');
 });
 
 test('a back off the wall is called, in the words of the wall', () => {
-  const said = play(new W.Coach(), { knee: 95, tilt: 25 }, 1200).said;
+  const said = play(W.Coach(), { knee: 95, tilt: 25 }, 1200).said;
   assert.equal(said[0].id, 'forward'); assert.match(said[0].text, /back flat/i);
-  const other = play(new W.Coach(), { knee: 95, tilt: -25 }, 1200).said;
+  const other = play(W.Coach(), { knee: 95, tilt: -25 }, 1200).said;
   assert.equal(other[0].id, 'back'); assert.match(other[0].text, /hips under/i);
 });
 
 test('the knee is said before the back, and then the back once the knee is right', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const first = play(c, { knee: 140, tilt: 35 }, 1200);
   assert.equal(first.said[0].id, 'high', 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
   /* fix the knee and the back is what is left to say */
@@ -240,7 +247,7 @@ test('the knee is said before the back, and then the back once the knee is right
 test('two faults ready at once are not said on top of each other', () => {
   /* knee and shin both eighteen degrees past their band, so both come ready on the
      same frame; only one may be spoken, and the second waits out the gap */
-  const c = new W.Coach();
+  const c = W.Coach();
   const first = play(c, { knee: 128, shin: 118 }, 1200);
   assert.equal(first.said.length, 1, 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
   assert.equal(first.said[0].id, 'feetback', 'and it is the feet, being the setup');
@@ -251,7 +258,7 @@ test('two faults ready at once are not said on top of each other', () => {
 });
 
 test('a time call is not held back by the gap, because a late one is a wrong one', () => {
-  const c = new W.Coach({ holdTargetSec: 10, callAtSec: [5] });
+  const c = W.Coach({ holdTargetSec: 10, callAtSec: [5] });
   const r = play(c, { knee: 95 }, 7000);
   const hold = r.said.find((x) => x.id === 'hold'), call = r.said.find((x) => x.id === 'call5');
   assert.ok(hold && call, 'said: ' + JSON.stringify(r.said.map((x) => x.text)));
@@ -260,7 +267,7 @@ test('a time call is not held back by the gap, because a late one is a wrong one
 });
 
 test('a good wall sit is told to hold, once, and the clock runs', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const r = play(c, { knee: 95, tilt: 3 }, 5000);
   const holds = r.said.filter((x) => x.id === 'hold');
   assert.equal(holds.length, 1, 'said once, not every frame: ' + r.said.length);
@@ -271,7 +278,7 @@ test('a good wall sit is told to hold, once, and the clock runs', () => {
 });
 
 test('the clock stops the moment the position goes, and the best run is remembered', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   let t = 0;
   ({ t } = play(c, { knee: 95 }, 4000, t));          // ~3.3 s of hold
   const after = play(c, { knee: 135 }, 3000, t);     // out of position
@@ -284,7 +291,7 @@ test('the clock stops the moment the position goes, and the best run is remember
 });
 
 test('the set is a sixty second countdown, called at forty five, thirty, ten and five', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const r = play(c, { knee: 95 }, 62000);
   const calls = r.said.filter((x) => /^call\d|^done$/.test(x.id));
   assert.deepEqual(calls.map((x) => x.id), ['call45', 'call30', 'call10', 'call5', 'done'],
@@ -301,7 +308,7 @@ test('the set is a sixty second countdown, called at forty five, thirty, ten and
 });
 
 test('the countdown is spent from time in position, so standing up pauses it rather than running it down', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   let t = 0;
   ({ t } = play(c, { knee: 95 }, 20000, t));              // ~19.3 s held, 40.7 s left
   const paused = play(c, { knee: 140 }, 8000, t);          // out of position for eight seconds
@@ -318,21 +325,21 @@ test('the countdown is spent from time in position, so standing up pauses it rat
 });
 
 test('nothing is counted down before the position has ever been right', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const r = play(c, { knee: 140 }, 20000);
   assert.equal(r.last.leftMs, 60000, 'the full sixty is still to do');
   assert.deepEqual(r.said.filter((x) => /^call\d|^done$/.test(x.id)), []);
 });
 
 test('the target is a setting, and so are the moments the time is called', () => {
-  const c = new W.Coach({ holdTargetSec: 20, callAtSec: [10] });
+  const c = W.Coach({ holdTargetSec: 20, callAtSec: [10] });
   const r = play(c, { knee: 95 }, 22000);
   const calls = r.said.filter((x) => /^call\d|^done$/.test(x.id));
   assert.deepEqual(calls.map((x) => x.text), ['10 seconds left', '20 seconds \u2014 done']);
 });
 
 test('a frame gap that carries the clock past two marks calls only the nearer one', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   let t = 0, said = [];
   /* settle, then step in half-second jumps — the coach caps each step at 250 ms,
      so the clock crawls and the marks are approached; then one huge jump */
@@ -345,13 +352,13 @@ test('a frame gap that carries the clock past two marks calls only the nearer on
 });
 
 test('a body the camera cannot read is asked to step in, not corrected', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   const said = play(c, { vis: 0.1 }, 1500).said;
   assert.equal(said[0].id, 'lost'); assert.match(said[0].text, /side on/i);
 });
 
 test('the summary counts what was said and keeps the timeline', () => {
-  const c = new W.Coach();
+  const c = W.Coach();
   let t = 0; ({ t } = play(c, { knee: 130 }, 6000, t)); play(c, { knee: 95 }, 4000, t);
   const s = c.summary();
   assert.ok(s.cues.high >= 1, JSON.stringify(s.cues));
@@ -360,9 +367,9 @@ test('the summary counts what was said and keeps the timeline', () => {
 });
 
 test('thresholds are settings, not rules baked into the code', () => {
-  const strict = new W.Coach({ kneeMin: 88, kneeMax: 92 });
-  assert.equal(W.judge(readOf({ knee: 95 }), strict.cfg).depth, 'high');
-  assert.equal(W.judge(readOf({ knee: 95 })).depth, 'good', 'and the default band is unchanged');
+  const strict = W.Coach({ kneeMin: 88, kneeMax: 92 });
+  assert.equal(W.judge(readOf({ knee: 95 }), strict.cfg).good.knee, false, 'narrowed, 95 is out');
+  assert.equal(W.judge(readOf({ knee: 95 })).good.knee, true, 'and the default band is unchanged');
 });
 
 test('smoothing settles on the truth and ignores a single wild frame', () => {

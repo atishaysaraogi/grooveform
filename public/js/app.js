@@ -1,33 +1,35 @@
 /* ---------------------------------------------------------------------------
-   Wall Sit Coach — camera, drawing, voice, recording.
+   Camera, drawing, voice, recording.
 
-   The measuring and the deciding live in wallsit.js and are tested there. This
-   file is the part that cannot be tested without a camera: getting frames,
-   putting the picture together, saying the words and writing the file.
+   What is measured and what is said live in core.js and moves.js and are tested
+   there. This file is the part that cannot be tested without a camera: getting
+   frames, putting the picture together, saying the words and writing the file.
 
    One rule shapes the drawing: the canvas IS the recording. Everything worth
-   keeping — the camera frame, the skeleton, the angle, the timer, the cue —
+   keeping — the camera frame, the skeleton, the angles, the countdown, the cue —
    is painted onto it, so the video that downloads is the video you watched.
+
+   Nothing here knows what a wall sit or a plank is. The readouts, the settings,
+   the heads-up display and the skeleton's colours are all built from the move's
+   own description of itself, so a new move is a new entry in moves.js.
    --------------------------------------------------------------------------- */
 (function () {
   'use strict';
 
   const MP = '0.10.21';
   const MODELS = {
-    full: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task`,
-    lite: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task`,
+    full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+    lite: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
   };
   const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', shadow: 'rgba(0,0,0,.55)' };
 
   const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
   const video = $('cam'), canvas = $('view'), ctx = canvas.getContext('2d');
-  const cfgEl = { min: $('cfg-min'), max: $('cfg-max'), tilt: $('cfg-tilt'), cool: $('cfg-cool'),
-    shinmin: $('cfg-shinmin'), shinmax: $('cfg-shinmax'), target: $('cfg-target'), calls: $('cfg-calls'),
-    model: $('cfg-model'), mirror: $('cfg-mirror') };
-  const KEYS = ['min', 'max', 'tilt', 'cool', 'shinmin', 'shinmax', 'target', 'calls', 'model', 'mirror'];
 
+  let move = Moves.wallsit;
   let vision = null, landmarker = null, loadedModel = null;
-  let stream = null, facing = 'environment';
+  let stream = null, camFacing = 'user';   // the front camera: it is the one you can see while you set the phone down
   let running = false, raf = 0, lastTs = 0;
   let coach = null, smoother = null, state = null;
   let banner = null;                      // the cue painted on the frame, and when it appeared
@@ -35,60 +37,98 @@
   let audio = null;                       // WebAudio graph: speakers + a track for the recording
   let t0 = 0;
 
-  /* ---------- settings ---------- */
-  /* Settings are remembered, but a band the app itself has changed its mind about is
-     not the person's setting — it is a stale default. The version is bumped whenever a
-     default moves, and a store written under an older one is dropped rather than
-     silently holding the old band on a page that says it uses the new one. */
-  const SETTINGS_V = 2;
+  /* ---------- settings ----------
+     Remembered in the browser, but a band the app itself has changed its mind
+     about is not the person's setting — it is a stale default. The version is
+     bumped whenever a default moves, and a store written under an older one is
+     dropped rather than silently holding the old band on a page that says it
+     uses the new one. */
+  const SETTINGS_V = 3;
+  const COMMON_KEYS = ['cool', 'target', 'calls', 'model', 'mirror'];
   const store = {
     get() {
-      try {
-        const v = JSON.parse(localStorage.getItem('wallsit') || '{}');
-        return v && v.v === SETTINGS_V ? v : {};
-      } catch { return {}; }
+      try { const v = JSON.parse(localStorage.getItem('wallsit') || '{}'); return v && v.v === SETTINGS_V ? v : {}; }
+      catch { return {}; }
     },
     set(v) { try { localStorage.setItem('wallsit', JSON.stringify(Object.assign({ v: SETTINGS_V }, v))); } catch { } },
   };
+  let saved = { move: 'wallsit', common: {}, bands: {} };
+
+  const num = (id, d) => { const e = $(id); if (!e) return d; const v = Number(e.value); return Number.isFinite(v) && e.value !== '' ? v : d; };
+
   function cfg() {
-    const n = (el, d) => { const v = Number(el.value); return Number.isFinite(v) && el.value !== '' ? v : d; };
-    /* the time calls are typed as a list, so anything unreadable falls back rather than
-       silently leaving the set with no calls in it */
-    const calls = String(cfgEl.calls.value).split(/[^\d]+/).map(Number).filter((x) => x > 0);
-    return {
-      kneeMin: n(cfgEl.min, 85), kneeMax: n(cfgEl.max, 110), backTilt: n(cfgEl.tilt, 12),
-      shinMin: n(cfgEl.shinmin, 85), shinMax: n(cfgEl.shinmax, 95),
-      holdTargetSec: Math.max(1, n(cfgEl.target, 60)),
-      callAtSec: (calls.length ? calls : [45, 30, 10, 5]).sort((a, b) => b - a),
-      cooldownMs: n(cfgEl.cool, 4) * 1000,
-      model: cfgEl.model.value, mirror: cfgEl.mirror.value === 'on',
-    };
+    const c = Object.assign({}, Core.COMMON, move.defaults);
+    for (const b of move.bands) for (const s of b.set) c[s.key] = num('cfg-' + s.key, move.defaults[s.key]);
+    /* the time calls are typed as a list, so anything unreadable falls back
+       rather than silently leaving the set with no calls in it */
+    const calls = String(($('cfg-calls') || {}).value || '').split(/[^\d]+/).map(Number).filter((x) => x > 0);
+    c.cooldownMs = num('cfg-cool', 4) * 1000;
+    c.holdTargetSec = Math.max(1, num('cfg-target', 60));
+    c.callAtSec = (calls.length ? calls : [45, 30, 10, 5]).sort((a, b) => b - a);
+    c.model = $('cfg-model').value;
+    c.mirror = $('cfg-mirror').value === 'on';
+    return c;
   }
+
+  /* the band inputs belong to the move, so they are built when the move changes */
+  function buildSettings() {
+    const host = $('band-settings'); host.innerHTML = '';
+    const mine = saved.bands[move.id] || {};
+    for (const b of move.bands) for (const s of b.set) {
+      const lab = el('label', null, `${s.label}<input type="number" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1">`);
+      host.appendChild(lab);
+      const input = lab.querySelector('input');
+      input.value = mine[s.key] != null ? mine[s.key] : move.defaults[s.key];
+      input.onchange = saveSettings;
+    }
+  }
+  /* and so do the readouts: one card per band, plus the clock */
+  function buildReads() {
+    const host = $('reads'); host.innerHTML = '';
+    for (const b of move.bands) {
+      host.appendChild(el('div', 'read', `<div class="v"><span id="v-${b.key}">—</span><i>°</i></div>` +
+        `<div class="k">${b.label}<span class="band" id="band-${b.key}"></span></div>` +
+        `<div class="meter"><span class="ok" id="ok-${b.key}"></span><b id="pin-${b.key}"></b></div>`));
+      host.lastChild.id = 'read-' + b.key;
+    }
+    host.appendChild(el('div', 'read wide', `<div class="v"><span id="hold-v">60.0</span><i>s</i></div>` +
+      `<div class="k"><span id="hold-k">left of 60 s</span><span class="band" id="best-v">held 0.0 s · best 0.0 s</span></div>` +
+      `<div class="meter"><span class="ok" style="width:100%"></span><b id="hold-pin"></b></div>`));
+    host.lastChild.id = 'read-hold';
+  }
+
   function loadSettings() {
-    const s = store.get();
-    for (const k of KEYS) if (s[k] != null) cfgEl[k].value = s[k];
-    syncBands();
+    saved = Object.assign({ move: 'wallsit', common: {}, bands: {} }, store.get());
+    move = Moves[saved.move] || Moves.wallsit;
+    $('move').value = move.id;
+    for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
+    buildReads(); buildSettings(); syncBands();
   }
   function saveSettings() {
-    const s = {}; for (const k of KEYS) s[k] = cfgEl[k].value;
-    store.set(s); syncBands();
+    saved.move = move.id;
+    for (const k of COMMON_KEYS) saved.common[k] = $('cfg-' + k).value;
+    const mine = saved.bands[move.id] = {};
+    for (const b of move.bands) for (const s of b.set) mine[s.key] = $('cfg-' + s.key).value;
+    store.set(saved); syncBands();
     if (coach) Object.assign(coach.cfg, cfg());
   }
+  /* the band shown beside each reading, and the green stretch on its meter */
   function syncBands() {
     const c = cfg();
-    $('knee-band').textContent = `${c.kneeMin}–${c.kneeMax}`;
-    $('back-band').textContent = `±${c.backTilt}`;
-    $('shin-band').textContent = `${c.shinMin}–${c.shinMax}`;
-    /* the green stretch on each meter, drawn on the scale each meter uses */
-    $('meter-ok').style.left = pct(c.kneeMin, 50, 150) + '%';
-    $('meter-ok').style.width = (pct(c.kneeMax, 50, 150) - pct(c.kneeMin, 50, 150)) + '%';
-    $('bmeter-ok').style.left = pct(-c.backTilt, -40, 40) + '%';
-    $('bmeter-ok').style.width = (pct(c.backTilt, -40, 40) - pct(-c.backTilt, -40, 40)) + '%';
-    $('smeter-ok').style.left = pct(c.shinMin, 50, 130) + '%';
-    $('smeter-ok').style.width = (pct(c.shinMax, 50, 130) - pct(c.shinMin, 50, 130)) + '%';
-    $('hmeter-ok').style.width = '100%';
+    for (const b of move.bands) {
+      const lo = b.sym ? -c[b.sym] : c[b.lo], hi = b.sym ? c[b.sym] : c[b.hi];
+      $('band-' + b.key).textContent = bandText(b, c);
+      $('ok-' + b.key).style.left = pct(lo, b.scale[0], b.scale[1]) + '%';
+      $('ok-' + b.key).style.width = (pct(hi, b.scale[0], b.scale[1]) - pct(lo, b.scale[0], b.scale[1])) + '%';
+    }
     if (!coach) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
     $('r-target').textContent = `of ${c.holdTargetSec}`;
+    $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
+  }
+  /* "-5–15" reads as a subtraction, so a band that starts below zero is spelt out */
+  function bandText(b, c) {
+    if (b.sym) return `±${c[b.sym]}`;
+    return c[b.lo] < 0 ? `${c[b.lo]} to ${c[b.hi]}` : `${c[b.lo]}–${c[b.hi]}`;
   }
   const pct = (v, lo, hi) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
 
@@ -141,12 +181,14 @@
       at += dur + 0.02;
     }
   }
+  const DOWN = [[660, 0.1], [440, 0.14]], UP = [[440, 0.1], [660, 0.14]];
   const TONES = {
-    high: [[660, 0.1], [440, 0.14]],      // going down: get lower
-    low: [[440, 0.1], [660, 0.14]],       // going up: come up
+    high: DOWN, low: UP, hipup: DOWN, hipdown: UP,
     forward: [[300, 0.16]], back: [[300, 0.16]],
     feetback: [[520, 0.09], [392, 0.09], [330, 0.13]],   // walking back: a falling run
     feetfwd: [[330, 0.09], [392, 0.09], [520, 0.13]],    // walking out: the same run, rising
+    stackback: [[330, 0.09], [392, 0.09], [520, 0.13]],
+    stackfwd: [[520, 0.09], [392, 0.09], [330, 0.13]],
     hold: [[880, 0.09], [1175, 0.13]],
     call: [[988, 0.07], [988, 0.09]],                    // the clock, twice, out of the way
     done: [[784, 0.1], [988, 0.1], [1319, 0.22]],
@@ -169,14 +211,14 @@
     });
     if (landmarker) { try { landmarker.close(); } catch { } landmarker = null; }
     try { landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
-    catch { note('No GPU here — using the processor…'); landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
-    loadedModel = want;
+    catch { landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
+    loadedModel = want; note('');
   }
 
   /* ---------- camera ---------- */
   async function startCamera() {
     stopCamera();
-    const want = { video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false };
+    const want = { video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
     try { stream = await navigator.mediaDevices.getUserMedia(want); }
     catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
     video.srcObject = stream;
@@ -202,78 +244,85 @@
   function drawBody(r, v, W, H) {
     const A = W / H;
     const at = (p) => [(p.x / A) * W, p.y * H];
-    const colour = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
     const s = Math.max(2, W / 320);
-    const cDepth = v.depth === 'good' ? C.good : C.bad;
-    const cBack = v.back === 'good' ? C.good : C.bad;
-    const cFeet = v.feet === 'good' ? C.good : C.bad;
+    const rad = Math.max(18, W * 0.045);
+    const fs = Math.max(14, W * 0.032);
+    const tone = (ok) => (ok ? C.good : C.bad);
+    const whole = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
 
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.lineWidth = s * 1.6;
     ctx.shadowColor = C.shadow; ctx.shadowBlur = s * 2;
-    for (const [a, b] of WallSit.BONES) {
+    ctx.lineWidth = s * 1.6; ctx.setLineDash([]);
+    for (const [a, b] of move.bones) {
       const p = r.points[a], q = r.points[b]; if (!p || !q) continue;
-      /* each part is drawn in the colour of the verdict that is about it: the torso
-         carries the back, the shin and foot carry where the feet are */
-      ctx.strokeStyle = !v.ok ? C.dim
-        : (a === 'shoulder' && b === 'hip') ? cBack
-          : (a === 'knee' || a === 'ankle' || a === 'heel') ? cFeet
-            : colour;
+      /* each part is drawn in the colour of the verdict that is about it */
+      const owner = move.limb[a + '|' + b];
+      ctx.strokeStyle = !v.ok ? C.dim : owner ? tone(v.good[owner]) : whole;
       ctx.beginPath(); ctx.moveTo(...at(p)); ctx.lineTo(...at(q)); ctx.stroke();
     }
-    /* the plumb line the back is judged against */
-    const hp = at(r.points.hip);
-    ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-    ctx.beginPath(); ctx.moveTo(hp[0], hp[1]); ctx.lineTo(hp[0], hp[1] - H * 0.3); ctx.stroke();
-
-    /* the floor the shin is judged against, through whichever foot point was used */
-    const footKey = r.shinFoot || 'heel';
-    const fp = at(r.points[footKey]);
-    if (r.shin != null) {
-      ctx.beginPath(); ctx.moveTo(fp[0] - r.facing * W * 0.05, fp[1]); ctx.lineTo(fp[0] + r.facing * W * 0.11, fp[1]); ctx.stroke();
-    }
-    ctx.setLineDash([]);
-
-    ctx.shadowBlur = 0; ctx.fillStyle = colour;
-    for (const k of ['shoulder', 'hip', 'knee', 'ankle', 'heel']) {
+    ctx.shadowBlur = 0; ctx.fillStyle = whole;
+    for (const k of move.dots) {
       const p = r.points[k]; if (!p) continue; const [x, y] = at(p);
       ctx.beginPath(); ctx.arc(x, y, s * 1.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    const rad = Math.max(18, W * 0.045);
-    /* the knee angle, drawn where it is measured */
-    if (r.knee != null) {
-      const [kx, ky] = at(r.points.knee);
-      const ang = (p) => { const [x, y] = at(p); return Math.atan2(y - ky, x - kx); };
-      sweep(kx, ky, rad, ang(r.points.hip), ang(r.points.ankle), cDepth, s, `${Math.round(r.knee)}°`, W);
-    }
-    /* the shin against the floor, drawn at the foot where the floor is. Measured
-       from the floor going forward, away from the wall, so the number on the
-       picture is the number being judged: past 90° the knee is behind the heel. */
-    if (r.shin != null) {
-      const a0 = r.facing > 0 ? 0 : Math.PI;
-      const [kx, ky] = at(r.points.knee);
-      const a1 = Math.atan2(ky - fp[1], kx - fp[0]);
-      sweep(fp[0], fp[1], rad * 0.8, a0, a1, cFeet, s, `${Math.round(r.shin)}°`, W);
-    }
+    /* what the move asks to be drawn, in terms that say nothing about which move it is */
+    move.draw({
+      /* a dashed line straight up (or down, for a negative share) from a point */
+      plumb(p, share) {
+        const [x, y] = at(p);
+        ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - H * share); ctx.stroke(); ctx.setLineDash([]);
+      },
+      /* a dashed floor line through a point */
+      floor(p) {
+        const [x, y] = at(p);
+        ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
+        ctx.beginPath(); ctx.moveTo(x - r.facing * W * 0.05, y); ctx.lineTo(x + r.facing * W * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
+      },
+      /* the straight line a joint is judged against, drawn end to end */
+      guide(a, b, ok) {
+        const p = at(a), q = at(b);
+        ctx.setLineDash([s * 2.5, s * 2.5]); ctx.lineWidth = s * 0.9; ctx.strokeStyle = ok ? C.dim : C.bad;
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); ctx.setLineDash([]);
+      },
+      /* the angle at b between a and c */
+      angleAt(b, a, c, deg, ok, k) {
+        const [cx, cy] = at(b);
+        const ang = (p) => { const [x, y] = at(p); return Math.atan2(y - cy, x - cx); };
+        sweep(cx, cy, rad * k, ang(a), ang(c), tone(ok), s, `${Math.round(deg)}°`, fs);
+      },
+      /* the angle at `from` between a reference direction and `to`: a floor ray
+         when `dir` is a facing, straight up when it is 0 */
+      angleTo(from, to, dir, deg, ok, k) {
+        const [cx, cy] = at(from), [tx, ty] = at(to);
+        const a0 = dir ? (dir > 0 ? 0 : Math.PI) : -Math.PI / 2;
+        sweep(cx, cy, rad * k, a0, Math.atan2(ty - cy, tx - cx), tone(ok), s, `${Math.round(deg)}°`, fs);
+      },
+      /* a bare number beside a point, pushed clear on the side it is signed toward */
+      readout(p, deg, ok, side) {
+        const [x, y] = at(p);
+        label(`${deg > 0 ? '+' : ''}${Math.round(deg)}°`, x, y + side * fs * 1.6, fs, tone(ok), cfg().mirror);
+      },
+    }, r, v);
   }
 
   /* An arc the short way round between two directions, with its number set on the
      bisector just outside it — so the number is plainly the label of that arc and
      the arc is plainly the angle, not its reflex. */
-  function sweep(cx, cy, rad, a0, a1, colour, s, text, W) {
+  function sweep(cx, cy, rad, a0, a1, colour, s, text, fs) {
     let d = a1 - a0;
     while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2;
     ctx.strokeStyle = colour; ctx.lineWidth = s * 1.1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(cx, cy, rad, a0, a1, d < 0); ctx.stroke();
-    const mid = a0 + d / 2, out = rad + Math.max(14, W * 0.032) * 0.95;
-    label(text, cx + Math.cos(mid) * out, cy + Math.sin(mid) * out, Math.max(14, W * 0.032), colour, cfg().mirror);
+    const mid = a0 + d / 2, out = rad + fs * 0.95;
+    label(text, cx + Math.cos(mid) * out, cy + Math.sin(mid) * out, fs, colour, cfg().mirror);
   }
 
-  /* The body is drawn under a mirror when mirroring, which would write the text backwards.
-     Flipping about the label's own x un-mirrors the glyphs and leaves the anchor where it is,
-     so the same (x, y) means the same place on screen either way — and centred text needs no
-     side-swap to go with it. */
+  /* The body is drawn under a mirror when mirroring, which would write the text
+     backwards. Flipping about the label's own x un-mirrors the glyphs and leaves
+     the anchor where it is, so the same (x, y) means the same place on screen
+     either way — and centred text needs no side-swap to go with it. */
   function label(text, x, y, size, colour, mirrored) {
     ctx.save();
     if (mirrored) { ctx.translate(x, y); ctx.scale(-1, 1); ctx.translate(-x, -y); }
@@ -308,21 +357,24 @@
         return y;
       };
     };
-    const num = (x, u) => (live && x != null ? `${Math.round(x)}°` : '—');
     const L = stack(pad, 'left');
-    L(`KNEE ${num(r && r.knee)}`, `target ${c.kneeMin}–${c.kneeMax}`, live ? (v.depth === 'good' ? C.good : C.bad) : C.dim);
-    L(`SHIN ${num(r && r.shin)}`, `floor ${c.shinMin}–${c.shinMax}`, live ? (v.feet === 'good' ? C.good : C.bad) : C.dim);
-    L(`BACK ${num(r && r.tilt)}`, `vertical ±${c.backTilt}`, live ? (v.back === 'good' ? C.good : C.bad) : C.dim);
+    for (const b of move.bands) {
+      const val = live && r[b.of] != null ? `${Math.round(r[b.of])}°` : '—';
+      L(`${b.hud} ${val}`, `${b.note} ${bandText(b, c)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
+    }
 
     /* the countdown, which is what the set is */
     const R = stack(W - pad, 'right');
     const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
-    let ry = R(out.done ? 'DONE' : `${left}s`, out.done ? `${target} s held` : `left of ${target} s`,
-      out.done ? C.good : out.holding ? C.good : C.ink, 1.5);
+    const ry = R(out.done ? 'DONE' : `${left}s`, out.done ? `${target} s held` : `left of ${target} s`,
+      out.done || out.holding ? C.good : C.ink, 1.5);
     if (rec && rec.mr && rec.mr.state === 'recording') {
       line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
       ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
     }
+    /* the move's name, so the recording says what it is a recording of. Top centre,
+       between the two stacks, because the bottom of the frame belongs to the cue. */
+    line(move.name, W / 2, pad, fs * 0.66, C.dim, 'center');
 
     /* the cue, kept on screen a moment after it was said so the recording shows it */
     if (banner && performance.now() - banner.at < 2600) {
@@ -343,9 +395,10 @@
     schedule();
     const now = performance.now();
     let lm = null;
-    /* `__poseSource` stands in for the model: the smoke test drives the whole picture-and-cue
-       path with landmarks it made up, which is the only way to check the drawing, the voice and
-       the recorder without a person and a wall. Unset in normal use. */
+    /* `__poseSource` stands in for the model: the smoke test drives the whole
+       picture-and-cue path with landmarks it made up, which is the only way to
+       check the drawing, the voice and the recorder without a person and a wall.
+       Unset in normal use. */
     if (window.__poseSource) lm = window.__poseSource(now - t0);
     else {
       if (!landmarker || video.readyState < 2) return;
@@ -353,14 +406,12 @@
       try { const res = landmarker.detectForVideo(video, ts); lm = res.landmarks && res.landmarks[0] ? res.landmarks[0] : null; }
       catch { return; }
     }
-
     const aspect = canvas.width / canvas.height;
-    const reading = smoother.apply(WallSit.read(lm, aspect, coach.cfg));
+    const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
     const out = coach.step(reading, now - t0);
-    const v = out.verdict;
     if (out.cue) fire(out.cue);
-    drawFrame(reading, v, out);
-    paintUi(reading, v, out);
+    drawFrame(reading, out.verdict, out);
+    paintUi(reading, out.verdict, out);
     state = out;
   }
   function schedule() {
@@ -377,30 +428,25 @@
     const colour = good ? C.good : cue.id === 'lost' ? C.warn : C.bad;
     banner = { text: cue.text, colour, at: performance.now() };
     voice.say(cue.text); tone(toneFor(cue.id));
-    const el = $('cue'); el.textContent = cue.text;
-    el.className = 'cue ' + (good ? 'good' : cue.id === 'lost' ? 'warn' : 'bad');
+    const e = $('cue'); e.textContent = cue.text;
+    e.className = 'cue ' + (good ? 'good' : cue.id === 'lost' ? 'warn' : 'bad');
   }
 
   function paintUi(r, v, out) {
     const c = cfg(), live = r && r.ok;
-    const ok = { knee: live && v.depth === 'good', back: live && v.back === 'good', shin: live && v.feet === 'good' };
-    $('knee-v').textContent = live && r.knee != null ? Math.round(r.knee) : '—';
-    $('back-v').textContent = live && r.tilt != null ? Math.round(r.tilt) : '—';
-    $('shin-v').textContent = live && r.shin != null ? Math.round(r.shin) : '—';
-    $('read-knee').className = 'read ' + (!live ? '' : ok.knee ? 'good' : 'bad');
-    $('read-back').className = 'read ' + (!live ? '' : ok.back ? 'good' : 'bad');
-    $('read-shin').className = 'read ' + (!live ? '' : ok.shin ? 'good' : 'bad');
-    if (live && r.knee != null) $('meter-pin').style.left = pct(r.knee, 50, 150) + '%';
-    if (live && r.tilt != null) $('bmeter-pin').style.left = pct(r.tilt, -40, 40) + '%';
-    if (live && r.shin != null) $('smeter-pin').style.left = pct(r.shin, 50, 130) + '%';
-
+    for (const b of move.bands) {
+      const x = live ? r[b.of] : null;
+      $('v-' + b.key).textContent = x != null ? Math.round(x) : '—';
+      $('read-' + b.key).className = 'read ' + (!live ? '' : v.good[b.key] ? 'good' : 'bad');
+      if (x != null) $('pin-' + b.key).style.left = pct(x, b.scale[0], b.scale[1]) + '%';
+    }
     /* the countdown: what is left, how much is banked, and how far along the bar is */
     const leftSec = out.leftMs / 1000, target = out.targetMs / 1000;
     $('hold-v').textContent = leftSec.toFixed(1);
     $('hold-k').textContent = out.done ? `${target} s done` : `left of ${target} s`;
     $('best-v').textContent = `held ${(out.holdMs / 1000).toFixed(1)} s · best ${(out.bestMs / 1000).toFixed(1)} s`;
-    $('read-hold').className = 'read wide' + (out.done ? ' good' : out.holding ? ' good' : '');
-    $('hmeter-pin').style.left = pct(out.holdMs, 0, out.targetMs) + '%';
+    $('read-hold').className = 'read wide' + (out.done || out.holding ? ' good' : '');
+    $('hold-pin').style.left = pct(out.holdMs, 0, out.targetMs) + '%';
 
     const chip = $('state');
     if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
@@ -408,9 +454,9 @@
     else if (out.holding) { chip.textContent = `${Math.ceil(leftSec)} s left`; chip.className = 'chip good'; }
     else if (v.inPosition) { chip.textContent = 'Settling'; chip.className = 'chip good'; }
     else {
-      /* the chip names the same fault the cue would, in two words */
-      chip.textContent = v.depth !== 'good' ? (v.depth === 'high' ? 'Too high' : 'Too deep')
-        : v.feet !== 'good' ? (v.feet === 'out' ? 'Feet out' : 'Feet in') : 'Back';
+      /* the chip names the first band that is out, which is the one being coached */
+      const bad = move.bands.find((b) => !v.good[b.key]);
+      chip.textContent = bad ? bad.hud + ' off' : 'Adjust';
       chip.className = 'chip bad';
     }
   }
@@ -463,20 +509,24 @@
       $('go').disabled = false; note(''); return;
     }
     $('veil').hidden = true; note('');
-    $('startstop').disabled = false; $('flip').disabled = false;
-    coach = new WallSit.Coach(cfg()); smoother = new WallSit.Smoother();
-    running = true; t0 = performance.now(); schedule();
-    $('state').textContent = 'Find your position'; $('state').className = 'chip';
+    $('flip').disabled = false;
+    running = true;
+    /* Starting the camera IS starting the set. Asking for a second tap is asking
+       someone to walk back to a phone they have just put on the floor. */
+    startSet();
   }
 
   function startSet() {
     $('result').hidden = true; $('log').innerHTML = ''; $('cue').textContent = '';
-    coach = new WallSit.Coach(cfg()); smoother = new WallSit.Smoother();
-    banner = null; t0 = performance.now();
+    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
+    banner = null; t0 = performance.now(); state = null;
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
-    voice.say('Get into your wall sit');
+    voice.say(move.start);
+    fire({ id: 'start', text: move.start, t: 0 });
     rec = startRecording(); inSet = true;
+    if (!raf) schedule();
     $('rec-note').textContent = rec ? '' : 'This browser will not record from a canvas, so there is no video to download.';
+    $('startstop').disabled = false;
     $('startstop').textContent = 'Finish the set'; $('startstop').className = 'btn stop';
   }
 
@@ -485,6 +535,7 @@
     const blob = await stopRecording();
     rec = rec ? Object.assign(rec, { blob }) : null;
     const s = coach.summary();
+    $('r-move').textContent = move.name;
     $('r-hold').textContent = s.holdSec; $('r-best').textContent = s.bestSec;
     $('r-target').textContent = `of ${s.targetSec}`;
     $('r-cues').textContent = Object.values(s.cues).reduce((a, b) => a + b, 0);
@@ -493,7 +544,7 @@
     $('dl-video').disabled = !blob;
     if (blob) $('rec-note').textContent = `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · the spoken cues are on it as tones and as text on the picture.`;
     $('result').hidden = false;
-    $('startstop').textContent = 'Start the set'; $('startstop').className = 'btn primary';
+    $('startstop').textContent = 'Start another set'; $('startstop').className = 'btn primary';
     voice.say(s.reachedTarget ? `Set done. You held the full ${s.targetSec} seconds.`
       : s.holdSec >= 1 ? `Set done. ${Math.round(s.holdSec)} of ${s.targetSec} seconds in position.` : 'Set done.');
     $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -503,8 +554,15 @@
   /* ---------- wiring ---------- */
   $('go').onclick = begin;
   $('startstop').onclick = () => (inSet ? endSet() : startSet());
+  $('move').onchange = () => {
+    move = Moves[$('move').value] || Moves.wallsit;
+    buildReads(); buildSettings(); saveSettings();
+    $('veil-title').textContent = move.name;
+    if (inSet) endSet();
+    else if (running) { coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother(); banner = null; t0 = performance.now(); }
+  };
   $('flip').onclick = async () => {
-    facing = facing === 'user' ? 'environment' : 'user';
+    camFacing = camFacing === 'user' ? 'environment' : 'user';
     unschedule(); try { await startCamera(); } catch { } if (running) schedule();
   };
   $('mute').onclick = (e) => {
@@ -515,8 +573,8 @@
   $('settings-btn').onclick = (e) => {
     const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
   };
-  for (const k of KEYS) if (k !== 'model') cfgEl[k].onchange = saveSettings;
-  cfgEl.model.onchange = async () => {
+  for (const k of COMMON_KEYS) if (k !== 'model') $('cfg-' + k).onchange = saveSettings;
+  $('cfg-model').onchange = async () => {
     saveSettings();
     if (!landmarker) return;
     unschedule(); $('state').textContent = 'Swapping model…';
@@ -525,26 +583,25 @@
   };
   $('dl-video').onclick = () => {
     if (!rec || !rec.blob) return;
-    save(rec.blob, `wall-sit-${stamp()}.${rec.blob.type.includes('mp4') ? 'mp4' : 'webm'}`);
+    save(rec.blob, `${move.id}-${stamp()}.${rec.blob.type.includes('mp4') ? 'mp4' : 'webm'}`);
   };
   $('dl-log').onclick = () => {
-    const s = coach ? coach.summary() : { log: [] };
+    const s = coach ? coach.summary() : { log: [], targetSec: 0, holdSec: 0, bestSec: 0 };
     const c = cfg();
-    const body = [`Wall sit — ${new Date().toLocaleString()}`,
-      `knee band ${c.kneeMin}-${c.kneeMax}°, shin ${c.shinMin}-${c.shinMax}° off the floor, back within ${c.backTilt}° of vertical`,
+    const bands = move.bands.map((b) => `${b.label} ${bandText(b, c)}°`).join(', ');
+    const body = [`${move.name} — ${new Date().toLocaleString()}`, bands,
       `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`, '',
-      ...s.log.map((c) => `${(c.t / 1000).toFixed(1)}s\t${c.text}`)].join('\n');
-    save(new Blob([body], { type: 'text/plain' }), `wall-sit-${stamp()}.txt`);
+      ...s.log.map((c2) => `${(c2.t / 1000).toFixed(1)}s\t${c2.text}`)].join('\n');
+    save(new Blob([body], { type: 'text/plain' }), `${move.id}-${stamp()}.txt`);
   };
   window.addEventListener('pagehide', () => { unschedule(); stopCamera(); });
 
   loadSettings();
+  $('veil-title').textContent = move.name;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     $('veil-title').textContent = 'No camera here';
     $('veil-text').textContent = 'This needs a browser with camera access, served over https.';
     $('go').disabled = true;
   }
-
-  /* a hook for the smoke test: it drives the loop with made-up landmarks */
-  window.__wallsit = { get coach() { return coach; }, get state() { return state; }, cfg, fire, drawFrame, paintUi };
+  window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; }, cfg, fire, drawFrame, paintUi };
 })();

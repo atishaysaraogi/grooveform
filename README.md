@@ -1,35 +1,55 @@
-# Wall Sit Coach
+# Form Coach
 
-A side-on wall sit coach that runs entirely in the browser. It watches your knee
-angle, your shins and your back, counts down a sixty second hold, says what to
-change while you do it, and hands you a recording of the set with the cues on it.
+A side-on coach for held positions, running entirely in the browser. Put the
+phone on the floor, step into the frame, and it watches the angles that decide
+whether the position is right, says the one thing to change, counts down the
+hold, and hands you a recording of the set with the cues on it.
 
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
-Point a phone at yourself side on, back against a wall, whole body in frame.
-The picture and the **Start the set** button sit together at the top, so nothing
-has to be scrolled to while you are against a wall. Nothing is uploaded — the
-pose model, the coaching and the video file are all made on the device.
+Two exercises so far: **wall sit** and **elbow plank**. Nothing is uploaded —
+the pose model, the coaching and the video file are all made on the device.
+
+## Starting
+
+The front camera opens first, because it is the one you can see while you are
+setting the phone down. Starting the camera *is* starting the set: it says
+*place the camera on the floor and step into the frame*, and it is already
+recording by the time you are in position. Asking for a second tap would be
+asking someone to walk back to a phone they have just put on the floor.
+
+The picture and the set button sit together at the top of the page, so nothing
+has to be scrolled to from the floor.
 
 ## What it measures
 
+**Wall sit** — side on, back against a wall.
+
 | | |
 |---|---|
-| **Knee angle** | the angle at the knee between hip and ankle. 90° is thighs parallel to the floor. The band is **85–110°**: above it the legs are too straight, below it you are too deep. |
+| **Knee angle** | at the knee, between hip and ankle. 90° is thighs parallel to the floor. The band is **85–110°**: above it the legs are too straight, below it you are too deep. |
 | **Shin** | the angle the knee→heel line makes with the floor. Plumb is 90° and the band is **85–95°**. Past 95° the heels are ahead of the knees, under 85° they are behind them, so one number carries both the fault and the direction the feet have to move. |
-| **Back** | how far the line from hip to shoulder leans off vertical. Against a wall it should be straight up; the default allows **±12°**. |
+| **Back** | how far the hip→shoulder line leans off vertical, allowed **±12°**. |
 
-Both numbers are on screen, on a meter with the target band marked, and burnt
-into the recording. Every threshold is a setting you can change.
+**Elbow plank** — side on, forearms down.
 
-**What it cannot see.** The spine rounding between the hip and the shoulder. No
-pose model gives a mid-spine point, so "back straight" here means the hip→shoulder
-line is vertical and nothing more. A rounded back with the hips and shoulders in
-the right places reads as fine.
+| | |
+|---|---|
+| **Arm** | the upper arm's lean off vertical, which is where the shoulder sits over the elbow. Allowed from **5° behind to 15° in front**: the band is not symmetric because a shoulder behind the elbow is the joint taking the load at its weakest, while a little in front is normal. |
+| **Hip** | how far the hip sits off the straight line from shoulder to ankle, as the angle the body bends at the hip. Allowed **±5°**. Above the line the hips are piked and are told to come down; below it they are sagging and are told to lift. |
 
-The heel is the point the shin is measured to and the one the model is least sure
-of; when its confidence drops below the threshold the ankle stands in, a couple of
-centimetres up the same line, and the reading says which point it came from.
+Every threshold is a setting. Both numbers are on screen, on a meter with the
+target band marked, and burnt into the recording.
+
+**Degrees, not distances.** Every measurement is an angle, so none of them
+change with how far away the camera is or how tall you are. One threshold means
+the same thing on every body and at every range, and a test can prove it: the
+plank suite reads the same plank at half the size in frame and checks the
+numbers do not move.
+
+**What it cannot see.** The spine rounding between hip and shoulder. No pose
+model gives a mid-spine point, so both moves judge that line by its ends and
+nothing more.
 
 ## What it says
 
@@ -41,42 +61,43 @@ the other rather than on top of each other.
 
 | | |
 |---|---|
-| heels ahead of the knees | *Bring your feet back* — or, more than 18° out, *your heels are well ahead of your knees* |
-| heels behind the knees | *Bring your feet forward* / *Walk your feet further out* |
+| heels ahead of the knees | *Bring your feet back* |
+| heels behind the knees | *Bring your feet forward* |
 | legs too straight | *Lower down* / *Slide further down the wall* |
 | too deep | *Come up a little* / *Come up — that is too deep* |
 | back off the wall | *Press your back flat to the wall* |
 | hips ahead of the shoulders | *Bring your hips under your shoulders* |
+| shoulders behind the elbows | *Bring your shoulders over your elbows* |
+| shoulders too far forward | *Bring your shoulders back over your elbows* |
+| hips piked | *Lower your hips — shoulders to heels in one line* |
+| hips sagging | *Lift your hips — shoulders to heels in one line* |
 | just right | *That is it — hold*, once, and the clock starts |
 
-They are listed in the order they are corrected.
+Each fault has a stronger form used when it is well past its band.
 
-When more than one is wrong they are corrected **feet, then knee, then back**,
-in that order and not by how far out each one is. The order is the chain of
-cause. Where the feet are decides which knee angles can be reached at all, and
-where the knee is decides what the back has to do to balance it. Being told to
-flatten a back that is only leaning because the feet are in the wrong place asks
-for something the stance will not give, so the chain is worked from the ground
-up and each cue lands on a position that can act on it.
+**The order.** When more than one is wrong they are corrected in the chain of
+cause, not by how far out each is: **feet, then knee, then back** for the wall
+sit, **shoulders, then hips** for the plank. Where the feet or the elbows are
+decides what the rest of the body can reach, so a correction further along the
+chain asks for something the base will not give. A shoulder six degrees behind
+the elbow is said before hips twenty degrees off the line, and that is the
+point of the rule rather than a flaw in it.
 
 ## The set
 
 Sixty seconds, counted down from the moment the position is right. The clock is
-spent from time **in position**, so standing up pauses it rather than running it
-down — sixty seconds means sixty seconds of wall sit. It starts after 0.7 s in
-the bands and stops the instant any of them is broken. The time left is called
-out at 45, 30, 10 and 5 seconds, and those calls jump the 1.5 s queue, because
-"ten seconds left" said two seconds late is a lie. The target and the moments it
-is called are both settings, as the bands are.
-
-The longest unbroken run is kept alongside the total.
+spent from time **in position**, so coming out of it pauses the clock rather
+than running it down — sixty seconds means sixty seconds of the exercise. It
+starts after 0.7 s in the bands and stops the instant any of them is broken.
+The time left is called out at 45, 30, 10 and 5 seconds, and those calls jump
+the 1.5 s queue, because "ten seconds left" said two seconds late is a lie. The
+target and the moments it is called are both settings.
 
 ## The recording
 
-The canvas **is** the recording: camera frame, skeleton, the angle drawn at the
-knee, the shin's angle drawn against the floor at the heel, the plumb line the
-back is judged against, all three readings, the countdown and the cue banner are
-all painted onto it, so the file you download is the picture
+The canvas **is** the recording: camera frame, skeleton, every angle drawn where
+it is measured, the lines each is judged against, the readings, the countdown and
+the cue banner are all painted onto it, so the file you download is the picture
 you watched. Cues are also mixed in as tones — a browser will not let a page
 capture its own speech, so the words are on the picture and a matching tone is
 on the audio track. MP4 where the browser can write one, WebM where it cannot.
@@ -97,34 +118,43 @@ uploads it as it stands.
 public/
   index.html
   styles.css
-  js/wallsit.js    the measuring and the coaching decision — pure, no DOM, tested
+  js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
+  js/moves.js      the exercises: what each measures, allows and says, and in what order
   js/app.js        camera, drawing, voice, recording
 test/
-  wallsit.test.js  angles and cue timing, against synthetic bodies
+  wallsit.test.js  the wall sit, against synthetic bodies
+  plank.test.js    the plank, likewise
   smoke.mjs        the browser, with the pose model stood in for
 ```
 
-Every threshold is remembered in the browser, and the store carries a version:
-when a default band changes, a store written under the old one is dropped rather
-than quietly holding the old band on a page that says it uses the new one.
+## Adding a move
 
-`wallsit.js` takes landmarks and a clock and returns readings and at most one
-cue. That is what makes the thresholds checkable: every number the app acts on
-is held in `test/wallsit.test.js` against a body built to read exactly that
-number, which is the only honest way to know a threshold does what it says.
+A move is data plus two functions. `read` turns landmarks into named angles;
+`judge` turns those into a verdict and a set of faults with how far out each one
+is. Everything after that — the clock, the countdown, the persistence and
+cooldown and the one-at-a-time rule — is in `core.js` and is the same for every
+move. The readouts, the settings inputs, the heads-up display and the skeleton's
+colours are all built from the move's own description of itself, so adding an
+exercise means describing it, not rewriting the app.
 
-The test rig builds that body from the knee outwards — the shin is laid down at
-the angle wanted and the thigh is swung off it by the knee angle — so the two
-are independent. A body can have good feet and bad depth, or the reverse, and
-each gets its own cue; a rig that could not pose those separately could not tell
+Settings are remembered in the browser per exercise, and the store carries a
+version: when a default band changes, a store written under the old one is
+dropped rather than quietly holding the old band on a page that says it uses the
+new one.
+
+## Testing
+
+Every number the app acts on is held against a body built to read exactly that
+number. Each rig builds the body backwards from the angles wanted, and builds
+them independently: the wall sit's shin is laid down at the angle asked for and
+the thigh swung off it by the knee angle; the plank's arm and body are built
+apart, and the body is bent *at the hip* so every limb keeps its length whatever
+the sag is. A rig that could not pose one fault without the other could not tell
 you the cues were right.
 
-## Pose model
-
-MediaPipe Pose Landmarker, loaded from the CDN on first use. The **full** model
-is the default: a wall sit is a hold, not a fast movement, so there is no reason
-to take the faster, shakier read. The lite model is one setting away for an old
-phone.
+`smoke.mjs` then drives a real browser with the pose model stood in for, through
+both exercises, and ends by downloading the video and checking there are frames
+in it.
 
 ## History
 

@@ -14,17 +14,17 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* the same body the unit tests pose, built in the page so the app sees ordinary landmarks */
+/* The same bodies the unit tests pose, built in the page so the app sees ordinary
+   landmarks. Which one is built follows `__pose.move`, so switching exercise in the
+   UI switches what the stand-in camera is showing, as a real person would. */
 const POSE_SRC = `
 const D = Math.PI / 180, ASPECT = 16 / 9;
-const SIDE = { L: { shoulder: 11, hip: 23, knee: 25, ankle: 27, heel: 29, toe: 31, ear: 7 },
-               R: { shoulder: 12, hip: 24, knee: 26, ankle: 28, heel: 30, toe: 32, ear: 8 } };
-window.__pose = { knee: 90, shin: 90, tilt: 0, vis: 0.95 };
-/* the same body the unit tests pose, built from the knee out so the knee angle and
-   the shin's angle off the floor can be set one without the other */
-window.__poseSource = function () {
-  const o = window.__pose; if (!o) return null;
-  const thigh = 0.2, shinLen = 0.22, torso = 0.26, f = 1;
+const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
+               R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
+window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0, vis: 0.95 };
+
+function wallsitBody(o, f) {
+  const thigh = 0.2, shinLen = 0.22, torso = 0.26;
   const knee = { x: 0.75, y: 0.55 };
   const u = { x: -f * Math.cos(o.shin * D), y: Math.sin(o.shin * D) };
   const heel = { x: knee.x + shinLen * u.x, y: knee.y + shinLen * u.y };
@@ -33,9 +33,29 @@ window.__poseSource = function () {
   const h = { x: u.x * ca - u.y * sa, y: u.x * sa + u.y * ca };
   const hip = { x: knee.x + thigh * h.x, y: knee.y + thigh * h.y };
   const shoulder = { x: hip.x + f * torso * Math.sin(o.tilt * D), y: hip.y - torso * Math.cos(o.tilt * D) };
-  const P = { hip, knee, ankle, shoulder, heel,
+  return { hip, knee, ankle, shoulder, heel,
     toe: { x: heel.x + f * 0.08, y: heel.y + 0.004 },
     ear: { x: shoulder.x + f * 0.02, y: shoulder.y - 0.07 } };
+}
+function plankBody(o, f) {
+  const upper = 0.18, torso = 0.27, legs = 0.26, fore = 0.13;
+  const shoulder = { x: 0.62, y: 0.42 };
+  const elbow = { x: shoulder.x - f * upper * Math.sin(o.stack * D), y: shoulder.y + upper * Math.cos(o.stack * D) };
+  const wrist = { x: elbow.x + f * fore, y: elbow.y + 0.012 };
+  const tilt = 12 * D, dir = { x: -f * Math.cos(tilt), y: Math.sin(tilt) };
+  const hip = { x: shoulder.x + torso * dir.x, y: shoulder.y + torso * dir.y };
+  const a = -o.sag * D * f, ca = Math.cos(a), sa = Math.sin(a);
+  const leg = { x: dir.x * ca - dir.y * sa, y: dir.x * sa + dir.y * ca };
+  const ankle = { x: hip.x + legs * leg.x, y: hip.y + legs * leg.y };
+  return { shoulder, elbow, wrist, hip, ankle,
+    knee: { x: hip.x + legs * 0.55 * leg.x, y: hip.y + legs * 0.55 * leg.y },
+    heel: { x: ankle.x - f * 0.02, y: ankle.y + 0.035 },
+    toe: { x: ankle.x - f * 0.05, y: ankle.y + 0.055 },
+    ear: { x: shoulder.x + f * 0.05, y: shoulder.y - 0.04 } };
+}
+window.__poseSource = function () {
+  const o = window.__pose; if (!o) return null;
+  const P = o.move === 'plank' ? plankBody(o, 1) : wallsitBody(o, 1);
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   for (const s of ['L', 'R']) for (const k in SIDE[s]) {
     const p = P[k]; if (!p) continue;
@@ -64,28 +84,32 @@ await page.addInitScript(POSE_SRC);
 const set = (o) => page.evaluate((v) => Object.assign(window.__pose, v), o);
 const cue = () => page.textContent('#cue');
 const chip = () => page.textContent('#state');
+const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 8000 });
 
 try {
   await step('the page comes up and offers the camera', async () => {
     await page.goto(base + '/');
     await page.waitForSelector('#go');
-    assert.equal(await page.textContent('#knee-band'), '85–110', 'the band asked for is the band shown');
-    assert.equal(await page.textContent('#back-band'), '±12');
-    assert.equal(await page.textContent('#shin-band'), '85–95');
+    assert.equal(await page.textContent('#band-knee'), '85–110', 'the band asked for is the band shown');
+    assert.equal(await page.textContent('#band-shin'), '85–95');
+    assert.equal(await page.textContent('#band-back'), '±12');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
   });
 
-  await step('starting the camera begins reading the body', async () => {
+  await step('starting the camera starts the set and says where to put the phone', async () => {
     await page.click('#go');
     await page.waitForFunction(() => document.getElementById('veil').hidden, null, { timeout: 20000 });
-    await page.waitForFunction(() => document.getElementById('knee-v').textContent !== '—', null, { timeout: 10000 });
-    const knee = await page.textContent('#knee-v');
+    /* no second tap: the set is already running and recording */
+    assert.equal(await page.textContent('#startstop'), 'Finish the set');
+    assert.match(await cue(), /camera on the floor/i, 'and the instruction is on screen');
+    assert.match(await cue(), /step into the frame/i);
+    await page.waitForFunction(() => document.getElementById('v-knee').textContent !== '—', null, { timeout: 10000 });
+    const knee = await page.textContent('#v-knee');
     assert.ok(Math.abs(Number(knee) - 90) <= 1, 'a body posed at 90° reads 90° on screen, not ' + knee);
-    const shin = await page.textContent('#shin-v');
-    assert.ok(Math.abs(Number(shin) - 90) <= 1, 'and a plumb shin reads 90°, not ' + shin);
+    assert.ok(Math.abs(Number(await page.textContent('#v-shin')) - 90) <= 1, 'and a plumb shin reads 90°');
   });
 
-  await step('the picture and the start button are on screen together', async () => {
+  await step('the picture and the finish button are on screen together', async () => {
     const box = await page.evaluate(() => {
       const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; };
       return { stage: r('stage'), button: r('startstop'), h: window.innerHeight };
@@ -111,47 +135,41 @@ try {
     assert.ok(Math.abs(b.mean - a.mean) > 0.01 || b.mean > 4, 'and it keeps being drawn');
   });
 
-  await step('a set starts, and the legs being too straight is called', async () => {
-    await page.click('#startstop');
-    assert.equal(await page.textContent('#startstop'), 'Finish the set');
+  await step('the legs being too straight is called', async () => {
     await set({ knee: 122 });
-    await page.waitForFunction(() => /lower/i.test(document.getElementById('cue').textContent), null, { timeout: 4000 });
-    assert.match(await cue(), /lower down/i);
-    assert.match(await chip(), /too high/i);
+    await saw('lower down');
+    assert.match(await chip(), /knee off/i);
   });
 
   await step('too deep is called the other way', async () => {
     await set({ knee: 70 });
-    await page.waitForFunction(() => /come up/i.test(document.getElementById('cue').textContent), null, { timeout: 6000 });
-    assert.match(await chip(), /too deep/i);
-  });
-
-  await step('a back off the wall is called', async () => {
-    await set({ knee: 95, tilt: 30 });
-    await page.waitForFunction(() => /back flat/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
+    await saw('come up');
   });
 
   await step('heels ahead of the knees are told to bring the feet back', async () => {
     await set({ knee: 95, tilt: 2, shin: 108 });
-    await page.waitForFunction(() => /feet back/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
-    assert.match(await chip(), /feet out/i);
+    await saw('feet back');
+    assert.match(await chip(), /shin off/i);
     assert.match(await page.getAttribute('#read-shin', 'class'), /bad/);
   });
 
   await step('heels behind the knees are told the other way', async () => {
     await set({ shin: 72 });
-    await page.waitForFunction(() => /feet forward/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
-    assert.match(await chip(), /feet in/i);
+    await saw('feet forward');
+  });
+
+  await step('a back off the wall is called', async () => {
+    await set({ shin: 90, tilt: 30 });
+    await saw('back flat');
   });
 
   await step('a good wall sit is told to hold, and the clock runs', async () => {
     await set({ knee: 95, tilt: 2, shin: 90 });
-    await page.waitForFunction(() => /hold/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
+    await saw('hold');
     /* the readout counts down from sixty, so time banked is what it has come off */
     await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) < 58.5, null, { timeout: 8000 });
     assert.match(await chip(), /\d+ s left/i);
     assert.match(await page.getAttribute('#read-knee', 'class'), /good/, 'and the reading reads as good');
-    assert.match(await page.getAttribute('#read-shin', 'class'), /good/);
   });
 
   await step('the clock stops when the position goes', async () => {
@@ -167,13 +185,14 @@ try {
     await page.click('#startstop');
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
     const out = await page.evaluate(() => ({
-      hold: document.getElementById('r-hold').textContent,
+      move: document.getElementById('r-move').textContent,
       best: document.getElementById('r-best').textContent,
       cues: Number(document.getElementById('r-cues').textContent),
       rows: [...document.querySelectorAll('#log li')].map((li) => li.textContent),
       canDownload: !document.getElementById('dl-video').disabled,
       note: document.getElementById('rec-note').textContent,
     }));
+    assert.equal(out.move, 'Wall sit', 'the set says which exercise it was');
     assert.ok(Number(out.best) >= 1, 'the longest hold was counted: ' + out.best);
     assert.ok(out.cues >= 3, 'the corrections were counted: ' + out.cues);
     assert.ok(out.rows.length >= 4 && /\d+\.\ds —/.test(out.rows[0]), 'the log has times and words: ' + JSON.stringify(out.rows.slice(0, 3)));
@@ -186,44 +205,84 @@ try {
     await page.click('#dl-video');
     const d = await dl;
     const name = d.suggestedFilename();
-    assert.match(name, /^wall-sit-.*\.(mp4|webm)$/, name);
+    assert.match(name, /^wallsit-.*\.(mp4|webm)$/, name);
     const path = await d.path();
     const { size } = await (await import('node:fs/promises')).stat(path);
     assert.ok(size > 20000, 'it has frames in it: ' + size + ' bytes');
     console.log('      ' + name + ', ' + (size / 1e6).toFixed(2) + ' MB');
   });
 
-  await step('the settings change what is judged', async () => {
-    await page.click('#settings-btn');
-    await page.fill('#cfg-max', '100');
-    await page.dispatchEvent('#cfg-max', 'change');
-    assert.equal(await page.textContent('#knee-band'), '85–100');
-    await set({ knee: 105, tilt: 0 });
-    await page.waitForFunction(() => /too high/i.test(document.getElementById('state').textContent), null, { timeout: 6000 });
+  await step('switching to the plank changes what is measured and what is shown', async () => {
+    await set({ move: 'plank', stack: 0, sag: 0 });
+    await page.selectOption('#move', 'plank');
+    await page.waitForSelector('#read-stack');
+    assert.equal(await page.textContent('#band-stack'), '-5 to 15', 'the shoulder band');
+    assert.equal(await page.textContent('#band-line'), '±5', 'the hip band');
+    assert.equal(await page.$('#read-knee'), null, 'and the wall sit\'s readings are gone');
+    await page.click('#startstop');
+    await page.waitForFunction(() => document.getElementById('v-line').textContent !== '—', null, { timeout: 10000 });
+    assert.ok(Math.abs(Number(await page.textContent('#v-line'))) <= 1, 'a straight plank reads zero at the hip');
+    assert.ok(Math.abs(Number(await page.textContent('#v-stack'))) <= 1, 'and a plumb arm reads zero');
   });
 
-  await step('the set is a countdown: it calls the time and it ends', async () => {
+  await step('hips above the line are told to come down', async () => {
+    await set({ sag: 12 });
+    await saw('lower your hips');
+    assert.match(await chip(), /hip off/i);
+  });
+
+  await step('hips below the line are told to lift', async () => {
+    await set({ sag: -12 });
+    await saw('lift your hips');
+  });
+
+  await step('shoulders behind the elbows are called before the hips, however far the hips are out', async () => {
+    /* six degrees behind the elbows against twenty past the hip band: the base still
+       goes first. Six is inside the plank's stronger-wording line, so this is the
+       plain cue rather than the emphatic one. */
+    await set({ stack: -11, sag: 25 });
+    await saw('shoulders over your elbows');
+  });
+
+  await step('a good plank holds, and its own countdown calls the time and ends', async () => {
     /* six seconds rather than sixty, because the target and the calls are settings —
        which is the other thing this proves */
+    await page.click('#settings-btn');
     await page.fill('#cfg-target', '6');
     await page.dispatchEvent('#cfg-target', 'change');
     await page.fill('#cfg-calls', '4, 2');
     await page.dispatchEvent('#cfg-calls', 'change');
-    await page.click('#startstop');
-    await set({ knee: 95, tilt: 0, shin: 90 });
-    const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms });
-    await saw('4 seconds left', 10000);
-    await saw('2 seconds left', 10000);
-    await saw('6 seconds . done', 10000);
+    await page.click('#startstop');            // finish the running set
+    await page.click('#startstop');            // and start a fresh one on the new target
+    await set({ stack: 5, sag: 1 });
+    await saw('4 seconds left', 12000);
+    await saw('2 seconds left', 12000);
+    await saw('6 seconds . done', 12000);
     assert.match(await chip(), /done/i);
     assert.equal(await page.textContent('#hold-v'), '0.0', 'nothing left to do');
     await page.click('#startstop');
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
-    assert.equal(await page.textContent('#r-target'), 'of 6');
-    assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held: ' + await page.textContent('#r-hold'));
+    assert.equal(await page.textContent('#r-move'), 'Elbow plank');
+    assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held');
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
     assert.ok(rows.some((t) => /4 seconds left/.test(t)) && rows.some((t) => /done/.test(t)),
       'and the calls are in the log: ' + JSON.stringify(rows));
+  });
+
+  await step('the settings change what is judged', async () => {
+    await page.fill('#cfg-hipLine', '2');
+    await page.dispatchEvent('#cfg-hipLine', 'change');
+    assert.equal(await page.textContent('#band-line'), '±2');
+    await page.click('#startstop');
+    await set({ stack: 0, sag: 4 });
+    await page.waitForFunction(() => /hip off/i.test(document.getElementById('state').textContent), null, { timeout: 8000 });
+  });
+
+  await step('the exercise and its bands are remembered across a reload', async () => {
+    await page.reload();
+    await page.waitForSelector('#go');
+    assert.equal(await page.inputValue('#move'), 'plank', 'it comes back on the plank');
+    assert.equal(await page.textContent('#band-line'), '±2', 'with the band that was set');
   });
 
   await step('no JS errors along the way', () => {
