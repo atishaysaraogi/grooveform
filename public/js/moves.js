@@ -19,7 +19,7 @@
   else root.Moves = factory(root.Core);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (Core) {
   'use strict';
-  const { angleAt, tiltFromVertical, fromFloor, lineBend, frame } = Core;
+  const { angleAt, tiltFromVertical, fromFloor, fromDown, lineBend, inBand, within, frame, sidePoints } = Core;
 
   /* =======================================================================
      Wall sit — side on, back against a wall.
@@ -90,13 +90,13 @@
     judge(r, cfg) {
       if (!r || !r.ok || r.knee == null || r.tilt == null) return { ok: false, inPosition: false, good: {}, faults: {} };
       const faults = {}, good = {};
-      good.knee = r.knee <= cfg.kneeMax && r.knee >= cfg.kneeMin;
+      good.knee = inBand(r.knee, cfg.kneeMin, cfg.kneeMax);
       if (r.knee > cfg.kneeMax) faults.high = r.knee - cfg.kneeMax;
       else if (r.knee < cfg.kneeMin) faults.low = cfg.kneeMin - r.knee;
-      good.shin = r.shin == null || (r.shin <= cfg.shinMax && r.shin >= cfg.shinMin);
+      good.shin = r.shin == null || inBand(r.shin, cfg.shinMin, cfg.shinMax);
       if (r.shin != null && r.shin > cfg.shinMax) faults.feetback = r.shin - cfg.shinMax;
       else if (r.shin != null && r.shin < cfg.shinMin) faults.feetfwd = cfg.shinMin - r.shin;
-      good.back = Math.abs(r.tilt) <= cfg.backTilt;
+      good.back = within(r.tilt, cfg.backTilt);
       if (r.tilt > cfg.backTilt) faults.forward = r.tilt - cfg.backTilt;
       else if (r.tilt < -cfg.backTilt) faults.back = -r.tilt - cfg.backTilt;
       return { ok: true, good, faults, inPosition: good.knee && good.shin && good.back };
@@ -179,10 +179,10 @@
     judge(r, cfg) {
       if (!r || !r.ok || r.stack == null || r.hipOff == null) return { ok: false, inPosition: false, good: {}, faults: {} };
       const faults = {}, good = {};
-      good.stack = r.stack >= cfg.stackMin && r.stack <= cfg.stackMax;
+      good.stack = inBand(r.stack, cfg.stackMin, cfg.stackMax);
       if (r.stack < cfg.stackMin) faults.stackback = cfg.stackMin - r.stack;
       else if (r.stack > cfg.stackMax) faults.stackfwd = r.stack - cfg.stackMax;
-      good.line = Math.abs(r.hipOff) <= cfg.hipLine;
+      good.line = within(r.hipOff, cfg.hipLine);
       if (r.hipOff > cfg.hipLine) faults.hipup = r.hipOff - cfg.hipLine;
       else if (r.hipOff < -cfg.hipLine) faults.hipdown = -r.hipOff - cfg.hipLine;
       return { ok: true, good, faults, inPosition: good.stack && good.line };
@@ -198,5 +198,125 @@
     },
   };
 
-  return { wallsit, plank, list: [wallsit, plank] };
+  /* =======================================================================
+     Standing knee raise — side on, standing tall, one knee up and held.
+     The first move here that is a set of reps rather than one long hold.
+     ======================================================================= */
+  const kneeraise = {
+    id: 'kneeraise',
+    name: 'Knee raise',
+    hint: 'Phone standing up, side on to you, whole body in frame.',
+    start: 'Stand the phone up on the floor, then stand side on, tall, and raise one knee.',
+    camera: 'tall',                 // a standing body needs the height, not the width
+    reps: true,
+    holdLabel: 'Hold each rep for',
+
+    defaults: {
+      kneeMin: 85, kneeMax: 95,     // the angle at the knee, hip to ankle: a right angle, 5° either way
+      ankleMin: 85, ankleMax: 95,   // the angle at the ankle, knee to toe: likewise
+      /* Where the thigh has to get to before this counts as a raise, and where it
+         has to come back to before the rep is finished. These are not coached and
+         are not judged — they are how the phases are told apart, and they are wide
+         on purpose so that the two angles above are the only things being marked. */
+      raiseAt: 45,
+      downAt: 20,
+      holdTargetSec: 10,
+      callAtSec: [5],
+      repCount: 10,
+      deepAt: 8,                    // tight bands, so "a long way out" has to be tighter too
+    },
+    extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
+            { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 }],
+
+    joints: ['shoulder', 'hip', 'knee', 'ankle', 'toe'],
+    needed: ['hip', 'knee', 'ankle', 'toe'],
+    bones: [['shoulder', 'hip'], ['hip', 'knee'], ['knee', 'ankle'], ['ankle', 'heel'], ['ankle', 'toe'], ['heel', 'toe']],
+    dots: ['shoulder', 'hip', 'knee', 'ankle', 'toe'],
+    limb: { 'hip|knee': 'knee', 'knee|ankle': 'knee', 'ankle|toe': 'ankle', 'ankle|heel': 'ankle', 'heel|toe': 'ankle' },
+
+    bands: [
+      { key: 'knee', of: 'knee', label: 'knee angle', hud: 'KNEE', note: 'target',
+        lo: 'kneeMin', hi: 'kneeMax', scale: [40, 180],
+        set: [{ key: 'kneeMin', label: 'Knee angle, lowest', min: 40, max: 175 },
+              { key: 'kneeMax', label: 'Knee angle, highest', min: 45, max: 180 }] },
+      { key: 'ankle', of: 'ankle', label: 'ankle angle', hud: 'FOOT', note: 'target',
+        lo: 'ankleMin', hi: 'ankleMax', scale: [50, 170],
+        set: [{ key: 'ankleMin', label: 'Ankle angle, lowest', min: 50, max: 165 },
+              { key: 'ankleMax', label: 'Ankle angle, highest', min: 55, max: 170 }] },
+    ],
+
+    faults: ['lost', 'raise', 'kneeOpen', 'kneeShut', 'toesDown', 'toesUp'],
+    prompts: ['raise'],
+    cues: {
+      raise: { text: 'Raise one knee' },
+      kneeOpen: { text: 'Bend your knee more', deep: 'Bend your knee to a right angle' },
+      kneeShut: { text: 'Open your knee a little', deep: 'Open your knee out to a right angle' },
+      /* the ankle angle grows as the toes point away and shrinks as they come up */
+      toesDown: { text: 'Pull your toes up', deep: 'Pull your toes up — foot square to your shin' },
+      toesUp: { text: 'Ease your toes down', deep: 'Ease your toes down — foot square to your shin' },
+      lower: { text: 'Lower slowly' },
+      early: { text: 'Hold it to the end of the count next time' },
+      lost: { text: 'Step into the camera, side on' },
+    },
+
+    /* Side-on the two legs sit on top of each other, so the usual "whichever is
+       clearer" is no help: both are. The leg being raised is the one to measure, so
+       the thigh that is higher wins, and visibility only decides when neither is up. */
+    read(lm, aspect, cfg) {
+      if (!lm || lm.length < 33) return null;
+      const opts = [];
+      for (const side of ['L', 'R']) {
+        const P = sidePoints(lm, aspect, side);
+        if (!P) return null;
+        const ok = kneeraise.needed.every((k) => P[k].v >= cfg.vis);
+        opts.push({ side, P, ok, thigh: fromDown(P.hip, P.knee) || 0,
+          vis: kneeraise.joints.reduce((a, k) => a + P[k].v, 0) / kneeraise.joints.length });
+      }
+      const usable = opts.filter((o) => o.ok);
+      if (!usable.length) {
+        return { ok: false, side: opts[0].side, vis: Math.max(...opts.map((o) => o.vis)),
+          why: 'Some of you is out of shot or hidden' };
+      }
+      const pick = usable.slice().sort((a, b) => (b.thigh - a.thigh) || (b.vis - a.vis))[0];
+      const P = pick.P;
+      /* which way the body faces, taken from the foot rather than the legs, because
+         the legs are the thing that moves */
+      const facing = Math.sign(P.toe.x - P.heel.x) || 1;
+      return {
+        ok: true, side: pick.side, vis: pick.vis, facing, points: P,
+        angles: ['knee', 'ankle', 'thigh'],
+        knee: angleAt(P.hip, P.knee, P.ankle),     // hip → knee → ankle
+        ankle: angleAt(P.knee, P.ankle, P.toe),    // knee → ankle → toe
+        thigh: pick.thigh,                          // 0 standing, 90 thigh level
+      };
+    },
+
+    judge(r, cfg) {
+      if (!r || !r.ok || r.knee == null || r.ankle == null) {
+        return { ok: false, inPosition: false, raised: false, atStart: false, good: {}, faults: {} };
+      }
+      const faults = {}, good = {};
+      good.knee = inBand(r.knee, cfg.kneeMin, cfg.kneeMax);
+      if (r.knee > cfg.kneeMax) faults.kneeOpen = r.knee - cfg.kneeMax;
+      else if (r.knee < cfg.kneeMin) faults.kneeShut = cfg.kneeMin - r.knee;
+      good.ankle = inBand(r.ankle, cfg.ankleMin, cfg.ankleMax);
+      if (r.ankle > cfg.ankleMax) faults.toesDown = r.ankle - cfg.ankleMax;
+      else if (r.ankle < cfg.ankleMin) faults.toesUp = cfg.ankleMin - r.ankle;
+      const raised = r.thigh >= cfg.raiseAt, atStart = r.thigh <= cfg.downAt;
+      return { ok: true, good, faults, raised, atStart,
+        inPosition: raised && good.knee && good.ankle };
+    },
+
+    /* The two angles where they are measured, and the thigh against straight down —
+       dim, because it is what tells a raise from standing rather than something
+       being marked. */
+    draw(d, r, v) {
+      d.plumb(r.points.hip, -0.16);
+      if (r.thigh != null) d.angleTo(r.points.hip, r.points.knee, 'down', r.thigh, null, 0.55);
+      if (r.knee != null) d.angleAt(r.points.knee, r.points.hip, r.points.ankle, r.knee, v.good.knee, 1);
+      if (r.ankle != null) d.angleAt(r.points.ankle, r.points.knee, r.points.toe, r.ankle, v.good.ankle, 0.7);
+    },
+  };
+
+  return { wallsit, plank, kneeraise, list: [wallsit, plank, kneeraise] };
 });

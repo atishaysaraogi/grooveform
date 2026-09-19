@@ -40,6 +40,15 @@
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
   const DEG = 180 / Math.PI;
 
+  /* Is a reading inside its band? A body posed to exactly the edge comes back a
+     ten-thousandth of a degree under it, so a bare comparison rejects the very
+     number the setting says is allowed. "Five degrees either way" has to include
+     five degrees, so the comparison is given room for the arithmetic and none for
+     anything else. */
+  const EDGE = 1e-9;
+  const inBand = (x, lo, hi) => x >= lo - EDGE && x <= hi + EDGE;
+  const within = (x, lim) => Math.abs(x) <= lim + EDGE;
+
   /* The angle at b, between a and c, in degrees. Landmark x is a share of the
      frame's WIDTH and y a share of its HEIGHT, so x has to be scaled by the
      aspect before any angle taken from them means anything. */
@@ -104,17 +113,36 @@
     return { side: r > l ? 'R' : 'L', vis: Math.max(l, r) };
   }
 
-  /* Landmarks → points in square space, so that an angle is an angle. Returns
+  /* One side's landmarks as points in square space, so that an angle is an angle.
+     A move that has to look at both sides before deciding which one to measure
+     builds them itself and chooses; everything else goes through `frame`. */
+  function sidePoints(lm, aspect, side) {
+    const j = SIDE[side], P = {};
+    for (const k of Object.keys(j)) { const p = lm[j[k]]; if (!p) return null; P[k] = { x: p.x * aspect, y: p.y, v: visOf(p) }; }
+    return P;
+  }
+  const seen = (P, needed, cfg) => needed.every((k) => P[k] && P[k].v >= cfg.vis);
+
+  /* Landmarks → the side worth measuring, by how clearly it can be seen. Returns
      null when the frame cannot be used at all, and `{ok:false}` when the body is
      there but not clearly enough to judge. */
   function frame(lm, aspect, cfg, joints, needed) {
     if (!lm || lm.length < 33) return null;
     const { side, vis } = pickSide(lm, joints);
-    const j = SIDE[side];
-    const P = {};
-    for (const k of Object.keys(j)) { const p = lm[j[k]]; if (!p) return null; P[k] = { x: p.x * aspect, y: p.y, v: visOf(p) }; }
-    for (const k of needed) if (P[k].v < cfg.vis) return { ok: false, side, vis, why: 'Some of you is out of shot or hidden' };
+    const P = sidePoints(lm, aspect, side);
+    if (!P) return null;
+    if (!seen(P, needed, cfg)) return { ok: false, side, vis, why: 'Some of you is out of shot or hidden' };
     return { ok: true, side, vis, points: P };
+  }
+
+  /* The angle a limb makes with straight down: 0 hanging, 90 level, more than that
+     above the horizontal. Unsigned, because it is a lift and there is only one way
+     to lift. */
+  function fromDown(from, to) {
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const m = Math.hypot(dx, dy);
+    if (!m) return null;
+    return Math.acos(clamp(dy / m, -1, 1)) * DEG;
   }
 
   /* A phone laid on the floor gives a frame the shape of however it is lying, and
@@ -174,6 +202,7 @@
       this.holdMs = 0; this.bestMs = 0; this.runMs = 0; this.totalMs = 0;
       this.called = {};                 // which time calls have already been made
       this.lastSpoke = 0;               // when anything was last said, whatever it was
+      this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
       this.lastT = null; this.log = [];
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
@@ -181,10 +210,15 @@
     /* One frame. `t` is a millisecond clock the caller owns. Returns the frame's
        verdict and, at most, one cue to speak. */
     step(r, t) {
-      const cfg = this.cfg, faults = this.move.faults;
       const dt = this.lastT == null ? 0 : Math.min(t - this.lastT, 250);
       this.lastT = t; this.totalMs += dt;
-      const v = this.move.judge(r, cfg);
+      const v = this.move.judge(r, this.cfg);
+      return this.move.reps ? this.stepReps(r, t, v, dt) : this.stepHold(r, t, v, dt);
+    }
+
+    /* A position held once, for as long as the target says. */
+    stepHold(r, t, v, dt) {
+      const cfg = this.cfg, faults = this.move.faults;
 
       /* which faults are true this frame, and by how much */
       const on = v.ok ? v.faults : { lost: 99 };
@@ -241,16 +275,97 @@
         else { cue = this.offer('hold', t, this.cues.hold.text); if (cue) this.holdDue = 0; }
       }
 
-      if (!cue) {
-        /* whatever is wrong, the one earliest in the move's order is the one to say */
-        const ready = faults.filter((id) => on[id] != null && this.since[id] && t - this.since[id] >= cfg.persistMs);
-        for (const id of ready) {
-          const c = this.cues[id];
-          cue = this.offer(id, t, (on[id] > cfg.deepAt && c.deep) || c.text);
-          if (cue) break;
+      if (!cue) cue = this.correct(on, t);
+      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs,
+        holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
+    }
+
+    /* Whatever is wrong, the one earliest in the move's order is the one to say. */
+    correct(on, t) {
+      const cfg = this.cfg;
+      for (const id of this.move.faults) {
+        if (on[id] != null) { if (!this.since[id]) this.since[id] = t; }
+        else this.since[id] = 0;
+      }
+      const ready = this.move.faults.filter((id) => on[id] != null && this.since[id] && t - this.since[id] >= cfg.persistMs);
+      for (const id of ready) {
+        const c = this.cues[id];
+        const cue = this.offer(id, t, (on[id] > cfg.deepAt && c.deep) || c.text);
+        if (cue) return cue;
+      }
+      return null;
+    }
+
+    /* Reps: come to the start, go to the position, hold it for the target, lower,
+       and come back to the start. A rep is only counted on that last step — the
+       lowering is part of the exercise, and a knee dropped from the top is not the
+       same as one put down.
+
+       The clock is the same clock as a held set, only per rep and reset at the top
+       of each one, so the time calls, the settle and the one-at-a-time rule are all
+       the shared ones rather than a second implementation that could drift. */
+    stepReps(r, t, v, dt) {
+      const cfg = this.cfg, C = this.cues;
+      const targetMs = cfg.holdTargetSec * 1000, total = cfg.repCount;
+      const raised = !!(v.ok && v.raised), atStart = !!(v.ok && v.atStart);
+
+      let holding = false;
+      if (v.inPosition && this.phase === 'up') {
+        if (!this.inSince) this.inSince = t;
+        if (t - this.inSince >= cfg.settleMs) {
+          holding = true; this.repHoldMs += dt; this.holdMs += dt; this.runMs += dt;
+          this.bestMs = Math.max(this.bestMs, this.runMs);
+        }
+      } else { this.inSince = 0; this.runMs = 0; }
+
+      let cue = null;
+      if (this.phase === 'down' && raised) {
+        this.phase = 'up'; this.repHoldMs = 0; this.inSince = 0; this.called = {};
+      } else if (this.phase === 'up') {
+        if (this.repHoldMs >= targetMs) { this.phase = 'lower'; cue = this.offer('lower', t, C.lower.text, true); }
+        else if (atStart) {
+          /* back down before the hold was finished: nothing to count, and worth saying
+             so, because the alternative is someone quietly doing ten half reps */
+          this.phase = 'down'; this.repHoldMs = 0;
+          cue = this.offer('early', t, C.early.text, true);
+        }
+      } else if (this.phase === 'lower' && atStart) {
+        this.reps += 1; this.repHoldMs = 0;
+        this.phase = this.reps >= total ? 'done' : 'down';
+        cue = this.phase === 'done'
+          ? this.offer('done', t, `${total} reps \u2014 done`, true)
+          : this.offer('count' + this.reps, t, String(this.reps), true);
+      }
+
+      const leftMs = Math.max(0, targetMs - this.repHoldMs);
+      if (!cue && this.phase === 'up' && this.repHoldMs > 0) {
+        const passed = cfg.callAtSec.filter((n) => !this.called[n] && leftMs <= n * 1000);
+        if (passed.length) {
+          const n = Math.min(...passed);
+          for (const m of passed) this.called[m] = true;
+          cue = this.offer('call' + n, t, `${n} seconds left`, true);
         }
       }
-      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs,
+
+      if (holding && !this.wasIn) this.holdDue = t;
+      if (!holding) this.holdDue = 0;
+      this.wasIn = holding;
+      if (!cue && this.holdDue) {
+        if (t - this.holdDue > cfg.gapMs * 2) this.holdDue = 0;
+        else { cue = this.offer('hold', t, C.hold.text); if (cue) this.holdDue = 0; }
+      }
+
+      /* only the position being worked on is coached: telling someone standing still
+         to straighten a knee they have not lifted yet is noise */
+      if (!cue) {
+        const on = !v.ok ? { lost: 99 } : this.phase === 'up' ? v.faults
+          : this.phase === 'down' ? { raise: 99 } : {};
+        cue = this.correct(on, t);
+      }
+
+      return { reading: r, verdict: v, holding, cue, phase: this.phase,
+        done: this.phase === 'done', leftMs, targetMs,
+        reps: this.reps, repTarget: total,
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
 
@@ -271,10 +386,16 @@
     }
 
     summary() {
+      const reps = !!this.move.reps;
       const s = { move: this.move.id, holdSec: +(this.holdMs / 1000).toFixed(1),
         bestSec: +(this.bestMs / 1000).toFixed(1), totalSec: +(this.totalMs / 1000).toFixed(1),
-        targetSec: this.cfg.holdTargetSec, reachedTarget: this.holdMs >= this.cfg.holdTargetSec * 1000, cues: {} };
-      for (const id of Object.keys(this.said)) if (this.move.faults.includes(id)) s.cues[id] = this.said[id];
+        targetSec: this.cfg.holdTargetSec, reps: this.reps, repTarget: reps ? this.cfg.repCount : 0,
+        reachedTarget: reps ? this.reps >= this.cfg.repCount : this.holdMs >= this.cfg.holdTargetSec * 1000,
+        cues: {} };
+      /* a prompt is not a correction: being asked to start the next rep says nothing
+         about how the last one was done */
+      const prompts = this.move.prompts || [];
+      for (const id of Object.keys(this.said)) if (this.move.faults.includes(id) && !prompts.includes(id)) s.cues[id] = this.said[id];
       s.log = this.log.slice();
       return s;
     }
@@ -300,5 +421,5 @@
   }
 
   return { SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
-    lineBend, visOf, pickSide, frame, framing, canvasSize, fitRect, Coach, Smoother };
+    lineBend, fromDown, inBand, within, visOf, pickSide, sidePoints, frame, framing, canvasSize, fitRect, Coach, Smoother };
 });

@@ -38,12 +38,23 @@ test('the plank asks for a wide frame and says so in the words it opens with', (
   assert.match(Moves.wallsit.start, /camera on the floor/i);
 });
 
-test('every move opens by saying where to put the phone and to get into frame', () => {
+test('every move opens by saying where to put the phone and how to stand to it', () => {
   for (const m of Moves.list) {
     assert.match(m.start, /floor/i, m.id + ' says where the phone goes');
-    assert.match(m.start, /frame|plank|wall/i, m.id + ' says what to do then');
+    assert.match(m.start, /side on/i, m.id + ' says which way to face — all of these are read from the side');
     assert.ok(m.start.length < 120, m.id + ' keeps it short enough to be spoken: ' + m.start.length);
   }
+});
+
+test('a move that counts reps says how many, how long each is, and what to call them', () => {
+  const m = Moves.kneeraise;
+  assert.equal(m.reps, true);
+  assert.equal(m.defaults.repCount, 10, 'ten reps');
+  assert.equal(m.defaults.holdTargetSec, 10, 'ten seconds each');
+  for (const id of ['raise', 'lower', 'early']) assert.ok(m.cues[id], 'it can say ' + id);
+  assert.deepEqual(m.prompts, ['raise'], 'and being asked to start a rep is not a correction');
+  /* the hold moves are not rep moves and must not have acquired any of this */
+  for (const h of [Moves.wallsit, Moves.plank]) assert.ok(!h.reps, h.id + ' is one long hold');
 });
 
 /* ---------- the shape of the canvas, and what goes in it ---------- */
@@ -81,4 +92,16 @@ test('whatever the frame and whatever the canvas, the proportions come through u
       assert.ok(Math.abs(f.w - W) < 1e-9 || Math.abs(f.h - H) < 1e-9, 'touching at least one pair of edges');
     }
   }
+});
+
+test('the edge of a band is inside it, on every move', () => {
+  /* a body posed to exactly the edge reads a ten-thousandth of a degree under it,
+     and a bare comparison would mark the very number the setting says is allowed */
+  assert.equal(Core.inBand(85 - 1e-13, 85, 95), true, 'the low edge');
+  assert.equal(Core.inBand(95 + 1e-13, 85, 95), true, 'the high edge');
+  assert.equal(Core.inBand(84.9, 85, 95), false, 'and a tenth outside is still outside');
+  assert.equal(Core.inBand(95.1, 85, 95), false);
+  assert.equal(Core.within(12 + 1e-13, 12), true);
+  assert.equal(Core.within(-12 - 1e-13, 12), true);
+  assert.equal(Core.within(12.1, 12), false);
 });

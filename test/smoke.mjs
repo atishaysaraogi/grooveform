@@ -18,10 +18,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
    landmarks. Which one is built follows `__pose.move`, so switching exercise in the
    UI switches what the stand-in camera is showing, as a real person would. */
 const POSE_SRC = `
-const D = Math.PI / 180, ASPECT = 16 / 9;
+const D = Math.PI / 180;
+/* the frame the camera is actually giving, which is not the same for every move:
+   the knee raise asks for a tall one. A stand-in that assumed a shape would pose
+   bodies the app then reads at the wrong scale. */
+function aspect() {
+  const cam = document.getElementById('cam');
+  return cam && cam.videoWidth ? cam.videoWidth / cam.videoHeight : 16 / 9;
+}
 const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
                R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
-window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0, vis: 0.95 };
+window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0,
+                  thigh: 0, kneeUp: 180, ankle: 90, vis: 0.95 };
 
 function wallsitBody(o, f) {
   const thigh = 0.2, shinLen = 0.22, torso = 0.26;
@@ -53,13 +61,41 @@ function plankBody(o, f) {
     toe: { x: ankle.x - f * 0.05, y: ankle.y + 0.055 },
     ear: { x: shoulder.x + f * 0.05, y: shoulder.y - 0.04 } };
 }
+function kneeraiseBody(o, f) {
+  const thighLen = 0.17, shinLen = 0.16, foot = 0.07, torso = 0.22, hipAt = [0.22, 0.42];
+  const leg = (lift, bend, ank) => {
+    const hip = { x: hipAt[0], y: hipAt[1] };
+    const dir = { x: f * Math.sin(lift * D), y: Math.cos(lift * D) };
+    const knee = { x: hip.x + thighLen * dir.x, y: hip.y + thighLen * dir.y };
+    const b = (180 - bend) * D * f;
+    const sd = { x: dir.x * Math.cos(b) - dir.y * Math.sin(b), y: dir.x * Math.sin(b) + dir.y * Math.cos(b) };
+    const ankle = { x: knee.x + shinLen * sd.x, y: knee.y + shinLen * sd.y };
+    const c = -(180 - ank) * D * f;
+    const fd = { x: sd.x * Math.cos(c) - sd.y * Math.sin(c), y: sd.x * Math.sin(c) + sd.y * Math.cos(c) };
+    return { hip, knee, ankle, toe: { x: ankle.x + foot * fd.x, y: ankle.y + foot * fd.y },
+      heel: { x: ankle.x - f * 0.018, y: ankle.y + 0.012 } };
+  };
+  const shoulder = { x: hipAt[0], y: hipAt[1] - torso };
+  const top = { shoulder, ear: { x: shoulder.x + f * 0.012, y: shoulder.y - 0.06 } };
+  /* two legs, not one copied: the raised one and the one holding him up. That is
+     what makes the app's choice of which leg to measure a real choice here. */
+  return { R: Object.assign({}, top, leg(o.thigh, o.kneeUp, o.ankle)),
+    L: Object.assign({}, top, leg(0, 180, 90)) };
+}
 window.__poseSource = function () {
   const o = window.__pose; if (!o) return null;
-  const P = o.move === 'plank' ? plankBody(o, 1) : wallsitBody(o, 1);
+  const A = aspect();
+  const B = o.move === 'plank' ? plankBody(o, 1)
+    : o.move === 'kneeraise' ? kneeraiseBody(o, 1) : wallsitBody(o, 1);
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
-  for (const s of ['L', 'R']) for (const k in SIDE[s]) {
-    const p = P[k]; if (!p) continue;
-    lm[SIDE[s][k]] = { x: p.x / ASPECT, y: p.y, z: 0, visibility: o.vis };
+  for (const s of ['L', 'R']) {
+    /* side on, most bodies here have their two sides on top of each other; the one
+       that does not hands back a limb for each */
+    const P = B[s] || B;
+    for (const k in SIDE[s]) {
+      const p = P[k]; if (!p) continue;
+      lm[SIDE[s][k]] = { x: p.x / A, y: p.y, z: 0, visibility: o.vis };
+    }
   }
   return lm;
 };
@@ -353,11 +389,78 @@ try {
     await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
   });
 
+  await step('the knee raise counts reps rather than holding one position', async () => {
+    await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, ankle: 90 });
+    await page.selectOption('#move', 'kneeraise');
+    await page.waitForSelector('#read-reps');
+    assert.equal(await page.textContent('#band-knee'), '85\u201395', 'a right angle at the knee, five either way');
+    assert.equal(await page.textContent('#band-ankle'), '85\u201395', 'and at the ankle');
+    /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
+       plank was just using */
+    assert.equal(await page.inputValue('#cfg-target'), '10');
+    assert.equal(await page.inputValue('#cfg-calls'), '5');
+    assert.equal(await page.textContent('#hold-k'), 'left of 10 s');
+    /* two seconds a rep and three of them, so a set finishes inside a test */
+    await page.fill('#cfg-target', '2'); await page.dispatchEvent('#cfg-target', 'change');
+    await page.fill('#cfg-calls', '1'); await page.dispatchEvent('#cfg-calls', 'change');
+    await page.fill('#cfg-repCount', '3'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await page.click('#startstop');
+    /* the card is rebuilt when the exercise changes, so wait for the count rather
+       than reading whatever happens to be in the DOM at this instant */
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
+    await saw('raise one knee');
+    await heard('raise one knee');
+  });
+
+  await step('a rep is counted on the way back down, not at the top', async () => {
+    await set({ thigh: 88, kneeUp: 90, ankle: 90 });
+    /* no "that is it" asserted here: these reps are two seconds so the coach can
+       finish a set inside a test, and a two second hold has no room to say hold and
+       then count it down. The unit tests cover that at the real ten. */
+    await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
+    await heard('lower slowly');
+    assert.equal(await page.textContent('#rep-v'), '0', 'the top of the rep is not the end of it');
+    await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
+  });
+
+  await step('a knee held out of line is corrected, and the knee before the foot', async () => {
+    await set({ thigh: 88, kneeUp: 130, ankle: 140 });
+    await saw('bend your knee');
+    await heard('bend your knee');
+    await set({ thigh: 88, kneeUp: 90, ankle: 140 });
+    await saw('pull your toes up');
+    await heard('pull your toes up');
+  });
+
+  await step('the set ends when the reps are done', async () => {
+    for (let i = 0; i < 3; i++) {
+      await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+      await wait(900);
+      await set({ thigh: 88, kneeUp: 90, ankle: 90 });
+      await wait(3400);
+      await set({ thigh: 0, kneeUp: 180, ankle: 90 });
+      await wait(900);
+      if (await page.textContent('#rep-v') === '3') break;
+    }
+    await page.waitForFunction(() => /done/i.test(document.getElementById('state').textContent), null, { timeout: 10000 });
+    assert.equal(await page.textContent('#rep-v'), '3');
+    await page.click('#startstop');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.textContent('#r-move'), 'Knee raise');
+    assert.equal(await page.isVisible('#r-reps'), true, 'the set is reported in reps');
+    assert.equal(await page.textContent('#r-reps-v'), '3/3');
+  });
+
   await step('the exercise and its bands are remembered across a reload', async () => {
     await page.reload();
     await page.waitForSelector('#go');
-    assert.equal(await page.inputValue('#move'), 'plank', 'it comes back on the plank');
-    assert.equal(await page.textContent('#band-line'), '±2', 'with the band that was set');
+    assert.equal(await page.inputValue('#move'), 'kneeraise', 'it comes back on the last exercise used');
+    assert.equal(await page.inputValue('#cfg-repCount'), '3', 'with the rep count that was set');
+    /* and the plank's own band, changed two exercises ago, is still its own */
+    await page.selectOption('#move', 'plank');
+    await page.waitForSelector('#read-line');
+    assert.equal(await page.textContent('#band-line'), '±2', 'each exercise keeps its own settings');
   });
 
   await step('no JS errors along the way', () => {

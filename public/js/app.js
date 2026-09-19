@@ -43,8 +43,12 @@
      bumped whenever a default moves, and a store written under an older one is
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
-  const SETTINGS_V = 3;
-  const COMMON_KEYS = ['cool', 'target', 'calls', 'model', 'mirror'];
+  const SETTINGS_V = 4;
+  const COMMON_KEYS = ['cool', 'model', 'mirror'];
+  /* One input each, but the value belongs to the exercise: a plank is held for a
+     minute and a knee raise for ten seconds a rep, and neither should inherit the
+     other's clock just because they share a box on the settings panel. */
+  const PER_MOVE = ['target', 'calls'];
   const store = {
     get() {
       try { const v = JSON.parse(localStorage.getItem('wallsit') || '{}'); return v && v.v === SETTINGS_V ? v : {}; }
@@ -58,23 +62,29 @@
 
   function cfg() {
     const c = Object.assign({}, Core.COMMON, move.defaults);
-    for (const b of move.bands) for (const s of b.set) c[s.key] = num('cfg-' + s.key, move.defaults[s.key]);
+    for (const s of settingsOf(move)) c[s.key] = num('cfg-' + s.key, move.defaults[s.key]);
     /* the time calls are typed as a list, so anything unreadable falls back
        rather than silently leaving the set with no calls in it */
     const calls = String(($('cfg-calls') || {}).value || '').split(/[^\d]+/).map(Number).filter((x) => x > 0);
     c.cooldownMs = num('cfg-cool', 4) * 1000;
-    c.holdTargetSec = Math.max(1, num('cfg-target', 60));
-    c.callAtSec = (calls.length ? calls : [45, 30, 10, 5]).sort((a, b) => b - a);
+    c.holdTargetSec = Math.max(1, num('cfg-target', c.holdTargetSec));
+    c.callAtSec = (calls.length ? calls : c.callAtSec).sort((a, b) => b - a);
     c.model = $('cfg-model').value;
     c.mirror = $('cfg-mirror').value === 'on';
     return c;
   }
 
-  /* the band inputs belong to the move, so they are built when the move changes */
+  /* every number a move owns: the band edges, plus anything else it declares */
+  const settingsOf = (m) => m.bands.reduce((a, b) => a.concat(b.set), []).concat(m.extra || []);
+
+  /* those inputs belong to the move, so they are built when the move changes */
   function buildSettings() {
     const host = $('band-settings'); host.innerHTML = '';
     const mine = saved.bands[move.id] || {};
-    for (const b of move.bands) for (const s of b.set) {
+    const fallback = Object.assign({}, Core.COMMON, move.defaults);
+    $('cfg-target').value = mine.target != null ? mine.target : fallback.holdTargetSec;
+    $('cfg-calls').value = mine.calls != null ? mine.calls : fallback.callAtSec.join(', ');
+    for (const s of settingsOf(move)) {
       const lab = el('label', null, `${s.label}<input type="number" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1">`);
       host.appendChild(lab);
       const input = lab.querySelector('input');
@@ -91,6 +101,12 @@
         `<div class="meter"><span class="ok" id="ok-${b.key}"></span><b id="pin-${b.key}"></b></div>`));
       host.lastChild.id = 'read-' + b.key;
     }
+    if (move.reps) {
+      host.appendChild(el('div', 'read', `<div class="v"><span id="rep-v">0</span><i>/${cfg().repCount}</i></div>` +
+        `<div class="k">reps<span class="band" id="rep-k">standing</span></div>` +
+        `<div class="meter"><span class="ok" style="width:100%"></span><b id="rep-pin"></b></div>`));
+      host.lastChild.id = 'read-reps';
+    }
     host.appendChild(el('div', 'read wide', `<div class="v"><span id="hold-v">60.0</span><i>s</i></div>` +
       `<div class="k"><span id="hold-k">left of 60 s</span><span class="band" id="best-v">held 0.0 s · best 0.0 s</span></div>` +
       `<div class="meter"><span class="ok" style="width:100%"></span><b id="hold-pin"></b></div>`));
@@ -102,13 +118,14 @@
     move = Moves[saved.move] || Moves.wallsit;
     $('move').value = move.id;
     for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
-    buildReads(); buildSettings(); syncBands();
+    buildSettings(); buildReads(); syncBands();
   }
   function saveSettings() {
     saved.move = move.id;
     for (const k of COMMON_KEYS) saved.common[k] = $('cfg-' + k).value;
     const mine = saved.bands[move.id] = {};
-    for (const b of move.bands) for (const s of b.set) mine[s.key] = $('cfg-' + s.key).value;
+    for (const s of settingsOf(move)) mine[s.key] = $('cfg-' + s.key).value;
+    for (const k of PER_MOVE) mine[k] = $('cfg-' + k).value;
     store.set(saved); syncBands();
     if (coach) Object.assign(coach.cfg, cfg());
   }
@@ -121,7 +138,9 @@
       $('ok-' + b.key).style.left = pct(lo, b.scale[0], b.scale[1]) + '%';
       $('ok-' + b.key).style.width = (pct(hi, b.scale[0], b.scale[1]) - pct(lo, b.scale[0], b.scale[1])) + '%';
     }
-    if (!coach) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
+    /* between sets the clock shows the whole of whatever this exercise asks for */
+    if (!inSet) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
+    $('target-label').textContent = move.holdLabel || 'Hold the set for';
     $('r-target').textContent = `of ${c.holdTargetSec}`;
     $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
   }
@@ -295,7 +314,7 @@
     const s = Math.max(2, W / 320);
     const rad = Math.max(18, W * 0.045);
     const fs = Math.max(14, W * 0.032);
-    const tone = (ok) => (ok ? C.good : C.bad);
+    const tone = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
     const whole = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
 
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -344,7 +363,7 @@
          when `dir` is a facing, straight up when it is 0 */
       angleTo(from, to, dir, deg, ok, k) {
         const [cx, cy] = at(from), [tx, ty] = at(to);
-        const a0 = dir ? (dir > 0 ? 0 : Math.PI) : -Math.PI / 2;
+        const a0 = dir === 'down' ? Math.PI / 2 : dir ? (dir > 0 ? 0 : Math.PI) : -Math.PI / 2;
         sweep(cx, cy, rad * k, a0, Math.atan2(ty - cy, tx - cx), tone(ok), s, `${Math.round(deg)}°`, fs);
       },
       /* a bare number beside a point, pushed clear on the side it is signed toward */
@@ -414,8 +433,9 @@
     /* the countdown, which is what the set is */
     const R = stack(W - pad, 'right');
     const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
-    const ry = R(out.done ? 'DONE' : `${left}s`, out.done ? `${target} s held` : `left of ${target} s`,
-      out.done || out.holding ? C.good : C.ink, 1.5);
+    const under = out.done ? (move.reps ? `${out.repTarget} reps` : `${target} s held`)
+      : move.reps ? `rep ${Math.min(out.reps + 1, out.repTarget)} of ${out.repTarget}` : `left of ${target} s`;
+    const ry = R(out.done ? 'DONE' : `${left}s`, under, out.done || out.holding ? C.good : C.ink, 1.5);
     if (rec && rec.mr && rec.mr.state === 'recording') {
       line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
       ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
@@ -510,11 +530,19 @@
     $('read-hold').className = 'read wide' + (out.done || out.holding ? ' good' : '');
     $('hold-pin').style.left = pct(out.holdMs, 0, out.targetMs) + '%';
 
+    if (move.reps) {
+      $('rep-v').textContent = out.reps;
+      $('rep-k').textContent = PHASE[out.phase] || '';
+      $('rep-pin').style.left = pct(out.reps, 0, out.repTarget) + '%';
+      $('read-reps').className = 'read' + (out.done ? ' good' : '');
+    }
+
     const chip = $('state');
     if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
     else if (!live) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
     else if (out.holding) { chip.textContent = `${Math.ceil(leftSec)} s left`; chip.className = 'chip good'; }
     else if (v.inPosition) { chip.textContent = 'Settling'; chip.className = 'chip good'; }
+    else if (move.reps && out.phase !== 'up') { chip.textContent = `Rep ${out.reps + 1} of ${out.repTarget}`; chip.className = 'chip'; }
     else {
       /* the chip names the first band that is out, which is the one being coached */
       const bad = move.bands.find((b) => !v.good[b.key]);
@@ -522,6 +550,7 @@
       chip.className = 'chip bad';
     }
   }
+  const PHASE = { down: 'ready', up: 'holding', lower: 'lower slowly', done: 'set done' };
 
   /* ---------- recording ---------- */
   function pickMime() {
@@ -600,7 +629,9 @@
     const s = coach.summary();
     $('r-move').textContent = move.name;
     $('r-hold').textContent = s.holdSec; $('r-best').textContent = s.bestSec;
-    $('r-target').textContent = `of ${s.targetSec}`;
+    $('r-target').textContent = move.reps ? `${s.reps} of ${s.repTarget} reps` : `of ${s.targetSec}`;
+    $('r-reps').hidden = !move.reps;
+    $('r-reps-v').textContent = move.reps ? `${s.reps}/${s.repTarget}` : '';
     $('r-cues').textContent = Object.values(s.cues).reduce((a, b) => a + b, 0);
     $('log').innerHTML = s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') ||
       '<li>Nothing needed saying.</li>';
@@ -608,8 +639,9 @@
     if (blob) $('rec-note').textContent = `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · the spoken cues are on it as tones and as text on the picture.`;
     $('result').hidden = false;
     $('startstop').textContent = 'Start another set'; $('startstop').className = 'btn primary';
-    voice.say(s.reachedTarget ? `Set done. You held the full ${s.targetSec} seconds.`
-      : s.holdSec >= 1 ? `Set done. ${Math.round(s.holdSec)} of ${s.targetSec} seconds in position.` : 'Set done.');
+    voice.say(move.reps ? `Set done. ${s.reps} of ${s.repTarget} reps.`
+      : s.reachedTarget ? `Set done. You held the full ${s.targetSec} seconds.`
+        : s.holdSec >= 1 ? `Set done. ${Math.round(s.holdSec)} of ${s.targetSec} seconds in position.` : 'Set done.');
     $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -622,15 +654,23 @@
     begin();
   };
   $('startstop').onclick = () => (inSet ? endSet() : startSet());
-  $('move').onchange = () => {
+  $('move').onchange = async () => {
     move = Moves[$('move').value] || Moves.wallsit;
-    buildReads(); buildSettings(); saveSettings();
+    buildSettings(); buildReads(); saveSettings();
     $('veil-title').textContent = move.name;
-    if (inSet) endSet();
-    else if (running) { coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother(); banner = null; t0 = performance.now(); }
+    /* finish whatever was under way, then start again from this exercise's own
+       coach — otherwise the readouts keep being painted by the last one, with its
+       bands and its clock, until something else happens to replace it */
+    if (inSet) await endSet();
+    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
+    banner = null; state = null; t0 = performance.now();
+    syncBands();
     /* a move that wants a different shape of frame gets the camera asked again */
     if (running && (move.camera || null) !== camShape) {
-      unschedule(); startCamera().catch(() => { }).then(() => { framingNote = undefined; if (running) schedule(); });
+      unschedule();
+      try { await startCamera(); } catch { }
+      framingNote = undefined;
+      if (running) schedule();
     } else sizeCanvas(true);
   };
   $('flip').onclick = async () => {
@@ -646,7 +686,7 @@
   $('settings-btn').onclick = (e) => {
     const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
   };
-  for (const k of COMMON_KEYS) if (k !== 'model') $('cfg-' + k).onchange = saveSettings;
+  for (const k of COMMON_KEYS.concat(PER_MOVE)) if (k !== 'model') $('cfg-' + k).onchange = saveSettings;
   $('cfg-model').onchange = async () => {
     saveSettings();
     if (!landmarker) return;
@@ -663,7 +703,8 @@
     const c = cfg();
     const bands = move.bands.map((b) => `${b.label} ${bandText(b, c)}°`).join(', ');
     const body = [`${move.name} — ${new Date().toLocaleString()}`, bands,
-      `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`, '',
+      move.reps ? `${s.reps} of ${s.repTarget} reps, ${s.targetSec}s each — in position ${s.holdSec}s, longest hold ${s.bestSec}s`
+        : `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`, '',
       ...s.log.map((c2) => `${(c2.t / 1000).toFixed(1)}s\t${c2.text}`)].join('\n');
     save(new Blob([body], { type: 'text/plain' }), `${move.id}-${stamp()}.txt`);
   };

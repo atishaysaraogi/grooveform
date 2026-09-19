@@ -7,8 +7,9 @@ hold, and hands you a recording of the set with the cues on it.
 
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
-Two exercises so far: **wall sit** and **elbow plank**. Nothing is uploaded —
-the pose model, the coaching and the video file are all made on the device.
+Three exercises so far: **wall sit**, **elbow plank** and **standing knee
+raise**. Nothing is uploaded — the pose model, the coaching and the video file
+are all made on the device.
 
 ## Starting
 
@@ -71,7 +72,25 @@ instead of the page just being silent.
 | **Arm** | the upper arm's lean off vertical, which is where the shoulder sits over the elbow. Allowed from **5° behind to 15° in front**: the band is not symmetric because a shoulder behind the elbow is the joint taking the load at its weakest, while a little in front is normal. |
 | **Hip** | how far the hip sits off the straight line from shoulder to ankle, as the angle the body bends at the hip. Allowed **±5°**. Above the line the hips are piked and are told to come down; below it they are sagging and are told to lift. |
 
-The plank wants the phone on its side; the wall sit takes it either way.
+**Standing knee raise** — side on, standing tall, one knee up.
+
+| | |
+|---|---|
+| **Knee** | the angle at the raised knee, between hip and ankle. A right angle, **85–95°**. |
+| **Ankle** | the angle at that ankle, between knee and toe. A right angle too, **85–95°**: the foot square to the shin, neither pointed nor over-pulled. |
+
+Ten seconds held, lowered slowly, and the rep counts when you are back to
+standing. Ten reps.
+
+*One thing worth saying about this one.* Those two right angles do not by
+themselves describe a knee raise: a heel tucked up behind makes both of them
+just as well. So how far the thigh has to come up is a setting, used to tell a
+raise from standing still and from the next rep starting, and it is not marked
+or coached — the two angles asked for stay the only things being judged. Widen
+or narrow it in the settings; make it a band of its own if you want it called.
+
+The plank wants the phone on its side, the knee raise wants it stood up, and the
+wall sit takes it either way.
 
 Every threshold is a setting. Both numbers are on screen, on a meter with the
 target band marked, and burnt into the recording.
@@ -103,6 +122,11 @@ the other rather than on top of each other.
 | back off the wall | *Press your back flat to the wall* |
 | hips ahead of the shoulders | *Bring your hips under your shoulders* |
 | shoulders behind the elbows | *Bring your shoulders over your elbows* |
+| knee not at a right angle | *Bend your knee more* / *Open your knee a little* |
+| toes pointed | *Pull your toes up* |
+| toes pulled too far up | *Ease your toes down* |
+| a rep held to the end | *Lower slowly*, then the count |
+| a knee dropped early | *Hold it to the end of the count next time* |
 | shoulders too far forward | *Bring your shoulders back over your elbows* |
 | hips piked | *Lower your hips — shoulders to heels in one line* |
 | hips sagging | *Lift your hips — shoulders to heels in one line* |
@@ -112,7 +136,8 @@ Each fault has a stronger form used when it is well past its band.
 
 **The order.** When more than one is wrong they are corrected in the chain of
 cause, not by how far out each is: **feet, then knee, then back** for the wall
-sit, **shoulders, then hips** for the plank. Where the feet or the elbows are
+sit, **shoulders, then hips** for the plank, **knee, then foot** for the knee
+raise. Where the feet or the elbows are
 decides what the rest of the body can reach, so a correction further along the
 chain asks for something the base will not give. A shoulder six degrees behind
 the elbow is said before hips twenty degrees off the line, and that is the
@@ -120,13 +145,23 @@ point of the rule rather than a flaw in it.
 
 ## The set
 
-Sixty seconds, counted down from the moment the position is right. The clock is
-spent from time **in position**, so coming out of it pauses the clock rather
-than running it down — sixty seconds means sixty seconds of the exercise. It
-starts after 0.7 s in the bands and stops the instant any of them is broken.
-The time left is called out at 45, 30, 10 and 5 seconds, and those calls jump
-the 1.5 s queue, because "ten seconds left" said two seconds late is a lie. The
-target and the moments it is called are both settings.
+For the two holds: sixty seconds, counted down from the moment the position is
+right. The clock is spent from time **in position**, so coming out of it pauses
+the clock rather than running it down — sixty seconds means sixty seconds of the
+exercise. It starts after 0.7 s in the bands and stops the instant any of them is
+broken. The time left is called out at 45, 30, 10 and 5 seconds, and those calls
+jump the 1.5 s queue, because "ten seconds left" said two seconds late is a lie.
+
+For the knee raise: the same clock, only per rep. Come to the start, go to the
+position, hold it for the count, lower, and come back to standing — and the rep
+is counted on that last step, not at the top. The lowering is part of the
+exercise, and a knee dropped from the top is not the same as one put down. A
+knee that comes down before the count is finished is not counted either, and is
+told so, because the alternative is someone quietly doing ten half reps.
+
+The target, the moments it is called and the number of reps all belong to the
+exercise rather than to the app: a plank is held for a minute and a knee raise
+for ten seconds a rep, and neither inherits the other's clock.
 
 ## The recording
 
@@ -157,8 +192,10 @@ public/
   js/moves.js      the exercises: what each measures, allows and says, and in what order
   js/app.js        camera, drawing, voice, recording
 test/
-  wallsit.test.js  the wall sit, against synthetic bodies
-  plank.test.js    the plank, likewise
+  wallsit.test.js   the wall sit, against synthetic bodies
+  plank.test.js     the plank, likewise
+  kneeraise.test.js the knee raise, and a whole set of reps
+  framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
 ```
 
@@ -166,9 +203,12 @@ test/
 
 A move is data plus two functions. `read` turns landmarks into named angles;
 `judge` turns those into a verdict and a set of faults with how far out each one
-is. Everything after that — the clock, the countdown, the persistence and
-cooldown and the one-at-a-time rule — is in `core.js` and is the same for every
-move. The readouts, the settings inputs, the heads-up display and the skeleton's
+is. A move that counts reps also says whether the body is at the start and
+whether it is in the position, and the shared coach runs the rest. Everything
+after that — the clock, the countdown, the persistence and cooldown and the
+one-at-a-time rule — is in `core.js` and is the same for every move, so a set of
+reps and a single long hold share one implementation of the clock rather than
+having two that can drift apart. The readouts, the settings inputs, the heads-up display and the skeleton's
 colours are all built from the move's own description of itself, so adding an
 exercise means describing it, not rewriting the app.
 
@@ -187,8 +227,20 @@ apart, and the body is bent *at the hip* so every limb keeps its length whatever
 the sag is. A rig that could not pose one fault without the other could not tell
 you the cues were right.
 
+Each rig builds a body backwards from the angles wanted, and builds them so that
+one fault can be posed without the others: the knee raise's thigh, knee and
+ankle are each measured off the one before it, which is how a leg actually hangs
+together, so all three can be set independently. The stand-in camera used in the
+browser builds two legs rather than copying one, which is what makes the app's
+choice of which leg to measure a real choice there.
+
+One thing the tests found rather than confirmed: a body posed to exactly the edge
+of a band reads a ten-thousandth of a degree under it, so a bare comparison marked
+the very number the setting says is allowed. "Five degrees either way" has to
+include five, and now does, on every move.
+
 `smoke.mjs` then drives a real browser with the pose model stood in for, through
-both exercises, and ends by downloading the video and checking there are frames
+all three exercises, and ends by downloading the video and checking there are frames
 in it. It also watches what is handed to the speech engine: headless Chromium
 makes no sound, but a cue that never reaches the engine is silent on a real
 phone too, so the suite checks that every cue in the log was also spoken.
