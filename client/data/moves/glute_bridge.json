@@ -50,7 +50,7 @@
       "tip": "Control both directions; momentum takes the work away from the muscle.",
       "severity": 1,
       "rule": "fast",
-      "minMs": 600
+      "minMs": 2000
     },
     {
       "id": "arch",
@@ -76,6 +76,17 @@
       "tentative": true
     },
     {
+      "id": "feet_unstable",
+      "label": "Feet unstable",
+      "cue": "Keep feet grounded",
+      "tip": "Heel pressure puts the work in the glutes; toe pressure sends it to the hamstrings and calves.",
+      "severity": 2,
+      "metric": { "kind": "tilt", "pts": ["FOOT", "HEEL"], "per": ["KNEE", "ANK"], "abs": true },
+      "rel": "change",
+      "op": ">",
+      "threshold": 4
+    },
+    {
       "id": "feet",
       "label": "Feet too far away",
       "cue": "Walk the heels closer",
@@ -83,7 +94,7 @@
       "severity": 2,
       "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 55,
+      "threshold": 50,
       "phase": "start"
     },
     {
@@ -161,13 +172,13 @@
     "screen": { "big": true, "across": true, "visible": true, "home": true, "geometry": true, "helps": true },
     "ptType": "A",
     "notes": "",
-    "edited": "2026-09-18",
+    "edited": "2026-09-19",
     "by": "Test",
     "tuned": {
       "date": "2026-09-16",
       "by": "Test",
       "takes": 44,
-      "faults": ["arch", "feet", "feet_too_close", "foot_lifting", "sitting"],
+      "faults": ["arch", "push", "feet", "toes_rising", "feet_too_close"],
       "override": ["arch", "feet", "feet_too_close"]
     }
   },

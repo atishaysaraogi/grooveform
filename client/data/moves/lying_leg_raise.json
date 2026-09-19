@@ -1,0 +1,168 @@
+{
+  "id": "lying_leg_raise",
+  "name": "Lying Leg Raise",
+  "type": "reps",
+  "view": "side",
+  "tracking": "form",
+  "vetted": true,
+  "level": "beginner",
+  "equipment": ["none"],
+  "muscles": { "primary": ["iliopsoas"], "secondary": ["quadriceps", "abdominals"] },
+  "summary": "Lay straight down and raise both legs, keeping knees locked",
+  "setup": "On the floor, about 2 meters away so the whole body is visible",
+  "brief": "Lay flat and slowly raise both legs together, keeping your back on the ground.",
+  "why": "Camera can see both legs move in unison",
+  "calibrationPose": "Lay straight down",
+  "camera": { "height": "floor", "distance": "2.5 m", "posture": "lying" },
+  "targets": [6, 8, 10, 12, 15],
+  "defaultTarget": 10,
+  "options": [
+    { "key": "rom", "label": "Range target", "values": [30, 45, 60, 90], "unit": "°", "default": 45 }
+  ],
+  "stable": ["SH"],
+  "progress": {
+    "metric": { "kind": "tilt", "pts": ["HEEL", "HIP"] },
+    "start": "calibrated",
+    "target": "opt:rom",
+    "max": { "delta": 30 }
+  },
+  "show": { "ask": "Raise both legs as high as you can keep them straight" },
+  "faults": [
+    {
+      "id": "knees_bent",
+      "label": "Knees Bent",
+      "cue": "Knees straight",
+      "tip": "Keep your knees locked and straight",
+      "severity": 2,
+      "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"] },
+      "op": "<",
+      "threshold": 155,
+      "minP": 0.2,
+      "persist": 250
+    },
+    {
+      "id": "toe_bent",
+      "label": "Toe Bent",
+      "cue": "Toes towards you",
+      "tip": "Keep your toes pulled in towards your body",
+      "severity": 2,
+      "metric": { "kind": "angle", "pts": ["FOOT", "HEEL", "KNEE"] },
+      "op": ">",
+      "threshold": 100,
+      "minP": 0.2,
+      "persist": 250
+    },
+    {
+      "id": "back_rising",
+      "label": "Back Rising",
+      "cue": "Keep back lowered",
+      "tip": "Keep your back on the ground",
+      "severity": 2,
+      "metric": { "kind": "rise", "pts": ["HIP"] },
+      "rel": "change",
+      "op": ">",
+      "threshold": 3,
+      "minP": 0.3
+    },
+    {
+      "id": "fast",
+      "label": "Too fast",
+      "cue": "Slower — two up, three down",
+      "tip": "Swinging lets momentum do the work. Two seconds out, a pause, three seconds back.",
+      "severity": 1,
+      "rule": "fast",
+      "minMs": 1500
+    }
+  ],
+  "guide": {
+    "surface": "Laying flat on the floor or a mat",
+    "stop": "Pain in back or legs",
+    "cannotSee": "Pushing with your hands, and whether the pelvis is tucked",
+    "regions": [
+      {
+        "name": "Legs",
+        "points": [
+          { "t": "Both legs rise together to the range you set, knees locked straight.", "tracked": true },
+          { "t": "Toes pulled back toward you the whole way up and down.", "tracked": true }
+        ]
+      },
+      {
+        "name": "Back & pelvis",
+        "points": [
+          { "t": "Lower back stays down — the hips lifting off the floor is the giveaway.", "tracked": true },
+          { "t": "Brace gently before the legs leave the floor.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Arms",
+        "points": [
+          { "t": "Hands flat beside you, not pushing down.", "tracked": false }
+        ]
+      },
+      {
+        "name": "Breathing & tempo",
+        "points": [
+          { "t": "Two seconds up, two seconds down. No swinging.", "tracked": true }
+        ]
+      }
+    ]
+  },
+  "figure": {
+    "view": "side",
+    "A": {
+      "h": [385, 146],
+      "sh": [367, 149],
+      "hip": [297, 146],
+      "kn": [249, 148],
+      "an": [200, 148],
+      "ft": [202, 123],
+      "el": [338, 150],
+      "wr": [303, 149],
+      "knF": [251, 148],
+      "anF": [200, 147],
+      "ftF": [201, 124],
+      "elF": [328, 146],
+      "wrF": [298, 147]
+    },
+    "B": {
+      "h": [385, 146],
+      "sh": [367, 149],
+      "hip": [297, 146],
+      "kn": [256, 111],
+      "an": [225, 84],
+      "ft": [244, 62],
+      "el": [338, 150],
+      "wr": [303, 149],
+      "knF": [260, 113],
+      "anF": [222, 82],
+      "ftF": [241, 59],
+      "elF": [328, 146],
+      "wrF": [298, 147]
+    },
+    "hold": false,
+    "side": "both",
+    "flip": false,
+    "w": { "abs": 1, "thigh": 1, "glute": 0.5 },
+    "belly": -1
+  },
+  "tempo": "2 sec up, 2 sec down",
+  "dosage": "3 x 10, 3 days/week",
+  "progression": "Add a weight between legs",
+  "regression": "Lower range",
+  "contraindications": "NA",
+  "_studio": {
+    "screen": { "big": true, "across": true, "visible": true, "home": true, "geometry": true, "helps": true },
+    "ptType": "A",
+    "notes": "",
+    "edited": "2026-09-19",
+    "by": "Test",
+    "tuned": {
+      "date": "2026-09-18",
+      "by": "Test",
+      "takes": 4,
+      "faults": ["knees_bent", "toe_bent", "back_rising"],
+      "override": ["knees_bent", "toe_bent", "back_rising"]
+    }
+  },
+  "region": "core"
+}

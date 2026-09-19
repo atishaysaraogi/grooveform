@@ -1,6 +1,6 @@
 # The exercise library
 
-The library is **data**. Every one of the 145 moves — the fifteen vetted ones
+The library is **data**. Every one of the 146 moves — the fifteen vetted ones
 included — is its own JSON file at `client/data/moves/<id>.json`, and
 `_about.json` beside it explains every field a move may contain: what it means,
 what good and bad input look like. Edit the file, reload the page, and the move
@@ -24,7 +24,7 @@ client/data/
     hip.json  …          ids it holds, in the order the app shows them
   moves/
     wallsit.json         one exercise, one file, named by its id
-    seated_knee_ext.json  quad_set.json  …  (145 of them)
+    seated_knee_ext.json  quad_set.json  …  (146 of them)
 client/coach/
   exercise-library.js    the registry: define(), validation, lookup
   engine.js              kinematics, smoothing, rep counting, set review
@@ -80,7 +80,7 @@ people (`"_note": "physio wants this re-checked"`) and is ignored.
 Things that are **not** per move live in `settings.json`: when a rep counts
 (`rep`), how long a fault must hold before it is spoken (`fault`), the standard
 rep and hold choices, the band colours, the score. Its `_about` explains each.
-A change there moves all 145 moves at once; restart the server to pick it up.
+A change there moves all 146 moves at once; restart the server to pick it up.
 
 ## The measurement language
 
