@@ -71,7 +71,7 @@ try {
     await page.waitForSelector('#go');
     assert.equal(await page.textContent('#knee-band'), '85–110', 'the band asked for is the band shown');
     assert.equal(await page.textContent('#back-band'), '±12');
-    assert.equal(await page.textContent('#shin-band'), '80–100');
+    assert.equal(await page.textContent('#shin-band'), '85–95');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
   });
 
@@ -83,6 +83,17 @@ try {
     assert.ok(Math.abs(Number(knee) - 90) <= 1, 'a body posed at 90° reads 90° on screen, not ' + knee);
     const shin = await page.textContent('#shin-v');
     assert.ok(Math.abs(Number(shin) - 90) <= 1, 'and a plumb shin reads 90°, not ' + shin);
+  });
+
+  await step('the picture and the start button are on screen together', async () => {
+    const box = await page.evaluate(() => {
+      const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; };
+      return { stage: r('stage'), button: r('startstop'), h: window.innerHeight };
+    });
+    assert.ok(box.stage.bottom > 0 && box.stage.bottom < box.h, 'the whole picture is in view');
+    assert.ok(box.button.top > box.stage.bottom, 'the button is below the picture');
+    assert.ok(box.button.bottom < box.h, 'and both fit without scrolling: button ends at '
+      + Math.round(box.button.bottom) + ' of ' + box.h);
   });
 
   await step('the canvas is painted, and repainted, with the picture the recording gets', async () => {
@@ -121,14 +132,14 @@ try {
   });
 
   await step('heels ahead of the knees are told to bring the feet back', async () => {
-    await set({ knee: 95, tilt: 2, shin: 118 });
+    await set({ knee: 95, tilt: 2, shin: 108 });
     await page.waitForFunction(() => /feet back/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
     assert.match(await chip(), /feet out/i);
     assert.match(await page.getAttribute('#read-shin', 'class'), /bad/);
   });
 
   await step('heels behind the knees are told the other way', async () => {
-    await set({ shin: 62 });
+    await set({ shin: 72 });
     await page.waitForFunction(() => /feet forward/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
     assert.match(await chip(), /feet in/i);
   });

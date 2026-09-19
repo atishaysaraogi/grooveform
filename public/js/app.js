@@ -36,9 +36,19 @@
   let t0 = 0;
 
   /* ---------- settings ---------- */
+  /* Settings are remembered, but a band the app itself has changed its mind about is
+     not the person's setting — it is a stale default. The version is bumped whenever a
+     default moves, and a store written under an older one is dropped rather than
+     silently holding the old band on a page that says it uses the new one. */
+  const SETTINGS_V = 2;
   const store = {
-    get() { try { return JSON.parse(localStorage.getItem('wallsit') || '{}'); } catch { return {}; } },
-    set(v) { try { localStorage.setItem('wallsit', JSON.stringify(v)); } catch { } },
+    get() {
+      try {
+        const v = JSON.parse(localStorage.getItem('wallsit') || '{}');
+        return v && v.v === SETTINGS_V ? v : {};
+      } catch { return {}; }
+    },
+    set(v) { try { localStorage.setItem('wallsit', JSON.stringify(Object.assign({ v: SETTINGS_V }, v))); } catch { } },
   };
   function cfg() {
     const n = (el, d) => { const v = Number(el.value); return Number.isFinite(v) && el.value !== '' ? v : d; };
@@ -47,7 +57,7 @@
     const calls = String(cfgEl.calls.value).split(/[^\d]+/).map(Number).filter((x) => x > 0);
     return {
       kneeMin: n(cfgEl.min, 85), kneeMax: n(cfgEl.max, 110), backTilt: n(cfgEl.tilt, 12),
-      shinMin: n(cfgEl.shinmin, 80), shinMax: n(cfgEl.shinmax, 100),
+      shinMin: n(cfgEl.shinmin, 85), shinMax: n(cfgEl.shinmax, 95),
       holdTargetSec: Math.max(1, n(cfgEl.target, 60)),
       callAtSec: (calls.length ? calls : [45, 30, 10, 5]).sort((a, b) => b - a),
       cooldownMs: n(cfgEl.cool, 4) * 1000,
@@ -74,8 +84,8 @@
     $('meter-ok').style.width = (pct(c.kneeMax, 50, 150) - pct(c.kneeMin, 50, 150)) + '%';
     $('bmeter-ok').style.left = pct(-c.backTilt, -40, 40) + '%';
     $('bmeter-ok').style.width = (pct(c.backTilt, -40, 40) - pct(-c.backTilt, -40, 40)) + '%';
-    $('smeter-ok').style.left = pct(c.shinMin, 40, 140) + '%';
-    $('smeter-ok').style.width = (pct(c.shinMax, 40, 140) - pct(c.shinMin, 40, 140)) + '%';
+    $('smeter-ok').style.left = pct(c.shinMin, 50, 130) + '%';
+    $('smeter-ok').style.width = (pct(c.shinMax, 50, 130) - pct(c.shinMin, 50, 130)) + '%';
     $('hmeter-ok').style.width = '100%';
     if (!coach) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
     $('r-target').textContent = `of ${c.holdTargetSec}`;
@@ -382,7 +392,7 @@
     $('read-shin').className = 'read ' + (!live ? '' : ok.shin ? 'good' : 'bad');
     if (live && r.knee != null) $('meter-pin').style.left = pct(r.knee, 50, 150) + '%';
     if (live && r.tilt != null) $('bmeter-pin').style.left = pct(r.tilt, -40, 40) + '%';
-    if (live && r.shin != null) $('smeter-pin').style.left = pct(r.shin, 40, 140) + '%';
+    if (live && r.shin != null) $('smeter-pin').style.left = pct(r.shin, 50, 130) + '%';
 
     /* the countdown: what is left, how much is banked, and how far along the bar is */
     const leftSec = out.leftMs / 1000, target = out.targetMs / 1000;

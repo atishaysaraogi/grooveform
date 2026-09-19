@@ -119,14 +119,14 @@ test('the shin is read against the floor, plumb at ninety, and the side of ninet
   assert.ok(Math.abs(plumb.points.heel.x - plumb.points.knee.x) < 1e-9, 'at ninety it is under it');
 });
 
-test('the shin band is 80 to 100 degrees', () => {
+test('the shin band is 85 to 95 degrees', () => {
   const feet = (shin) => W.judge(readOf({ shin })).feet;
   assert.equal(feet(65), 'in', 'heels well behind the knees');
-  assert.equal(feet(79), 'in');
-  assert.equal(feet(81), 'good');
+  assert.equal(feet(84), 'in');
+  assert.equal(feet(86), 'good');
   assert.equal(feet(90), 'good', 'plumb');
-  assert.equal(feet(99), 'good');
-  assert.equal(feet(102), 'out');
+  assert.equal(feet(94), 'good');
+  assert.equal(feet(96), 'out');
   assert.equal(feet(120), 'out', 'heels well ahead of the knees');
 });
 
@@ -142,20 +142,30 @@ test('heels ahead of the knees are told to bring the feet back, heels behind to 
   assert.match(far[0].text, /well ahead of your knees/i, 'twenty-five degrees out is not a nudge');
 });
 
-test('the feet are the setup, so they are said before a knee that is out by as much', () => {
-  /* both ten degrees past their band: the stance is what has to move first */
-  const said = play(new W.Coach(), { knee: 120, shin: 110 }, 1200).said;
-  assert.equal(said[0].id, 'feetback', 'said: ' + JSON.stringify(said.map((x) => x.text)));
-  /* but a knee miles out still wins */
-  const legs = play(new W.Coach(), { knee: 145, shin: 104 }, 1200).said;
-  assert.equal(legs[0].id, 'high', 'said: ' + JSON.stringify(legs.map((x) => x.text)));
+test('faults are corrected in the order of the chain: feet, then knee, then back', () => {
+  const first = (opts) => {
+    const said = play(new W.Coach(), opts, 1200).said;
+    assert.ok(said.length, 'nothing was said for ' + JSON.stringify(opts));
+    return said[0].id;
+  };
+  /* the feet come first however small their error is beside the others */
+  assert.equal(first({ knee: 145, shin: 97, tilt: 40 }), 'feetback', 'feet barely out, knee and back miles out');
+  assert.equal(first({ knee: 50, shin: 83, tilt: -40 }), 'feetfwd');
+  /* with the feet right, the knee is next — again however small beside the back */
+  assert.equal(first({ knee: 112, shin: 90, tilt: 40 }), 'high', 'knee barely out, back miles out');
+  assert.equal(first({ knee: 83, shin: 90, tilt: -40 }), 'low');
+  /* and the back is what is left */
+  assert.equal(first({ knee: 95, shin: 90, tilt: 40 }), 'forward');
+  assert.equal(first({ knee: 95, shin: 90, tilt: -40 }), 'back');
+  /* nothing outranks not being able to see the body at all */
+  assert.equal(first({ vis: 0.1 }), 'lost');
 });
 
 test('an untrusted heel hands the shin over to the ankle rather than guessing', () => {
-  const r = readOf({ shin: 95, heelVis: 0.1 });
+  const r = readOf({ shin: 92, heelVis: 0.1 });
   assert.equal(r.shinFoot, 'ankle', 'the reading says which point it came from');
-  assert.ok(Math.abs(r.shin - 95) < 0.01, 'and the ankle is on the same line, so it reads the same');
-  assert.equal(readOf({ shin: 95 }).shinFoot, 'heel', 'a trusted heel is used');
+  assert.ok(Math.abs(r.shin - 92) < 0.01, 'and the ankle is on the same line, so it reads the same');
+  assert.equal(readOf({ shin: 92 }).shinFoot, 'heel', 'a trusted heel is used');
 });
 
 test('the back is judged against vertical, to twelve degrees either way', () => {
@@ -166,6 +176,7 @@ test('the back is judged against vertical, to twelve degrees either way', () => 
 
 test('in position means all three at once', () => {
   assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 92 })).inPosition, true);
+  assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 98 })).inPosition, false, 'three degrees past the shin band is out');
   assert.equal(W.judge(readOf({ knee: 95, tilt: 25 })).inPosition, false, 'good depth and feet, bad back');
   assert.equal(W.judge(readOf({ knee: 130, tilt: 0 })).inPosition, false, 'good back and feet, bad depth');
   assert.equal(W.judge(readOf({ knee: 95, tilt: 0, shin: 115 })).inPosition, false, 'good depth and back, feet too far out');
@@ -217,13 +228,13 @@ test('a back off the wall is called, in the words of the wall', () => {
   assert.equal(other[0].id, 'back'); assert.match(other[0].text, /hips under/i);
 });
 
-test('when both are wrong the one further out is said first', () => {
-  /* legs miles off, back a little off: the legs are the thing to fix */
-  const legs = play(new W.Coach(), { knee: 140, tilt: 16 }, 1200).said;
-  assert.equal(legs[0].id, 'high', 'said: ' + JSON.stringify(legs.map((x) => x.text)));
-  /* legs just past the line, back badly off: the back */
-  const back = play(new W.Coach(), { knee: 112, tilt: 35 }, 1200).said;
-  assert.equal(back[0].id, 'forward', 'said: ' + JSON.stringify(back.map((x) => x.text)));
+test('the knee is said before the back, and then the back once the knee is right', () => {
+  const c = new W.Coach();
+  const first = play(c, { knee: 140, tilt: 35 }, 1200);
+  assert.equal(first.said[0].id, 'high', 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
+  /* fix the knee and the back is what is left to say */
+  const then = play(c, { knee: 95, tilt: 35 }, 3000, first.t);
+  assert.equal(then.said[0].id, 'forward', 'said: ' + JSON.stringify(then.said.map((x) => x.text)));
 });
 
 test('two faults ready at once are not said on top of each other', () => {

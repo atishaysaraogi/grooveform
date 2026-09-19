@@ -7,15 +7,16 @@ change while you do it, and hands you a recording of the set with the cues on it
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
 Point a phone at yourself side on, back against a wall, whole body in frame.
-Nothing is uploaded — the pose model, the coaching and the video file are all
-made on the device.
+The picture and the **Start the set** button sit together at the top, so nothing
+has to be scrolled to while you are against a wall. Nothing is uploaded — the
+pose model, the coaching and the video file are all made on the device.
 
 ## What it measures
 
 | | |
 |---|---|
 | **Knee angle** | the angle at the knee between hip and ankle. 90° is thighs parallel to the floor. The band is **85–110°**: above it the legs are too straight, below it you are too deep. |
-| **Shin** | the angle the knee→heel line makes with the floor. Plumb is 90° and the band is **80–100°**. Past 100° the heels are ahead of the knees, under 80° they are behind them, so one number carries both the fault and the direction the feet have to move. |
+| **Shin** | the angle the knee→heel line makes with the floor. Plumb is 90° and the band is **85–95°**. Past 95° the heels are ahead of the knees, under 85° they are behind them, so one number carries both the fault and the direction the feet have to move. |
 | **Back** | how far the line from hip to shoulder leans off vertical. Against a wall it should be straight up; the default allows **±12°**. |
 
 Both numbers are on screen, on a meter with the target band marked, and burnt
@@ -48,10 +49,13 @@ the other rather than on top of each other.
 | hips ahead of the shoulders | *Bring your hips under your shoulders* |
 | just right | *That is it — hold*, once, and the clock starts |
 
-When more than one is wrong the one further out is said first, weighted so that
-the feet win a tie. Where the feet are is the setup: with them in the wrong
-place the knee angle cannot be right except by leaning or coming up on the toes,
-so moving them first means the depth cue lands on a stance that can hold it.
+When more than one is wrong they are corrected **feet, then knee, then back**,
+in that order and not by how far out each one is. The order is the chain of
+cause. Where the feet are decides which knee angles can be reached at all, and
+where the knee is decides what the back has to do to balance it. Being told to
+flatten a back that is only leaning because the feet are in the wrong place asks
+for something the stance will not give, so the chain is worked from the ground
+up and each cue lands on a position that can act on it.
 
 ## The set
 
@@ -97,6 +101,10 @@ test/
   wallsit.test.js  angles and cue timing, against synthetic bodies
   smoke.mjs        the browser, with the pose model stood in for
 ```
+
+Every threshold is remembered in the browser, and the store carries a version:
+when a default band changes, a store written under the old one is dropped rather
+than quietly holding the old band on a page that says it uses the new one.
 
 `wallsit.js` takes landmarks and a clock and returns readings and at most one
 cue. That is what makes the thresholds checkable: every number the app acts on

@@ -21,9 +21,15 @@
                   point — so that is what this reads and what it says.
 
      shin         the line from the knee to the heel, against the floor. Plumb
-                  is 90° and the band is 80–100°. Which side of 90 it falls
+                  is 90° and the band is 85–95°. Which side of 90 it falls
                   on is which way the feet have to move, so one number carries
                   both the fault and its remedy.
+
+   They are corrected in that order and not by how far out each is: feet, then
+   knee, then back. The order is the chain of cause. Where the feet are decides
+   what knee angles are even reachable, and where the knee is decides what the
+   back has to do to balance it — so correcting further down the chain first
+   asks for a change that the position below it will not allow.
 
    And a wall sit is a hold, so there is a clock: once the position is right it
    counts down from a target, calling the time out as it goes.
@@ -48,8 +54,8 @@
     kneeMin: 85,          // below this the legs are too bent — too low
     kneeMax: 110,         // above this the legs are too straight — too high
     backTilt: 12,         // degrees the torso may lean off vertical
-    shinMin: 80,          // below this the heels are behind the knees — feet too far in
-    shinMax: 100,         // above this the heels are ahead of the knees — feet too far out
+    shinMin: 85,          // below this the heels are behind the knees — feet too far in
+    shinMax: 95,          // above this the heels are ahead of the knees — feet too far out
     holdTargetSec: 60,    // the set: this many seconds in position
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     vis: 0.5,             // a landmark below this is not trusted
@@ -158,12 +164,6 @@
     return {
       ok: true, depth, back, feet, depthOff, backOff, feetOff,
       inPosition: depth === 'good' && back === 'good' && feet === 'good',
-      /* The divisors are what rank one fault against another, and they are not
-         all the same on purpose. Where the feet are is the setup: with them in
-         the wrong place the knee angle cannot be right except by leaning or
-         standing on the toes, so a foot that is as far out as a knee is gets
-         said first and the depth cue lands on a stance that can hold it. */
-      severity: { depth: depthOff / 15, back: backOff / 10, feet: feetOff / 8 },
     };
   }
 
@@ -183,8 +183,13 @@
     hold: { text: 'That is it — hold' },
     lost: { text: 'Step into the camera, side on' },
   };
-  /* the ones that come from a fault holding — the rest are announcements */
-  const FAULTS = ['high', 'low', 'forward', 'back', 'feetback', 'feetfwd', 'lost'];
+  /* The ones that come from a fault holding — the rest are announcements. This list
+     is in the order they are corrected, and that order is the chain of cause rather
+     than a ranking by how far out each one is: where the feet are decides which knee
+     angles can be reached at all, and where the knee is decides what the back must do
+     to balance it. Telling someone to flatten a back that is only leaning because the
+     feet are in the wrong place asks for something the stance will not give. */
+  const FAULTS = ['lost', 'feetback', 'feetfwd', 'high', 'low', 'forward', 'back'];
 
   class Coach {
     constructor(cfg) {
@@ -269,10 +274,9 @@
       }
 
       if (!cue) {
-        const ready = Object.keys(on).filter((id) => this.since[id] && t - this.since[id] >= cfg.persistMs);
+        /* whatever is wrong, the one earliest in the chain is the one to say */
+        const ready = FAULTS.filter((id) => on[id] && this.since[id] && t - this.since[id] >= cfg.persistMs);
         const of = (id) => (id === 'high' || id === 'low' ? v.depthOff : id === 'feetback' || id === 'feetfwd' ? v.feetOff : v.backOff);
-        const rank = (id) => (id === 'lost' ? 99 : id === 'high' || id === 'low' ? v.severity.depth : id === 'feetback' || id === 'feetfwd' ? v.severity.feet : v.severity.back);
-        ready.sort((a, b) => rank(b) - rank(a));
         for (const id of ready) {
           const text = (of(id) > 18 && CUES[id].deep) || CUES[id].text;
           cue = this.offer(id, t, text);
