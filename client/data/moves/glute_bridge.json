@@ -20,21 +20,9 @@
   "progress": {
     "metric": { "kind": "offset", "pts": ["KNEE", "SH", "HIP"], "per": ["KNEE", "ANK"] },
     "start": "calibrated",
-    "target": 5,
-    "max": { "delta": 10 }
+    "target": 5
   },
   "faults": [
-    {
-      "id": "sitting",
-      "label": "Shoulders not on the floor",
-      "cue": "Lie back — shoulders on the floor",
-      "tip": "Start lying flat. The bridge is measured from shoulders and knees that stay on the mat; calibrated sitting up, every rep reads wrong.",
-      "severity": 3,
-      "metric": "hip_open",
-      "op": "<",
-      "threshold": 100,
-      "phase": "start"
-    },
     {
       "id": "shallow",
       "label": "Not reaching the target",
@@ -50,30 +38,18 @@
       "tip": "Control both directions; momentum takes the work away from the muscle.",
       "severity": 1,
       "rule": "fast",
-      "minMs": 600
+      "minMs": 2000
     },
     {
-      "id": "arch",
-      "label": "Arching the lower back at the top",
-      "cue": "Squeeze glutes instead of lower back",
-      "tip": "Height should come from the buttocks, not from pushing the ribs or back up. Stop where the body is straight.",
+      "id": "feet_unstable",
+      "label": "Feet unstable",
+      "cue": "Keep feet grounded",
+      "tip": "Heel pressure puts the work in the glutes; toe pressure sends it to the hamstrings and calves.",
       "severity": 2,
-      "metric": { "kind": "height", "pts": ["HIP", "KNEE"], "per": ["KNEE", "ANK"] },
+      "metric": { "kind": "tilt", "pts": ["FOOT", "HEEL"], "per": ["KNEE", "ANK"], "abs": true },
+      "rel": "change",
       "op": ">",
-      "threshold": -30,
-      "minP": 0.5
-    },
-    {
-      "id": "foot_lifting",
-      "label": "Foot coming off the floor",
-      "cue": "Keep the whole foot flat",
-      "tip": "Push through the whole foot. Heels and toes both stay down — the hips should be lifted by the buttocks, not levered up off the ball of the foot. Side-on the coach cannot tell a lifting heel from lifting toes (the pose model swaps the two labels when a heel comes up) and the reading wobbles a couple of percent of the shin with the foot flat, so this one is not spoken during the set — watch the reps back and mark the ones where it really happened.",
-      "severity": 2,
-      "metric": "toes_lift",
-      "op": ">",
-      "threshold": 10,
-      "persist": 250,
-      "tentative": true
+      "threshold": 4
     },
     {
       "id": "feet",
@@ -83,19 +59,7 @@
       "severity": 2,
       "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"], "per": ["KNEE", "ANK"] },
       "op": ">",
-      "threshold": 55,
-      "phase": "start"
-    },
-    {
-      "id": "feet_too_close",
-      "label": "Feet too close",
-      "cue": "Walk heels farther",
-      "tip": "Keep feet a little away from hips",
-      "severity": 2,
-      "metric": { "kind": "angle", "pts": ["HEEL", "KNEE", "HIP"], "per": ["KNEE", "ANK"] },
-      "op": "<",
-      "threshold": 35,
-      "persist": 250,
+      "threshold": 50,
       "phase": "start"
     }
   ],
@@ -161,13 +125,13 @@
     "screen": { "big": true, "across": true, "visible": true, "home": true, "geometry": true, "helps": true },
     "ptType": "A",
     "notes": "",
-    "edited": "2026-09-18",
+    "edited": "2026-09-19",
     "by": "Test",
     "tuned": {
       "date": "2026-09-16",
       "by": "Test",
       "takes": 44,
-      "faults": ["arch", "feet", "feet_too_close", "foot_lifting", "sitting"],
+      "faults": ["arch", "push", "feet", "toes_rising", "feet_too_close"],
       "override": ["arch", "feet", "feet_too_close"]
     }
   },
