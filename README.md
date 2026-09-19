@@ -1,23 +1,94 @@
-# OnTrack — camera-guided exercise
+# Wall Sit Coach
 
-(Repository name: grooveform. The product is called OnTrack in the app. Browser storage keys and the test fixtures still say fyzio/grooveform on purpose — renaming them would discard work already saved in people’s browsers.)
+A side-on wall sit coach that runs entirely in the browser. It watches your knee
+angle and your back, says what to change while you hold, and hands you a
+recording of the set with the cues on it.
 
-**Current mode: solo.** `SOLO_MODE=true` (the default) hides sign-in, plans, prices and curators and makes every exercise free; the app runs entirely anonymously on the device. Set `SOLO_MODE=false` to bring the marketplace back (accounts, Pro/Curator plans, directory) — all of that code and its tests are still here.
+**Live:** https://atishaysaraogi.github.io/grooveform/
 
-Working name was OnTrack; the folder, docs and some identifiers still say so.
+Point a phone at yourself side on, back against a wall, whole body in frame.
+Nothing is uploaded — the pose model, the coaching and the video file are all
+made on the device.
 
-A phone or laptop camera watches your form (pose estimation runs on the device, video never leaves it), counts reps, times holds and speaks corrections. Some exercises are free for anyone with no account. The rest unlock with a **Pro** subscription — or when a **curator** (physiotherapist or trainer, who subscribes to a Curator plan) sends you a routine. Anyone signed in keeps history and notes; Pro members and curators build custom routines; a **Find a curator** directory lets professionals advertise.
+## What it measures
 
-Zero-dependency Node 22 server, one SQLite file, OTP sign-in (MSG91/Twilio/Resend), Razorpay payments, DPDP-ready.
+| | |
+|---|---|
+| **Knee angle** | the angle at the knee between hip and ankle. 90° is thighs parallel to the floor, shins vertical. The band is **85–110°**: above it the legs are too straight, below it you are too deep. |
+| **Back** | how far the line from hip to shoulder leans off vertical. Against a wall it should be straight up; the default allows **±12°**. |
+
+Both numbers are on screen, on a meter with the target band marked, and burnt
+into the recording. Every threshold is a setting you can change.
+
+**What it cannot see.** The spine rounding between the hip and the shoulder. No
+pose model gives a mid-spine point, so "back straight" here means the hip→shoulder
+line is vertical and nothing more. A rounded back with the hips and shoulders in
+the right places reads as fine.
+
+## What it says
+
+One cue at a time, spoken and written, and only when it has held for half a
+second — an instruction given for a flicker is noise. The same cue is not
+repeated inside its cooldown (4 s by default). When depth and back are both
+wrong, whichever is further out is the one said.
+
+| | |
+|---|---|
+| legs too straight | *Lower down* — or, more than 18° out, *Slide further down the wall* |
+| too deep | *Come up a little* / *Come up — that is too deep* |
+| back off the wall | *Press your back flat to the wall* |
+| hips ahead of the shoulders | *Bring your hips under your shoulders* |
+| just right | *That is it — hold*, once, and the clock starts |
+
+The hold clock runs after 0.7 s in position and stops the instant the position
+goes; the longest unbroken hold is kept alongside the total.
+
+## The recording
+
+The canvas **is** the recording: camera frame, skeleton, the angle drawn at the
+knee, the plumb line the back is judged against, both readings, the timer and
+the cue banner are all painted onto it, so the file you download is the picture
+you watched. Cues are also mixed in as tones — a browser will not let a page
+capture its own speech, so the words are on the picture and a matching tone is
+on the audio track. MP4 where the browser can write one, WebM where it cannot.
+There is a plain-text cue log with timings beside it.
+
+## Running it
+
+```sh
+npm run dev        # http://localhost:8000 — localhost counts as secure, so the camera works
+npm test           # the measuring and the coaching, against bodies posed to a known angle
+npm run smoke      # a real browser: canvas, cues, MediaRecorder  (needs playwright)
+```
+
+No dependencies and no build step. `public/` is the site; the Pages workflow
+uploads it as it stands.
 
 ```
-ADMIN_IDENTIFIER=you@example.com npm run dev     # http://localhost:8080 — OTP codes print to the terminal, payments are mocked
-npm test                                         # engine + API tests (~3 s)
-NODE_PATH=$(npm root -g) npm run test:e2e        # marketplace browser end-to-end with a synthetic camera (needs Playwright)
-NODE_PATH=$(npm root -g) npm run test:solo       # solo-mode browser checks
-npm run build:static                             # dist/ for GitHub Pages or any static host
+public/
+  index.html
+  styles.css
+  js/wallsit.js    the measuring and the coaching decision — pure, no DOM, tested
+  js/app.js        camera, drawing, voice, recording
+test/
+  wallsit.test.js  angles and cue timing, against synthetic bodies
+  smoke.mjs        the browser, with the pose model stood in for
 ```
 
-Docs: [RUN-LOCALLY](docs/RUN-LOCALLY.md) (laptop + phone in 10 minutes) · [PUBLISH-GITHUB-PAGES](docs/PUBLISH-GITHUB-PAGES.md) (free hosting + Claude pushes updates) · [SETUP](docs/SETUP.md) (laptop → Fly.io with real SMS and Razorpay, step by step) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [COMPLIANCE-INDIA](docs/COMPLIANCE-INDIA.md) · [OPERATIONS](docs/OPERATIONS.md) · [TESTING](docs/TESTING.md). Screenshots of every screen are in `docs/screenshots/` after running the e2e suite.
+`wallsit.js` takes landmarks and a clock and returns readings and at most one
+cue. That is what makes the thresholds checkable: every number the app acts on
+is held in `test/wallsit.test.js` against a body built to read exactly that
+number, which is the only honest way to know a threshold does what it says.
 
-Sixteen vetted moves: heel slide, standing hip abduction, wall sit, plank, wall calf stretch, the glute bridge, five shoulder & neck exercises (band external/internal rotation, band abduction, band rows, band pull-apart, upper trapezius stretch), the banded kicks — forward, backward, seated and the clamshell — and a lying leg raise, each with a full-body position guide and fault detection. The first eleven were checked rep by rep against recordings; the banded kicks and the clamshell were tuned on synthetic bodies carrying real landmark noise, and the leg raise on four takes whose fire report its author overrode — all of those still want a pass against footage of their own ([docs/EXERCISE-LIBRARY.md](docs/EXERCISE-LIBRARY.md)). Behind them, the rest of a **library of 146** physio and gym moves (no machines), every one of them its own editable JSON file in `client/data/moves/`, with `_about.json` beside them explaining every field — each with the fields a physio fills in (dosage, tempo, progression, contraindications, faults with cues, sources) and an honest tracking tier — *form coached*, *counts reps* or *no camera* (logged by hand). The whole library is listed, vetted moves first — including a set of Indian dance moves (Bharatanatyam aramandi and adavus, Kathak tatkar and chakkars, Garba, Bhangra) treated as exercise, with the same honest tiers. Seventeen playlists cover the programmes physios prescribe most: the daily three for backs, plantar heel pain, tennis elbow, a stiff shoulder, falls prevention, glute rebuild, knee arthritis — and one per dance form. Edit a move in the Studio, in a text editor or with `node scripts/catalog.js` — see [docs/EXERCISE-LIBRARY.md](docs/EXERCISE-LIBRARY.md) for the tiers, the file format and how to add a move; shoulder rules and sources in [docs/LIBRARY-SHOULDER.md](docs/LIBRARY-SHOULDER.md). New moves are built with a physio in the **Studio** (`/studio/` on the site): screen, record takes, pick the measurement, set fault thresholds against the recordings, save into the library — [docs/STUDIO.md](docs/STUDIO.md), reasoning in [docs/PT-INTAKE.md](docs/PT-INTAKE.md).
+## Pose model
+
+MediaPipe Pose Landmarker, loaded from the CDN on first use. The **full** model
+is the default: a wall sit is a hold, not a fast movement, so there is no reason
+to take the faster, shakier read. The lite model is one setting away for an old
+phone.
+
+## History
+
+Everything before this — a whole exercise library and coaching engine — is on
+the `archive/ontrack` branch, untouched. To bring it back:
+`git checkout archive/ontrack`.

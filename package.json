@@ -1,22 +1,12 @@
 {
-  "name": "grooveform",
+  "name": "wall-sit-coach",
   "version": "1.0.0",
-  "description": "OnTrack — camera-guided exercise coach with free and Pro exercises, curator-sent routines, a curator directory and Razorpay subscriptions. Zero-dependency Node 22 server + SQLite.",
   "private": true,
-  "engines": {
-    "node": ">=22.12"
-  },
+  "description": "Side-on wall sit coach: knee angle 85-110 degrees, back flat to the wall, spoken cues, downloadable recording. Runs entirely in the browser.",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "NODE_ENV=development ADMIN_IDENTIFIER=${ADMIN_IDENTIFIER:-admin@example.com} node --watch server/index.js",
-    "test": "node --test test/api.test.js test/engine.test.js test/library.test.js test/spec.test.js test/studio-save.test.js test/replay.test.js",
-    "test:e2e": "node test/e2e.test.js",
-    "keygen": "node -e \"const c=require('crypto');console.log('DATA_KEY='+c.randomBytes(32).toString('hex'));console.log('APP_SECRET='+c.randomBytes(32).toString('base64url'))\"",
-    "test:solo": "node test/solo.test.js",
-    "build:static": "node scripts/build-static.js",
-    "test:static": "node scripts/build-static.js && node test/static.test.js",
-    "catalog": "node scripts/catalog.js",
-    "catalog:check": "node scripts/catalog.js check"
+    "test": "node --test \"test/*.test.js\"",
+    "smoke": "node test/smoke.mjs",
+    "dev": "node scripts/serve.js"
   },
-  "license": "UNLICENSED"
+  "license": "MIT"
 }

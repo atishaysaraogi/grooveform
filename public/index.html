@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>Wall Sit Coach</title>
+<meta name="description" content="Side-on wall sit coach: knee angle 85–110°, back flat, spoken cues, and a recording you can download.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🪑</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="bar">
+  <h1>Wall&nbsp;Sit <span class="sub">Coach</span></h1>
+  <span class="chip" id="state">Ready</span>
+</header>
+
+<main>
+  <!-- everything drawn here is what the recording captures: camera, skeleton, readings, cues -->
+  <div class="stage" id="stage">
+    <video id="cam" playsinline muted></video>
+    <canvas id="view"></canvas>
+    <div class="veil" id="veil">
+      <div class="veil-in">
+        <p class="big" id="veil-title">Stand side&nbsp;on to the camera</p>
+        <p class="muted" id="veil-text">Whole body in frame, back against the wall. The camera never leaves this device.</p>
+        <button class="btn primary" id="go">Start the camera</button>
+        <p class="tiny" id="veil-note"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="reads">
+    <div class="read" id="read-knee">
+      <div class="v"><span id="knee-v">—</span><i>°</i></div>
+      <div class="k">knee angle<span class="band" id="knee-band">85–110</span></div>
+      <div class="meter"><span class="ok" id="meter-ok"></span><b id="meter-pin"></b></div>
+    </div>
+    <div class="read" id="read-back">
+      <div class="v"><span id="back-v">—</span><i>°</i></div>
+      <div class="k">back off vertical<span class="band" id="back-band">±12</span></div>
+      <div class="meter"><span class="ok" id="bmeter-ok"></span><b id="bmeter-pin"></b></div>
+    </div>
+    <div class="read wide">
+      <div class="v"><span id="hold-v">0.0</span><i>s</i></div>
+      <div class="k">held in position<span class="band" id="best-v">best 0.0 s</span></div>
+    </div>
+  </div>
+
+  <p class="cue" id="cue" aria-live="polite"></p>
+
+  <div class="row">
+    <button class="btn primary" id="startstop" disabled>Start the set</button>
+    <button class="btn" id="flip" disabled>Flip camera</button>
+    <button class="btn" id="mute" aria-pressed="false">Voice on</button>
+    <button class="btn" id="settings-btn" aria-expanded="false">Settings</button>
+  </div>
+
+  <section class="panel" id="settings" hidden>
+    <div class="grid">
+      <label>Knee angle, lowest<input type="number" id="cfg-min" value="85" min="40" max="150" step="1"></label>
+      <label>Knee angle, highest<input type="number" id="cfg-max" value="110" min="40" max="170" step="1"></label>
+      <label>Back allowed off vertical<input type="number" id="cfg-tilt" value="12" min="3" max="40" step="1"></label>
+      <label>Seconds between repeats<input type="number" id="cfg-cool" value="4" min="1" max="15" step="1"></label>
+      <label>Pose model
+        <select id="cfg-model"><option value="full">Full — steadier, the default here</option><option value="lite">Lite — faster on an old phone</option></select>
+      </label>
+      <label>Mirror the picture
+        <select id="cfg-mirror"><option value="off">Off</option><option value="on">On</option></select>
+      </label>
+    </div>
+    <p class="tiny">A wall sit is a hold, not a fast movement, so the full model is worth its cost: it is the steadier read, and steadier readings are what stop a cue firing on nothing.</p>
+  </section>
+
+  <section class="panel" id="result" hidden>
+    <h2>That set</h2>
+    <div class="reads">
+      <div class="read"><div class="v"><span id="r-hold">0</span><i>s</i></div><div class="k">in position</div></div>
+      <div class="read"><div class="v"><span id="r-best">0</span><i>s</i></div><div class="k">longest hold</div></div>
+      <div class="read"><div class="v"><span id="r-cues">0</span></div><div class="k">corrections</div></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="dl-video">Download the video</button>
+      <button class="btn" id="dl-log">Download the cue log</button>
+    </div>
+    <p class="tiny" id="rec-note"></p>
+    <ol class="log" id="log"></ol>
+  </section>
+
+  <section class="panel how">
+    <h2>What it measures</h2>
+    <p><b>Knee angle</b> — the angle at your knee between hip and ankle. 90° is thighs parallel to the floor. Above the band your legs are too straight, below it you are too deep.</p>
+    <p><b>Back</b> — how far the line from your hip to your shoulder leans off vertical. Against a wall it should be straight up. The camera cannot see your spine rounding between those two points; no pose model gives a mid-spine point, so this is the tilt and nothing more.</p>
+    <p class="tiny">Everything runs on this device. The camera image is never uploaded, and the recording you download is made here in the browser.</p>
+  </section>
+</main>
+
+<script src="js/wallsit.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
