@@ -1150,8 +1150,9 @@ async function runCoachedSet(page, side = 'right') {
         for (const id in REST) { const a = REST[id], b = TOP[id]; p[+id] = { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, z: 0, visibility: 0.95 }; }
         for (const id of [31, 32]) p[id] = { ...p[id], y: p[id].y - toes };
         return p; };
-      window.__mockPose = (t) => { if (t < 10500) return lying(0, 0); const tt = t - 10500, rep = Math.floor(tt / 3000), ph = (tt % 3000) / 3000;
-        if (rep >= 8) return lying(0, 0); const k = Math.sin(Math.PI * ph); return lying(k, k > 0.6 ? 0.07 : 0); };
+      /* reps until the target of ten is reached and the set finishes itself */
+      window.__mockPose = (t) => { if (t < 10500) return lying(0, 0); const ph = ((t - 10500) % 3000) / 3000;
+        const k = Math.sin(Math.PI * ph); return lying(k, k > 0.6 ? 0.07 : 0); };
     });
     await page.click('#do-start');
     await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 20000 });
