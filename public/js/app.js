@@ -21,7 +21,10 @@
 
   const $ = (id) => document.getElementById(id);
   const video = $('cam'), canvas = $('view'), ctx = canvas.getContext('2d');
-  const cfgEl = { min: $('cfg-min'), max: $('cfg-max'), tilt: $('cfg-tilt'), cool: $('cfg-cool'), model: $('cfg-model'), mirror: $('cfg-mirror') };
+  const cfgEl = { min: $('cfg-min'), max: $('cfg-max'), tilt: $('cfg-tilt'), cool: $('cfg-cool'),
+    shinmin: $('cfg-shinmin'), shinmax: $('cfg-shinmax'), target: $('cfg-target'), calls: $('cfg-calls'),
+    model: $('cfg-model'), mirror: $('cfg-mirror') };
+  const KEYS = ['min', 'max', 'tilt', 'cool', 'shinmin', 'shinmax', 'target', 'calls', 'model', 'mirror'];
 
   let vision = null, landmarker = null, loadedModel = null;
   let stream = null, facing = 'environment';
@@ -38,20 +41,26 @@
     set(v) { try { localStorage.setItem('wallsit', JSON.stringify(v)); } catch { } },
   };
   function cfg() {
-    const n = (el, d) => { const v = Number(el.value); return Number.isFinite(v) ? v : d; };
+    const n = (el, d) => { const v = Number(el.value); return Number.isFinite(v) && el.value !== '' ? v : d; };
+    /* the time calls are typed as a list, so anything unreadable falls back rather than
+       silently leaving the set with no calls in it */
+    const calls = String(cfgEl.calls.value).split(/[^\d]+/).map(Number).filter((x) => x > 0);
     return {
       kneeMin: n(cfgEl.min, 85), kneeMax: n(cfgEl.max, 110), backTilt: n(cfgEl.tilt, 12),
+      shinMin: n(cfgEl.shinmin, 80), shinMax: n(cfgEl.shinmax, 100),
+      holdTargetSec: Math.max(1, n(cfgEl.target, 60)),
+      callAtSec: (calls.length ? calls : [45, 30, 10, 5]).sort((a, b) => b - a),
       cooldownMs: n(cfgEl.cool, 4) * 1000,
       model: cfgEl.model.value, mirror: cfgEl.mirror.value === 'on',
     };
   }
   function loadSettings() {
     const s = store.get();
-    for (const k of ['min', 'max', 'tilt', 'cool', 'model', 'mirror']) if (s[k] != null) cfgEl[k].value = s[k];
+    for (const k of KEYS) if (s[k] != null) cfgEl[k].value = s[k];
     syncBands();
   }
   function saveSettings() {
-    const s = {}; for (const k of ['min', 'max', 'tilt', 'cool', 'model', 'mirror']) s[k] = cfgEl[k].value;
+    const s = {}; for (const k of KEYS) s[k] = cfgEl[k].value;
     store.set(s); syncBands();
     if (coach) Object.assign(coach.cfg, cfg());
   }
@@ -59,11 +68,17 @@
     const c = cfg();
     $('knee-band').textContent = `${c.kneeMin}–${c.kneeMax}`;
     $('back-band').textContent = `±${c.backTilt}`;
+    $('shin-band').textContent = `${c.shinMin}–${c.shinMax}`;
     /* the green stretch on each meter, drawn on the scale each meter uses */
     $('meter-ok').style.left = pct(c.kneeMin, 50, 150) + '%';
     $('meter-ok').style.width = (pct(c.kneeMax, 50, 150) - pct(c.kneeMin, 50, 150)) + '%';
     $('bmeter-ok').style.left = pct(-c.backTilt, -40, 40) + '%';
     $('bmeter-ok').style.width = (pct(c.backTilt, -40, 40) - pct(-c.backTilt, -40, 40)) + '%';
+    $('smeter-ok').style.left = pct(c.shinMin, 40, 140) + '%';
+    $('smeter-ok').style.width = (pct(c.shinMax, 40, 140) - pct(c.shinMin, 40, 140)) + '%';
+    $('hmeter-ok').style.width = '100%';
+    if (!coach) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
+    $('r-target').textContent = `of ${c.holdTargetSec}`;
   }
   const pct = (v, lo, hi) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
 
@@ -120,9 +135,15 @@
     high: [[660, 0.1], [440, 0.14]],      // going down: get lower
     low: [[440, 0.1], [660, 0.14]],       // going up: come up
     forward: [[300, 0.16]], back: [[300, 0.16]],
+    feetback: [[520, 0.09], [392, 0.09], [330, 0.13]],   // walking back: a falling run
+    feetfwd: [[330, 0.09], [392, 0.09], [520, 0.13]],    // walking out: the same run, rising
     hold: [[880, 0.09], [1175, 0.13]],
+    call: [[988, 0.07], [988, 0.09]],                    // the clock, twice, out of the way
+    done: [[784, 0.1], [988, 0.1], [1319, 0.22]],
     lost: [[350, 0.08]],
   };
+  /* every call shares one tone, so `call30` and `call5` do not each need an entry */
+  const toneFor = (id) => TONES[id] || (/^call\d/.test(id) ? TONES.call : TONES.lost);
 
   /* ---------- the pose model ---------- */
   async function loadModel(want, note) {
@@ -173,20 +194,34 @@
     const at = (p) => [(p.x / A) * W, p.y * H];
     const colour = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
     const s = Math.max(2, W / 320);
+    const cDepth = v.depth === 'good' ? C.good : C.bad;
+    const cBack = v.back === 'good' ? C.good : C.bad;
+    const cFeet = v.feet === 'good' ? C.good : C.bad;
 
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = colour; ctx.lineWidth = s * 1.6;
+    ctx.lineWidth = s * 1.6;
     ctx.shadowColor = C.shadow; ctx.shadowBlur = s * 2;
     for (const [a, b] of WallSit.BONES) {
       const p = r.points[a], q = r.points[b]; if (!p || !q) continue;
-      /* the back gets its own colour, because it has its own verdict */
-      ctx.strokeStyle = (a === 'shoulder' && b === 'hip') ? (v.back === 'good' ? C.good : C.bad) : colour;
+      /* each part is drawn in the colour of the verdict that is about it: the torso
+         carries the back, the shin and foot carry where the feet are */
+      ctx.strokeStyle = !v.ok ? C.dim
+        : (a === 'shoulder' && b === 'hip') ? cBack
+          : (a === 'knee' || a === 'ankle' || a === 'heel') ? cFeet
+            : colour;
       ctx.beginPath(); ctx.moveTo(...at(p)); ctx.lineTo(...at(q)); ctx.stroke();
     }
     /* the plumb line the back is judged against */
     const hp = at(r.points.hip);
     ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
     ctx.beginPath(); ctx.moveTo(hp[0], hp[1]); ctx.lineTo(hp[0], hp[1] - H * 0.3); ctx.stroke();
+
+    /* the floor the shin is judged against, through whichever foot point was used */
+    const footKey = r.shinFoot || 'heel';
+    const fp = at(r.points[footKey]);
+    if (r.shin != null) {
+      ctx.beginPath(); ctx.moveTo(fp[0] - r.facing * W * 0.05, fp[1]); ctx.lineTo(fp[0] + r.facing * W * 0.11, fp[1]); ctx.stroke();
+    }
     ctx.setLineDash([]);
 
     ctx.shadowBlur = 0; ctx.fillStyle = colour;
@@ -194,28 +229,37 @@
       const p = r.points[k]; if (!p) continue; const [x, y] = at(p);
       ctx.beginPath(); ctx.arc(x, y, s * 1.5, 0, Math.PI * 2); ctx.fill();
     }
-    /* the measured angle, drawn where it is measured */
+
+    const rad = Math.max(18, W * 0.045);
+    /* the knee angle, drawn where it is measured */
     if (r.knee != null) {
       const [kx, ky] = at(r.points.knee);
       const ang = (p) => { const [x, y] = at(p); return Math.atan2(y - ky, x - kx); };
-      const rad = Math.max(18, W * 0.045);
-      ctx.strokeStyle = v.depth === 'good' ? C.good : C.bad; ctx.lineWidth = s * 1.1;
-      ctx.beginPath(); ctx.arc(kx, ky, rad, ang(r.points.hip), ang(r.points.ankle), needsCCW(r, ang)); ctx.stroke();
-      /* the number sits on the bisector, just outside the arc, so it reads as that arc's label */
-      const a0 = ang(r.points.hip);
-      let d = ang(r.points.ankle) - a0;
-      while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2;
-      const mid = a0 + d / 2, out = rad * 1.75;
-      label(`${Math.round(r.knee)}°`, kx + Math.cos(mid) * out, ky + Math.sin(mid) * out,
-        Math.max(14, W * 0.032), v.depth === 'good' ? C.good : C.bad, cfg().mirror);
+      sweep(kx, ky, rad, ang(r.points.hip), ang(r.points.ankle), cDepth, s, `${Math.round(r.knee)}°`, W);
+    }
+    /* the shin against the floor, drawn at the foot where the floor is. Measured
+       from the floor going forward, away from the wall, so the number on the
+       picture is the number being judged: past 90° the knee is behind the heel. */
+    if (r.shin != null) {
+      const a0 = r.facing > 0 ? 0 : Math.PI;
+      const [kx, ky] = at(r.points.knee);
+      const a1 = Math.atan2(ky - fp[1], kx - fp[0]);
+      sweep(fp[0], fp[1], rad * 0.8, a0, a1, cFeet, s, `${Math.round(r.shin)}°`, W);
     }
   }
-  /* the short way round between the two limbs, so the arc is the angle and not its reflex */
-  function needsCCW(r, ang) {
-    let d = ang(r.points.ankle) - ang(r.points.hip);
+
+  /* An arc the short way round between two directions, with its number set on the
+     bisector just outside it — so the number is plainly the label of that arc and
+     the arc is plainly the angle, not its reflex. */
+  function sweep(cx, cy, rad, a0, a1, colour, s, text, W) {
+    let d = a1 - a0;
     while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2;
-    return d < 0;
+    ctx.strokeStyle = colour; ctx.lineWidth = s * 1.1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx, cy, rad, a0, a1, d < 0); ctx.stroke();
+    const mid = a0 + d / 2, out = rad + Math.max(14, W * 0.032) * 0.95;
+    label(text, cx + Math.cos(mid) * out, cy + Math.sin(mid) * out, Math.max(14, W * 0.032), colour, cfg().mirror);
   }
+
   /* The body is drawn under a mirror when mirroring, which would write the text backwards.
      Flipping about the label's own x un-mirrors the glyphs and leaves the anchor where it is,
      so the same (x, y) means the same place on screen either way — and centred text needs no
@@ -232,7 +276,8 @@
 
   function drawHud(r, v, out, W, H) {
     const pad = Math.round(W * 0.022), fs = Math.max(15, Math.round(W * 0.028));
-    const edge = !r || !r.ok ? C.dim : v.inPosition ? C.good : C.bad;
+    const live = r && r.ok;
+    const edge = out.done ? C.good : !live ? C.dim : v.inPosition ? C.good : C.bad;
     ctx.strokeStyle = edge; ctx.lineWidth = Math.max(3, W * 0.006);
     ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, W - ctx.lineWidth, H - ctx.lineWidth);
 
@@ -243,31 +288,42 @@
       ctx.lineWidth = size * 0.26; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
       ctx.strokeText(text, x, y); ctx.fillStyle = colour; ctx.fillText(text, x, y);
     };
-    const knee = r && r.ok && r.knee != null ? `${Math.round(r.knee)}°` : '—';
-    const back = r && r.ok && r.tilt != null ? `${Math.round(r.tilt)}°` : '—';
-    line(`KNEE ${knee}`, pad, pad, fs, r && r.ok ? (v.depth === 'good' ? C.good : C.bad) : C.dim);
-    line(`target ${c.kneeMin}–${c.kneeMax}`, pad, pad + fs * 1.15, fs * 0.62, C.dim);
-    line(`BACK ${back}`, pad, pad + fs * 2.05, fs, r && r.ok ? (v.back === 'good' ? C.good : C.bad) : C.dim);
-    line(`vertical ±${c.backTilt}`, pad, pad + fs * 3.2, fs * 0.62, C.dim);
+    /* one cursor down each side, so no two lines can ever be laid on top of each other */
+    const stack = (x, align) => {
+      let y = pad;
+      return (big, small, colour, scale) => {
+        const sz = fs * (scale || 1);
+        line(big, x, y, sz, colour, align); y += sz * 1.12;
+        line(small, x, y, fs * 0.62, C.dim, align); y += fs * 0.95;
+        return y;
+      };
+    };
+    const num = (x, u) => (live && x != null ? `${Math.round(x)}°` : '—');
+    const L = stack(pad, 'left');
+    L(`KNEE ${num(r && r.knee)}`, `target ${c.kneeMin}–${c.kneeMax}`, live ? (v.depth === 'good' ? C.good : C.bad) : C.dim);
+    L(`SHIN ${num(r && r.shin)}`, `floor ${c.shinMin}–${c.shinMax}`, live ? (v.feet === 'good' ? C.good : C.bad) : C.dim);
+    L(`BACK ${num(r && r.tilt)}`, `vertical ±${c.backTilt}`, live ? (v.back === 'good' ? C.good : C.bad) : C.dim);
 
-    const secs = (out.holdMs / 1000).toFixed(1);
-    line(`${secs}s`, W - pad, pad, fs * 1.5, out.holding ? C.good : C.ink, 'right');
-    line('held', W - pad, pad + fs * 1.75, fs * 0.62, C.dim, 'right');
+    /* the countdown, which is what the set is */
+    const R = stack(W - pad, 'right');
+    const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
+    let ry = R(out.done ? 'DONE' : `${left}s`, out.done ? `${target} s held` : `left of ${target} s`,
+      out.done ? C.good : out.holding ? C.good : C.ink, 1.5);
+    if (rec && rec.mr && rec.mr.state === 'recording') {
+      line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
+      ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
+    }
 
     /* the cue, kept on screen a moment after it was said so the recording shows it */
     if (banner && performance.now() - banner.at < 2600) {
       const bh = fs * 2.2, y = H - bh - pad;
+      ctx.font = `800 ${fs}px ui-sans-serif, system-ui, sans-serif`;
+      const bw = Math.min(W - pad * 2, ctx.measureText(banner.text).width + fs * 3);
       ctx.fillStyle = 'rgba(13,17,23,.82)';
-      const bw = Math.min(W - pad * 2, ctx.measureText(banner.text).width + fs * 8);
       ctx.beginPath(); ctx.roundRect((W - bw) / 2, y, bw, bh, bh / 2); ctx.fill();
       ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
-      ctx.font = `800 ${fs}px ui-sans-serif, system-ui, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = banner.colour; ctx.fillText(banner.text, W / 2, y + bh / 2);
-    }
-    if (rec && rec.mr && rec.mr.state === 'recording') {
-      ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.4, pad + fs * 2.9, fs * 0.32, 0, Math.PI * 2); ctx.fill();
-      line('REC', W - pad - fs, pad + fs * 2.55, fs * 0.66, C.bad, 'right');
     }
   }
 
@@ -307,29 +363,46 @@
   }
 
   function fire(cue) {
-    const colour = cue.id === 'hold' ? C.good : cue.id === 'lost' ? C.warn : C.bad;
+    const good = cue.id === 'hold' || cue.id === 'done' || /^call\d/.test(cue.id);
+    const colour = good ? C.good : cue.id === 'lost' ? C.warn : C.bad;
     banner = { text: cue.text, colour, at: performance.now() };
-    voice.say(cue.text); tone(TONES[cue.id] || TONES.lost);
+    voice.say(cue.text); tone(toneFor(cue.id));
     const el = $('cue'); el.textContent = cue.text;
-    el.className = 'cue ' + (cue.id === 'hold' ? 'good' : cue.id === 'lost' ? 'warn' : 'bad');
+    el.className = 'cue ' + (good ? 'good' : cue.id === 'lost' ? 'warn' : 'bad');
   }
 
   function paintUi(r, v, out) {
-    const c = cfg();
-    const kneeOk = r && r.ok && v.depth === 'good', backOk = r && r.ok && v.back === 'good';
-    $('knee-v').textContent = r && r.ok && r.knee != null ? Math.round(r.knee) : '—';
-    $('back-v').textContent = r && r.ok && r.tilt != null ? Math.round(r.tilt) : '—';
-    $('read-knee').className = 'read ' + (!r || !r.ok ? '' : kneeOk ? 'good' : 'bad');
-    $('read-back').className = 'read ' + (!r || !r.ok ? '' : backOk ? 'good' : 'bad');
-    if (r && r.ok && r.knee != null) $('meter-pin').style.left = pct(r.knee, 50, 150) + '%';
-    if (r && r.ok && r.tilt != null) $('bmeter-pin').style.left = pct(r.tilt, -40, 40) + '%';
-    $('hold-v').textContent = (out.holdMs / 1000).toFixed(1);
-    $('best-v').textContent = `best ${(out.bestMs / 1000).toFixed(1)} s`;
+    const c = cfg(), live = r && r.ok;
+    const ok = { knee: live && v.depth === 'good', back: live && v.back === 'good', shin: live && v.feet === 'good' };
+    $('knee-v').textContent = live && r.knee != null ? Math.round(r.knee) : '—';
+    $('back-v').textContent = live && r.tilt != null ? Math.round(r.tilt) : '—';
+    $('shin-v').textContent = live && r.shin != null ? Math.round(r.shin) : '—';
+    $('read-knee').className = 'read ' + (!live ? '' : ok.knee ? 'good' : 'bad');
+    $('read-back').className = 'read ' + (!live ? '' : ok.back ? 'good' : 'bad');
+    $('read-shin').className = 'read ' + (!live ? '' : ok.shin ? 'good' : 'bad');
+    if (live && r.knee != null) $('meter-pin').style.left = pct(r.knee, 50, 150) + '%';
+    if (live && r.tilt != null) $('bmeter-pin').style.left = pct(r.tilt, -40, 40) + '%';
+    if (live && r.shin != null) $('smeter-pin').style.left = pct(r.shin, 40, 140) + '%';
+
+    /* the countdown: what is left, how much is banked, and how far along the bar is */
+    const leftSec = out.leftMs / 1000, target = out.targetMs / 1000;
+    $('hold-v').textContent = leftSec.toFixed(1);
+    $('hold-k').textContent = out.done ? `${target} s done` : `left of ${target} s`;
+    $('best-v').textContent = `held ${(out.holdMs / 1000).toFixed(1)} s · best ${(out.bestMs / 1000).toFixed(1)} s`;
+    $('read-hold').className = 'read wide' + (out.done ? ' good' : out.holding ? ' good' : '');
+    $('hmeter-pin').style.left = pct(out.holdMs, 0, out.targetMs) + '%';
+
     const chip = $('state');
-    if (!r || !r.ok) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
-    else if (out.holding) { chip.textContent = 'Holding'; chip.className = 'chip good'; }
+    if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
+    else if (!live) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
+    else if (out.holding) { chip.textContent = `${Math.ceil(leftSec)} s left`; chip.className = 'chip good'; }
     else if (v.inPosition) { chip.textContent = 'Settling'; chip.className = 'chip good'; }
-    else { chip.textContent = v.depth !== 'good' ? (v.depth === 'high' ? 'Too high' : 'Too deep') : 'Back'; chip.className = 'chip bad'; }
+    else {
+      /* the chip names the same fault the cue would, in two words */
+      chip.textContent = v.depth !== 'good' ? (v.depth === 'high' ? 'Too high' : 'Too deep')
+        : v.feet !== 'good' ? (v.feet === 'out' ? 'Feet out' : 'Feet in') : 'Back';
+      chip.className = 'chip bad';
+    }
   }
 
   /* ---------- recording ---------- */
@@ -403,6 +476,7 @@
     rec = rec ? Object.assign(rec, { blob }) : null;
     const s = coach.summary();
     $('r-hold').textContent = s.holdSec; $('r-best').textContent = s.bestSec;
+    $('r-target').textContent = `of ${s.targetSec}`;
     $('r-cues').textContent = Object.values(s.cues).reduce((a, b) => a + b, 0);
     $('log').innerHTML = s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') ||
       '<li>Nothing needed saying.</li>';
@@ -410,7 +484,8 @@
     if (blob) $('rec-note').textContent = `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · the spoken cues are on it as tones and as text on the picture.`;
     $('result').hidden = false;
     $('startstop').textContent = 'Start the set'; $('startstop').className = 'btn primary';
-    voice.say(s.bestSec >= 1 ? `Set done. Longest hold ${Math.round(s.bestSec)} seconds.` : 'Set done.');
+    voice.say(s.reachedTarget ? `Set done. You held the full ${s.targetSec} seconds.`
+      : s.holdSec >= 1 ? `Set done. ${Math.round(s.holdSec)} of ${s.targetSec} seconds in position.` : 'Set done.');
     $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -430,7 +505,7 @@
   $('settings-btn').onclick = (e) => {
     const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
   };
-  for (const k of ['min', 'max', 'tilt', 'cool', 'mirror']) cfgEl[k].onchange = saveSettings;
+  for (const k of KEYS) if (k !== 'model') cfgEl[k].onchange = saveSettings;
   cfgEl.model.onchange = async () => {
     saveSettings();
     if (!landmarker) return;
@@ -444,9 +519,10 @@
   };
   $('dl-log').onclick = () => {
     const s = coach ? coach.summary() : { log: [] };
+    const c = cfg();
     const body = [`Wall sit — ${new Date().toLocaleString()}`,
-      `knee band ${cfg().kneeMin}-${cfg().kneeMax}°, back within ${cfg().backTilt}° of vertical`,
-      `in position ${s.holdSec}s, longest hold ${s.bestSec}s`, '',
+      `knee band ${c.kneeMin}-${c.kneeMax}°, shin ${c.shinMin}-${c.shinMax}° off the floor, back within ${c.backTilt}° of vertical`,
+      `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`, '',
       ...s.log.map((c) => `${(c.t / 1000).toFixed(1)}s\t${c.text}`)].join('\n');
     save(new Blob([body], { type: 'text/plain' }), `wall-sit-${stamp()}.txt`);
   };

@@ -11,26 +11,44 @@ const ASPECT = 16 / 9;
 
 /* A body side-on, built backwards from the angles it should read.
      knee   the angle wanted at the knee, between hip and ankle
+     shin   the angle wanted between the knee→heel line and the floor: 90 is plumb,
+            more than 90 puts the heel ahead of the knee, less puts it behind
      tilt   how far the torso leans off vertical, + = the way the knees point
      facing +1 = knees to the image right, -1 = mirrored
+
+   It is built from the knee outwards, because the knee is where both angles meet:
+   the shin is laid down at the angle asked for, and the thigh is swung off it by
+   the knee angle. That makes the two independent, which is the whole point — a
+   body can have good feet and bad depth, or the reverse, and each has its own cue.
+
+   The ankle sits on the knee→heel line by default, so the knee angle is exactly
+   the one posed whichever foot point it is taken to; `heelOff` moves the heel off
+   that line when a test wants a real foot rather than a clean one.
+
    Lengths are shares of the frame height; x is divided by the aspect on the way out,
    because that is how a pose model reports it. */
-function body({ knee = 90, tilt = 0, facing = 1, hip = [0.55, 0.5], vis = 0.95, thigh = 0.2, shin = 0.22, torso = 0.26 } = {}) {
+function body({ knee = 90, shin = 90, tilt = 0, facing = 1, kneeAt = [0.75, 0.55], vis = 0.95,
+                heelVis = null, thigh = 0.2, shinLen = 0.22, torso = 0.26, heelOff = [0, 0] } = {}) {
   const P = {};
-  P.hip = { x: hip[0], y: hip[1] };
-  P.knee = { x: P.hip.x + facing * thigh, y: P.hip.y };                       // thigh horizontal
-  const phi = (180 - knee) * D;                                               // shin, measured off the thigh
-  P.ankle = { x: P.knee.x + facing * shin * Math.cos(phi), y: P.knee.y + shin * Math.sin(phi) };
+  P.knee = { x: kneeAt[0], y: kneeAt[1] };
+  /* the shin, from the horizontal that points back toward the wall */
+  const u = { x: -facing * Math.cos(shin * D), y: Math.sin(shin * D) };
+  P.heel = { x: P.knee.x + shinLen * u.x + facing * heelOff[0], y: P.knee.y + shinLen * u.y + heelOff[1] };
+  P.ankle = { x: P.knee.x + shinLen * 0.86 * u.x, y: P.knee.y + shinLen * 0.86 * u.y };
+  /* the thigh, swung off the shin by the knee angle — clockwise on screen when
+     the knees point right, the other way when they point left */
+  const a = knee * D * facing, ca = Math.cos(a), sa = Math.sin(a);
+  const h = { x: u.x * ca - u.y * sa, y: u.x * sa + u.y * ca };
+  P.hip = { x: P.knee.x + thigh * h.x, y: P.knee.y + thigh * h.y };
   P.shoulder = { x: P.hip.x + facing * torso * Math.sin(tilt * D), y: P.hip.y - torso * Math.cos(tilt * D) };
-  P.heel = { x: P.ankle.x - facing * 0.03, y: P.ankle.y + 0.012 };
-  P.toe = { x: P.ankle.x + facing * 0.06, y: P.ankle.y + 0.015 };
+  P.toe = { x: P.heel.x + facing * 0.08, y: P.heel.y + 0.004 };
   P.ear = { x: P.shoulder.x + facing * 0.02, y: P.shoulder.y - 0.07 };
 
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   /* both sides get the same body: side-on the two legs sit on top of each other */
   for (const s of ['L', 'R']) for (const [name, i] of Object.entries(W.SIDE[s])) {
     const p = P[name]; if (!p) continue;
-    lm[i] = { x: p.x / ASPECT, y: p.y, z: 0, visibility: vis };
+    lm[i] = { x: p.x / ASPECT, y: p.y, z: 0, visibility: name === 'heel' && heelVis != null ? heelVis : vis };
   }
   return lm;
 }
@@ -53,12 +71,12 @@ test('it reads the same angle on a body facing the other way', () => {
   }
 });
 
-test('the heel reading is the same angle taken to a nearer point, and is reported beside it', () => {
-  const r = readOf({ knee: 90 });
-  assert.ok(r.kneeHeel != null, 'it is read');
-  /* the heel sits behind and below the ankle, so the angle to it is not the same number —
-     which is exactly why the ankle is the one judged */
-  assert.ok(Math.abs(r.kneeHeel - r.knee) > 2, 'and it differs from the ankle reading: ' + r.kneeHeel.toFixed(1));
+test('a heel off the shin line reads a different angle from the ankle, which is why the ankle is judged', () => {
+  const clean = readOf({ knee: 90 });
+  assert.ok(Math.abs(clean.kneeHeel - clean.knee) < 0.01, 'a heel on the line reads the same');
+  const real = readOf({ knee: 90, heelOff: [-0.03, 0.012] });
+  assert.ok(Math.abs(real.kneeHeel - real.knee) > 2, 'a heel behind and below does not: ' + real.kneeHeel.toFixed(1));
+  assert.ok(Math.abs(real.knee - 90) < 0.01, 'and the judged angle is untouched by where the heel is');
 });
 
 test('torso lean is signed: + when the shoulders go the way the knees point', () => {
@@ -87,16 +105,70 @@ test('the band is 85 to 110 degrees, inclusive of what sits inside it', () => {
   assert.equal(depth(140), 'high');
 });
 
+test('the shin is read against the floor, plumb at ninety, and the side of ninety says which way the feet go', () => {
+  for (const want of [60, 75, 85, 90, 100, 110, 120]) {
+    for (const facing of [1, -1]) {
+      const r = readOf({ shin: want, facing });
+      assert.ok(Math.abs(r.shin - want) < 0.01, `posed ${want}\u00b0 facing ${facing}, read ${r.shin.toFixed(2)}\u00b0`);
+    }
+  }
+  /* the geometry behind the number, checked on the points rather than trusted */
+  const ahead = readOf({ shin: 115 }), behind = readOf({ shin: 65 }), plumb = readOf({ shin: 90 });
+  assert.ok(ahead.points.heel.x > ahead.points.knee.x, 'above ninety the heel is ahead of the knee');
+  assert.ok(behind.points.heel.x < behind.points.knee.x, 'below ninety it is behind it');
+  assert.ok(Math.abs(plumb.points.heel.x - plumb.points.knee.x) < 1e-9, 'at ninety it is under it');
+});
+
+test('the shin band is 80 to 100 degrees', () => {
+  const feet = (shin) => W.judge(readOf({ shin })).feet;
+  assert.equal(feet(65), 'in', 'heels well behind the knees');
+  assert.equal(feet(79), 'in');
+  assert.equal(feet(81), 'good');
+  assert.equal(feet(90), 'good', 'plumb');
+  assert.equal(feet(99), 'good');
+  assert.equal(feet(102), 'out');
+  assert.equal(feet(120), 'out', 'heels well ahead of the knees');
+});
+
+test('heels ahead of the knees are told to bring the feet back, heels behind to bring them forward', () => {
+  const out = play(new W.Coach(), { shin: 112 }, 1200).said;
+  assert.equal(out[0].id, 'feetback', 'said: ' + JSON.stringify(out.map((x) => x.text)));
+  assert.match(out[0].text, /feet back/i);
+  const inn = play(new W.Coach(), { shin: 68 }, 1200).said;
+  assert.equal(inn[0].id, 'feetfwd');
+  assert.match(inn[0].text, /feet forward/i);
+  /* and a long way out gets the stronger words, as the other faults do */
+  const far = play(new W.Coach(), { shin: 125 }, 1200).said;
+  assert.match(far[0].text, /well ahead of your knees/i, 'twenty-five degrees out is not a nudge');
+});
+
+test('the feet are the setup, so they are said before a knee that is out by as much', () => {
+  /* both ten degrees past their band: the stance is what has to move first */
+  const said = play(new W.Coach(), { knee: 120, shin: 110 }, 1200).said;
+  assert.equal(said[0].id, 'feetback', 'said: ' + JSON.stringify(said.map((x) => x.text)));
+  /* but a knee miles out still wins */
+  const legs = play(new W.Coach(), { knee: 145, shin: 104 }, 1200).said;
+  assert.equal(legs[0].id, 'high', 'said: ' + JSON.stringify(legs.map((x) => x.text)));
+});
+
+test('an untrusted heel hands the shin over to the ankle rather than guessing', () => {
+  const r = readOf({ shin: 95, heelVis: 0.1 });
+  assert.equal(r.shinFoot, 'ankle', 'the reading says which point it came from');
+  assert.ok(Math.abs(r.shin - 95) < 0.01, 'and the ankle is on the same line, so it reads the same');
+  assert.equal(readOf({ shin: 95 }).shinFoot, 'heel', 'a trusted heel is used');
+});
+
 test('the back is judged against vertical, to twelve degrees either way', () => {
   const back = (tilt) => W.judge(readOf({ tilt })).back;
   assert.equal(back(0), 'good'); assert.equal(back(10), 'good'); assert.equal(back(-10), 'good');
   assert.equal(back(20), 'forward'); assert.equal(back(-20), 'back');
 });
 
-test('in position means both at once', () => {
-  assert.equal(W.judge(readOf({ knee: 95, tilt: 4 })).inPosition, true);
-  assert.equal(W.judge(readOf({ knee: 95, tilt: 25 })).inPosition, false, 'good depth, bad back');
-  assert.equal(W.judge(readOf({ knee: 130, tilt: 0 })).inPosition, false, 'good back, bad depth');
+test('in position means all three at once', () => {
+  assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 92 })).inPosition, true);
+  assert.equal(W.judge(readOf({ knee: 95, tilt: 25 })).inPosition, false, 'good depth and feet, bad back');
+  assert.equal(W.judge(readOf({ knee: 130, tilt: 0 })).inPosition, false, 'good back and feet, bad depth');
+  assert.equal(W.judge(readOf({ knee: 95, tilt: 0, shin: 115 })).inPosition, false, 'good depth and back, feet too far out');
 });
 
 /* ---------- the coaching, over time ---------- */
@@ -154,6 +226,28 @@ test('when both are wrong the one further out is said first', () => {
   assert.equal(back[0].id, 'forward', 'said: ' + JSON.stringify(back.map((x) => x.text)));
 });
 
+test('two faults ready at once are not said on top of each other', () => {
+  /* knee and shin both eighteen degrees past their band, so both come ready on the
+     same frame; only one may be spoken, and the second waits out the gap */
+  const c = new W.Coach();
+  const first = play(c, { knee: 128, shin: 118 }, 1200);
+  assert.equal(first.said.length, 1, 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
+  assert.equal(first.said[0].id, 'feetback', 'and it is the feet, being the setup');
+  const rest = play(c, { knee: 128, shin: 118 }, 2000, first.t);
+  assert.equal(rest.said.length, 1, 'then the other, once the gap has passed');
+  assert.equal(rest.said[0].id, 'high');
+  assert.ok(rest.said[0].t - first.said[0].t >= 1500, 'a second and a half apart at least');
+});
+
+test('a time call is not held back by the gap, because a late one is a wrong one', () => {
+  const c = new W.Coach({ holdTargetSec: 10, callAtSec: [5] });
+  const r = play(c, { knee: 95 }, 7000);
+  const hold = r.said.find((x) => x.id === 'hold'), call = r.said.find((x) => x.id === 'call5');
+  assert.ok(hold && call, 'said: ' + JSON.stringify(r.said.map((x) => x.text)));
+  /* the call lands on the frame the clock reaches it, five seconds of hold in */
+  assert.ok(Math.abs(call.t - 5700) < 200, 'called at ' + call.t + ' ms');
+});
+
 test('a good wall sit is told to hold, once, and the clock runs', () => {
   const c = new W.Coach();
   const r = play(c, { knee: 95, tilt: 3 }, 5000);
@@ -176,6 +270,67 @@ test('the clock stops the moment the position goes, and the best run is remember
   const again = play(c, { knee: 95 }, 2000, after.t);
   assert.ok(again.last.holdMs > held, 'and it picks up again');
   assert.ok(again.last.bestMs >= 3000, 'the best unbroken run stands: ' + again.last.bestMs);
+});
+
+test('the set is a sixty second countdown, called at forty five, thirty, ten and five', () => {
+  const c = new W.Coach();
+  const r = play(c, { knee: 95 }, 62000);
+  const calls = r.said.filter((x) => /^call\d|^done$/.test(x.id));
+  assert.deepEqual(calls.map((x) => x.id), ['call45', 'call30', 'call10', 'call5', 'done'],
+    'said: ' + JSON.stringify(r.said.map((x) => x.text)));
+  assert.match(calls[0].text, /^45 seconds left$/);
+  assert.match(calls[3].text, /^5 seconds left$/);
+  assert.match(calls[4].text, /60 seconds .* done/);
+  /* each is called at the moment it is true, allowing the settle before the clock starts */
+  assert.ok(Math.abs(calls[0].t - 15700) < 200, 'forty five left at ' + calls[0].t + ' ms');
+  assert.ok(Math.abs(calls[4].t - 60700) < 200, 'done at ' + calls[4].t + ' ms');
+  assert.equal(r.last.done, true);
+  assert.equal(r.last.leftMs, 0);
+  assert.equal(c.summary().reachedTarget, true);
+});
+
+test('the countdown is spent from time in position, so standing up pauses it rather than running it down', () => {
+  const c = new W.Coach();
+  let t = 0;
+  ({ t } = play(c, { knee: 95 }, 20000, t));              // ~19.3 s held, 40.7 s left
+  const paused = play(c, { knee: 140 }, 8000, t);          // out of position for eight seconds
+  assert.equal(paused.last.holding, false);
+  assert.ok(Math.abs(paused.last.leftMs - 40700) < 300, 'the clock did not move: ' + paused.last.leftMs);
+  const back = play(c, { knee: 95 }, 12000, paused.t);
+  /* it picks up from the 40.7 s it was paused at, less the twelve seconds played,
+     less one more settle: getting back into position has to be earned again */
+  assert.ok(back.last.leftMs > 28500 && back.last.leftMs < 30000, 'left: ' + back.last.leftMs);
+  /* forty five was called during the first stretch; the eight seconds standing up added
+     nothing, so thirty is the next and only mark reached */
+  const calls = [...paused.said, ...back.said].filter((x) => /^call\d/.test(x.id));
+  assert.deepEqual(calls.map((x) => x.id), ['call30'], 'said: ' + JSON.stringify(calls.map((x) => x.id)));
+});
+
+test('nothing is counted down before the position has ever been right', () => {
+  const c = new W.Coach();
+  const r = play(c, { knee: 140 }, 20000);
+  assert.equal(r.last.leftMs, 60000, 'the full sixty is still to do');
+  assert.deepEqual(r.said.filter((x) => /^call\d|^done$/.test(x.id)), []);
+});
+
+test('the target is a setting, and so are the moments the time is called', () => {
+  const c = new W.Coach({ holdTargetSec: 20, callAtSec: [10] });
+  const r = play(c, { knee: 95 }, 22000);
+  const calls = r.said.filter((x) => /^call\d|^done$/.test(x.id));
+  assert.deepEqual(calls.map((x) => x.text), ['10 seconds left', '20 seconds \u2014 done']);
+});
+
+test('a frame gap that carries the clock past two marks calls only the nearer one', () => {
+  const c = new W.Coach();
+  let t = 0, said = [];
+  /* settle, then step in half-second jumps — the coach caps each step at 250 ms,
+     so the clock crawls and the marks are approached; then one huge jump */
+  for (; t < 2000; t += 33) { const o = c.step(W.read(body({ knee: 95 }), ASPECT), t); if (o.cue) said.push(o.cue); }
+  c.holdMs = 47000;                                        // straight past forty five and thirty
+  const o = c.step(W.read(body({ knee: 95 }), ASPECT), t + 33);
+  assert.equal(o.cue.id, 'call30', 'the nearer mark is the one worth saying');
+  const next = play(c, { knee: 95 }, 2000, t + 66);
+  assert.deepEqual(next.said.filter((x) => /^call45$/.test(x.id)), [], 'and the one skipped is spent');
 });
 
 test('a body the camera cannot read is asked to step in, not corrected', () => {

@@ -19,18 +19,22 @@ const POSE_SRC = `
 const D = Math.PI / 180, ASPECT = 16 / 9;
 const SIDE = { L: { shoulder: 11, hip: 23, knee: 25, ankle: 27, heel: 29, toe: 31, ear: 7 },
                R: { shoulder: 12, hip: 24, knee: 26, ankle: 28, heel: 30, toe: 32, ear: 8 } };
-window.__pose = { knee: 90, tilt: 0, vis: 0.95 };
+window.__pose = { knee: 90, shin: 90, tilt: 0, vis: 0.95 };
+/* the same body the unit tests pose, built from the knee out so the knee angle and
+   the shin's angle off the floor can be set one without the other */
 window.__poseSource = function () {
   const o = window.__pose; if (!o) return null;
-  const thigh = 0.2, shin = 0.22, torso = 0.26, f = 1;
-  const hip = { x: 0.55, y: 0.5 };
-  const knee = { x: hip.x + f * thigh, y: hip.y };
-  const phi = (180 - o.knee) * D;
-  const ankle = { x: knee.x + f * shin * Math.cos(phi), y: knee.y + shin * Math.sin(phi) };
+  const thigh = 0.2, shinLen = 0.22, torso = 0.26, f = 1;
+  const knee = { x: 0.75, y: 0.55 };
+  const u = { x: -f * Math.cos(o.shin * D), y: Math.sin(o.shin * D) };
+  const heel = { x: knee.x + shinLen * u.x, y: knee.y + shinLen * u.y };
+  const ankle = { x: knee.x + shinLen * 0.86 * u.x, y: knee.y + shinLen * 0.86 * u.y };
+  const a = o.knee * D * f, ca = Math.cos(a), sa = Math.sin(a);
+  const h = { x: u.x * ca - u.y * sa, y: u.x * sa + u.y * ca };
+  const hip = { x: knee.x + thigh * h.x, y: knee.y + thigh * h.y };
   const shoulder = { x: hip.x + f * torso * Math.sin(o.tilt * D), y: hip.y - torso * Math.cos(o.tilt * D) };
-  const P = { hip, knee, ankle, shoulder,
-    heel: { x: ankle.x - f * 0.03, y: ankle.y + 0.012 },
-    toe: { x: ankle.x + f * 0.06, y: ankle.y + 0.015 },
+  const P = { hip, knee, ankle, shoulder, heel,
+    toe: { x: heel.x + f * 0.08, y: heel.y + 0.004 },
     ear: { x: shoulder.x + f * 0.02, y: shoulder.y - 0.07 } };
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   for (const s of ['L', 'R']) for (const k in SIDE[s]) {
@@ -67,6 +71,8 @@ try {
     await page.waitForSelector('#go');
     assert.equal(await page.textContent('#knee-band'), '85–110', 'the band asked for is the band shown');
     assert.equal(await page.textContent('#back-band'), '±12');
+    assert.equal(await page.textContent('#shin-band'), '80–100');
+    assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
   });
 
   await step('starting the camera begins reading the body', async () => {
@@ -75,6 +81,8 @@ try {
     await page.waitForFunction(() => document.getElementById('knee-v').textContent !== '—', null, { timeout: 10000 });
     const knee = await page.textContent('#knee-v');
     assert.ok(Math.abs(Number(knee) - 90) <= 1, 'a body posed at 90° reads 90° on screen, not ' + knee);
+    const shin = await page.textContent('#shin-v');
+    assert.ok(Math.abs(Number(shin) - 90) <= 1, 'and a plumb shin reads 90°, not ' + shin);
   });
 
   await step('the canvas is painted, and repainted, with the picture the recording gets', async () => {
@@ -112,22 +120,36 @@ try {
     await page.waitForFunction(() => /back flat/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
   });
 
+  await step('heels ahead of the knees are told to bring the feet back', async () => {
+    await set({ knee: 95, tilt: 2, shin: 118 });
+    await page.waitForFunction(() => /feet back/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
+    assert.match(await chip(), /feet out/i);
+    assert.match(await page.getAttribute('#read-shin', 'class'), /bad/);
+  });
+
+  await step('heels behind the knees are told the other way', async () => {
+    await set({ shin: 62 });
+    await page.waitForFunction(() => /feet forward/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
+    assert.match(await chip(), /feet in/i);
+  });
+
   await step('a good wall sit is told to hold, and the clock runs', async () => {
-    await set({ knee: 95, tilt: 2 });
+    await set({ knee: 95, tilt: 2, shin: 90 });
     await page.waitForFunction(() => /hold/i.test(document.getElementById('cue').textContent), null, { timeout: 8000 });
-    await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) > 1.5, null, { timeout: 8000 });
-    assert.match(await chip(), /holding/i);
-    const knee = await page.getAttribute('#read-knee', 'class');
-    assert.match(knee, /good/, 'and the reading reads as good');
+    /* the readout counts down from sixty, so time banked is what it has come off */
+    await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) < 58.5, null, { timeout: 8000 });
+    assert.match(await chip(), /\d+ s left/i);
+    assert.match(await page.getAttribute('#read-knee', 'class'), /good/, 'and the reading reads as good');
+    assert.match(await page.getAttribute('#read-shin', 'class'), /good/);
   });
 
   await step('the clock stops when the position goes', async () => {
-    const held = Number(await page.textContent('#hold-v'));
+    const left = Number(await page.textContent('#hold-v'));
     await set({ knee: 140 });
     await wait(1200);
     const now = Number(await page.textContent('#hold-v'));
-    assert.ok(now - held < 0.4, `the hold clock stopped: ${held} → ${now}`);
-    assert.match(await page.textContent('#best-v'), /best \d/);
+    assert.ok(left - now < 0.4, `the countdown stopped: ${left} → ${now}`);
+    assert.match(await page.textContent('#best-v'), /held \d.*best \d/);
   });
 
   await step('finishing the set writes a video with the cues on it, and a log', async () => {
@@ -167,6 +189,30 @@ try {
     assert.equal(await page.textContent('#knee-band'), '85–100');
     await set({ knee: 105, tilt: 0 });
     await page.waitForFunction(() => /too high/i.test(document.getElementById('state').textContent), null, { timeout: 6000 });
+  });
+
+  await step('the set is a countdown: it calls the time and it ends', async () => {
+    /* six seconds rather than sixty, because the target and the calls are settings —
+       which is the other thing this proves */
+    await page.fill('#cfg-target', '6');
+    await page.dispatchEvent('#cfg-target', 'change');
+    await page.fill('#cfg-calls', '4, 2');
+    await page.dispatchEvent('#cfg-calls', 'change');
+    await page.click('#startstop');
+    await set({ knee: 95, tilt: 0, shin: 90 });
+    const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms });
+    await saw('4 seconds left', 10000);
+    await saw('2 seconds left', 10000);
+    await saw('6 seconds . done', 10000);
+    assert.match(await chip(), /done/i);
+    assert.equal(await page.textContent('#hold-v'), '0.0', 'nothing left to do');
+    await page.click('#startstop');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.textContent('#r-target'), 'of 6');
+    assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held: ' + await page.textContent('#r-hold'));
+    const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
+    assert.ok(rows.some((t) => /4 seconds left/.test(t)) && rows.some((t) => /done/.test(t)),
+      'and the calls are in the log: ' + JSON.stringify(rows));
   });
 
   await step('no JS errors along the way', () => {

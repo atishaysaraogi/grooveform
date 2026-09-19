@@ -19,6 +19,14 @@
                   away from straight up. It cannot see the spine rounding
                   between those two points — no pose model gives a mid-spine
                   point — so that is what this reads and what it says.
+
+     shin         the line from the knee to the heel, against the floor. Plumb
+                  is 90° and the band is 80–100°. Which side of 90 it falls
+                  on is which way the feet have to move, so one number carries
+                  both the fault and its remedy.
+
+   And a wall sit is a hold, so there is a clock: once the position is right it
+   counts down from a target, calling the time out as it goes.
    --------------------------------------------------------------------------- */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory();
@@ -40,10 +48,15 @@
     kneeMin: 85,          // below this the legs are too bent — too low
     kneeMax: 110,         // above this the legs are too straight — too high
     backTilt: 12,         // degrees the torso may lean off vertical
+    shinMin: 80,          // below this the heels are behind the knees — feet too far in
+    shinMax: 100,         // above this the heels are ahead of the knees — feet too far out
+    holdTargetSec: 60,    // the set: this many seconds in position
+    callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     vis: 0.5,             // a landmark below this is not trusted
     smooth: 0.35,         // EMA on the angles; 1 = no smoothing
     persistMs: 500,       // how long a fault holds before it is worth saying
     cooldownMs: 4000,     // how long before the same cue may be said again
+    gapMs: 1500,          // the least silence between any two cues
     settleMs: 700,        // how long in the band before the hold clock starts
   };
 
@@ -66,6 +79,23 @@
     const dx = shoulder.x - hip.x, dy = shoulder.y - hip.y;
     if (!dx && !dy) return null;
     return Math.atan2(dx * facing, -dy) * DEG;
+  }
+
+  /* The angle the shin makes with the floor, taken knee→heel and measured from
+     the horizontal that points back toward the wall. That choice of zero is what
+     makes one number say both things:
+
+        90°   the heel is directly under the knee — the shin is plumb
+       >90°   the heel is ahead of the knee, out away from the wall
+       <90°   the heel is behind the knee, in toward the wall
+
+     so the side of 90 it falls on is the direction the feet have to move. The
+     rise is taken as a magnitude: a heel above the knee is not a wall sit at
+     all, and reading it as a sign flip would send the feet the wrong way. */
+  function shinFromFloor(knee, heel, facing) {
+    const dx = (heel.x - knee.x) * facing, dy = Math.abs(heel.y - knee.y);
+    if (!dx && !dy) return null;
+    return Math.atan2(dy, -dx) * DEG;
   }
 
   const visOf = (p) => (p && p.visibility === undefined ? 1 : p ? p.visibility : 0);
@@ -97,12 +127,18 @@
       return { ok: false, side, vis, why: 'Some of you is out of shot or hidden' };
     }
     const facing = Math.sign(P.knee.x - P.hip.x) || 1;
+    /* the heel is the foot's contact with the floor and the point the shin is
+       measured to, but it is the landmark the model is least sure of — when it
+       is not trusted the ankle stands in, a couple of centimetres up the same line */
+    const foot = P.heel.v >= cfg.vis ? 'heel' : 'ankle';
     return {
       ok: true, side, vis, facing, points: P,
       knee: angleAt(P.hip, P.knee, P.ankle),        // the one that is judged
       kneeHeel: angleAt(P.hip, P.knee, P.heel),     // the same angle taken to the heel
       tilt: tiltFromVertical(P.hip, P.shoulder, facing),
       hip: angleAt(P.shoulder, P.hip, P.knee),      // ~90° in a good wall sit
+      shin: shinFromFloor(P.knee, P[foot], facing), // the shin against the floor
+      shinFoot: foot,
     };
   }
 
@@ -112,14 +148,22 @@
     if (!r || !r.ok || r.knee == null || r.tilt == null) return { ok: false, depth: null, back: null, inPosition: false };
     const depth = r.knee > cfg.kneeMax ? 'high' : r.knee < cfg.kneeMin ? 'low' : 'good';
     const back = r.tilt > cfg.backTilt ? 'forward' : r.tilt < -cfg.backTilt ? 'back' : 'good';
-    /* how far out of line each is, scaled so the two can be compared and the
+    /* 'out' = heels ahead of the knees, 'in' = heels behind them */
+    const feet = r.shin == null ? 'good' : r.shin > cfg.shinMax ? 'out' : r.shin < cfg.shinMin ? 'in' : 'good';
+    /* how far out of line each is, scaled so the three can be compared and the
        worse one is the one spoken about */
     const depthOff = depth === 'high' ? r.knee - cfg.kneeMax : depth === 'low' ? cfg.kneeMin - r.knee : 0;
     const backOff = back === 'good' ? 0 : Math.abs(r.tilt) - cfg.backTilt;
+    const feetOff = feet === 'out' ? r.shin - cfg.shinMax : feet === 'in' ? cfg.shinMin - r.shin : 0;
     return {
-      ok: true, depth, back, depthOff, backOff,
-      inPosition: depth === 'good' && back === 'good',
-      severity: { depth: depthOff / 15, back: backOff / 10 },
+      ok: true, depth, back, feet, depthOff, backOff, feetOff,
+      inPosition: depth === 'good' && back === 'good' && feet === 'good',
+      /* The divisors are what rank one fault against another, and they are not
+         all the same on purpose. Where the feet are is the setup: with them in
+         the wrong place the knee angle cannot be right except by leaning or
+         standing on the toes, so a foot that is as far out as a knee is gets
+         said first and the depth cue lands on a stance that can hold it. */
+      severity: { depth: depthOff / 15, back: backOff / 10, feet: feetOff / 8 },
     };
   }
 
@@ -134,16 +178,22 @@
     low: { text: 'Come up a little', deep: 'Come up — that is too deep' },
     forward: { text: 'Press your back flat to the wall', deep: 'Back flat — your shoulders are ahead of your hips' },
     back: { text: 'Bring your hips under your shoulders' },
+    feetback: { text: 'Bring your feet back', deep: 'Bring your feet back — your heels are well ahead of your knees' },
+    feetfwd: { text: 'Bring your feet forward', deep: 'Walk your feet further out — your heels are behind your knees' },
     hold: { text: 'That is it — hold' },
     lost: { text: 'Step into the camera, side on' },
   };
+  /* the ones that come from a fault holding — the rest are announcements */
+  const FAULTS = ['high', 'low', 'forward', 'back', 'feetback', 'feetfwd', 'lost'];
 
   class Coach {
     constructor(cfg) {
       this.cfg = Object.assign({}, DEFAULTS, cfg);
       this.since = {}; this.last = {}; this.said = {};
-      this.inSince = 0; this.wasIn = false;
+      this.inSince = 0; this.wasIn = false; this.holdDue = 0;
       this.holdMs = 0; this.bestMs = 0; this.runMs = 0; this.totalMs = 0;
+      this.called = {};                 // which time calls have already been made
+      this.lastSpoke = 0;               // when anything was last said, whatever it was
       this.lastT = null; this.log = [];
     }
     reset() { const c = this.cfg; Object.assign(this, new Coach(c)); this.cfg = c; }
@@ -162,8 +212,10 @@
       else {
         if (v.depth !== 'good') on[v.depth] = true;
         if (v.back !== 'good') on[v.back] = true;
+        if (v.feet === 'out') on.feetback = true;
+        else if (v.feet === 'in') on.feetfwd = true;
       }
-      for (const id of Object.keys(CUES)) {
+      for (const id of FAULTS) {
         if (on[id]) { if (!this.since[id]) this.since[id] = t; }
         else this.since[id] = 0;
       }
@@ -176,30 +228,73 @@
         if (t - this.inSince >= cfg.settleMs) { holding = true; this.holdMs += dt; this.runMs += dt; this.bestMs = Math.max(this.bestMs, this.runMs); }
       } else { this.inSince = 0; this.runMs = 0; }
 
-      /* entering the band is worth one word, and it clears the way for the next
-         correction by resetting nothing else */
+      /* The countdown. It is spent from time IN position, not from the wall
+         clock: standing up stops it rather than running it down, so sixty
+         seconds means sixty seconds of wall sit. */
+      const targetMs = cfg.holdTargetSec * 1000;
+      const leftMs = Math.max(0, targetMs - this.holdMs);
+      const done = this.holdMs >= targetMs;
+
+      /* the time called out, which jumps the queue: it is two words and it is
+         only right at the moment it is true */
       let cue = null;
-      if (holding && !this.wasIn) cue = this.offer('hold', t, CUES.hold.text);
+      if (this.holdMs > 0) {
+        if (done && !this.called.done) {
+          this.called.done = true;
+          for (const n of cfg.callAtSec) this.called[n] = true;   // nothing left to count
+          cue = this.offer('done', t, `${cfg.holdTargetSec} seconds — done`, true);
+        } else if (!done) {
+          /* a dropped frame can carry the clock past two marks at once; only the
+             nearest is worth saying, and the ones skipped are spent */
+          const passed = cfg.callAtSec.filter((n) => !this.called[n] && leftMs <= n * 1000);
+          if (passed.length) {
+            const n = Math.min(...passed);
+            for (const m of passed) this.called[m] = true;
+            cue = this.offer('call' + n, t, `${n} seconds left`, true);
+          }
+        }
+      }
+
+      /* Entering the band is worth one word. It happens on a single frame, so unlike a
+         fault it cannot simply be re-offered until it lands — if the gap swallows that
+         frame the word is gone. So the moment is remembered and retried, and given up
+         on if it has not been said within a couple of gaps, by which time saying it
+         would be a remark about the past. */
+      if (holding && !this.wasIn) this.holdDue = t;
+      if (!holding) this.holdDue = 0;
       this.wasIn = holding;
+      if (!cue && this.holdDue) {
+        if (t - this.holdDue > cfg.gapMs * 2) this.holdDue = 0;
+        else { cue = this.offer('hold', t, CUES.hold.text); if (cue) this.holdDue = 0; }
+      }
 
       if (!cue) {
         const ready = Object.keys(on).filter((id) => this.since[id] && t - this.since[id] >= cfg.persistMs);
-        const rank = (id) => (id === 'lost' ? 99 : id === 'high' || id === 'low' ? v.severity.depth : v.severity.back);
+        const of = (id) => (id === 'high' || id === 'low' ? v.depthOff : id === 'feetback' || id === 'feetfwd' ? v.feetOff : v.backOff);
+        const rank = (id) => (id === 'lost' ? 99 : id === 'high' || id === 'low' ? v.severity.depth : id === 'feetback' || id === 'feetfwd' ? v.severity.feet : v.severity.back);
         ready.sort((a, b) => rank(b) - rank(a));
         for (const id of ready) {
-          const far = (id === 'high' || id === 'low' ? v.depthOff : v.backOff) > 18;
-          const text = (far && CUES[id].deep) || CUES[id].text;
+          const text = (of(id) > 18 && CUES[id].deep) || CUES[id].text;
           cue = this.offer(id, t, text);
           if (cue) break;
         }
       }
-      return { reading: r, verdict: v, holding, cue, holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
+      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs,
+        holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
 
-    /* a cue is only handed over if its cooldown has run out; taking it starts a new one */
-    offer(id, t, text) {
+    /* A cue is handed over only if its own cooldown has run out AND nothing else has
+       just been said. Two instructions a frame apart are worse than one: they talk over
+       each other and the second wipes the first off the screen, so `gapMs` keeps them
+       apart even when two faults come ready together.
+
+       A time call is `urgent` and takes no notice of the gap — "ten seconds left" said
+       two seconds late is a lie. It still sets the clock, so the next correction waits
+       rather than treading on it. */
+    offer(id, t, text, urgent) {
       if (this.last[id] && t - this.last[id] < this.cfg.cooldownMs) return null;
-      this.last[id] = t; this.said[id] = (this.said[id] || 0) + 1;
+      if (!urgent && this.lastSpoke && t - this.lastSpoke < this.cfg.gapMs) return null;
+      this.last[id] = t; this.lastSpoke = t; this.said[id] = (this.said[id] || 0) + 1;
       const cue = { id, text, t };
       this.log.push(cue);
       return cue;
@@ -207,7 +302,9 @@
 
     summary() {
       const s = { holdSec: +(this.holdMs / 1000).toFixed(1), bestSec: +(this.bestMs / 1000).toFixed(1), totalSec: +(this.totalMs / 1000).toFixed(1), cues: {} };
-      for (const id of Object.keys(this.said)) if (id !== 'hold') s.cues[id] = this.said[id];
+      s.targetSec = this.cfg.holdTargetSec;
+      s.reachedTarget = this.holdMs >= this.cfg.holdTargetSec * 1000;
+      for (const id of Object.keys(this.said)) if (FAULTS.includes(id)) s.cues[id] = this.said[id];
       s.log = this.log.slice();
       return s;
     }
@@ -229,9 +326,10 @@
       if (!r || !r.ok) return r;
       r.knee = this.of('knee', r.knee); r.kneeHeel = this.of('kneeHeel', r.kneeHeel);
       r.tilt = this.of('tilt', r.tilt); r.hip = this.of('hip', r.hip);
+      r.shin = this.of('shin', r.shin);
       return r;
     }
   }
 
-  return { SIDE, BONES, DEFAULTS, CUES, angleAt, tiltFromVertical, pickSide, read, judge, Coach, Smoother };
+  return { SIDE, BONES, DEFAULTS, CUES, FAULTS, angleAt, tiltFromVertical, shinFromFloor, pickSide, read, judge, Coach, Smoother };
 });

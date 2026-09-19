@@ -57,6 +57,10 @@ h2 { font-size: 1rem; margin: 0 0 8px; }
 .meter { position: relative; height: 6px; border-radius: 3px; background: #0b0f16; margin-top: 10px; overflow: hidden; }
 .meter .ok { position: absolute; top: 0; bottom: 0; background: rgba(53,208,127,.35); }
 .meter b { position: absolute; top: -3px; width: 3px; height: 12px; border-radius: 2px; background: var(--ink); transform: translateX(-1px); transition: left .08s linear; }
+/* the hold meter is a progress bar, not a pin on a scale: the green is the whole
+   run and the marker is how much of it has been banked */
+#read-hold .meter .ok { background: rgba(53,208,127,.18); }
+#read-hold .meter b { background: var(--good); width: 4px; }
 
 .cue { min-height: 1.6em; margin: 0; font-weight: 700; font-size: 1.05rem; text-align: center; }
 .cue.warn { color: var(--warn); } .cue.bad { color: var(--bad); } .cue.good { color: var(--good); }
