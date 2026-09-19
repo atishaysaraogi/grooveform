@@ -13,13 +13,30 @@ the pose model, the coaching and the video file are all made on the device.
 ## Starting
 
 The front camera opens first, because it is the one you can see while you are
-setting the phone down. Starting the camera *is* starting the set: it says
-*place the camera on the floor and step into the frame*, and it is already
+setting the phone down. Starting the camera *is* starting the set: it says out
+loud where to put the phone and to step into the frame, and it is already
 recording by the time you are in position. Asking for a second tap would be
 asking someone to walk back to a phone they have just put on the floor.
 
 The picture and the set button sit together at the top of the page, so nothing
 has to be scrolled to from the floor.
+
+**Which way round the phone goes.** A wall sit is a standing body and fits a
+frame either way up. A plank is long and low: in a tall frame it either loses
+the feet or shrinks to a line across the middle, and angles read off a handful
+of pixels are not worth reading. So the plank asks for the phone on its side,
+asks the camera for a wide frame, and if what arrives is taller than it is wide
+it says so — on screen and out loud — until it is turned.
+
+**Out loud.** Every cue is spoken as well as written. Three things make a
+browser swallow speech quietly, and all three are handled rather than left to
+chance: Safari only begins speaking from inside a user gesture, so the engine is
+woken silently on the tap that starts the camera, long before the first cue —
+by the time the camera and the model have loaded, the gesture is gone. Chrome
+drops an utterance queued in the same turn as a cancel, so the next one waits a
+tick. And Chrome leaves the engine paused after a spell of silence, so every cue
+resumes it first. If the browser has no speech at all, the voice button says so
+instead of the page just being silent.
 
 ## What it measures
 
@@ -37,6 +54,8 @@ has to be scrolled to from the floor.
 |---|---|
 | **Arm** | the upper arm's lean off vertical, which is where the shoulder sits over the elbow. Allowed from **5° behind to 15° in front**: the band is not symmetric because a shoulder behind the elbow is the joint taking the load at its weakest, while a little in front is normal. |
 | **Hip** | how far the hip sits off the straight line from shoulder to ankle, as the angle the body bends at the hip. Allowed **±5°**. Above the line the hips are piked and are told to come down; below it they are sagging and are told to lift. |
+
+The plank wants the phone on its side; the wall sit takes it either way.
 
 Every threshold is a setting. Both numbers are on screen, on a meter with the
 target band marked, and burnt into the recording.
@@ -154,7 +173,9 @@ you the cues were right.
 
 `smoke.mjs` then drives a real browser with the pose model stood in for, through
 both exercises, and ends by downloading the video and checking there are frames
-in it.
+in it. It also watches what is handed to the speech engine: headless Chromium
+makes no sound, but a cue that never reaches the engine is silent on a real
+phone too, so the suite checks that every cue in the log was also spoken.
 
 ## History
 

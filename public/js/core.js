@@ -117,6 +117,19 @@
     return { ok: true, side, vis, points: P };
   }
 
+  /* A phone laid on the floor gives a frame the shape of however it is lying, and
+     the shape has to suit the body. A plank is long and low: in a tall frame it
+     either loses the feet or shrinks to a line across the middle, and either way
+     the angles are read from a handful of pixels. A move says which way round it
+     wants the phone; this says whether it has it, and what to do if not. */
+  function framing(want, w, h) {
+    if (!want || !w || !h) return null;
+    const wide = w > h;
+    if (want === 'wide' && !wide) return 'Turn the phone on its side \u2014 this one needs a wide frame';
+    if (want === 'tall' && wide) return 'Stand the phone up \u2014 this one needs a tall frame';
+    return null;
+  }
+
   /* Said by every move, so they live here rather than in each one. */
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
@@ -264,5 +277,5 @@
   }
 
   return { SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
-    lineBend, visOf, pickSide, frame, Coach, Smoother };
+    lineBend, visOf, pickSide, frame, framing, Coach, Smoother };
 });

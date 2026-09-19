@@ -70,6 +70,13 @@ h2 { font-size: 1rem; margin: 0 0 8px; }
 #read-hold .meter .ok { background: rgba(53,208,127,.18); }
 #read-hold .meter b { background: var(--good); width: 4px; }
 
+/* about the phone rather than the body, so it sits apart from the cues */
+.note {
+  margin: 0; padding: 10px 14px; border-radius: 12px; text-align: center; font-weight: 700;
+  background: rgba(255,181,69,.14); border: 1px solid rgba(255,181,69,.5); color: var(--warn);
+}
+.note[hidden] { display: none; }
+
 .cue { min-height: 1.6em; margin: 0; font-weight: 700; font-size: 1.05rem; text-align: center; }
 .cue.warn { color: var(--warn); } .cue.bad { color: var(--bad); } .cue.good { color: var(--good); }
 

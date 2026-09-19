@@ -132,28 +132,50 @@
   }
   const pct = (v, lo, hi) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
 
-  /* ---------- voice ---------- */
+  /* ---------- voice ----------
+     A coach that is sometimes silent is worse than one that is never heard, so
+     the three ways a browser quietly swallows speech are all handled here rather
+     than left to chance. */
   const voice = {
-    on: true, pick: null,
+    on: true, pick: null, ok: 'speechSynthesis' in window, primed: false,
     ready() {
-      if (!('speechSynthesis' in window)) { this.on = false; return; }
+      if (!this.ok) return;
       const vs = speechSynthesis.getVoices();
       /* anything but the buzzy fallbacks, and an English one if there is one */
       const good = vs.filter((v) => /^en/i.test(v.lang) && !/espeak|compact|pico/i.test(v.name));
       this.pick = good.find((v) => /natural|neural|premium|enhanced|google|samantha|daniel/i.test(v.name)) || good[0] || vs[0] || null;
     },
+    /* Safari will only begin speaking from inside a user gesture, and once it has
+       begun once everything after is allowed. The camera and the model are awaited
+       before the first cue, and by then the gesture is long gone — so the engine is
+       woken here, silently, on the tap itself. */
+    prime() {
+      if (!this.ok || this.primed) return;
+      try {
+        const u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0; speechSynthesis.speak(u); this.primed = true;
+      } catch { }
+    },
     say(text) {
-      if (!this.on || !('speechSynthesis' in window)) return;
+      if (!this.on || !this.ok) return;
       try {
         speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        if (this.pick) u.voice = this.pick;
-        u.rate = 1.03; u.pitch = 1;
-        speechSynthesis.speak(u);
+        /* Chrome drops an utterance queued in the same turn as a cancel, and after
+           a spell of silence leaves the engine paused; a tick's delay and a resume
+           cost nothing and cover both. */
+        setTimeout(() => {
+          try {
+            speechSynthesis.resume();
+            const u = new SpeechSynthesisUtterance(text);
+            if (this.pick) u.voice = this.pick;
+            u.rate = 1.03; u.pitch = 1; u.volume = 1;
+            speechSynthesis.speak(u);
+          } catch { }
+        }, 0);
       } catch { }
     },
   };
-  if ('speechSynthesis' in window) { voice.ready(); speechSynthesis.onvoiceschanged = () => voice.ready(); }
+  if (voice.ok) { voice.ready(); speechSynthesis.onvoiceschanged = () => voice.ready(); }
 
   /* ---------- tones ----------
      Spoken words cannot be captured into a MediaRecorder from the browser's
@@ -216,9 +238,13 @@
   }
 
   /* ---------- camera ---------- */
+  let camShape = null;              // the frame shape the running camera was asked for
   async function startCamera() {
     stopCamera();
-    const want = { video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+    camShape = move.camera || null;
+    const box = camShape === 'tall' ? { width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } }
+      : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } };
+    const want = { video: Object.assign({ facingMode: camFacing }, box), audio: false };
     try { stream = await navigator.mediaDevices.getUserMedia(want); }
     catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
     video.srcObject = stream;
@@ -406,6 +432,7 @@
       try { const res = landmarker.detectForVideo(video, ts); lm = res.landmarks && res.landmarks[0] ? res.landmarks[0] : null; }
       catch { return; }
     }
+    showFraming();
     const aspect = canvas.width / canvas.height;
     const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
     const out = coach.step(reading, now - t0);
@@ -421,6 +448,16 @@
   function unschedule() {
     if (video.cancelVideoFrameCallback && raf) { try { video.cancelVideoFrameCallback(raf); } catch { } }
     cancelAnimationFrame(raf); raf = 0;
+  }
+
+  let framingNote = null;
+  function showFraming() {
+    const msg = Core.framing(move.camera, canvas.width, canvas.height);
+    if (msg === framingNote) return;
+    framingNote = msg;
+    const e = $('orient');
+    e.textContent = msg || ''; e.hidden = !msg;
+    if (msg) voice.say(msg);
   }
 
   function fire(cue) {
@@ -521,7 +558,8 @@
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; t0 = performance.now(); state = null;
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
-    voice.say(move.start);
+    /* one call, not two: `fire` both says it and puts it on the picture, and a
+       second `say` would cancel the first mid-word */
     fire({ id: 'start', text: move.start, t: 0 });
     rec = startRecording(); inSet = true;
     if (!raf) schedule();
@@ -552,7 +590,12 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- wiring ---------- */
-  $('go').onclick = begin;
+  $('go').onclick = () => {
+    /* before any await: this is the only moment the browser counts as a gesture */
+    voice.prime();
+    const a = initAudio(); if (a && a.ac.state === 'suspended') a.ac.resume();
+    begin();
+  };
   $('startstop').onclick = () => (inSet ? endSet() : startSet());
   $('move').onchange = () => {
     move = Moves[$('move').value] || Moves.wallsit;
@@ -560,11 +603,16 @@
     $('veil-title').textContent = move.name;
     if (inSet) endSet();
     else if (running) { coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother(); banner = null; t0 = performance.now(); }
+    /* a move that wants a different shape of frame gets the camera asked again */
+    if (running && (move.camera || null) !== camShape) {
+      unschedule(); startCamera().catch(() => { }).then(() => { framingNote = undefined; if (running) schedule(); });
+    }
   };
   $('flip').onclick = async () => {
     camFacing = camFacing === 'user' ? 'environment' : 'user';
     unschedule(); try { await startCamera(); } catch { } if (running) schedule();
   };
+  if (!voice.ok) { $('mute').textContent = 'No voice here'; $('mute').disabled = true; }
   $('mute').onclick = (e) => {
     voice.on = !voice.on; e.target.setAttribute('aria-pressed', String(!voice.on));
     e.target.textContent = voice.on ? 'Voice on' : 'Voice off';

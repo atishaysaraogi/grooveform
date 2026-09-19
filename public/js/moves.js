@@ -118,8 +118,10 @@
   const plank = {
     id: 'plank',
     name: 'Elbow plank',
-    hint: 'Side on, forearms on the floor, whole body in frame.',
-    start: 'Place the camera on the floor and step into the frame, side on, down onto your forearms.',
+    hint: 'Phone on its side on the floor, side on to you, forearms down, whole body in frame.',
+    start: 'Lay the phone on its side on the floor, then get into your plank, side on, down onto your forearms.',
+    /* a plank is long and low, so the frame has to be too */
+    camera: 'wide',
 
     defaults: {
       /* The upper arm's lean off vertical, positive toward the head. The shoulder

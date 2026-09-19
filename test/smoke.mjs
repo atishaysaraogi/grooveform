@@ -65,6 +65,15 @@ window.__poseSource = function () {
 };
 `;
 
+/* Headless Chromium has a speech engine that makes no sound, so "did it speak?"
+   is checked by watching what is handed to it. That is the part that can break:
+   a cue that never reaches the engine is silent on a real phone too. */
+const SPY_SRC = `
+window.__spoken = [];
+const _speak = speechSynthesis.speak.bind(speechSynthesis);
+speechSynthesis.speak = function (u) { window.__spoken.push({ text: u.text, volume: u.volume }); return _speak(u); };
+`;
+
 const steps = [];
 const step = async (name, fn) => { try { await fn(); steps.push(true); console.log('ok  -', name); } catch (e) { steps.push(false); console.log('FAIL-', name, '\n     ', e.message); throw e; } };
 
@@ -80,10 +89,13 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 await page.addInitScript(POSE_SRC);
+await page.addInitScript(SPY_SRC);
 
 const set = (o) => page.evaluate((v) => Object.assign(window.__pose, v), o);
 const cue = () => page.textContent('#cue');
 const chip = () => page.textContent('#state');
+const spoken = () => page.evaluate(() => window.__spoken.map((u) => u.text));
+const heard = (re, ms) => page.waitForFunction((r) => window.__spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 8000 });
 const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 8000 });
 
 try {
@@ -98,11 +110,17 @@ try {
 
   await step('starting the camera starts the set and says where to put the phone', async () => {
     await page.click('#go');
+    /* the engine is woken on the tap itself, silently, because Safari will not
+       start speaking later — long after the camera and the model are awaited */
+    await page.waitForFunction(() => window.__spoken.length > 0, null, { timeout: 5000 });
+    const first = (await page.evaluate(() => window.__spoken[0]));
+    assert.equal(first.volume, 0, 'the waking utterance is silent: ' + JSON.stringify(first));
     await page.waitForFunction(() => document.getElementById('veil').hidden, null, { timeout: 20000 });
     /* no second tap: the set is already running and recording */
     assert.equal(await page.textContent('#startstop'), 'Finish the set');
     assert.match(await cue(), /camera on the floor/i, 'and the instruction is on screen');
     assert.match(await cue(), /step into the frame/i);
+    await heard('camera on the floor');   // and said out loud, not only written
     await page.waitForFunction(() => document.getElementById('v-knee').textContent !== '—', null, { timeout: 10000 });
     const knee = await page.textContent('#v-knee');
     assert.ok(Math.abs(Number(knee) - 90) <= 1, 'a body posed at 90° reads 90° on screen, not ' + knee);
@@ -138,17 +156,20 @@ try {
   await step('the legs being too straight is called', async () => {
     await set({ knee: 122 });
     await saw('lower down');
+    await heard('lower down');
     assert.match(await chip(), /knee off/i);
   });
 
   await step('too deep is called the other way', async () => {
     await set({ knee: 70 });
     await saw('come up');
+    await heard('come up');
   });
 
   await step('heels ahead of the knees are told to bring the feet back', async () => {
     await set({ knee: 95, tilt: 2, shin: 108 });
     await saw('feet back');
+    await heard('feet back');
     assert.match(await chip(), /shin off/i);
     assert.match(await page.getAttribute('#read-shin', 'class'), /bad/);
   });
@@ -156,16 +177,19 @@ try {
   await step('heels behind the knees are told the other way', async () => {
     await set({ shin: 72 });
     await saw('feet forward');
+    await heard('feet forward');
   });
 
   await step('a back off the wall is called', async () => {
     await set({ shin: 90, tilt: 30 });
     await saw('back flat');
+    await heard('back flat');
   });
 
   await step('a good wall sit is told to hold, and the clock runs', async () => {
     await set({ knee: 95, tilt: 2, shin: 90 });
     await saw('hold');
+    await heard('that is it');
     /* the readout counts down from sixty, so time banked is what it has come off */
     await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) < 58.5, null, { timeout: 8000 });
     assert.match(await chip(), /\d+ s left/i);
@@ -228,12 +252,14 @@ try {
   await step('hips above the line are told to come down', async () => {
     await set({ sag: 12 });
     await saw('lower your hips');
+    await heard('lower your hips');
     assert.match(await chip(), /hip off/i);
   });
 
   await step('hips below the line are told to lift', async () => {
     await set({ sag: -12 });
     await saw('lift your hips');
+    await heard('lift your hips');
   });
 
   await step('shoulders behind the elbows are called before the hips, however far the hips are out', async () => {
@@ -242,6 +268,7 @@ try {
        plain cue rather than the emphatic one. */
     await set({ stack: -11, sag: 25 });
     await saw('shoulders over your elbows');
+    await heard('shoulders over your elbows');
   });
 
   await step('a good plank holds, and its own countdown calls the time and ends', async () => {
@@ -276,6 +303,25 @@ try {
     await page.click('#startstop');
     await set({ stack: 0, sag: 4 });
     await page.waitForFunction(() => /hip off/i.test(document.getElementById('state').textContent), null, { timeout: 8000 });
+  });
+
+  await step('every cue that was written was also said out loud', async () => {
+    const said = await spoken();
+    const written = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent.replace(/^[\d.]+s\s*—\s*/, '')));
+    const missing = written.filter((t) => !said.some((u) => u === t));
+    assert.deepEqual(missing, [], 'these reached the log but never the voice: ' + JSON.stringify(missing));
+    assert.ok(said.length > 10, 'and there was plenty of it: ' + said.length);
+  });
+
+  await step('a plank wants a wide frame, and says so when it does not have one', async () => {
+    assert.equal(await page.isVisible('#orient'), false, 'nothing to say about a landscape frame');
+    /* stand the frame up under it: the next painted frame should notice */
+    await page.evaluate(() => { const c = document.getElementById('view'); c.width = 720; c.height = 1280; });
+    await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
+    assert.match(await page.textContent('#orient'), /turn the phone on its side/i);
+    await heard('turn the phone on its side');
+    await page.evaluate(() => { const c = document.getElementById('view'); c.width = 1280; c.height = 720; });
+    await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
   });
 
   await step('the exercise and its bands are remembered across a reload', async () => {
