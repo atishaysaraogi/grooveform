@@ -1135,6 +1135,10 @@ async function runCoachedSet(page, side = 'right') {
 
   await step('a fault the coach will not swear to waits for the review, where a rep can be watched back and corrected', async () => {
     const page = pro;
+    /* the step before this one leaves its set running, and a live coach is a full-screen overlay
+       that swallows every click — so hand the page back before asking for anything on it */
+    await page.evaluate(() => { try { window.OnTrackCoach.exitLive(); } catch (e) { } });
+    await page.waitForFunction(() => !document.querySelector('#coach:not([hidden])'));
     await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');
     /* the same recorded bridge as the other bridge steps, with the toes lifted at the top of every
        rep: "foot coming off the floor" is a tentative fault, so it is measured all set and never
