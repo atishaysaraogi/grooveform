@@ -632,3 +632,79 @@ test('farSide "ignore" leaves the limb away from the camera out of it', () => {
   const bright = pose(0).map((p) => ({ ...p, v: 1, visibility: 1 }));
   assert.equal(E.positionCheck(bright, { ...ex, view: 'front', farSide: null }, 1).visOk, true, 'and a body fully in frame passes either way');
 });
+
+/* ---------- a fault the coach is not sure enough of to say ----------
+   Some readings the camera can take but not stand behind: a heel a few pixels off the floor, a
+   pelvis tilt the raise explains most of. Mid-rep a cue is an instruction, and an instruction the
+   coach is unsure of is worse than silence. Such a fault is marked tentative: measured, counted,
+   attached to the reps it happened on — and never spoken, never scored against, saved up as a
+   reminder for after the set. */
+test('a tentative fault is counted and attached to its reps but never cued or scored', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  spec.faults[0] = { ...spec.faults[0], tentative: true };        // hip hiking, now a maybe
+  assert.deepEqual(SPEC.checkSpec(spec), []);
+  const ex = SPEC.compile(spec, K);
+  const frames = takes(32, 4, 30);                                 // every rep hikes the hip hard
+  const { review, fired, sess } = run(ex, frames, { rom: 30 });
+  assert.ok(review.faults.hike, 'it is still measured and counted: ' + JSON.stringify(Object.keys(review.faults)));
+  assert.ok(review.faults.hike.n >= 3, 'on every rep: ' + review.faults.hike.n);
+  assert.ok(!fired.has('hike'), 'and never spoken during the set');
+  assert.equal(sess.faults.cued.hike, undefined, 'so it never used up a turn');
+  assert.ok(sess.counter.reps.every((r) => r.faults.includes('hike')), 'the reps still carry it');
+  /* it is a reminder, not a thing to work on, and it costs nothing */
+  assert.ok((review.reminders || []).some((r) => r.label === 'Hip hiking'), 'listed as a reminder: ' + JSON.stringify(review.reminders));
+  assert.ok(!review.tips.some((t) => t.label === 'Hip hiking'), 'not in what to work on: ' + JSON.stringify(review.tips));
+  const clean = run(SPEC.compile(spec, K), takes(32, 4, 0), { rom: 30 }).review;
+  assert.equal(review.score, clean.score, 'and the score is the same as a set without it');
+  /* the same fault left ordinary is spoken and does cost */
+  const loud = run(SPEC.compile(sideLegRaise, K), takes(32, 4, 30), { rom: 30 });
+  assert.ok(loud.fired.has('hike'), 'the ordinary version is cued');
+  assert.ok(loud.review.score < clean.score, 'and marks the set down: ' + loud.review.score + ' vs ' + clean.score);
+});
+
+test('tentative belongs to a fault the camera measures', () => {
+  const spec = JSON.parse(JSON.stringify(sideLegRaise));
+  spec.faults.push({ id: 'watchit', label: 'Toes turning out', cue: 'Toes forward', tip: 'Lead with the heel.', severity: 1, tentative: true });
+  assert.match(SPEC.checkSpec(spec).join(' '), /tentative belongs to a fault the camera measures/);
+  spec.faults[spec.faults.length - 1].tentative = 'yes';
+  assert.match(SPEC.checkSpec(spec).join(' '), /tentative must be true or false/);
+});
+
+/* ---------- the person's own verdict on a rep ----------
+   The review screen plays each rep back. What the camera made of it is a first draft: the person
+   can mark a fault it missed or clear one it invented, and the set's counts, score and advice all
+   follow — with both the fault and the rep marked as corrected by hand, so nobody later mistakes
+   the number for a measurement. */
+test('watching a rep back, a fault can be added or cleared and the set is scored again', () => {
+  const ex = SPEC.compile(sideLegRaise, K);
+  const rv = run(ex, takes(32, 4, 0), { rom: 30 }).review;
+  assert.equal(rv.reps, 4); assert.deepEqual(Object.keys(rv.faults), [], 'a clean set to start from');
+  const clean = rv.score;
+  /* rep 2 really was a hip hike, the camera just did not see it */
+  assert.ok(E.applyRepFault(rv, ex.faults, 1, 'hike', true));
+  assert.deepEqual(rv.repList[1].faults, ['hike']);
+  assert.equal(rv.faults.hike.n, 1); assert.ok(rv.faults.hike.edited, 'and says it was the person, not the camera');
+  assert.ok(rv.repList[1].edited);
+  assert.ok(rv.score < clean, 'the set is scored again: ' + rv.score + ' vs ' + clean);
+  assert.ok(rv.tips.some((t) => t.label === 'Hip hiking'), 'and it is on the list to work on');
+  /* and taken back off again */
+  assert.ok(E.applyRepFault(rv, ex.faults, 1, 'hike', false));
+  assert.deepEqual(rv.repList[1].faults, []);
+  assert.equal(rv.faults.hike, undefined, 'the fault leaves the set once no rep carries it');
+  assert.equal(rv.score, clean, 'and the score comes back');
+  /* saying the same thing twice changes nothing, and an unknown rep or fault is refused */
+  assert.equal(E.applyRepFault(rv, ex.faults, 1, 'hike', false), false);
+  assert.equal(E.applyRepFault(rv, ex.faults, 99, 'hike', true), false);
+  assert.equal(E.applyRepFault(rv, ex.faults, 0, 'nosuch', true), false);
+});
+
+test('clearing a fault the camera saw takes it off that rep and out of the count', () => {
+  const ex = SPEC.compile(sideLegRaise, K);
+  const rv = run(ex, takes(32, 4, 30), { rom: 30 }).review;
+  const was = rv.faults.hike.n; const score = rv.score;
+  assert.ok(was >= 3 && rv.repList[0].faults.includes('hike'), 'the camera called it on rep 1');
+  assert.ok(E.applyRepFault(rv, ex.faults, 0, 'hike', false));
+  assert.equal(rv.faults.hike.n, was - 1, 'one fewer');
+  assert.ok(!rv.repList[0].faults.includes('hike'), 'and gone from that rep');
+  assert.ok(rv.score > score, 'the set scores better for it: ' + rv.score + ' vs ' + score);
+});

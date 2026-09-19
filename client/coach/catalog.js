@@ -252,7 +252,7 @@
       'summary', 'setup', 'brief', 'why', 'calibrationPose', 'camera', 'targets', 'defaultTarget', 'options', 'band', 'weight', 'repHold', 'minMs', 'focus',
       'progress', 'hold', 'faults', 'guide', 'pose', 'figure', 'enterCue', 'display', 'show', 'listed', 'stable', 'cues', 'farSide',
       'tempo', 'dosage', 'progression', 'regression', 'contraindications', 'sources', 'icon', 'order', 'group', 'region'],
-    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'rule', 'minMs'],
+    fault: ['template', 'id', 'label', 'cue', 'tip', 'severity', 'metric', 'rel', 'op', 'threshold', 'scale', 'minP', 'persist', 'cooldown', 'maxCues', 'phase', 'when', 'invalidates', 'tentative', 'rule', 'minMs'],
     metric: ['kind', 'pts', 'per', 'sign', 'abs', 'flip', 'unit'],
     progress: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta', 'and', 'combine', 'max', 'overLabel', 'overCue', 'overTip', 'overSeverity', 'overInvalidates'],
     progressPart: ['metric', 'start', 'startMin', 'startMax', 'target', 'targetIsDelta', 'delta'],

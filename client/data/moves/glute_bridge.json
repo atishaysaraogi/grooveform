@@ -67,12 +67,13 @@
       "id": "foot_lifting",
       "label": "Foot coming off the floor",
       "cue": "Keep the whole foot flat",
-      "tip": "Heel and toes both stay down — drive through the whole foot. Side-on, the camera cannot tell a heel lifting from toes lifting, so this catches either.",
+      "tip": "Push through the whole foot. Heels and toes both stay down — the hips should be lifted by the buttocks, not levered up off the ball of the foot. Side-on the coach cannot tell a lifting heel from lifting toes (the pose model swaps the two labels when a heel comes up) and the reading wobbles a couple of percent of the shin with the foot flat, so this one is not spoken during the set — watch the reps back and mark the ones where it really happened.",
       "severity": 2,
       "metric": "toes_lift",
       "op": ">",
       "threshold": 10,
-      "persist": 250
+      "persist": 250,
+      "tentative": true
     },
     {
       "id": "feet",

@@ -323,7 +323,11 @@
     </div>`;
     const stage = host.querySelector('.rp-stage'), tlc = host.querySelector('.rp-timeline'), play = host.querySelector('.rp-play'), seek = host.querySelector('.rp-seek'), time = host.querySelector('.rp-time');
     const sctx = stage.getContext('2d'), tctx = tlc.getContext('2d');
-    let t = tl.t0, playing = false, raf = 0, last = 0;
+    /* `range` is a single rep the person asked to watch: playback stops at its end instead of
+       running on into the next one. Touching play, the scrubber or the timeline drops it — those
+       all mean "the whole set from here". */
+    let t = tl.t0, playing = false, raf = 0, last = 0, range = null;
+    const endT = () => (range ? range.to : tl.t1), startT = () => (range ? range.from : tl.t0);
     function size() {
       const w = Math.max(200, host.clientWidth || 600), dpr = Math.min(2, root.devicePixelRatio || 1);
       stage.width = Math.round(w * dpr); stage.height = Math.round(w / aspect * dpr); stage.style.width = w + 'px'; stage.style.height = Math.round(w / aspect) + 'px';
@@ -340,7 +344,7 @@
     function tick(at) {
       if (!playing) return;
       const dt = last ? at - last : 0; last = at; t += dt;
-      if (t >= tl.t1) { t = tl.t1; pause(); render(); return; }
+      if (t >= endT()) { t = endT(); pause(); render(); return; }
       /* the video plays on its own clock: a stall or a slow decode and it is no longer under the
          skeleton it belongs to, so it is put back whenever it has visibly slipped */
       if (videoEl && videoEl.readyState >= 2 && !videoEl.seeking) {
@@ -350,15 +354,18 @@
       render(); raf = root.requestAnimationFrame(tick);
     }
     function seekVideo() { if (!videoEl) return; try { videoEl.currentTime = Math.max(0, videoTimeOf(rec, t)); } catch (e) { } }
-    function start() { if (t >= tl.t1) t = tl.t0; playing = true; last = 0; play.textContent = '⏸ Pause'; if (videoEl) { seekVideo(); videoEl.play().catch(() => { }); } raf = root.requestAnimationFrame(tick); }
+    function start() { if (t >= endT()) t = startT(); playing = true; last = 0; play.textContent = '⏸ Pause'; if (videoEl) { seekVideo(); videoEl.play().catch(() => { }); } raf = root.requestAnimationFrame(tick); }
     function pause() { playing = false; root.cancelAnimationFrame(raf); play.textContent = '▶ Play'; if (videoEl) videoEl.pause(); }
-    play.onclick = () => (playing ? pause() : start());
+    play.onclick = () => { range = null; return playing ? pause() : start(); };
     const jump = () => { pause(); seekVideo(); if (videoEl) videoEl.addEventListener('seeked', render, { once: true }); render(); };
-    seek.oninput = () => { t = tl.t0 + Number(seek.value); jump(); };
-    tlc.onclick = (e) => { const r = tlc.getBoundingClientRect(); t = tl.t0 + (e.clientX - r.left) / r.width * tl.duration; jump(); };
+    seek.oninput = () => { range = null; t = tl.t0 + Number(seek.value); jump(); };
+    tlc.onclick = (e) => { range = null; const r = tlc.getBoundingClientRect(); t = tl.t0 + (e.clientX - r.left) / r.width * tl.duration; jump(); };
     size(); if (videoEl) videoEl.addEventListener('loadeddata', render, { once: true });
     if (root.addEventListener) root.addEventListener('resize', size);
-    return { play: start, pause, seek: (ms) => { t = tl.t0 + ms; render(); }, get t() { return t; }, timeline: tl, hasVideo: !!videoEl, destroy() { pause(); if (root.removeEventListener) root.removeEventListener('resize', size); if (videoUrl) URL.revokeObjectURL(videoUrl); host.innerHTML = ''; } };
+    return { play: start, pause, seek: (ms) => { range = null; t = tl.t0 + ms; render(); },
+      /* one rep, from its own clock: play `from` and stop at `to`, both in ms from the set's start */
+      playRange(from, to) { range = { from: tl.t0 + from, to: Math.min(tl.t1, tl.t0 + to) }; t = range.from; pause(); seekVideo(); render(); start(); },
+      get t() { return t; }, timeline: tl, hasVideo: !!videoEl, destroy() { pause(); if (root.removeEventListener) root.removeEventListener('resize', size); if (videoUrl) URL.revokeObjectURL(videoUrl); host.innerHTML = ''; } };
   }
 
   /* ---------- the same playback as a video file ---------- */

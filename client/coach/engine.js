@@ -584,7 +584,9 @@
           if (held >= (f.persistFor ? f.persistFor(m) : f.persist)) {
             if (!this.active.has(f.id)) { this.active.add(f.id); this.counts[f.id] = (this.counts[f.id] || 0) + 1; }
             this.timeIn[f.id] = (this.timeIn[f.id] || 0) + dt;
-            if (this.due(f, t)) cues.push(f);
+            /* counted, timed and marked on the rep like any other — but never offered as a cue:
+               a tentative fault has nothing to say until the set is over (spec.js) */
+            if (!f.tentative && this.due(f, t)) cues.push(f);
           }
         } else { this.since[f.id] = 0; this.active.delete(f.id); }
       }
@@ -817,17 +819,17 @@
          and drowns out everything else. The counting in repFaultCounts is untouched, so the
          end-of-set review still sees every occurrence. */
       const repCues = repEvent
-        ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
+        ? repEvent.rep.faults.map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && f.onRep && !f.tentative && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
       /* a set-up that has drifted is worth saying at the rep boundary, where there is a pause to
          fix it in; it takes its turn with the rep rules and obeys the same cap and cooldown */
       const startCues = repEvent
-        ? (repEvent.rep.startFaults || []).map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
+        ? (repEvent.rep.startFaults || []).map(id => this.ex.faults.find(f => f.id === id)).filter(f => f && !f.tentative && this.faults.due(f, t)).sort((a, b) => b.weight - a.weight)
         : [];
       return { m, cues, repCues, startCues, repEvent, held, holding: this.counter ? this.counter.holding : null, rebased, restarted, done: this.complete };
     }
     review() {
-      const ex = this.ex; const faultCounts = {}; const wobble = {}; const tips = [];
+      const ex = this.ex; const faultCounts = {}; const wobble = {};
       for (const f of ex.faults) {
         const n = f.onRep ? (this.repFaultCounts[f.id] || 0) : (this.faults.counts[f.id] || 0);
         /* which reps began from a position this fault was true of */
@@ -842,37 +844,81 @@
         if (this.noise && f.iRead != null && this.noise[f.iRead]) wobble[f.id] = +this.noise[f.iRead].toFixed(2);
         if (n > 0) faultCounts[f.id] = { fault: f, n, ms: this.faults.timeIn[f.id] || 0, said, capped, ...(f.atStart ? { startReps } : {}) };
       }
-      let score = 100;
       const out = { exercise: ex.id, name: ex.name, type: ex.type, target: this.target, faults: faultCounts, wobble, durationMs: (this.lastT || 0) - (this.startT || 0), trace: this.trace, date: Date.now() };
+      let holdScore = null;
       if (ex.type === 'reps') {
         const reps = this.counter.reps; const full = reps.filter(r => r.full);
         out.reps = this.counter.count; out.partials = this.counter.partials;
         out.avgTempo = full.length ? full.reduce((s, r) => s + r.duration, 0) / full.length : 0;
         out.avgROM = full.length ? full.reduce((s, r) => s + Math.min(r.peak, 1.2), 0) / full.length : 0;
         out.repList = reps;
-        // each fault costs weight×faultCost per occurrence, capped so one recurring fault can't zero the score
-        const sc = settingsOr().score;
-        for (const k in faultCounts) { const fc = faultCounts[k]; score -= Math.min(fc.fault.weight * sc.faultCost * fc.n, fc.fault.weight * sc.faultCap); }
-        score -= this.counter.partials * sc.partialCost;
-        if (this.counter.count === 0) score = Math.min(score, sc.noRepCap);
       } else {
         out.holdSec = Math.round(this.holdMs / 100) / 10; out.goodSec = Math.round(this.goodMs / 100) / 10;
         const goodFrac = this.holdMs ? this.goodMs / this.holdMs : 0;
         const sc = settingsOr().score;
-        score = Math.round(sc.holdFloor + (100 - sc.holdFloor) * goodFrac);
-        if (this.holdMs < this.target * 1000) score -= Math.round(sc.shortHoldPenalty * (1 - this.holdMs / (this.target * 1000)));
+        holdScore = Math.round(sc.holdFloor + (100 - sc.holdFloor) * goodFrac);
+        if (this.holdMs < this.target * 1000) holdScore -= Math.round(sc.shortHoldPenalty * (1 - this.holdMs / (this.target * 1000)));
       }
-      score = clamp(Math.round(score), 0, 100); out.score = score;
-      const sorted = Object.values(faultCounts).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
-      for (const fc of sorted.slice(0, settingsOr().score.tips)) tips.push({ label: fc.fault.label, tip: fc.fault.tip, n: fc.n });
-      out.tips = tips;
-      out.headline = (settingsOr().score.headlines.find((h) => score >= h.atLeast) || { text: '' }).text;
       out.trackingLossPct = this.frames ? Math.round(100 * this.lostMs / Math.max(1, out.durationMs)) : 0;
-      return out;
+      return tally(out, holdScore);
     }
   }
 
-  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Stillness, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodySpan, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, clamp, lerp, configure,
+  /* ---------------- What the set came to ----------------
+     The score, the things to fix and the reminders, worked out from the counted faults. Apart from
+     review() because a review is no longer the last word on a set: watching a rep back, the person
+     adds a fault the camera missed or clears one it invented, and the set has to be worked out
+     again from the corrected counts. Same arithmetic either way, in one place.
+     `holdScore` is a hold's score, which comes from time in position rather than from faults and
+     so is not recomputed; a rep move passes null and is scored here. */
+  function tally(out, holdScore = null) {
+    const sc = settingsOr().score;
+    const counted = Object.values(out.faults || {});
+    let score = holdScore;
+    if (score == null) {
+      score = 100;
+      /* each fault costs weight×faultCost per occurrence, capped so one recurring fault cannot
+         zero the score; a tentative one costs nothing — the coach is not sure enough of it to
+         mark the set down for it, which is the whole reason it does not speak either */
+      for (const fc of counted) { if (fc.fault.tentative) continue; score -= Math.min(fc.fault.weight * sc.faultCost * fc.n, fc.fault.weight * sc.faultCap); }
+      score -= (out.partials || 0) * sc.partialCost;
+      if (!out.reps) score = Math.min(score, sc.noRepCap);
+    }
+    out.score = clamp(Math.round(score), 0, 100);
+    const rank = (a, b) => b.fault.weight * b.n - a.fault.weight * a.n;
+    const line = (fc) => ({ label: fc.fault.label, tip: fc.fault.tip, n: fc.n });
+    out.tips = counted.filter((fc) => !fc.fault.tentative).sort(rank).slice(0, sc.tips).map(line);
+    /* things to look at rather than things to fix: said once, after the set, never mid-rep */
+    const maybe = counted.filter((fc) => fc.fault.tentative).sort(rank).map(line);
+    if (maybe.length) out.reminders = maybe; else delete out.reminders;
+    out.headline = (sc.headlines.find((h) => out.score >= h.atLeast) || { text: '' }).text;
+    return out;
+  }
+
+  /* ---------------- The person's own verdict on a rep ----------------
+     The camera is not the last word. Watching a rep back on the review screen, the person can mark
+     a fault it missed or clear one it invented, and from then on that rep carries their answer.
+     The set's count for that fault moves with it — one per rep, added or taken away — and the set
+     is scored again from the corrected counts. What the camera thought is not overwritten silently:
+     the fault and the rep are both marked `edited`, so the review, the saved session and the
+     diagnostics all say the number was corrected by hand rather than measured.
+     Returns true when something actually changed. */
+  function applyRepFault(rv, faults, repIndex, id, on) {
+    const rep = (rv.repList || [])[repIndex]; const f = (faults || []).find((x) => x.id === id);
+    if (!rep || !f) return false;
+    rep.faults = rep.faults || [];
+    const has = rep.faults.includes(id);
+    if (has === !!on) return false;
+    if (on) rep.faults = rep.faults.concat([id]); else rep.faults = rep.faults.filter((x) => x !== id);
+    rep.edited = true;
+    const fc = rv.faults[id] || (rv.faults[id] = { fault: f, n: 0, ms: 0, said: 0, capped: false });
+    fc.n = Math.max(0, fc.n + (on ? 1 : -1)); fc.edited = true;
+    if (!fc.n) delete rv.faults[id];
+    tally(rv, rv.type === 'reps' ? null : rv.score);
+    return true;
+  }
+
+  const FormEngine = { LM, SIDE, CONNECTIONS, HEAD_LINKS, HEAD_STYLES, headShape, seen, sure, farLimb, positionCheck, Settle, Stillness, Camera, fromVertical, armAngle, tiltOf, lineTilt, headTilt, armRot, elbowGap, outward, OneEuro, PoseSmoother, angle, lineOffset, dist, mid, nearSide, orientation, framing, bodySpan, visOf, EXERCISES, RepCounter, FaultTracker, SetSession, tally, applyRepFault, clamp, lerp, configure,
     get REST() { return settingsOr() && T.rest; }, get ATTEMPT() { return settingsOr() && T.attempt; }, get FULL() { return settingsOr() && T.full; }, get settings() { return SETTINGS; } };
   /* Node (server + tests) has no <script> tags, so the whole library is loaded here, in the order
      the browser's OnTrackCatalog.load() uses: settings first, then the hand-written code moves the

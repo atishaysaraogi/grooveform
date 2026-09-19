@@ -216,6 +216,15 @@ Rep-level questions the physio answers per fault: does it invalidate the rep
 (rep does not count) or only cost a cue; only once the rep is under way, or at any
 time; how long it must persist before it counts (0.4 s is the usual answer).
 
+**Said** decides whether the cue is spoken at all. A reading that sits close to
+its own noise — the fire report is green on the fault takes but the wobble
+column is the same size as the threshold — should be held back: the fault is
+still measured, still counted and still attached to its reps, but it never
+interrupts a rep and it costs nothing off the score. It surfaces after the set
+under *Worth a look*, where the person can play the rep back and say yes or no.
+Reach for it when the honest answer to "would I bet on this one?" is no; a fault
+worth shouting about should be tuned until it is worth shouting about.
+
 ### A set-up check on every rep
 
 A rep clip calibrates on its own start, so a set-up check is judged there

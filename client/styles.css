@@ -354,6 +354,19 @@ a.ex-card .name { color: var(--text, inherit); }
 .replist .pill.clean { background: var(--lime); color: var(--grape); } .replist .pill.fault { background: var(--tangerine); color: var(--grape); } .replist .pill.partial { background: var(--surface-2); color: var(--ink-soft); }
 .replist .rep-body { padding: 8px 0 4px; } .stats.small .stat { padding: 8px 10px; } .stats.small .stat .v { font-size: 1.05rem; }
 .rep-faults { margin: 8px 0 0; padding-left: 18px; font-size: .9rem; }
+.rep-faults .tag { margin-left: 4px; }
+/* correcting the camera: one rep, its own footage, and the move's whole list of faults to tick */
+.rep-edit { margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--line); display: grid; gap: 8px; }
+.rep-edit .row { align-items: center; gap: 10px; }
+.rep-edit .k { margin: 0; font-size: .8rem; font-weight: 800; color: var(--muted); }
+.rep-edit .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.small { min-height: 32px; padding: 4px 11px; font-size: .78rem; }
+/* a fault the coach is not sure of reads as an open question until someone answers it */
+.chip.maybe { border-style: dashed; }
+.chip.maybe[aria-pressed="true"] { background: var(--tangerine); color: var(--grape); border-color: var(--tangerine); border-style: solid; }
+.replist summary .tag { padding: 2px 7px; font-size: .62rem; }
+.fixlist .tag { font-size: .62rem; padding: 1px 6px; vertical-align: 1px; }
+.fixlist.maybe .n { color: var(--muted); }
 .card h3, .panel h3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 400; }
 .card.config h3 { font-family: var(--font-body); font-size: .95rem; font-weight: 900; }
 

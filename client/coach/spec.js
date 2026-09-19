@@ -327,6 +327,10 @@
         need(!f.rule, w + ': phase "start" needs a measurement of its own — a built-in rule judges a rep, and at the start there is no rep yet');
         need(f.rel !== 'change', w + ': phase "start" cannot measure the change from the start position, because that is the position being judged');
       }
+      if (f.tentative !== undefined) {
+        need(typeof f.tentative === 'boolean', w + ': tentative must be true or false');
+        need(!f.tentative || f.rule || f.metric, w + ': tentative belongs to a fault the camera measures — one nobody checks has nothing to be unsure about');
+      }
       if (f.scale) { need(Number.isFinite(f.scale.times), w + ': scale needs times'); if (f.scale.metric !== 'progress') mOk(f.scale.metric, w + ' (scale)'); }
       whenOk(f.when, w);
       if (RULES.includes(f.rule)) { if (f.rule === 'fast') need(Number.isFinite(f.minMs), w + ': minimum rep time'); }
@@ -594,7 +598,13 @@
          its own; otherwise settings.json caps by rule name. */
       const byRule = f.rule ? (fs.maxCues || {})[f.rule] : undefined;
       const cap = Number.isFinite(f.maxCues) ? f.maxCues : Number.isFinite(byRule) ? byRule : (fs.maxCues || {}).perSet;
-      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates, ...(Number.isFinite(cap) ? { maxCues: cap } : {}) };
+      /* A tentative fault is one the camera can see but not swear to. It is measured, counted and
+         attached to the reps it happened on exactly like any other; what it never does is speak.
+         Mid-set a cue is an instruction, and an instruction the coach is not sure of is worse than
+         silence — it interrupts a rep to correct something that may not be wrong. So it waits for
+         the end of the set, where it is a reminder to look at rather than an order to obey, and it
+         costs nothing off the score. */
+      const common = { id: f.id, label: f.label, cue: f.cue, tip: f.tip, weight: fs.severityWeight[String(+f.severity)] || 1, invalidates: !!f.invalidates, ...(f.tentative ? { tentative: true } : {}), ...(Number.isFinite(cap) ? { maxCues: cap } : {}) };
       if (f.rule === 'shallow') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.peak < FULL && rep.peak > ATTEMPT };
       if (f.rule === 'fast') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.duration < f.minMs };
       if (f.rule === 'return') return { ...common, onRep: true, cooldown: f.cooldown || fs.cooldown, check: (rep) => rep.endP > (Number.isFinite(f.threshold) ? f.threshold : 0.25) };

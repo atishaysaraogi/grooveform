@@ -1329,7 +1329,7 @@
       st.textContent = 'Building the report…';
       let src = ''; try { src = await (await fetch('coach/replay.js')).text(); } catch (e) { src = ''; }
       if (!src) { st.textContent = 'Could not load the player for the report — try again online.'; return; }
-      const review = { ...rv, faults: Object.fromEntries(Object.entries(rv.faults).map(([k, v]) => [k, { n: v.n, fault: { label: v.fault.label, tip: v.fault.tip, weight: v.fault.weight } }])) };
+      const review = { ...rv, faults: Object.fromEntries(Object.entries(rv.faults).map(([k, v]) => [k, { n: v.n, edited: v.edited, fault: { label: v.fault.label, tip: v.fault.tip, weight: v.fault.weight, tentative: v.fault.tentative } }])) };
       saveFile(recName('html'), Replay.reportHtml(lastRec, meta, review, src), 'text/html', st);
     };
     const bv = $('btn-video'); bv.hidden = !Replay.canRecord();
@@ -1361,7 +1361,11 @@
        is meant to replace. "Major" is a severity weight from settings.json, heaviest first, capped
        so it cannot become a paragraph; a set with only light faults still gets the heaviest one. */
     const sc = (E.settings.score || {}), minW = sc.speakWeight ?? 2, max = sc.speakMax ?? 4;
-    const sorted = Object.values(rv.faults || {}).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
+    /* A tentative fault has no place here either: it was kept quiet all set precisely because the
+       coach cannot stand behind it, and "next set, do X" is exactly the instruction it must not
+       give. It is on the screen under "worth a look", where the person can watch the rep and
+       decide. */
+    const sorted = Object.values(rv.faults || {}).filter((fc) => !fc.fault.tentative).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
     const major = sorted.filter((fc) => fc.fault.weight >= minW).slice(0, max);
     /* A cue is said twice and then held back, so the set is not a lecture. What it stopped saying
        is owed to the person here, where there is time to act on it: a fault that ran out of turns
@@ -1373,8 +1377,84 @@
     s += fixes.length ? `Next set: ${list}.` : 'Nothing to fix — same again.';
     return s;
   }
-  function renderReview(rv) {
-    const ring = $('ring-val'); const circ = 326.7; ring.style.strokeDashoffset = circ; requestAnimationFrame(() => setTimeout(() => ring.style.strokeDashoffset = circ * (1 - rv.score / 100), 50));
+  /* ---------- the person's own verdict on a rep ----------
+     The camera is good, not certain. Every rep in the review opens onto its own footage and the
+     move's whole list of faults, so the person can watch what actually happened and say: that one
+     was fine, or the coach missed this. The set's counts, the score and what it says to work on
+     all follow (engine.js applyRepFault), and the correction is written into the recording as
+     well, so the replay's timeline, the report and the diagnostics all tell the same story.
+     `reviewNow` is the review object app.js is holding to save; it is edited in place, so what the
+     person corrected here is what gets stored. */
+  let reviewNow = null, reviewEx = null;
+  const openReps = new Set();
+  function repFaultsOf(ex) { return (ex && ex.faults) || []; }
+  function editRepFault(i, id, on) {
+    if (!reviewNow || !reviewEx) return;
+    if (!E.applyRepFault(reviewNow, repFaultsOf(reviewEx), i, id, on)) return;
+    const rep = reviewNow.repList[i];
+    /* the recording carries its own copy of each rep, which is what the replay timeline, the
+       report and the diagnostics all read: keep it in step, and leave a note of the edit */
+    if (lastRec) {
+      let seen = -1, at = 0;
+      for (const e of lastRec.events) if (e.type === 'rep' && ++seen === i) { e.faults = rep.faults.slice(); e.edited = true; at = e.t; break; }
+      lastRec.events.push({ t: at, type: 'repEdit', rep: rep.n || 0, index: i, fault: id, on: !!on });
+      if (lastRec.review) { lastRec.review.faults = Object.fromEntries(Object.entries(reviewNow.faults).map(([k, v]) => [k, v.n])); lastRec.review.score = reviewNow.score; }
+    }
+    /* the mounted player draws from this array, so the rep's colour changes under the person
+       without tearing the video down and losing where they were */
+    if (replayer && replayer.timeline && replayer.timeline.reps[i]) replayer.timeline.reps[i].faults = rep.faults.slice();
+    renderReview(reviewNow, { keepReplay: true });
+  }
+  /* One row per rep, each opening onto the footage of that rep and the whole list of faults the
+     move can see, so the person can watch it and say what really happened. Rows the person had
+     open stay open across a re-render — correcting one rep must not close the one being read. */
+  function renderRepList(rv) {
+    const rl = $('rv-replist'); if (!rl) return;
+    const ex = reviewEx; const F = Object.fromEntries(repFaultsOf(ex).map((f) => [f.id, f]));
+    const all = repFaultsOf(ex);
+    const verdict = (r) => !r.full ? 'not counted' : r.faults.length ? (r.edited ? 'counted, with a fault' : 'counted, with a cue') : 'counted';
+    rl.innerHTML = rv.repList.map((r, i) => {
+      const chips = all.map((f) => {
+        const on = r.faults.includes(f.id);
+        return `<button type="button" class="chip small${f.tentative ? ' maybe' : ''}" data-rep="${i}" data-fault="${escT(f.id)}" aria-pressed="${on}" title="${escT(f.tip || '')}">${escT(f.label)}</button>`;
+      }).join('');
+      const body = r.faults.length
+        ? `<ul class="rep-faults">${r.faults.map((id) => `<li><strong>${escT(F[id] ? F[id].label : id)}</strong>${F[id] && F[id].tentative ? ' <span class="tag">not sure</span>' : ''}${F[id] ? ' — ' + escT(F[id].tip) : ''}</li>`).join('')}</ul>`
+        : `<p class="muted">${!r.full ? 'Turned around before reaching the target range, so it was not counted.' : 'Nothing to fix on this one.'}</p>`;
+      return `<details class="rep"${openReps.has(i) ? ' open' : ''} data-i="${i}"><summary><span class="n">${r.n ? 'Rep ' + r.n : 'Not counted'}</span><span class="pill ${!r.full ? 'partial' : r.faults.length ? 'fault' : 'clean'}">${verdict(r)}</span>${r.edited ? '<span class="tag">your call</span>' : ''}<span class="meta">${Math.round(r.peak * 100)}% range · ${(r.duration / 1000).toFixed(1)} s</span></summary><div class="rep-body"><div class="stats small"><div class="stat"><div class="v">${Math.round(r.peak * 100)}%</div><div class="k">of target range</div></div><div class="stat"><div class="v">${(r.tDown / 1000).toFixed(1)} s</div><div class="k">out</div></div><div class="stat"><div class="v">${(r.tUp / 1000).toFixed(1)} s</div><div class="k">back</div></div><div class="stat"><div class="v">${Math.round((r.endP || 0) * 100)}%</div><div class="k">left at the end</div></div></div>${body}${all.length ? `<div class="rep-edit"><div class="row"><button type="button" class="btn ghost small" data-watch="${i}">▶ Watch this rep</button><span class="muted" data-watch-note="${i}"></span></div><p class="k">What happened on this rep — tap to correct the camera</p><div class="chips">${chips}</div></div>` : ''}</div></details>`;
+    }).join('');
+    rl.querySelectorAll('details.rep').forEach((d) => {
+      const i = Number(d.dataset.i);
+      d.addEventListener('toggle', () => { if (d.open) openReps.add(i); else openReps.delete(i); });
+    });
+    rl.querySelectorAll('[data-watch]').forEach((b) => { b.onclick = () => watchRep(Number(b.dataset.watch)); });
+    rl.querySelectorAll('[data-fault]').forEach((b) => {
+      b.onclick = () => editRepFault(Number(b.dataset.rep), b.dataset.fault, b.getAttribute('aria-pressed') !== 'true');
+    });
+  }
+  /* Play one rep and stop at its end. The recording's rep events are what the player's timeline is
+     built from and they are in the same order as the review's rep list, so the row and the window
+     line up without either side having to carry the other's clock. */
+  function watchRep(i) {
+    const note = $('rv-replist').querySelector(`[data-watch-note="${i}"]`);
+    const seg = replayer && replayer.timeline && replayer.timeline.reps[i];
+    if (!seg) { if (note) note.textContent = 'No footage of this one was kept.'; return; }
+    const panel = $('rv-replay');
+    if (panel && panel.hidden) { if (note) note.textContent = 'No footage of this one was kept.'; return; }
+    if (note) note.textContent = '';
+    const t0 = seg.t0 - replayer.timeline.t0, t1 = seg.t1 - replayer.timeline.t0;
+    /* a beat before the rep starts: a fault at the very first frame is easier to see coming */
+    replayer.playRange(Math.max(0, t0 - 400), t1 + 200);
+    if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function renderReview(rv, { keepReplay = false } = {}) {
+    reviewNow = rv; reviewEx = (live && live.ex) || current.ex;
+    if (!keepReplay) openReps.clear();
+    const ring = $('ring-val'); const circ = 326.7;
+    /* the ring sweeps up once, when the set's score first lands; correcting a rep moves it, and
+       replaying the sweep on every tap would turn a correction into a performance */
+    if (keepReplay) ring.style.strokeDashoffset = circ * (1 - rv.score / 100);
+    else { ring.style.strokeDashoffset = circ; requestAnimationFrame(() => setTimeout(() => ring.style.strokeDashoffset = circ * (1 - rv.score / 100), 50)); }
     ring.style.stroke = rv.score >= 75 ? 'var(--good)' : rv.score >= 55 ? 'var(--warn)' : 'var(--bad)';
     $('ring-text').textContent = rv.score;
     $('rv-headline').textContent = rv.headline;
@@ -1387,8 +1467,7 @@
     if (rv.type === 'reps' && rv.repList && rv.repList.length) {
       wrap.hidden = false;
       $('rv-reps').innerHTML = rv.repList.map(r => `<div class="bar ${!r.full ? 'partial' : r.faults.length ? 'fault' : ''}" style="height:${Math.round(E.clamp(r.peak, 0.1, 1.2) / 1.2 * 100)}%" title="Rep ${r.n || '–'}: ${Math.round(r.peak * 100)}% range, ${(r.duration / 1000).toFixed(1)}s${r.faults.length ? ', ' + r.faults.join(', ') : ''}"></div>`).join('');
-      const rl = $('rv-replist'); if (rl) { const F = Object.fromEntries(live && live.ex ? live.ex.faults.map(f => [f.id, f]) : (current.ex ? current.ex.faults.map(f => [f.id, f]) : []));
-        rl.innerHTML = rv.repList.map((r, i) => `<details class="rep"><summary><span class="n">${r.n ? 'Rep ' + r.n : 'Not counted'}</span><span class="pill ${!r.full ? 'partial' : r.faults.length ? 'fault' : 'clean'}">${!r.full ? 'not counted' : r.faults.length ? 'counted, with a cue' : 'counted'}</span><span class="meta">${Math.round(r.peak * 100)}% range · ${(r.duration / 1000).toFixed(1)} s</span></summary><div class="rep-body"><div class="stats small"><div class="stat"><div class="v">${Math.round(r.peak * 100)}%</div><div class="k">of target range</div></div><div class="stat"><div class="v">${(r.tDown / 1000).toFixed(1)} s</div><div class="k">out</div></div><div class="stat"><div class="v">${(r.tUp / 1000).toFixed(1)} s</div><div class="k">back</div></div><div class="stat"><div class="v">${Math.round((r.endP || 0) * 100)}%</div><div class="k">left at the end</div></div></div>${r.faults.length ? `<ul class="rep-faults">${r.faults.map(id => `<li><strong>${F[id] ? F[id].label : id}</strong>${F[id] ? ' — ' + F[id].tip : ''}</li>`).join('')}</ul>` : `<p class="muted">${!r.full ? 'Turned around before reaching the target range, so it was not counted.' : 'Nothing to fix on this one.'}</p>`}</div></details>`).join(''); }
+      renderRepList(rv);
       const tr = rv.trace; const T = tr.length ? tr[tr.length - 1][0] : 1;
       const path = tr.map((p, i) => (i ? 'L' : 'M') + (p[0] / T * 600).toFixed(1) + ' ' + (85 - E.clamp(p[1], 0, 1.2) / 1.2 * 80).toFixed(1)).join(' ');
       $('rv-trace').innerHTML = `<line x1="0" y1="${85 - E.FULL / 1.2 * 80}" x2="600" y2="${85 - E.FULL / 1.2 * 80}"></line><path d="${path}"></path>`;
@@ -1396,13 +1475,21 @@
     /* Advice, not diagnosis: the cue says what to do ("Slow it down"), the label only names what
        went wrong ("Too fast"). Heaviest first, so the top line is the one worth fixing. */
     const fl = $('rv-faults');
-    const items = Object.values(rv.faults).sort((a, b) => b.fault.weight * b.n - a.fault.weight * a.n);
-    fl.innerHTML = items.length
-      /* a set-up check says which reps began from the wrong position, not just how many times */
-      ? items.map((fc) => `<li><span class="n">×${fc.n}</span><span class="s">${escT(fc.fault.cue || fc.fault.label)}${fc.startReps ? ` <span class="meta">at the start of ${fc.startReps} rep${fc.startReps > 1 ? 's' : ''}</span>` : ''}</span><span class="t">${escT(fc.fault.tip)}</span></li>`).join('')
+    const rank = (a, b) => b.fault.weight * b.n - a.fault.weight * a.n;
+    const all = Object.values(rv.faults).sort(rank);
+    const items = all.filter((fc) => !fc.fault.tentative);
+    /* a set-up check says which reps began from the wrong position, not just how many times;
+       a count the person corrected says so, so the number is not read as the camera's */
+    const row = (fc) => `<li><span class="n">×${fc.n}</span><span class="s">${escT(fc.fault.cue || fc.fault.label)}${fc.startReps ? ` <span class="meta">at the start of ${fc.startReps} rep${fc.startReps > 1 ? 's' : ''}</span>` : ''}${fc.edited ? ' <span class="tag">your call</span>' : ''}</span><span class="t">${escT(fc.fault.tip)}</span></li>`;
+    fl.innerHTML = items.length ? items.map(row).join('')
       : '<li class="empty">Nothing to fix. Same again next set — or add a couple of reps.</li>';
+    /* Faults the coach watched but would not swear to. They were never spoken during the set and
+       they cost nothing off the score; here they are a reminder to look, with the rep-by-rep list
+       below to look at. */
+    const maybe = all.filter((fc) => fc.fault.tentative);
+    const mp = $('rv-maybe'); if (mp) { mp.hidden = !maybe.length; const ml = $('rv-maybe-list'); if (ml) ml.innerHTML = maybe.map(row).join(''); }
     const spk = $('btn-speak-review'); if (spk) spk.onclick = () => { voice.unlock(); voice.say(spokenSummary(rv), { priority: 2 }); };
-    renderReplay(rv);
+    if (!keepReplay) renderReplay(rv);
     const dg = $('rv-diag'); if (!dg) return; dg.hidden = !lastRec;
     if (lastRec) {
       $('rv-diag-info').textContent = `${lastRec.frames.length} frames · ${(recJson().length / 1024).toFixed(0)} KB · landmarks + metrics, no video`;
@@ -1430,5 +1517,8 @@
 
   /* The anatomical figure lives in coach/archive/; this keeps its small API for the Studio and the catalogue. */
   window.OnTrackAnatomy = { demo, register: registerFigure, figure: (id) => REGISTERED[id] || null, mountAll: mountFigures, stopAll() { if (muscleFig) try { muscleFig.stopAll(); } catch (e) { } }, regions: MUSCLE_REGIONS, noteSvg, figureBox };
-  window.OnTrackCoach = { start, exitLive, aimFor, ghostFor, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, cueAt, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice };
+  window.OnTrackCoach = { start, exitLive, aimFor, ghostFor, restOverlay, restActive, endRest, diagram, demo, cameraDiagram, phoneInset, thumb, registerFigure, listVoices, pickVoice, voiceRate, applyVoiceButton, mountFigures, cueAt, exercises: E.EXERCISES, settings, setSetting, get live() { return live; }, get lastRec() { return lastRec; }, recJson, finishSet, renderReview, spokenSummary, voice,
+    /* the review the person is looking at, and where the player has got to: the set is not
+       finished with until they have had their say about it */
+    reviewNow: () => reviewNow, editRepFault, replayAt: () => (replayer ? Math.round(replayer.t - replayer.timeline.t0) : -1) };
 })();

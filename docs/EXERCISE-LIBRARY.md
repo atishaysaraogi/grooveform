@@ -385,7 +385,48 @@ differ — the cue is shouted mid-rep, the tip explains.
 | `maxCues` | how many times it may be spoken in one set at all. `settings.json` caps the `fast` rule at 1; the review still counts every occurrence |
 | `phase` | limit it to `'moving'` / `'hold'`, or `'start'` to judge the start position before the set |
 | `onRep` | judge the finished rep instead of each frame: `check: (rep) => …` |
+| `tentative` | the camera can see it but cannot swear to it: never spoken, never scored, saved up as a reminder after the set (below) |
 | `check` | `(m) => boolean` over the object `measure` returned (or `(rep)` when `onRep`) |
+
+#### A fault the coach will not swear to
+
+Some readings sit close to their own noise: a heel a few pixels off the floor,
+a pelvis tilt that most of the raise explains anyway. The camera can take the
+measurement; it cannot stand behind the verdict. `tentative: true` says so.
+
+Such a fault is measured, counted and attached to the reps it happened on like
+any other — what it never does is **speak**. Mid-rep a cue is an instruction,
+and an instruction the coach is not sure of is worse than silence: it interrupts
+a rep to correct something that may not be wrong. So it is held back to the end
+of the set, where the review lists it under *Worth a look* — a reminder to
+check rather than an order to obey — and it costs nothing off the score, for the
+same reason it does not speak. The spoken summary leaves it out too.
+
+It belongs on a fault the camera actually measures (or a built-in rule). A fault
+nobody checks is already only a line in the guide and has nothing to be unsure
+about; `checkSpec` refuses that combination.
+
+Today the glute bridge's *foot coming off the floor* is the one move that uses
+it, and the reason is written into its tip: side-on, the pose model swaps the
+heel and toe labels when a heel lifts, so no threshold separates the two, and
+the reading wanders a couple of percent of the shin with the foot flat on the
+mat. The camera is right often enough to be worth raising and wrong often
+enough that it must not shout.
+
+#### The person has the last word on a rep
+
+The review screen plays each rep back on its own — *Watch this rep* stops the
+player at the end of that rep rather than running on into the next — and offers
+the move's whole list of faults as toggles. Watching what actually happened, the
+person can mark a fault the camera missed or clear one it invented.
+
+The set follows: that fault's count moves by one, the score is worked out again
+from the corrected counts (`FormEngine.applyRepFault`, which shares its
+arithmetic with `review()`), and *Work on next* is rebuilt. Nothing is
+overwritten silently — the fault and the rep are both marked `edited`, shown as
+*your call*, and the correction is written into the recording as a `repEdit`
+event, so the replay timeline, the downloadable report, the diagnostics and the
+saved session all tell the same story as the screen.
 
 ### What people see
 

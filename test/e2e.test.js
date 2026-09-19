@@ -1133,6 +1133,65 @@ async function runCoachedSet(page, side = 'right') {
     await st.close();
   });
 
+  await step('a fault the coach will not swear to waits for the review, where a rep can be watched back and corrected', async () => {
+    const page = pro;
+    await page.goto(base + '/?mock=1#/exercise/glute_bridge'); await page.waitForSelector('#do-start');
+    /* the same recorded bridge as the other bridge steps, with the toes lifted at the top of every
+       rep: "foot coming off the floor" is a tentative fault, so it is measured all set and never
+       said. 31/32 are the foot points; lifting them raises the toes-off-the-floor reading. */
+    await page.evaluate(() => {
+      const REST = { 0: [0.852, 0.576], 7: [0.871, 0.642], 8: [0.865, 0.576], 11: [0.786, 0.650], 12: [0.772, 0.584], 13: [0.632, 0.654], 14: [0.616, 0.605], 15: [0.474, 0.682], 16: [0.485, 0.623], 23: [0.467, 0.590], 24: [0.470, 0.532], 25: [0.374, 0.301], 26: [0.358, 0.284], 27: [0.297, 0.644], 28: [0.285, 0.570], 29: [0.318, 0.687], 30: [0.296, 0.633], 31: [0.203, 0.685], 32: [0.182, 0.593] };
+      const TOP = { 0: [0.862, 0.560], 7: [0.880, 0.633], 8: [0.875, 0.574], 11: [0.786, 0.648], 12: [0.786, 0.568], 13: [0.626, 0.672], 14: [0.626, 0.573], 15: [0.457, 0.691], 16: [0.491, 0.567], 23: [0.522, 0.443], 24: [0.532, 0.382], 25: [0.322, 0.267], 26: [0.339, 0.244], 27: [0.295, 0.650], 28: [0.313, 0.587], 29: [0.318, 0.691], 30: [0.344, 0.646], 31: [0.196, 0.704], 32: [0.216, 0.644] };
+      const lying = (k, toes) => { const p = []; for (let i = 0; i < 33; i++) p.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.95 });
+        for (const id in REST) { const a = REST[id], b = TOP[id]; p[+id] = { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, z: 0, visibility: 0.95 }; }
+        for (const id of [31, 32]) p[id] = { ...p[id], y: p[id].y - toes };
+        return p; };
+      window.__mockPose = (t) => { if (t < 10500) return lying(0, 0); const tt = t - 10500, rep = Math.floor(tt / 3000), ph = (tt % 3000) / 3000;
+        if (rep >= 8) return lying(0, 0); const k = Math.sin(Math.PI * ph); return lying(k, k > 0.6 ? 0.07 : 0); };
+    });
+    await page.click('#do-start');
+    await page.waitForFunction(() => window.OnTrackCoach.live && window.OnTrackCoach.live.state === 'active', null, { timeout: 20000 });
+    await page.waitForFunction(() => document.querySelector('#rv-portal .panel') !== null || window.OnTrackCoach.restActive(), null, { timeout: 60000 });
+    const quiet = await page.evaluate(() => { const r = window.OnTrackCoach.lastRec; const rv = window.OnTrackCoach.lastRec.review;
+      return { spoken: r.events.filter((e) => e.type === 'cue' && e.fault === 'foot_lifting').length, counted: (rv.faults || {}).foot_lifting || 0,
+        maybe: !document.getElementById('rv-maybe').hidden, maybeText: document.getElementById('rv-maybe-list').textContent,
+        fixes: document.getElementById('rv-faults').textContent }; });
+    assert.ok(quiet.counted > 0, 'the camera saw the toes come up: ' + JSON.stringify(quiet));
+    assert.equal(quiet.spoken, 0, 'and said nothing about it during the set: ' + JSON.stringify(quiet));
+    assert.ok(quiet.maybe && /foot|floor/i.test(quiet.maybeText), 'it is a reminder after the set instead: ' + JSON.stringify(quiet));
+    assert.ok(!/off the floor/i.test(quiet.fixes), 'and not among the things to work on: ' + quiet.fixes);
+    /* now the person watches a rep back and says the camera got it wrong */
+    const before = await page.evaluate(() => ({ score: window.OnTrackCoach.lastRec.review.score, ring: document.getElementById('ring-text').textContent }));
+    await page.click('#rv-replist details.rep:first-of-type > summary');
+    await page.waitForSelector('#rv-replist details.rep[open] .rep-edit .chip');
+    /* the rep plays on its own: the player stops at the end of that rep rather than running on */
+    const played = await page.evaluate(async () => {
+      const btn = document.querySelector('#rv-replist details.rep[open] [data-watch]'); if (!btn) return { ok: false };
+      btn.click(); await new Promise((r) => setTimeout(r, 250));
+      return { ok: true, t: window.OnTrackCoach.replayAt() };
+    });
+    assert.ok(played.ok && played.t >= 0, 'the rep plays back: ' + JSON.stringify(played));
+    /* clear the fault the coach was unsure about on this rep, and add one it never saw */
+    const ids = await page.evaluate(() => [...document.querySelectorAll('#rv-replist details.rep[open] .rep-edit .chip')].map((c) => ({ id: c.dataset.fault, on: c.getAttribute('aria-pressed') })));
+    assert.ok(ids.some((c) => c.id === 'foot_lifting'), 'every fault the move can see is offered: ' + JSON.stringify(ids));
+    await page.click('#rv-replist details.rep[open] .chip[data-fault="arch"]');
+    await page.waitForFunction(() => (window.OnTrackCoach.lastRec.review.faults || {}).arch > 0);
+    const after = await page.evaluate(() => { const rv = window.OnTrackCoach.lastRec.review;
+      const r = window.OnTrackCoach.reviewNow();
+      return { arch: (rv.faults || {}).arch, repFaults: r.repList[0].faults, edited: !!r.faults.arch.edited, score: r.score,
+        ring: document.getElementById('ring-text').textContent, open: document.querySelectorAll('#rv-replist details.rep[open]').length,
+        events: window.OnTrackCoach.lastRec.events.filter((e) => e.type === 'repEdit').length,
+        tips: document.getElementById('rv-faults').textContent, mark: document.querySelector('#rv-replist details.rep[open] summary').textContent }; });
+    assert.ok(after.repFaults.includes('arch'), 'the rep carries what the person said: ' + JSON.stringify(after));
+    assert.equal(after.arch, 1, 'and the set counts it once: ' + JSON.stringify(after));
+    assert.ok(after.edited && /your call/i.test(after.mark), 'marked as the person\'s call, not a measurement: ' + JSON.stringify(after));
+    assert.ok(after.score < before.score && after.ring === String(after.score), 'the set is scored again: ' + JSON.stringify([before, after]));
+    assert.equal(after.open, 1, 'and the rep being read stays open');
+    assert.equal(after.events, 1, 'the correction is written into the recording');
+    assert.match(after.tips, /back/i, 'and it joins what to work on: ' + after.tips);
+    if (await page.$('#rv-submit')) { await page.click('#rv-submit'); await page.waitForFunction(() => !document.querySelector('#coach:not([hidden])')); }
+  });
+
   await step('security: pages load with no JS errors; API refuses requests without the fetch header', async () => {
     const r = await member.evaluate(async () => (await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"text":"x"}' })).status); assert.equal(r, 403);
     assert.deepEqual(errors, [], 'no page errors');
