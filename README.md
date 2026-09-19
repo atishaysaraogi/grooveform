@@ -41,13 +41,15 @@ the other rather than on top of each other.
 
 | | |
 |---|---|
-| legs too straight | *Lower down* — or, more than 18° out, *Slide further down the wall* |
+| heels ahead of the knees | *Bring your feet back* — or, more than 18° out, *your heels are well ahead of your knees* |
+| heels behind the knees | *Bring your feet forward* / *Walk your feet further out* |
+| legs too straight | *Lower down* / *Slide further down the wall* |
 | too deep | *Come up a little* / *Come up — that is too deep* |
-| heels ahead of the knees | *Bring your feet back* |
-| heels behind the knees | *Bring your feet forward* |
 | back off the wall | *Press your back flat to the wall* |
 | hips ahead of the shoulders | *Bring your hips under your shoulders* |
 | just right | *That is it — hold*, once, and the clock starts |
+
+They are listed in the order they are corrected.
 
 When more than one is wrong they are corrected **feet, then knee, then back**,
 in that order and not by how far out each one is. The order is the chain of
