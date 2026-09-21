@@ -129,10 +129,10 @@ or narrow it in the settings; make it a band of its own if you want it called.
 
 | | |
 |---|---|
-| **Shin** | the angle at the heel between the toe and the knee, as in the knee raise. Allowed **85–110°**. Under it the knee is out over the toes and the feet are too far from the hips; over it the knee is back behind the heel and they are too close. This is where the feet are, so it is coached at the start, before the lift is asked for. |
+| **Feet** | the foot's own line, heel against toe, off the floor: **±10°**. Heels lifting tilt it one way and toes lifting the other, so the cue says which. Checked first, and at the start. |
+| **Shin** | the angle at the heel between the toe and the knee, as in the knee raise. Allowed **85–110°**. Under it the knee is out over the toes and the feet are too far from the hips; over it the knee is back behind the heel and they are too close. This is where the feet are, so it too is coached at the start, before the lift is asked for. |
 | **Hip** | the angle at the hip between knee and shoulder: the line the hips are lifted to. **At least 160°** at the top. |
 | **Rise** | how far the hip sits above the knee, as the rise of the knee→hip line. **At most 3°**: the hips are not to go higher than the knees, and the three degrees are for the pose model's wobble. A floor line is drawn through the knee, which is the height not to pass. |
-| **Feet** | the foot's own line, heel against toe, off the floor: **±10°**. Heels lifting tilt it one way and toes lifting the other, so the cue says which. |
 
 Two seconds held at the top, lowered slowly, and the rep counts when the hips
 are back down. Ten reps.
@@ -143,8 +143,17 @@ told when it took less. The rep still counts — it was done — and the remark 
 on the count rather than queueing behind it, so it lands on the rep it is about:
 "three — slower on the way down".
 
-**Which way the phone goes.** The plank and the bridge want it on its side; the
-wall sit and the knee raise are standing bodies and want it stood up. Each asks the camera for
+**Which way the phone goes.** Every exercise is one of two kinds: phone on its
+side, or phone stood up. The plank and the bridge want it on its side; the wall
+sit and the knee raise are standing bodies and want it stood up. While the camera
+is giving the other shape the page stays a page, with a notice — on screen and
+out loud — saying which way to turn it. The moment the shape is right and a set
+is under way, the picture takes the whole screen, fitted inside it and never
+cropped, with nothing on it but the button that ends the set and one that shows
+the page again (for the settings, the voice, the other camera); a tap brings the
+picture back, and so does the next set. Turning the phone
+mid-set starts the film again from there, since a film cannot change shape and
+what came before was a phone being turned. Each asks the camera for
 that shape, says so in the words it opens with, and says so again — on screen and
 out loud — if what arrives is the other way round.
 

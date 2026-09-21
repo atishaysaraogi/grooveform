@@ -294,7 +294,9 @@ try {
       proto.encode = function () { count++; return orig.apply(this, arguments); };
       setTimeout(() => { proto.encode = orig; res(count); }, 2000);
     }));
-    assert.ok(n >= 40 && n <= 75, 'handed over ' + n + ' frames in two seconds; thirty a second is the film');
+    /* the lower bound has room for a slow machine: a frame is only taken when the
+       canvas has been drawn since the last, and a busy encoder is left to catch up */
+    assert.ok(n >= 30 && n <= 75, 'handed over ' + n + ' frames in two seconds; thirty a second is the film');
     await page.click('#startstop');
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
   });
@@ -408,6 +410,9 @@ try {
   await step('a good plank holds, and its own countdown calls the time and ends', async () => {
     /* six seconds rather than sixty, because the target and the calls are settings —
        which is the other thing this proves */
+    await page.click('#page-btn');              // the plank runs full screen; the settings are on the page
+    await page.waitForFunction(() => !document.body.classList.contains('full'), null, { timeout: 3000 });
+    assert.equal(await page.isVisible('#full-btn'), true, 'and the way back to the picture is offered');
     await page.click('#settings-btn');
     await page.fill('#cfg-target', '6');
     await page.dispatchEvent('#cfg-target', 'change');
@@ -421,7 +426,7 @@ try {
     await saw('6 seconds . done', 12000);
     assert.match(await chip(), /done/i);
     assert.equal(await page.textContent('#hold-v'), '0.0', 'nothing left to do');
-    await page.click('#startstop');
+    await page.click('#finish-full');            // a fresh set is full screen again
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
     assert.equal(await page.textContent('#r-move'), 'Elbow plank');
     assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held');
@@ -448,6 +453,8 @@ try {
   });
 
   await step('the canvas is the frame the camera gave, and the box on screen is that shape too', async () => {
+    await page.click('#page-btn');              // as a page: full screen, the box is the screen
+    await page.waitForFunction(() => !document.body.classList.contains('full'), null, { timeout: 3000 });
     const shot = await page.evaluate(() => {
       const c = document.getElementById('view'), v = document.getElementById('cam');
       const b = document.getElementById('stage').getBoundingClientRect();
@@ -533,6 +540,9 @@ try {
        frame, and the app says so in words rather than bending the picture */
     await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
     assert.match(await page.textContent('#orient'), /stand the phone up.*wide 1280\u00d7720/i);
+    /* and the wrong way round, the page stays a page, notice and all */
+    await wait(300);
+    assert.equal(await page.evaluate(() => document.body.classList.contains('full')), false, 'not full screen until the phone is turned');
   });
 
   await step('the knee raise counts reps rather than holding one position', async () => {
@@ -622,6 +632,13 @@ try {
     await page.click('#startstop');
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
     await page.waitForFunction(() => document.getElementById('v-hip').textContent !== '\u2014', null, { timeout: 10000 });
+    /* the phone is the way this one wants it and a set is running, so the picture
+       takes the whole screen: the stage is the viewport, and the finish button is
+       on it */
+    await page.waitForFunction(() => document.body.classList.contains('full'), null, { timeout: 5000 });
+    const box = await page.evaluate(() => { const r = document.getElementById('stage').getBoundingClientRect(); return [r.x, r.y, r.width, r.height, innerWidth, innerHeight]; });
+    assert.deepEqual(box.slice(0, 4), [0, 0, box[4], box[5]], 'the stage is the whole screen: ' + box.join(','));
+    assert.equal(await page.isVisible('#finish-full'), true, 'with the finish button on it');
     assert.ok(Math.abs(Number(await page.textContent('#v-hip')) - 130) <= 1, 'lying there reads the hip angle');
     assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the knee');
     /* feet too far out: said before the lift is asked for */
@@ -640,13 +657,14 @@ try {
     await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
     assert.equal(await page.textContent('#rep-v'), '0', 'the top is not the rep');
     /* SMOKE_SHOT=<dir> keeps a picture of the top of the rep, for looking at */
-    if (process.env.SMOKE_SHOT) await page.locator('#stage').screenshot({ path: (await import('node:path')).join(process.env.SMOKE_SHOT, 'bridge-top.png') });
+    if (process.env.SMOKE_SHOT) await page.screenshot({ path: (await import('node:path')).join(process.env.SMOKE_SHOT, 'bridge-top.png') });
     await set({ dip: 25, hipAng: 145 });
     await wait(1300);
     await set({ dip: 50, hipAng: 130 });
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
-    await page.click('#startstop');
+    await page.click('#finish-full');                // the button on the picture ends the set
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('full')), false, 'and the page is a page again');
     assert.equal(await page.textContent('#r-move'), 'Glute bridge');
     assert.equal(await page.textContent('#r-reps-v'), '1/2');
     /* back to the knee raise, which the reload step below expects to find */

@@ -109,8 +109,8 @@ test('the shin band is 85 to 110 at the heel, edges included, and says which way
   assert.ok(at(125).faults.feetClose > 0 && at(125).faults.feetFar == null, 'feet close');
   assert.match(M.cues.feetFar.text, /feet in/i);
   assert.match(M.cues.feetClose.text, /feet out/i);
-  /* those two are set-up faults, coached before the lift is asked for */
-  assert.deepEqual(M.setup, ['feetFar', 'feetClose']);
+  /* the feet, flat and placed, are set-up faults, coached before the lift is asked for */
+  assert.deepEqual(M.setup, ['heelsUp', 'toesUp', 'feetFar', 'feetClose']);
 });
 
 test('the top is a hip angle of at least 160, and the hip no more than three degrees above the knee', () => {
@@ -149,8 +149,8 @@ test('the position is all four together, with the hips actually lifted', () => {
   assert.equal(at({ hipAng: 140 }).atStart, true);
 });
 
-test('the order: feet first, then the feet staying down, then the hips — too high before not high enough', () => {
-  assert.deepEqual(M.faults, ['lost', 'feetFar', 'feetClose', 'raise', 'heelsUp', 'toesUp', 'hipHigh', 'hipLow']);
+test('the order: feet flat, then where they are, then the hips — too high before not high enough', () => {
+  assert.deepEqual(M.faults, ['lost', 'heelsUp', 'toesUp', 'feetFar', 'feetClose', 'raise', 'hipHigh', 'hipLow']);
   assert.equal(M.camera, 'wide');
   assert.equal(M.reps, true);
   assert.equal(M.defaults.holdTargetSec, 2);
@@ -208,6 +208,11 @@ test('feet placed wrong are corrected at the start, before the lift is asked for
   /* fixed, the lift is asked for */
   const fixed = play(c, REST, 3000, far.t);
   assert.ok(fixed.said.some((x) => x.id === 'raise'), texts(fixed));
+  /* and a foot off the floor at the start comes before where the feet are */
+  const both = new Core.Coach(M);
+  const lifted = play(both, Object.assign({}, REST, { shin: 70, foot: -16 }), 1500, 0);
+  const said = lifted.said.find((x) => x.id !== 'lost');
+  assert.equal(said && said.id, 'toesUp', 'toes down first: ' + texts(lifted));
 });
 
 test('at the top, the hips past the knees are said before the line being short, and the feet before both', () => {

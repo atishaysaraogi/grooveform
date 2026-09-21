@@ -616,15 +616,43 @@
     cancelAnimationFrame(raf); raf = 0;
   }
 
-  let framingNote = null;
+  let framingNote = null, framingMsg = null, pageMode = false;
   function showFraming() {
     const t = turned(quarterTurn());
-    const msg = Core.framing(move.camera, t.w, t.h);
+    const msg = framingMsg = Core.framing(move.camera, t.w, t.h);
+    applyFull();
     if (msg === framingNote) return;
     framingNote = msg;
     const e = $('orient');
     e.textContent = msg || ''; e.hidden = !msg;
     if (msg) voice.say(msg);
+  }
+  /* The right way round, with a set under way: the picture takes the screen. The
+     page can be asked for back — to reach the settings, the voice, the other
+     camera — and comes back to the picture on a tap, or at the next set. */
+  function applyFull() {
+    const can = inSet && running && !framingMsg;
+    setFull(can && !pageMode);
+    $('full-btn').hidden = !(can && pageMode);
+  }
+  function setFull(on) {
+    if (document.body.classList.contains('full') === !!on) return;
+    document.body.classList.toggle('full', !!on);
+    if (on) window.scrollTo(0, 0);
+  }
+  /* The frame changed shape while a set was running — the phone was turned the way
+     the exercise asked for. The canvas takes the new shape, and the film, which
+     cannot change shape, is started again from here: what was filmed before was a
+     phone being turned. */
+  let refilm = Promise.resolve();
+  function reshapeMidSet() {
+    const t = turned(quarterTurn());
+    if (!inSet || !t.w || !t.h || (canvas.width === t.w && canvas.height === t.h)) return;
+    refilm = refilm.then(async () => {
+      if (rec) { try { await rec.stop(); } catch { } }
+      sizeCanvas(true);
+      rec = inSet ? startRecording() : null;
+    });
   }
 
   function fire(cue) {
@@ -870,7 +898,7 @@
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
     fire({ id: 'start', text: move.start, t: 0 });
-    rec = startRecording(); inSet = true;
+    rec = startRecording(); inSet = true; pageMode = false;
     stayAwake();
     if (!raf) schedule();
     $('rec-note').textContent = rec ? '' : 'The camera has not given a picture yet, so there is nothing to film.';
@@ -879,7 +907,8 @@
   }
 
   async function endSet() {
-    inSet = false; letSleep();
+    inSet = false; letSleep(); applyFull();
+    await refilm;
     const blob = rec ? await rec.stop() : null;
     if (rec) rec.blob = blob;
     const s = coach.summary();
@@ -912,6 +941,9 @@
     begin();
   };
   $('startstop').onclick = () => (inSet ? endSet() : startSet());
+  $('finish-full').onclick = () => { if (inSet) endSet(); };
+  $('page-btn').onclick = () => { pageMode = true; applyFull(); };
+  $('full-btn').onclick = () => { pageMode = false; applyFull(); };
   $('move').onchange = async () => {
     move = Moves[$('move').value] || Moves.wallsit;
     buildSettings(); buildReads(); saveSettings();
@@ -964,8 +996,8 @@
   };
   /* turning the phone over changes the frame the camera gives, and the browser
      reports it here rather than through any event on the stream */
-  video.addEventListener('resize', () => { sizeCanvas(); framingNote = undefined; });
-  window.addEventListener('orientationchange', () => setTimeout(() => { sizeCanvas(); framingNote = undefined; }, 300));
+  video.addEventListener('resize', () => { sizeCanvas(); reshapeMidSet(); framingNote = undefined; });
+  window.addEventListener('orientationchange', () => setTimeout(() => { sizeCanvas(); reshapeMidSet(); framingNote = undefined; }, 300));
   window.addEventListener('pagehide', () => { unschedule(); stopCamera(); });
 
   loadSettings();

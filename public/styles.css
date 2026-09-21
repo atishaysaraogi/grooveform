@@ -51,6 +51,22 @@ h2 { font-size: 1rem; margin: 0 0 8px; }
 }
 .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
+/* ---- the whole screen, once the phone is the right way round ----
+   An exercise wants the phone one of two ways, on its side or stood up. While the
+   camera is giving the other shape the page stays a page, with the notice saying
+   which way to turn it; the moment the shape is right and a set is under way, the
+   picture takes the whole screen. The canvas is fitted inside the screen, never
+   cropped, because the whole body has to be in it to be coached. The one control
+   left on it is the button that ends the set. */
+body.full { overflow: hidden; }
+body.full .stage {
+  position: fixed; inset: 0; z-index: 50; border-radius: 0;
+  width: auto !important; max-width: none !important; max-height: none; aspect-ratio: auto !important;
+}
+.float { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); display: none; justify-content: center; gap: 8px; pointer-events: none; }
+body.full .float { display: flex; }
+.float .btn { pointer-events: auto; flex: 0 0 auto; min-width: 150px; opacity: .92; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+
 .veil {
   position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
   background: rgba(13,17,23,.9); backdrop-filter: blur(3px); padding: 20px;

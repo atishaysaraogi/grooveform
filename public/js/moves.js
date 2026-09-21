@@ -392,12 +392,12 @@
         set: [{ key: 'footFlat', label: 'Foot off the floor, at most', min: 2, max: 30 }] },
     ],
 
-    /* The chain: where the feet are decides what the hips can do, so the feet are
-       coached first, and at the start, before the lift is asked for. Then the feet
-       staying down, then the hips: too high before not high enough, because a hip
-       driven past the knees is the one that hurts. */
-    faults: ['lost', 'feetFar', 'feetClose', 'raise', 'heelsUp', 'toesUp', 'hipHigh', 'hipLow'],
-    setup: ['feetFar', 'feetClose'],
+    /* The chain: the feet flat on the floor, then where they are, then the hips.
+       The feet decide what the hips can do, so both foot checks come first and are
+       made at the start, before the lift is asked for. At the hip, too high before
+       not high enough, because a hip driven past the knees is the one that hurts. */
+    faults: ['lost', 'heelsUp', 'toesUp', 'feetFar', 'feetClose', 'raise', 'hipHigh', 'hipLow'],
+    setup: ['heelsUp', 'toesUp', 'feetFar', 'feetClose'],
     prompts: ['raise'],
     cues: {
       raise: { text: 'Lift your hips' },
