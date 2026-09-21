@@ -62,12 +62,11 @@ test('a move that counts reps says how many, how long each is, and what to call 
 
 /* ---------- the shape of the canvas, and what goes in it ---------- */
 
-test('a move that wants a wide picture gets one whichever way the phone is lying', () => {
-  assert.deepEqual(Core.canvasSize('wide', 1280, 720), { w: 1280, h: 720 }, 'already on its side');
-  assert.deepEqual(Core.canvasSize('wide', 720, 1280), { w: 1280, h: 720 }, 'and stood up, it is still made wide');
-  assert.deepEqual(Core.canvasSize('tall', 1280, 720), { w: 720, h: 1280 });
-  assert.deepEqual(Core.canvasSize(null, 720, 1280), { w: 720, h: 1280 }, 'asking for nothing takes what comes');
-  assert.equal(Core.canvasSize('wide', 0, 0), null, 'and a frame of no size decides nothing');
+test('nothing is forced into a shape the camera did not give', () => {
+  /* The canvas is the frame, the same way up. A move that wanted the other shape
+     says so in words; it does not get the picture bent into one, and it does not
+     get it parked in a letterbox either. */
+  assert.equal(Core.canvasSize, undefined, 'there is no such thing as a wanted canvas shape any more');
 });
 
 test('the picture is fitted into the canvas whole, and never stretched to it', () => {

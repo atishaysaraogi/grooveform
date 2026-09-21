@@ -388,14 +388,19 @@ try {
     assert.ok(said.length > 10, 'and there was plenty of it: ' + said.length);
   });
 
-  await step('the plank canvas is wide, and the picture fills it without being stretched', async () => {
+  await step('the canvas is the frame the camera gave, and the box on screen is that shape too', async () => {
     const shot = await page.evaluate(() => {
       const c = document.getElementById('view'), v = document.getElementById('cam');
-      return { cw: c.width, ch: c.height, vw: v.videoWidth, vh: v.videoHeight };
+      const b = document.getElementById('stage').getBoundingClientRect();
+      return { cw: c.width, ch: c.height, vw: v.videoWidth, vh: v.videoHeight, bw: b.width, bh: b.height };
     });
-    assert.ok(shot.cw > shot.ch, 'the canvas is on its side: ' + shot.cw + 'x' + shot.ch);
-    assert.ok(Math.abs(shot.cw / shot.ch - shot.vw / shot.vh) < 0.01,
-      `and it is the frame's own shape, so nothing is squashed: canvas ${shot.cw}x${shot.ch}, frame ${shot.vw}x${shot.vh}`);
+    assert.equal(shot.cw, shot.vw, 'the canvas is the frame, not a shape chosen for it');
+    assert.equal(shot.ch, shot.vh);
+    assert.ok(shot.cw > shot.ch, 'and the plank got a wide one: ' + shot.cw + 'x' + shot.ch);
+    /* the stage is given the same shape and a width to match the height it is
+       allowed, so the picture is the box rather than a letterbox inside it */
+    assert.ok(Math.abs(shot.bw / shot.bh - shot.cw / shot.ch) < 0.02,
+      `the box on screen is the picture's shape: ${Math.round(shot.bw)}x${Math.round(shot.bh)} for ${shot.cw}x${shot.ch}`);
     /* and on the way to the eye it is fitted into whatever box the page gives it,
        never stretched to fill one of a different shape */
     assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('view')).objectFit),
@@ -437,7 +442,7 @@ try {
        frame is turned before anything is read rather than after. */
     await wait(600);
     const turned = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
-    await page.selectOption('#cfg-rotate', 'auto');
+    await page.selectOption('#cfg-rotate', 'off');
     await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
     await wait(600);
     const straight = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
@@ -447,9 +452,29 @@ try {
       `while the hip's bend is the same either way: ${straight.hip}° and ${turned.hip}°`);
   });
 
+  await step('a standing exercise comes up portrait, and is shown that way up', async () => {
+    for (const [id, name] of [['wallsit', 'Wall sit'], ['kneeraise', 'Knee raise']]) {
+      await set({ move: id === 'kneeraise' ? 'kneeraise' : 'wallsit' });
+      await page.selectOption('#move', id);
+      await page.waitForFunction((n) => document.getElementById('veil-title').textContent === n, name, { timeout: 5000 });
+      await wait(700);
+      const shot = await page.evaluate(() => {
+        const c = document.getElementById('view'), v = document.getElementById('cam');
+        const b = document.getElementById('stage').getBoundingClientRect();
+        return { cw: c.width, ch: c.height, vw: v.videoWidth, vh: v.videoHeight, bw: b.width, bh: b.height,
+          orient: !document.getElementById('orient').hidden };
+      });
+      assert.ok(shot.vh > shot.vw, `${name}: the camera came up portrait, ${shot.vw}x${shot.vh}`);
+      assert.equal(shot.cw, shot.vw, `${name}: the canvas is that frame`);
+      assert.equal(shot.ch, shot.vh);
+      assert.ok(Math.abs(shot.bw / shot.bh - shot.cw / shot.ch) < 0.02,
+        `${name}: and so is the box on screen, ${Math.round(shot.bw)}x${Math.round(shot.bh)}`);
+      assert.equal(shot.orient, false, `${name}: with nothing to complain about`);
+    }
+  });
+
   await step('the knee raise counts reps rather than holding one position', async () => {
     await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 85 });
-    await page.selectOption('#move', 'kneeraise');
     await page.waitForSelector('#read-reps');
     assert.equal(await page.textContent('#band-knee'), '85\u201395', 'a right angle at the knee, five either way');
     assert.equal(await page.textContent('#band-foot'), '75\u201395', 'and the foot, taken at the heel');

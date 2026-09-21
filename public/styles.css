@@ -2,6 +2,7 @@
   --bg: #0d1117; --surface: #161b22; --line: #263040; --ink: #e8edf4; --muted: #8b97a8;
   --good: #35d07f; --warn: #ffb545; --bad: #ff5c6c; --accent: #5aa9ff;
   --r: 16px;
+  --stage-h: 62vh;      /* how much of the screen the picture may take, so the set button stays on it */
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -44,7 +45,9 @@ h2 { font-size: 1rem; margin: 0 0 8px; }
    rule as inside the canvas itself, for the same reason. */
 .stage {
   position: relative; border-radius: var(--r); overflow: hidden; background: #000;
-  aspect-ratio: 16/9; max-height: 62vh;
+  /* width is stated so the auto margins have something to centre: a grid item left
+     to size itself, with nothing in it but an aspect ratio, collapses to nothing */
+  width: 100%; aspect-ratio: 16/9; max-height: var(--stage-h); margin-inline: auto;
 }
 .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; }

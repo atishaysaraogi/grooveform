@@ -43,7 +43,7 @@
      bumped whenever a default moves, and a store written under an older one is
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
-  const SETTINGS_V = 6;
+  const SETTINGS_V = 7;
   const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate'];
   /* One input each, but the value belongs to the exercise: a plank is held for a
      minute and a knee raise for ten seconds a rep, and neither should inherit the
@@ -258,25 +258,15 @@
   }
 
   /* ---------- camera ---------- */
-  /* A phone stood on its end does not always hand over a frame stored that way up:
-     some browsers give the sensor's own landscape frame and leave the turning to
-     whoever displays it. Then a standing body arrives lying down, and every angle
-     taken against vertical or the floor is ninety degrees wrong. So the frame is
-     turned here, before anything is read from it.
-
-     `auto` turns it only when the shape the move asked for is not the shape that
-     came, and guesses the direction from the screen's own orientation. A guess can
-     be wrong, which shows up immediately as an upside-down picture, so the other
-     direction is one setting away. */
+  /* Almost every browser hands over the camera frame the way the phone is being
+     held, and a picture that is already upright must not be turned — doing it on a
+     hunch is how an app takes something correct and lays it on its side. So nothing
+     is turned unless it is asked for. The few devices that really do give the
+     sensor's own frame regardless of the phone get this setting, which also turns
+     the landmarks, because an angle read off a sideways frame is a sideways angle. */
   function quarterTurn() {
-    const w = video.videoWidth, h = video.videoHeight, want = move.camera;
     const pick = cfg().rotate;
-    if (pick === 'right') return 1;
-    if (pick === 'left') return 3;
-    if (pick !== 'auto' || !want || !w || !h) return 0;
-    if ((want === 'wide') === (w > h)) return 0;          // already the right way round
-    const a = (window.screen && screen.orientation && screen.orientation.angle) || 0;
-    return a === 90 ? 3 : 1;
+    return pick === 'right' ? 1 : pick === 'left' ? 3 : 0;
   }
   /* the frame's size once it has been turned */
   const turned = (q) => (q % 2
@@ -287,8 +277,13 @@
   async function startCamera() {
     stopCamera();
     camShape = move.camera || null;
-    const box = camShape === 'tall' ? { width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } }
-      : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } };
+    /* A resolution the right way up is worth asking for; an aspect ratio is not.
+       A phone that cannot make a 9:16 stream will satisfy an aspectRatio constraint
+       by cropping, or quietly drop it, and either way the frame that comes back is
+       not the one that was asked for. Width and height are a request the camera can
+       answer honestly, and whatever it answers is what gets used. */
+    const box = camShape === 'tall' ? { width: { ideal: 720 }, height: { ideal: 1280 } }
+      : { width: { ideal: 1280 }, height: { ideal: 720 } };
     const want = { video: Object.assign({ facingMode: camFacing }, box), audio: false };
     try { stream = await navigator.mediaDevices.getUserMedia(want); }
     catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
@@ -298,18 +293,24 @@
     sizeCanvas(true);
   }
 
-  /* The canvas is the recording, so its size is chosen once and then left alone
-     while a set is running: a file that changes shape halfway through is not one
-     most players will take. Between sets it follows the camera, which is how
-     turning the phone over takes effect. */
+  /* The canvas is the frame the camera gave, the same way up. Nothing is forced
+     into a shape it is not: a portrait frame makes a portrait canvas and fills it,
+     and a move that wanted the other shape says so in words rather than by leaving
+     the picture in a letterbox. The stage is given that shape and a width to match
+     the height it is allowed, so the picture on screen is the picture exactly.
+
+     The size is chosen once and then left alone while a set is running: a file that
+     changes shape halfway through is not one most players will take. Between sets it
+     follows the camera, which is how turning the phone over takes effect. */
   function sizeCanvas(force) {
     const t = turned(quarterTurn());
-    const want = Core.canvasSize(move.camera, t.w, t.h);
-    if (!want) return;
+    if (!t.w || !t.h) return;
     if (!force && rec && rec.mr && rec.mr.state === 'recording') return;
-    if (canvas.width === want.w && canvas.height === want.h) return;
-    canvas.width = want.w; canvas.height = want.h;
-    $('stage').style.aspectRatio = `${want.w}/${want.h}`;
+    if (canvas.width === t.w && canvas.height === t.h) return;
+    canvas.width = t.w; canvas.height = t.h;
+    const stage = $('stage');
+    stage.style.aspectRatio = `${t.w}/${t.h}`;
+    stage.style.maxWidth = `calc(var(--stage-h) * ${t.w} / ${t.h})`;
   }
   function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; } video.srcObject = null; }
 

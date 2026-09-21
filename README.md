@@ -29,15 +29,24 @@ of pixels are not worth reading. So the plank asks for the phone on its side,
 asks the camera for a wide frame, and if what arrives is taller than it is wide
 it says so — on screen and out loud — until it is turned.
 
-**Nothing is ever stretched.** The canvas takes the shape the move wants, and the
-camera frame is fitted inside it whole: all of the picture, none of it distorted,
-with bars at the edges when the two shapes differ. Filling the canvas by
-stretching would be worse than a border, because a squashed body reads squashed
-angles and every threshold here is an angle. The skeleton is drawn into that
-fitted rectangle rather than the whole canvas, and the angles are worked out in
-the camera frame's own proportions, so the numbers do not move when the shapes
-do. The box on screen is the canvas's shape, so what you watch and what
-downloads are the same picture.
+**The canvas is the frame.** Whatever the camera hands over is what the canvas
+becomes, the same size and the same way up, and the box on screen is given that
+shape too — so a phone held upright gives a portrait picture that fills its box,
+with no bars and nothing bent. A move that wanted the other shape says so in
+words; it does not get the picture forced into one.
+
+An exercise still asks the camera for a resolution the right way up, because that
+is a request a camera can answer honestly. It does not ask for an aspect ratio: a
+phone that cannot make a 9:16 stream will satisfy that constraint by cropping, or
+drop it quietly, and either way what comes back is not what was asked for. So the
+request is made and then the answer is used, rather than the answer being argued
+with.
+
+Nothing is ever stretched. Where a box and a picture do end up different shapes,
+the picture is fitted inside whole rather than filled to the edges, because a
+squashed body reads squashed angles and every threshold here is an angle. The
+skeleton is drawn into that fitted rectangle, and the angles are worked out in the
+frame's own proportions, so the numbers do not move when the shapes do.
 
 **Turning the phone mid-session.** Laying the phone down changes the frame the
 camera gives. Between sets the canvas follows it, which is how turning the phone
@@ -45,17 +54,19 @@ takes effect. During a set it does not: a recording that changes shape halfway
 through is not a file most players will take, so the canvas is held and the
 fitting absorbs the change instead.
 
-**When the phone does not turn the picture itself.** Some browsers hand over the
-frame the way the sensor sits rather than the way the phone is held, so a phone
-stood on its end still gives a landscape frame with the body lying down in it.
-Every angle taken against vertical or the floor is then a quarter turn wrong — a
-shin is only plumb with respect to gravity. So the frame is turned before
-anything is read from it, not after, and the landmarks are turned with it. On
-**Automatic** that happens only when the shape that arrived is not the shape the
-exercise asked for, with the direction guessed from the screen's own orientation.
-A guess can be wrong, which shows up at once as an upside-down picture, so the
-other quarter turn is one setting away. There is a test that reads a body from an
-upright frame and from a sideways one put right, and requires the same numbers.
+**When the phone does not turn the picture itself.** Nearly every browser hands
+over the frame the way the phone is being held, and a picture that is already
+upright must not be turned — doing it on a hunch is how an app takes something
+correct and lays it on its side. So nothing is turned unless it is asked for.
+
+The setting is there for the few devices that really do give the sensor's own
+frame whatever way the phone is held, which arrives as a body lying down. A
+quarter turn puts it back, and turns the landmarks with it, because every angle
+taken against vertical or the floor is a quarter turn wrong on a sideways frame:
+a shin is only plumb with respect to gravity. There is a test that reads a body
+from an upright frame and from a sideways one put right, and requires the same
+numbers — and checks the converse too, that an angle at a joint is the same
+either way, which is why the turn has to happen before the reading and not after.
 
 **Out loud.** Every cue is spoken as well as written. Three things make a
 browser swallow speech quietly, and all three are handled rather than left to
