@@ -203,57 +203,63 @@ for ten seconds a rep, and neither inherits the other's clock.
 
 ## The recording
 
-**How long it is.** Asking a canvas for a stream at thirty frames a second means
-asking for it to be sampled that often. The pose model takes long enough that the
-canvas is not repainted anything like that often, and what an encoder does with
-the shortfall is its own business: some repeat the last frame and the film comes
-out the right length, some write the frames they were given at the spacing they
-were promised, and a minute of wall sit plays back in twenty seconds. So the
-frames are asked for on a clock instead — thirty times a real second, whatever
-the model is doing — and the recording is written in one piece rather than a run
-of fragments glued together. One frame per tick of real time is a film the length
-of the thing it filmed, on any engine. The browser suite records a set with the
-model slowed to seven frames a second and checks the file's duration against the
-clock.
+**The page makes the film itself.** Thirty times a real second a frame is taken
+from the canvas, stamped with the clock's time, and handed to the browser's
+encoder (WebCodecs). When the set ends the encoded frames are written into an
+MP4 by `mp4.js`, a small writer of this app's own, with those times as their
+durations. Nothing in the file is timed by anything but the clock the frames
+were taken by, and the file carries its length in its header, so a player shows
+it and can seek in it before the download has finished. H.264 where the browser
+can encode it, which is every phone; VP9 in the same MP4 where it cannot.
+
+Why not the browser's own recorder: two real sets on a phone came back wrong
+from it. The first had 2415 frames in twelve seconds, most two milliseconds
+apart, then no picture for the last nine while the sound went on. The second,
+made after the canvas was only ever asked for a frame on a clock, had 155
+frames — distinct, at the camera's rate, four or five seconds of a set — that the
+recorder had stamped as if they fit in nine tenths of a second, with a sound track
+that stopped after one. The frames were right and the recorder's clock was not,
+and there is nothing a page can do about a recorder's clock except keep its own.
+
+**The film is silent.** The cues are written on the picture, and the cue log
+downloads beside it with timings. (Where a browser has no encoder to hand over,
+the old way still runs: its recorder takes a stream from the canvas, fed one
+frame per tick of the same clock, with the cue tones mixed in — a browser will
+not let a page capture its own speech. MP4 where it can write one, WebM where
+it cannot.)
 
 **How smooth it is.** The pose model takes long enough per frame that, run on
 the page's own thread, it stops the page for that long each time: the canvas is
 repainted only when the model lets it, seven or eight times a second on a phone,
-and a film taken at thirty a second carries each real frame three or four times
-over — which plays as a judder. So the model runs in a thread of its own. The
-page's thread only ever draws, at the camera's rate, over whichever pose the
-model last handed back. Where a browser cannot give the model its own thread, it
-runs on the page's as before.
-
-**Frames for the film come from a clock, and nowhere else.** Thirty a second,
-whatever the draw loop is doing. A recording of a real set showed what asking on
-every draw does on a phone: bursts of hundreds of frames a second, most of them
-two milliseconds apart, until the encoder gave up and the picture stopped at
-twelve seconds of a twenty-one second set while the sound went on. The browser
-suite counts how often the canvas is asked for a frame over two seconds of a set
-and requires the clock's rate and no more.
+and a film taken at thirty a second would carry each real frame three or four
+times over. So the model runs in a thread of its own; the page's thread only ever
+draws, at the camera's rate, over whichever pose the model last handed back. And
+a frame is only taken for the film when the canvas has been drawn since the last
+one: a page stalled by anything fires its late timer ticks in a bunch when it
+comes back, and the frame before a stall covers the stall rather than being put
+in the film twice.
 
 **The screen stays on.** A phone stood on the floor is not being touched, and a
 phone not being touched turns its screen off inside a minute; when it does, the
-page is hidden, nothing is drawn, and a recording keeps only its sound. A wake
-lock is held for as long as a set runs. If the page is hidden anyway and comes
-back with a set still running, it says so out loud, because that stretch of the
-set was not seen.
+page is hidden and nothing is drawn. A wake lock is held for as long as a set
+runs. If the page is hidden anyway and comes back with a set still running, it
+says so out loud, because that stretch of the set was not seen.
+
+**Stale copies.** Every script the page loads carries the current version in its
+URL, so a phone that cached the last release loads this one rather than running
+old code under a new page.
 
 The canvas **is** the recording: camera frame, skeleton, every angle drawn where
 it is measured, the lines each is judged against, the readings, the countdown and
 the cue banner are all painted onto it, so the file you download is the picture
-you watched. Cues are also mixed in as tones — a browser will not let a page
-capture its own speech, so the words are on the picture and a matching tone is
-on the audio track. MP4 where the browser can write one, WebM where it cannot.
-There is a plain-text cue log with timings beside it.
+you watched.
 
 ## Running it
 
 ```sh
 npm run dev        # http://localhost:8000 — localhost counts as secure, so the camera works
 npm test           # the measuring and the coaching, against bodies posed to a known angle
-npm run smoke      # a real browser: canvas, cues, MediaRecorder  (needs playwright)
+npm run smoke      # a real browser: canvas, cues, the encoder and the file  (needs playwright)
 ```
 
 No dependencies and no build step. `public/` is the site; the Pages workflow
@@ -316,8 +322,14 @@ the very number the setting says is allowed. "Five degrees either way" has to
 include five, and now does, on every move.
 
 `smoke.mjs` then drives a real browser with the pose model stood in for, through
-all three exercises, and ends by downloading the video and checking there are frames
-in it. It also watches what is handed to the speech engine: headless Chromium
+all three exercises. It counts the frames handed to the encoder over two seconds
+of a set (the clock's thirty a second, no more), records a set with the model
+slowed to a phone's pace and checks the file's length against the clock, and then
+reads the file back box by box: index before data, every frame's duration about
+what it was on screen for and none of them two milliseconds, the header's length
+the played length. `mp4.test.js` holds the writer to the same things in node,
+without a browser. The suite ends by downloading the video and checking there
+are frames in it (`SMOKE_KEEP=<dir>` keeps the file). It also watches what is handed to the speech engine: headless Chromium
 makes no sound, but a cue that never reaches the engine is silent on a real
 phone too, so the suite checks that every cue in the log was also spoken.
 

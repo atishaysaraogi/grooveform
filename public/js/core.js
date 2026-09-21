@@ -428,6 +428,9 @@
     }
   }
 
-  return { SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
+  /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
+  const VER = '2026-09-21c';
+
+  return { VER, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
     lineBend, fromDown, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

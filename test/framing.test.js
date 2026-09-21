@@ -161,3 +161,13 @@ test('a body that arrived on its side reads the same as one that arrived upright
   assert.ok(Math.abs(raw.shin - a.shin) > 45, 'unturned, the shin reads nothing like it: ' + raw.shin.toFixed(1));
   assert.ok(Math.abs(raw.knee - a.knee) < 1e-9, 'while the angle at the knee is a rotation apart from nobody');
 });
+
+test('every script the page loads carries the current version, so a phone that cached the last one loads this one', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const tags = [...html.matchAll(/<script src="js\/([a-z0-9-]+\.js)(\?v=([^"]*))?"/g)];
+  assert.ok(tags.length >= 4, 'the scripts are there: ' + tags.length);
+  for (const t of tags) assert.equal(t[3], Core.VER, t[1] + ' is stamped ' + t[3]);
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
+  assert.match(app, /pose-worker\.js\?v=' \+ Core\.VER/, 'and so is the worker');
+});

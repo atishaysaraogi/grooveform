@@ -36,7 +36,7 @@
   let running = false, raf = 0, lastTs = 0;
   let coach = null, smoother = null, state = null;
   let banner = null;                      // the cue painted on the frame, and when it appeared
-  let rec = null, inSet = false;          // MediaRecorder + its chunks, and whether a set is under way
+  let rec = null, inSet = false;          // the film under way (see startRecording), and whether a set is
   let audio = null;                       // WebAudio graph: speakers + a track for the recording
   let t0 = 0;
 
@@ -201,9 +201,11 @@
   if (voice.ok) { voice.ready(); speechSynthesis.onvoiceschanged = () => voice.ready(); }
 
   /* ---------- tones ----------
-     Spoken words cannot be captured into a MediaRecorder from the browser's
-     speech engine, so every cue also gets a short tone, and that tone is mixed
-     into the recording. The downloaded file is audible as well as readable. */
+     Every cue also gets a short tone: something to hear from across the room
+     that is not words, at the moment the words start. Where the film is made by
+     the browser's own recorder (see startRecording) the tones are mixed into it
+     too, since it cannot capture the browser's speech; the film the page writes
+     itself is silent, with the cues on the picture. */
   function initAudio() {
     if (audio) return audio;
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
@@ -257,7 +259,7 @@
       if (!window.Worker || !window.createImageBitmap) return res(false);
       note('Loading the pose engine…');
       let w = worker;
-      try { if (!w) w = new Worker('js/pose-worker.js', { type: 'module' }); }
+      try { if (!w) w = new Worker('js/pose-worker.js?v=' + Core.VER, { type: 'module' }); }
       catch { return res(false); }
       const giveUp = setTimeout(() => finish(false), 45000);
       const finish = (ok) => {
@@ -352,7 +354,7 @@
   function sizeCanvas(force) {
     const t = turned(quarterTurn());
     if (!t.w || !t.h) return;
-    if (!force && rec && rec.mr && rec.mr.state === 'recording') return;
+    if (!force && rec && rec.live) return;
     if (canvas.width === t.w && canvas.height === t.h) return;
     canvas.width = t.w; canvas.height = t.h;
     const stage = $('stage');
@@ -362,7 +364,9 @@
   function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; } video.srcObject = null; }
 
   /* ---------- drawing ---------- */
+  let painted = 0;                        // how many times the canvas has been drawn, so a film takes no frame twice
   function drawFrame(reading, verdict, out) {
+    painted++;
     const W = canvas.width, H = canvas.height, m = cfg().mirror;
     const q = quarterTurn(), t = turned(q);
     /* All of the picture, none of it stretched. A squashed body reads squashed
@@ -521,7 +525,7 @@
     const under = out.done ? (move.reps ? `${out.repTarget} reps` : `${target} s held`)
       : move.reps ? `rep ${Math.min(out.reps + 1, out.repTarget)} of ${out.repTarget}` : `left of ${target} s`;
     const ry = R(out.done ? 'DONE' : `${left}s`, under, out.done || out.holding ? C.good : C.ink, 1.5);
-    if (rec && rec.mr && rec.mr.state === 'recording') {
+    if (rec && rec.live) {
       line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
       ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
     }
@@ -659,69 +663,143 @@
   }
   const PHASE = { down: 'ready', up: 'holding', lower: 'lower slowly', done: 'set done' };
 
-  /* ---------- recording ---------- */
+  /* ---------- recording ----------
+     Two ways to make the film, tried in this order.
+
+     1. The page encodes the frames itself. Thirty times a real second a frame is
+        taken from the canvas, stamped with the clock's time and handed to a
+        WebCodecs encoder; at the end the encoded frames are written into an MP4
+        by mp4.js with those times as their durations. A recording of a real set
+        on a phone showed why: the browser's own recorder was given distinct frames
+        at thirty a second and wrote a hundred and thirty of them as two
+        milliseconds apart, with the sound track stopping after a second — the
+        frames were right and the recorder's clock was not. Here nothing but the
+        page's clock times anything, and the file carries its length in its
+        header, so a player shows it. It is silent: the cues are on the picture as
+        text.
+
+     2. Where the browser has no encoder to hand over, its MediaRecorder takes a
+        stream from the canvas, fed one frame per tick of the same clock, with the
+        cue tones mixed in. MP4 where it can write one, WebM where it cannot. */
+  const REC_FPS = 30;
+  /* H.264 first, for every player; the levels cover a phone's frame at thirty a
+     second and a larger one. VP9 in MP4 where H.264 cannot be encoded, which is
+     the open-source browser build the tests run in. */
+  const CODECS = [
+    ['avc1.42E01F', 'avc'], ['avc1.42E028', 'avc'], ['avc1.42E02A', 'avc'],
+    ['avc1.4D401F', 'avc'], ['avc1.4D4028', 'avc'], ['avc1.64001F', 'avc'], ['avc1.640028', 'avc'], ['avc1.64002A', 'avc'],
+    ['vp09.00.31.08', 'vp9'], ['vp09.00.40.08', 'vp9'], ['vp09.00.51.08', 'vp9'],
+  ];
+  async function pickCodec(w, h) {
+    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined' || !window.Mp4) return null;
+    for (const [codec, kind] of CODECS) {
+      const config = { codec, width: w, height: h, bitrate: 3.5e6, framerate: REC_FPS, latencyMode: 'realtime' };
+      if (kind === 'avc') config.avc = { format: 'avc' };
+      try { const r = await VideoEncoder.isConfigSupported(config); if (r && r.supported) return { config, kind, codec }; }
+      catch { }
+    }
+    return null;
+  }
   function pickMime() {
     const want = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
     for (const m of want) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
     return '';
   }
-  /* Asking a canvas for a stream at some frame rate means asking it to be sampled
-     that often. The pose model takes long enough that the canvas is not repainted
-     anything like that often, and what an encoder does with the shortfall is its
-     own business: some repeat the last frame and the film comes out the right
-     length, some write the frames they were given at the spacing they were
-     promised, and the set plays back at three times the speed it was done at.
+  const bytesOf = (d) => d instanceof ArrayBuffer ? new Uint8Array(d.slice(0)) : new Uint8Array(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength));
 
-     So the frames are asked for on a clock instead. `captureStream(0)` hands over
-     nothing until it is asked, and it is asked thirty times a real second, whatever
-     the model is doing. One frame per tick of real time is a film the length of the
-     thing it filmed, on any engine. Where a browser cannot be asked, the stream is
-     left to emit on its own as the canvas changes, which at least carries real
-     timestamps. */
-  const REC_FPS = 30;
-  let recTrack = null;
-  function captureFrame() {
-    if (!recTrack) return;
-    try { recTrack.requestFrame(); } catch { }
-  }
+  /* The film under way. `live` while frames are being taken — the canvas keeps its
+     shape for as long as that is so. `kind` is which of the two ways is making it,
+     once that is known. `stop()` gives the file, or null with `why` saying what
+     went wrong. */
   function startRecording() {
-    if (!window.MediaRecorder || !canvas.captureStream) return null;
-    try {
-      const a = initAudio();
-      let s = canvas.captureStream(0), pump = 0;
-      const vt = s.getVideoTracks()[0];
-      if (vt && typeof vt.requestFrame === 'function') {
-        /* One frame per tick of a real clock, and from nowhere else. A recording of
-           a real set showed what asking on every draw does on a phone: bursts of
-           hundreds of frames a second, most of them two milliseconds apart, until the
-           encoder gave up and the picture stopped at twelve seconds of a twenty-one
-           second set while the sound went on. Thirty a second is the film; the draw
-           loop's rate is its own business. */
-        recTrack = vt;
-        pump = setInterval(captureFrame, 1000 / REC_FPS);
-      } else {
-        s.getTracks().forEach((t) => { try { t.stop(); } catch { } });
-        s = canvas.captureStream();
-      }
-      if (a) for (const t of a.dest.stream.getAudioTracks()) s.addTrack(t);
-      const mimeType = pickMime();
-      const mr = new MediaRecorder(s, mimeType ? { mimeType, videoBitsPerSecond: 3.5e6 } : undefined);
-      const chunks = [];
-      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      /* no timeslice: one recording, written once, rather than a run of fragments
-         glued together and hoped over */
-      mr.start();
-      return { mr, chunks, pump, mimeType: mimeType || 'video/webm' };
-    } catch { return null; }
-  }
-  function stopRecording() {
-    return new Promise((res) => {
-      if (rec && rec.pump) { clearInterval(rec.pump); rec.pump = 0; }
+    const w = canvas.width, h = canvas.height;
+    if (!w || !h) return null;
+    const film = { live: true, kind: '', taken: 0, dropped: 0, blob: null, why: null, mime: '' };
+    const samples = []; let enc = null, desc = null, pick = null, start = 0, pump = 0, lastPainted = -1;
+    let mr = null, recTrack = null; const chunks = [];
+
+    /* one frame, now, at the clock's time — if the canvas has been drawn since the
+       last one. A page stalled by the model fires its late timer ticks in a bunch
+       when it comes back, and two ticks two milliseconds apart would put the same
+       picture in the film twice, stamped as two frames; the frame before a stall
+       covers the stall instead. The encoder is likewise left to catch up if it
+       has fallen behind: a frame not taken is time the frame before it covers. */
+    const snap = () => {
+      if (!enc || enc.state !== 'configured' || painted === lastPainted) return;
+      if (enc.encodeQueueSize > 3) { film.dropped++; return; }
+      lastPainted = painted;
+      let f = null;
+      try {
+        f = new VideoFrame(canvas, { timestamp: Math.round((performance.now() - start) * 1000) });
+        enc.encode(f, { keyFrame: film.taken % (REC_FPS * 2) === 0 });
+        film.taken++;
+      } catch (e) { film.why = film.why || e; }
+      finally { if (f) { try { f.close(); } catch { } } }
+    };
+    const viaRecorder = () => {
+      if (!window.MediaRecorder || !canvas.captureStream) { film.why = new Error('no encoder and no recorder in this browser'); return; }
+      try {
+        const a = initAudio();
+        let s = canvas.captureStream(0);
+        const vt = s.getVideoTracks()[0];
+        if (vt && typeof vt.requestFrame === 'function') {
+          recTrack = vt;
+          pump = setInterval(() => { try { recTrack.requestFrame(); } catch { } }, 1000 / REC_FPS);
+        } else {
+          s.getTracks().forEach((t) => { try { t.stop(); } catch { } });
+          s = canvas.captureStream();
+        }
+        if (a) for (const t of a.dest.stream.getAudioTracks()) s.addTrack(t);
+        const mimeType = pickMime();
+        mr = new MediaRecorder(s, mimeType ? { mimeType, videoBitsPerSecond: 3.5e6 } : undefined);
+        mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+        /* no timeslice: one recording, written once, rather than a run of fragments
+           glued together and hoped over */
+        mr.start();
+        film.kind = 'recorder'; film.mime = mimeType || 'video/webm';
+      } catch (e) { film.why = e; mr = null; }
+    };
+    const ready = (async () => {
+      try { pick = await pickCodec(w, h); } catch { pick = null; }
+      if (!film.live) return;
+      if (!pick) return viaRecorder();
+      enc = new VideoEncoder({
+        output: (chunk, meta) => {
+          const dc = meta && meta.decoderConfig;
+          if (dc && dc.description && !desc) desc = bytesOf(dc.description);
+          const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data);
+          samples.push({ data, ts: chunk.timestamp, key: chunk.type === 'key' });
+        },
+        error: (e) => { film.why = film.why || e; },
+      });
+      enc.configure(pick.config);
+      film.kind = 'codec'; film.mime = 'video/mp4'; start = performance.now();
+      pump = setInterval(snap, 1000 / REC_FPS);
+    })();
+
+    film.stop = async () => {
+      film.live = false;
+      if (pump) { clearInterval(pump); pump = 0; }
       recTrack = null;
-      if (!rec || !rec.mr || rec.mr.state === 'inactive') return res(null);
-      rec.mr.onstop = () => res(new Blob(rec.chunks, { type: rec.mimeType }));
-      try { rec.mr.stop(); } catch { res(null); }
-    });
+      await ready;
+      if (enc) {
+        try { if (enc.state === 'configured') await enc.flush(); } catch (e) { film.why = film.why || e; }
+        try { enc.close(); } catch { }
+        if (!samples.length) { film.why = film.why || new Error('the encoder gave nothing back'); return null; }
+        try {
+          const file = Mp4.write({ width: w, height: h, codec: pick.kind, description: desc, codecString: pick.codec, samples, created: new Date() });
+          return new Blob([file], { type: 'video/mp4' });
+        } catch (e) { film.why = e; return null; }
+      }
+      if (mr && mr.state !== 'inactive') {
+        return new Promise((res) => {
+          mr.onstop = () => res(new Blob(chunks, { type: film.mime }));
+          try { mr.stop(); } catch { res(null); }
+        });
+      }
+      return null;
+    };
+    return film;
   }
   function save(blob, name) {
     const url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -733,8 +811,8 @@
   /* ---------- keeping the screen on ----------
      A phone stood on the floor is not being touched, and a phone not being touched
      turns its screen off inside a minute. When it does, the page is hidden: nothing
-     is drawn, the camera may be paused, and a recording keeps only its sound. A set
-     ends by itself in silence. So a wake lock is held for as long as a set runs, and
+     is drawn, the camera may be paused, and the film has nothing to take. A set
+     ends by itself unseen. So a wake lock is held for as long as a set runs, and
      taken again if the page comes back into view with one still running. */
   let wake = null;
   async function stayAwake() {
@@ -784,15 +862,15 @@
     rec = startRecording(); inSet = true;
     stayAwake();
     if (!raf) schedule();
-    $('rec-note').textContent = rec ? '' : 'This browser will not record from a canvas, so there is no video to download.';
+    $('rec-note').textContent = rec ? '' : 'The camera has not given a picture yet, so there is nothing to film.';
     $('startstop').disabled = false;
     $('startstop').textContent = 'Finish the set'; $('startstop').className = 'btn stop';
   }
 
   async function endSet() {
     inSet = false; letSleep();
-    const blob = await stopRecording();
-    rec = rec ? Object.assign(rec, { blob }) : null;
+    const blob = rec ? await rec.stop() : null;
+    if (rec) rec.blob = blob;
     const s = coach.summary();
     $('r-move').textContent = move.name;
     $('r-hold').textContent = s.holdSec; $('r-best').textContent = s.bestSec;
@@ -803,7 +881,9 @@
     $('log').innerHTML = s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') ||
       '<li>Nothing needed saying.</li>';
     $('dl-video').disabled = !blob;
-    if (blob) $('rec-note').textContent = `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · the spoken cues are on it as tones and as text on the picture.`;
+    $('rec-note').textContent = blob
+      ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? 'silent, with the cues written on the picture' : 'the cues are on it as tones and as text on the picture'}.`
+      : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
     $('result').hidden = false;
     $('startstop').textContent = 'Start another set'; $('startstop').className = 'btn primary';
     voice.say(move.reps ? `Set done. ${s.reps} of ${s.repTarget} reps.`
@@ -885,6 +965,6 @@
     $('go').disabled = true;
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
-    get blob() { return rec && rec.blob; }, get cameraRequest() { return lastCameraRequest; },
+    get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
     get worker() { return !!worker; }, cfg, fire, drawFrame, paintUi };
 })();

@@ -11,6 +11,7 @@ import { createRequire } from 'node:module';
 import { server } from '../scripts/serve.js';
 /* through require, so a globally installed playwright on NODE_PATH is found — ESM ignores it */
 const { chromium } = createRequire(import.meta.url)('playwright');
+const Mp4 = createRequire(import.meta.url)('../public/js/mp4.js');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -260,22 +261,23 @@ try {
     assert.match(out.note, /MB/, 'with something in it: ' + out.note);
   });
 
-  await step('frames are taken for the film thirty times a second, and from nowhere else', async () => {
-    /* A real set on a phone came back with 2415 frames in twelve seconds, most of
-       them two milliseconds apart, and then no picture at all for the last nine
-       seconds while the sound went on: frames were being asked for on every draw as
-       well as on the clock, and the encoder gave up. So the number of times the
-       canvas is asked for a frame is counted here, over two seconds of a running
-       set, and has to be the clock's rate and no more. */
+  await step('the page encodes the film itself, thirty frames a second from the clock and from nowhere else', async () => {
+    /* Two real sets on a phone came back wrong from the browser's recorder: one
+       with 2415 frames in twelve seconds, most two milliseconds apart, then no
+       picture for the last nine; one with 155 distinct frames stamped as if they
+       fit in nine tenths of a second, and a sound track that stopped after one. So
+       the page takes the frames itself, on its own clock. Here the frames handed to
+       the encoder over two seconds of a running set are counted, and have to be the
+       clock's rate and no more. */
     await page.click('#startstop');                  // a set of its own, so a film is being made
-    await wait(600);
+    await wait(800);
+    assert.equal(await page.evaluate(() => window.__app.rec && window.__app.rec.kind), 'codec', 'this browser can encode, so the page does');
     const n = await page.evaluate(() => new Promise((res) => {
-      const proto = Object.getPrototypeOf(document.getElementById('view').captureStream(0).getVideoTracks()[0]);
-      const orig = proto.requestFrame; let count = 0;
-      proto.requestFrame = function () { count++; return orig.apply(this, arguments); };
-      setTimeout(() => { proto.requestFrame = orig; res(count); }, 2000);
+      const proto = VideoEncoder.prototype, orig = proto.encode; let count = 0;
+      proto.encode = function () { count++; return orig.apply(this, arguments); };
+      setTimeout(() => { proto.encode = orig; res(count); }, 2000);
     }));
-    assert.ok(n >= 40 && n <= 75, 'asked for ' + n + ' frames in two seconds; thirty a second is the film');
+    assert.ok(n >= 40 && n <= 75, 'handed over ' + n + ' frames in two seconds; thirty a second is the film');
     await page.click('#startstop');
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
   });
@@ -317,6 +319,24 @@ try {
     console.log('      ' + film.duration.toFixed(2) + 's recorded of a ' + wall.toFixed(2) + 's set');
     /* put the speed back, or every step after this one runs at a seventh of the pace */
     await page.evaluate(() => { window.__poseSource = window.__quick; });
+
+    /* and the file itself, frame by frame: every frame lasts about as long as it
+       was on screen, none is two milliseconds, the index is in front of the data,
+       and the header says how long it is */
+    const b64 = await page.evaluate(() => new Promise((res) => {
+      const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(window.__app.blob);
+    }));
+    const f = Mp4.inspect(new Uint8Array(Buffer.from(b64, 'base64')));
+    assert.ok(f.moovBeforeMdat, 'the index comes before the data: ' + f.top.join(' '));
+    assert.ok(/^(avc1|vp09)$/.test(f.codec), 'a codec players know: ' + f.codec);
+    assert.ok(f.samples >= wall * 5, f.samples + ' frames for ' + wall.toFixed(1) + ' s with the model this slow');
+    const shortest = Math.min(...f.durations), longest = Math.max(...f.durations);
+    assert.ok(shortest >= 0.015, 'no frame is stamped shorter than a sixtieth of a second: ' + shortest.toFixed(4));
+    assert.ok(longest <= 1.5, 'and none longer than a stall: ' + longest.toFixed(3));
+    assert.ok(Math.abs(f.duration - film.duration) < 0.05, 'the header length is the played length: ' + f.duration.toFixed(2));
+    assert.ok(f.keyframes.length >= 1 && f.keyframes[0] === 1, 'the first frame is a key frame');
+    assert.ok(f.sizes.every((n) => n > 0));
+    console.log('      ' + f.samples + ' frames, ' + f.codec + ', shortest ' + (shortest * 1000).toFixed(0) + ' ms, longest ' + (longest * 1000).toFixed(0) + ' ms');
   });
 
   await step('the downloaded file is a real video', async () => {
@@ -329,6 +349,8 @@ try {
     const { size } = await (await import('node:fs/promises')).stat(path);
     assert.ok(size > 20000, 'it has frames in it: ' + size + ' bytes');
     console.log('      ' + name + ', ' + (size / 1e6).toFixed(2) + ' MB');
+    /* SMOKE_KEEP=<dir> keeps the file, for looking at with other tools */
+    if (process.env.SMOKE_KEEP) await (await import('node:fs/promises')).copyFile(path, (await import('node:path')).join(process.env.SMOKE_KEEP, name));
   });
 
   await step('switching to the plank changes what is measured and what is shown', async () => {
