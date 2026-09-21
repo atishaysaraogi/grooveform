@@ -153,8 +153,9 @@
   function framing(want, w, h) {
     if (!want || !w || !h) return null;
     const wide = w > h;
-    if (want === 'wide' && !wide) return 'Turn the phone on its side \u2014 this one needs a wide frame';
-    if (want === 'tall' && wide) return 'Stand the phone up \u2014 this one needs a tall frame';
+    const got = `the camera is giving a ${wide ? 'wide' : 'tall'} ${w}\u00d7${h} picture`;
+    if (want === 'wide' && !wide) return `Turn the phone on its side \u2014 this one needs a wide picture, and ${got}`;
+    if (want === 'tall' && wide) return `Stand the phone up \u2014 this one needs a tall picture, and ${got}`;
     return null;
   }
 

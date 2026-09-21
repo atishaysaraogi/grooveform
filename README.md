@@ -35,12 +35,17 @@ shape too — so a phone held upright gives a portrait picture that fills its bo
 with no bars and nothing bent. A move that wanted the other shape says so in
 words; it does not get the picture forced into one.
 
-An exercise still asks the camera for a resolution the right way up, because that
-is a request a camera can answer honestly. It does not ask for an aspect ratio: a
-phone that cannot make a 9:16 stream will satisfy that constraint by cropping, or
-drop it quietly, and either way what comes back is not what was asked for. So the
-request is made and then the answer is used, rather than the answer being argued
-with.
+The camera is asked for the same thing whatever the exercise: its own landscape
+resolution, 1280×720, and nothing about which way up. Width and height in a
+camera request describe the *sensor's* frame, before the phone turns it to match
+how it is being held. A phone stood on its end turns a 1280×720 capture into a
+720×1280 picture by itself. Asked for 720×1280 instead, it obliges by cropping a
+tall strip out of the sensor — which it then turns, the same as always, into a
+wide band on screen with the head and feet gone. That was the landscape picture
+with the legs missing, and it was the request that caused it. So the shape is left
+to the phone, which knows which way up it is, and the exercise only says in words
+which way up it would like to be. When the picture is the wrong shape for the
+exercise, the notice says so and says what size the camera is actually giving.
 
 Nothing is ever stretched. Where a box and a picture do end up different shapes,
 the picture is fitted inside whole rather than filled to the edges, because a

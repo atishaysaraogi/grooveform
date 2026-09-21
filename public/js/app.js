@@ -274,17 +274,24 @@
     : { w: video.videoWidth || 1280, h: video.videoHeight || 720 });
 
   let camShape = null;              // the frame shape the running camera was asked for
+  /* The camera is asked for the same thing whatever the exercise: the sensor's own
+     landscape resolution, and nothing about which way up.
+
+     Width and height in a camera request describe the SENSOR's frame, before the
+     phone turns it to match how it is being held. A phone stood on its end turns a
+     1280×720 capture into a 720×1280 picture by itself. Ask it for 720×1280 instead
+     and it obliges by cropping a tall strip out of the sensor — which it then turns,
+     the same as always, into a wide band on screen with the head and feet gone.
+     That is the landscape picture with the legs missing, and it was this request
+     that caused it. So the shape is left to the phone: it knows which way up it is,
+     and the exercise only says in words which way up it would like to be. */
+  const CAMERA = { width: { ideal: 1280 }, height: { ideal: 720 } };
+  let lastCameraRequest = null;
   async function startCamera() {
     stopCamera();
     camShape = move.camera || null;
-    /* A resolution the right way up is worth asking for; an aspect ratio is not.
-       A phone that cannot make a 9:16 stream will satisfy an aspectRatio constraint
-       by cropping, or quietly drop it, and either way the frame that comes back is
-       not the one that was asked for. Width and height are a request the camera can
-       answer honestly, and whatever it answers is what gets used. */
-    const box = camShape === 'tall' ? { width: { ideal: 720 }, height: { ideal: 1280 } }
-      : { width: { ideal: 1280 }, height: { ideal: 720 } };
-    const want = { video: Object.assign({ facingMode: camFacing }, box), audio: false };
+    const want = { video: Object.assign({ facingMode: camFacing }, CAMERA), audio: false };
+    lastCameraRequest = want.video;
     try { stream = await navigator.mediaDevices.getUserMedia(want); }
     catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
     video.srcObject = stream;
@@ -729,13 +736,9 @@
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; state = null; t0 = performance.now();
     syncBands();
-    /* a move that wants a different shape of frame gets the camera asked again */
-    if (running && (move.camera || null) !== camShape) {
-      unschedule();
-      try { await startCamera(); } catch { }
-      framingNote = undefined;
-      if (running) schedule();
-    } else sizeCanvas(true);
+    camShape = move.camera || null;
+    framingNote = undefined;
+    sizeCanvas(true);
   };
   $('flip').onclick = async () => {
     camFacing = camFacing === 'user' ? 'environment' : 'user';
@@ -787,5 +790,5 @@
     $('go').disabled = true;
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
-    get blob() { return rec && rec.blob; }, cfg, fire, drawFrame, paintUi };
+    get blob() { return rec && rec.blob; }, get cameraRequest() { return lastCameraRequest; }, cfg, fire, drawFrame, paintUi };
 })();

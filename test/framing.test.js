@@ -5,11 +5,15 @@ const assert = require('node:assert/strict');
 const Core = require('../public/js/core.js');
 const Moves = require('../public/js/moves.js');
 
-test('a move that wants a wide frame says so when it has a tall one', () => {
+test('a move that wants a wide frame says so when it has a tall one, and says what it has', () => {
   assert.equal(Core.framing('wide', 1280, 720), null, 'a landscape frame is what it asked for');
   assert.equal(Core.framing('wide', 1920, 1080), null);
   assert.match(Core.framing('wide', 720, 1280), /turn the phone on its side/i);
-  assert.match(Core.framing('wide', 480, 640), /wide frame/i);
+  assert.match(Core.framing('wide', 480, 640), /wide picture/i);
+  /* the size the camera is actually giving is in the words, so that a report of
+     "still wrong" carries the one fact that decides what is wrong */
+  assert.match(Core.framing('wide', 480, 640), /tall 480×640/);
+  assert.match(Core.framing('tall', 1280, 720), /wide 1280×720/);
 });
 
 test('and the other way round, for a move that wants a tall one', () => {

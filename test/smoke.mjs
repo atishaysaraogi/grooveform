@@ -452,25 +452,28 @@ try {
       `while the hip's bend is the same either way: ${straight.hip}° and ${turned.hip}°`);
   });
 
-  await step('a standing exercise comes up portrait, and is shown that way up', async () => {
-    for (const [id, name] of [['wallsit', 'Wall sit'], ['kneeraise', 'Knee raise']]) {
-      await set({ move: id === 'kneeraise' ? 'kneeraise' : 'wallsit' });
+  await step('the camera is asked for its own landscape resolution, the same for every exercise', async () => {
+    /* Width and height in a camera request describe the sensor's frame before the
+       phone turns it. A phone stood on its end turns a 1280×720 capture into a tall
+       picture by itself; asked for 720×1280 it crops a strip out of the sensor and
+       turns that instead, which lands as a wide band with the legs gone. So the
+       request must be the sensor's own shape whatever the exercise wants. */
+    for (const id of ['wallsit', 'kneeraise', 'plank']) {
+      await set({ move: id });
       await page.selectOption('#move', id);
-      await page.waitForFunction((n) => document.getElementById('veil-title').textContent === n, name, { timeout: 5000 });
-      await wait(700);
-      const shot = await page.evaluate(() => {
-        const c = document.getElementById('view'), v = document.getElementById('cam');
-        const b = document.getElementById('stage').getBoundingClientRect();
-        return { cw: c.width, ch: c.height, vw: v.videoWidth, vh: v.videoHeight, bw: b.width, bh: b.height,
-          orient: !document.getElementById('orient').hidden };
-      });
-      assert.ok(shot.vh > shot.vw, `${name}: the camera came up portrait, ${shot.vw}x${shot.vh}`);
-      assert.equal(shot.cw, shot.vw, `${name}: the canvas is that frame`);
-      assert.equal(shot.ch, shot.vh);
-      assert.ok(Math.abs(shot.bw / shot.bh - shot.cw / shot.ch) < 0.02,
-        `${name}: and so is the box on screen, ${Math.round(shot.bw)}x${Math.round(shot.bh)}`);
-      assert.equal(shot.orient, false, `${name}: with nothing to complain about`);
+      await wait(400);
+      const req = await page.evaluate(() => window.__app.cameraRequest);
+      assert.equal(req.width.ideal, 1280, id + ' asks for the sensor\'s width');
+      assert.equal(req.height.ideal, 720, id + ' and its height');
+      assert.equal(req.aspectRatio, undefined, id + ' and dictates no aspect ratio');
     }
+    await set({ move: 'kneeraise' });
+    await page.selectOption('#move', 'kneeraise');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
+    /* the stand-in camera here cannot turn itself, so a standing exercise gets a wide
+       frame, and the app says so in words rather than bending the picture */
+    await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
+    assert.match(await page.textContent('#orient'), /stand the phone up.*wide 1280\u00d7720/i);
   });
 
   await step('the knee raise counts reps rather than holding one position', async () => {
