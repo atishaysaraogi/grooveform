@@ -213,12 +213,12 @@
     holdLabel: 'Hold each rep for',
 
     defaults: {
-      kneeMin: 85, kneeMax: 95,     // the angle at the knee, hip to ankle: a right angle, 5° either way
+      kneeMin: 80, kneeMax: 100,    // the angle at the knee, hip to ankle: a right angle, 10° either way
       /* The foot, taken at the heel between the toe and the knee — the foot's own
          line against the shin's. The heel rather than the ankle because the heel is
          where the foot meets the floor and is the end of the segment being measured.
          The band is not centred on a right angle and is not meant to be. */
-      footMin: 75, footMax: 95,
+      footMin: 60, footMax: 100,
       /* Where the thigh has to get to before this counts as a raise, and where it
          has to come back to before the rep is finished. These are not coached and
          are not judged — they are how the phases are told apart, and they are wide

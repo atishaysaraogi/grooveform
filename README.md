@@ -104,8 +104,8 @@ instead of the page just being silent.
 
 | | |
 |---|---|
-| **Knee** | the angle at the raised knee, between hip and ankle. A right angle, **85–95°**. |
-| **Foot** | the angle at that heel, between the toe and the knee — the foot's own line against the shin's. Allowed **75–95°**. Past 95° the foot is pointing away and the toes come up; under 75° they are pulled too far. |
+| **Knee** | the angle at the raised knee, between hip and ankle. A right angle, **80–100°**. |
+| **Foot** | the angle at that heel, between the toe and the knee — the foot's own line against the shin's. Allowed **60–100°**. Past 100° the foot is pointing away and the toes come up; under 60° they are pulled too far. |
 
 Ten seconds held, lowered slowly, and the rep counts when you are back to
 standing. Ten reps.
@@ -216,6 +216,16 @@ of the thing it filmed, on any engine. The browser suite records a set with the
 model slowed to seven frames a second and checks the file's duration against the
 clock.
 
+**How smooth it is.** The pose model takes long enough per frame that, run on
+the page's own thread, it stops the page for that long each time: the canvas is
+repainted only when the model lets it, seven or eight times a second on a phone,
+and a film taken at thirty a second carries each real frame three or four times
+over — which plays as a judder. So the model runs in a thread of its own. The
+page's thread only ever draws, at the camera's rate, over whichever pose the
+model last handed back, and a frame is taken for the film each time the canvas is
+drawn, with a clock behind it that only steps in if drawing has stalled. Where a
+browser cannot give the model its own thread, it runs on the page's as before.
+
 The canvas **is** the recording: camera frame, skeleton, every angle drawn where
 it is measured, the lines each is judged against, the readings, the countdown and
 the cue banner are all painted onto it, so the file you download is the picture
@@ -242,6 +252,7 @@ public/
   js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
   js/moves.js      the exercises: what each measures, allows and says, and in what order
   js/app.js        camera, drawing, voice, recording
+  js/pose-worker.js the pose model, in a thread of its own so the page only draws
 test/
   wallsit.test.js   the wall sit, against synthetic bodies
   plank.test.js     the plank, likewise

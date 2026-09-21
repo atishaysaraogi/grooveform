@@ -103,14 +103,14 @@ test('the leg being measured is the one that is raised, whichever side it is', (
   assert.ok(Math.abs(still.thigh) < 0.01);
 });
 
-test('a right angle at the knee, five degrees either way', () => {
-  /* the edge of the band is inside it: five degrees allowed has to allow five */
+test('a right angle at the knee, ten degrees either way', () => {
+  /* the edge of the band is inside it: ten degrees allowed has to allow ten */
   const g = (o) => judge(readOf(Object.assign({ thigh: 85 }, o))).good;
   assert.equal(g({ knee: 90 }).knee, true, 'a right angle');
-  assert.equal(g({ knee: 85 }).knee, true, 'and the edges of the five allowed');
-  assert.equal(g({ knee: 95 }).knee, true);
-  assert.equal(g({ knee: 84 }).knee, false);
-  assert.equal(g({ knee: 96 }).knee, false);
+  assert.equal(g({ knee: 80 }).knee, true, 'and the edges of the ten allowed');
+  assert.equal(g({ knee: 100 }).knee, true);
+  assert.equal(g({ knee: 79 }).knee, false);
+  assert.equal(g({ knee: 101 }).knee, false);
 });
 
 test('the foot cues say which way the foot is wrong, and do not promise a right angle', () => {
@@ -124,13 +124,13 @@ test('the foot cues say which way the foot is wrong, and do not promise a right 
   assert.match(M.cues.toesUp.deep, /too far up/i);
 });
 
-test('the foot is taken at the heel, between the toe and the knee, and allowed 75 to 95', () => {
+test('the foot is taken at the heel, between the toe and the knee, and allowed 60 to 100', () => {
   const g = (foot) => judge(readOf({ thigh: 85, knee: 90, foot })).good.foot;
-  assert.equal(g(74), false);
-  assert.equal(g(75), true, 'the low edge is inside');
+  assert.equal(g(59), false);
+  assert.equal(g(60), true, 'the low edge is inside');
   assert.equal(g(85), true);
-  assert.equal(g(95), true, 'and so is the high one');
-  assert.equal(g(96), false);
+  assert.equal(g(100), true, 'and so is the high one');
+  assert.equal(g(101), false);
   assert.equal(g(140), false, 'a foot well past it');
   /* it is the angle at the HEEL, not at the ankle: the two are different numbers on
      a real body, and the one being judged is the one asked for */
@@ -142,16 +142,16 @@ test('the foot is taken at the heel, between the toe and the knee, and allowed 7
 
 test('a knee that is too straight is told to bend, and toes that point are told to come up', () => {
   const f = (o) => judge(readOf(Object.assign({ thigh: 85, knee: 90, foot: 85 }, o))).faults;
-  assert.ok(f({ knee: 120 }).kneeOpen > 0, 'too open');
-  assert.ok(f({ knee: 70 }).kneeShut > 0, 'too shut');
+  assert.ok(f({ knee: 125 }).kneeOpen > 0, 'too open');
+  assert.ok(f({ knee: 65 }).kneeShut > 0, 'too shut');
   assert.ok(f({ foot: 130 }).toesDown > 0, 'toes pointed away');
-  assert.ok(f({ foot: 55 }).toesUp > 0, 'toes pulled too far up');
+  assert.ok(f({ foot: 45 }).toesUp > 0, 'toes pulled too far up');
   assert.deepEqual(f({}), {}, 'and nothing at all when it is right');
 });
 
 test('the position is the two right angles together, with the knee actually up', () => {
   assert.equal(judge(readOf({ thigh: 85, knee: 90, foot: 85 })).inPosition, true);
-  assert.equal(judge(readOf({ thigh: 85, knee: 110, foot: 85 })).inPosition, false, 'knee out');
+  assert.equal(judge(readOf({ thigh: 85, knee: 115, foot: 85 })).inPosition, false, 'knee out');
   assert.equal(judge(readOf({ thigh: 85, knee: 90, foot: 130 })).inPosition, false, 'foot out');
   /* the two right angles can be made with the heel tucked up behind, which is not a
      knee raise — so the thigh has to have come up for any of it to count */
@@ -252,9 +252,9 @@ test('the knee is corrected before the foot, being what the foot hangs off', () 
 });
 
 test('the bands are settings, not rules baked into the code', () => {
-  const loose = { kneeMin: 70, kneeMax: 110 };
-  assert.equal(judge(readOf({ thigh: 85, knee: 100 }), loose).good.knee, true, 'widened, 100 is in');
-  assert.equal(judge(readOf({ thigh: 85, knee: 100 })).good.knee, false, 'and the default band is unchanged');
+  const loose = { kneeMin: 70, kneeMax: 120 };
+  assert.equal(judge(readOf({ thigh: 85, knee: 110 }), loose).good.knee, true, 'widened, 110 is in');
+  assert.equal(judge(readOf({ thigh: 85, knee: 110 })).good.knee, false, 'and the default band is unchanged');
   /* how far the thigh must come up is a setting too, and is not marked either way */
   assert.equal(judge(readOf({ thigh: 30, knee: 90, foot: 85 })).raised, false);
   assert.equal(judge(readOf({ thigh: 30, knee: 90, foot: 85 }), { raiseAt: 25 }).raised, true);

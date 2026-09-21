@@ -29,6 +29,9 @@
 
   let move = Moves.wallsit;
   let vision = null, landmarker = null, loadedModel = null;
+  /* the model in its own thread: the frame most recently read, and whether one is
+     out being read now */
+  let worker = null, latestLm = null, inFlight = false, seq = 0;
   let stream = null, camFacing = 'user';   // the front camera: it is the one you can see while you set the phone down
   let running = false, raf = 0, lastTs = 0;
   let coach = null, smoother = null, state = null;
@@ -239,8 +242,45 @@
   /* every call shares one tone, so `call30` and `call5` do not each need an entry */
   const toneFor = (id) => TONES[id] || (/^call\d/.test(id) ? TONES.call : TONES.lost);
 
-  /* ---------- the pose model ---------- */
+  /* ---------- the pose model ----------
+     In its own thread wherever the browser allows it, so that the page's thread
+     only ever draws. On the page's own thread the model stops everything for as
+     long as a frame takes to read, the canvas is repainted only when it is let,
+     and the recording carries each real frame three or four times over. */
   async function loadModel(want, note) {
+    if (loadedModel === want && (worker || landmarker)) return;
+    if (await loadInWorker(want, note)) return;
+    await loadInline(want, note);
+  }
+  function loadInWorker(want, note) {
+    return new Promise((res) => {
+      if (!window.Worker || !window.createImageBitmap) return res(false);
+      note('Loading the pose engine…');
+      let w = worker;
+      try { if (!w) w = new Worker('js/pose-worker.js', { type: 'module' }); }
+      catch { return res(false); }
+      const giveUp = setTimeout(() => finish(false), 45000);
+      const finish = (ok) => {
+        clearTimeout(giveUp);
+        if (ok) { worker = w; loadedModel = want; note(''); w.onmessage = onPose; }
+        else { try { w.terminate(); } catch { } if (worker === w) worker = null; }
+        res(ok);
+      };
+      w.onmessage = (e) => {
+        const m = e.data || {};
+        if (m.type === 'ready') finish(true);
+        else if (m.type === 'error') finish(false);
+      };
+      w.onerror = () => finish(false);
+      note(`Loading the ${want} pose model…`);
+      w.postMessage({ type: 'load', model: want });
+    });
+  }
+  function onPose(e) {
+    const m = e.data || {};
+    if (m.type === 'pose') { latestLm = m.lm; inFlight = false; }
+  }
+  async function loadInline(want, note) {
     if (landmarker && loadedModel === want) return;
     note('Loading the pose engine…');
     if (!vision) vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/vision_bundle.mjs`);
@@ -513,7 +553,20 @@
        check the drawing, the voice and the recorder without a person and a wall.
        Unset in normal use. */
     if (window.__poseSource) lm = window.__poseSource(now - t0);
-    else {
+    else if (worker) {
+      if (video.readyState < 2) return;
+      /* hand the model this frame if it is free, and draw with what it last said:
+         the picture is painted at the camera's rate whatever the model is doing */
+      if (!inFlight) {
+        inFlight = true;
+        const ts = Math.max(now, lastTs + 1); lastTs = ts;
+        const n = ++seq;
+        createImageBitmap(video)
+          .then((bmp) => worker.postMessage({ type: 'frame', bitmap: bmp, ts, seq: n }, [bmp]))
+          .catch(() => { inFlight = false; });
+      }
+      lm = latestLm;
+    } else {
       if (!landmarker || video.readyState < 2) return;
       const ts = Math.max(now, lastTs + 1); lastTs = ts;
       try { const res = landmarker.detectForVideo(video, ts); lm = res.landmarks && res.landmarks[0] ? res.landmarks[0] : null; }
@@ -529,6 +582,7 @@
     const out = coach.step(reading, now - t0);
     if (out.cue) fire(out.cue);
     drawFrame(reading, out.verdict, out);
+    captureFrame();
     paintUi(reading, out.verdict, out);
     state = out;
   }
@@ -619,6 +673,12 @@
      left to emit on its own as the canvas changes, which at least carries real
      timestamps. */
   const REC_FPS = 30;
+  let recTrack = null, lastCapture = 0;
+  function captureFrame() {
+    if (!recTrack) return;
+    lastCapture = performance.now();
+    try { recTrack.requestFrame(); } catch { }
+  }
   function startRecording() {
     if (!window.MediaRecorder || !canvas.captureStream) return null;
     try {
@@ -626,7 +686,12 @@
       let s = canvas.captureStream(0), pump = 0;
       const vt = s.getVideoTracks()[0];
       if (vt && typeof vt.requestFrame === 'function') {
-        pump = setInterval(() => { try { vt.requestFrame(); } catch { } }, 1000 / REC_FPS);
+        /* a frame is taken each time the canvas is drawn, so the film is in step with
+           the picture; the clock behind it only steps in when drawing has stalled */
+        recTrack = vt; lastCapture = 0;
+        pump = setInterval(() => {
+          if (performance.now() - lastCapture > 1000 / REC_FPS * 2) captureFrame();
+        }, 1000 / REC_FPS);
       } else {
         s.getTracks().forEach((t) => { try { t.stop(); } catch { } });
         s = canvas.captureStream();
@@ -645,6 +710,7 @@
   function stopRecording() {
     return new Promise((res) => {
       if (rec && rec.pump) { clearInterval(rec.pump); rec.pump = 0; }
+      recTrack = null;
       if (!rec || !rec.mr || rec.mr.state === 'inactive') return res(null);
       rec.mr.onstop = () => res(new Blob(rec.chunks, { type: rec.mimeType }));
       try { rec.mr.stop(); } catch { res(null); }
@@ -757,10 +823,9 @@
   $('cfg-rotate').onchange = () => { saveSettings(); sizeCanvas(true); framingNote = undefined; };
   $('cfg-model').onchange = async () => {
     saveSettings();
-    if (!landmarker) return;
-    unschedule(); $('state').textContent = 'Swapping model…';
+    if (!landmarker && !worker) return;
+    $('state').textContent = 'Swapping model…';
     try { await loadModel(cfg().model, () => { }); } catch { }
-    if (running) schedule();
   };
   $('dl-video').onclick = () => {
     if (!rec || !rec.blob) return;
@@ -790,5 +855,6 @@
     $('go').disabled = true;
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
-    get blob() { return rec && rec.blob; }, get cameraRequest() { return lastCameraRequest; }, cfg, fire, drawFrame, paintUi };
+    get blob() { return rec && rec.blob; }, get cameraRequest() { return lastCameraRequest; },
+    get worker() { return !!worker; }, cfg, fire, drawFrame, paintUi };
 })();

@@ -479,8 +479,8 @@ try {
   await step('the knee raise counts reps rather than holding one position', async () => {
     await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 85 });
     await page.waitForSelector('#read-reps');
-    assert.equal(await page.textContent('#band-knee'), '85\u201395', 'a right angle at the knee, five either way');
-    assert.equal(await page.textContent('#band-foot'), '75\u201395', 'and the foot, taken at the heel');
+    assert.equal(await page.textContent('#band-knee'), '80\u2013100', 'a right angle at the knee, ten either way');
+    assert.equal(await page.textContent('#band-foot'), '60\u2013100', 'and the foot, taken at the heel');
     /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
        plank was just using */
     assert.equal(await page.inputValue('#cfg-target'), '10');
@@ -554,6 +554,22 @@ try {
     await page.selectOption('#move', 'plank');
     await page.waitForSelector('#read-line');
     assert.equal(await page.textContent('#band-line'), '±2', 'each exercise keeps its own settings');
+  });
+
+  await step('the pose model has a thread of its own, and it answers', async () => {
+    /* the model itself is never loaded here — the stand-in stands in for it — but the
+       worker that would run it has to be a module the browser can start, and it has
+       to answer, or a phone falls back to reading frames on the page's own thread
+       and the recording judders again */
+    const reply = await page.evaluate(() => new Promise((res) => {
+      let w;
+      try { w = new Worker('js/pose-worker.js', { type: 'module' }); } catch (e) { return res('could not start: ' + e.message); }
+      const t = setTimeout(() => res('no answer'), 8000);
+      w.onmessage = (e) => { clearTimeout(t); w.terminate(); res(e.data && e.data.type); };
+      w.onerror = (e) => { clearTimeout(t); res('error: ' + (e.message || 'unknown')); };
+      w.postMessage({ type: 'ping' });
+    }));
+    assert.equal(reply, 'pong', reply);
   });
 
   await step('no JS errors along the way', () => {
