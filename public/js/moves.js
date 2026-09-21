@@ -218,7 +218,7 @@
          line against the shin's. The heel rather than the ankle because the heel is
          where the foot meets the floor and is the end of the segment being measured.
          The band is not centred on a right angle and is not meant to be. */
-      footMin: 85, footMax: 110,
+      footMin: 75, footMax: 95,
       /* Where the thigh has to get to before this counts as a raise, and where it
          has to come back to before the rep is finished. These are not coached and
          are not judged — they are how the phases are told apart, and they are wide
@@ -246,8 +246,8 @@
               { key: 'kneeMax', label: 'Knee angle, highest', min: 45, max: 180 }] },
       { key: 'foot', of: 'foot', label: 'toe, heel, knee', hud: 'FOOT', note: 'target',
         lo: 'footMin', hi: 'footMax', scale: [40, 170],
-        set: [{ key: 'footMin', label: 'Foot angle, lowest', min: 40, max: 165 },
-              { key: 'footMax', label: 'Foot angle, highest', min: 45, max: 170 }] },
+        set: [{ key: 'footMin', label: 'Foot angle, lowest', min: 30, max: 165 },
+              { key: 'footMax', label: 'Foot angle, highest', min: 35, max: 170 }] },
     ],
 
     faults: ['lost', 'raise', 'kneeOpen', 'kneeShut', 'toesDown', 'toesUp'],

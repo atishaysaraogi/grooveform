@@ -260,6 +260,45 @@ try {
     assert.match(out.note, /MB/, 'with something in it: ' + out.note);
   });
 
+  await step('the recording is as long as the set was, even when the model is slow', async () => {
+    /* The failure this guards against: a canvas asked for thirty frames a second
+       that is only repainted seven times a second, and an encoder that writes the
+       seven at the spacing of thirty. The set then plays back four times too fast.
+       So the frames are asked for on a real clock, and this checks the film is the
+       length of the thing it filmed with the model made as slow as a phone's. */
+    await page.evaluate(() => {
+      const src = window.__poseSource;
+      window.__quick = src;                          // kept so the slowness can be undone
+      window.__poseSource = function (t) {
+        const until = performance.now() + 120;      // about seven frames a second
+        while (performance.now() < until) { }
+        return src(t);
+      };
+    });
+    await page.click('#startstop');                  // a fresh set, timed from here
+    const t0 = Date.now();
+    await wait(6000);
+    await page.click('#startstop');
+    const wall = (Date.now() - t0) / 1000;
+    await page.waitForSelector('#result:not([hidden])', { timeout: 15000 });
+    const film = await page.evaluate(() => new Promise((res) => {
+      const blob = window.__app.blob;
+      if (!blob) return res({ err: 'nothing was recorded' });
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => res({ duration: v.duration });
+      v.onerror = () => res({ err: 'the file would not load' });
+      v.src = URL.createObjectURL(blob);
+    }));
+    assert.ok(!film.err, String(film.err));
+    assert.ok(film.duration > 0 && Number.isFinite(film.duration), 'it has a duration: ' + film.duration);
+    const off = Math.abs(film.duration - wall) / wall;
+    assert.ok(off < 0.2, `the film is ${film.duration.toFixed(2)}s for a set of ${wall.toFixed(2)}s`);
+    console.log('      ' + film.duration.toFixed(2) + 's recorded of a ' + wall.toFixed(2) + 's set');
+    /* put the speed back, or every step after this one runs at a seventh of the pace */
+    await page.evaluate(() => { window.__poseSource = window.__quick; });
+  });
+
   await step('the downloaded file is a real video', async () => {
     const dl = page.waitForEvent('download');
     await page.click('#dl-video');
@@ -363,14 +402,11 @@ try {
       'contain', 'the canvas is fitted into its box on screen, not stretched to it');
   });
 
-  await step('a frame the wrong way round is bordered, not squashed, and is asked to be turned', async () => {
-    assert.equal(await page.isVisible('#orient'), false, 'nothing to say about a landscape frame');
+  await step('a frame the wrong way round is bordered, not squashed', async () => {
     /* stand the canvas up under a landscape frame: the picture must keep its own
        proportions and sit in the middle, which is the squash this was reported as */
     await page.evaluate(() => { const c = document.getElementById('view'); c.width = 720; c.height = 1280; });
-    await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
-    assert.match(await page.textContent('#orient'), /turn the phone on its side/i);
-    await heard('turn the phone on its side');
+    await wait(400);
     const bands = await page.evaluate(() => {
       const c = document.getElementById('view'), x = c.getContext('2d');
       const lit = (y) => { const d = x.getImageData(2, y, c.width - 4, 1).data;
@@ -382,20 +418,53 @@ try {
       'the picture sits in a band across the middle with borders above and below, rather than filling a shape that is not its own: '
       + JSON.stringify(bands));
     await page.evaluate(() => { const c = document.getElementById('view'); c.width = 1280; c.height = 720; });
+    await wait(400);
+  });
+
+  await step('turning the picture is what puts a sideways frame right, and is said when it is needed', async () => {
+    /* the plank's frame is already the way it wants it, so there is nothing to say */
+    assert.equal(await page.isVisible('#orient'), false);
+    /* a quarter turn makes it the wrong way round, which is exactly the state some
+       phones hand over on their own, and the app has to notice and say so */
+    await page.selectOption('#cfg-rotate', 'right');
+    await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
+    assert.match(await page.textContent('#orient'), /turn the phone on its side/i);
+    await heard('turn the phone on its side');
+    /* The readings are taken from the turned frame, so a turn moves the ones that are
+       taken against vertical. The arm's lean off vertical is one; the hip's bend off
+       the shoulder-to-ankle line is not, being an angle at a joint, and would look
+       the same whichever way up the frame arrived. That difference is the reason the
+       frame is turned before anything is read rather than after. */
+    await wait(600);
+    const turned = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
+    await page.selectOption('#cfg-rotate', 'auto');
     await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
+    await wait(600);
+    const straight = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
+    assert.ok(Math.abs(turned.arm - straight.arm) > 45,
+      `the arm reads ${straight.arm}° upright and ${turned.arm}° on its side`);
+    assert.ok(Math.abs(turned.hip - straight.hip) < 2,
+      `while the hip's bend is the same either way: ${straight.hip}° and ${turned.hip}°`);
   });
 
   await step('the knee raise counts reps rather than holding one position', async () => {
-    await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 95 });
+    await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 85 });
     await page.selectOption('#move', 'kneeraise');
     await page.waitForSelector('#read-reps');
     assert.equal(await page.textContent('#band-knee'), '85\u201395', 'a right angle at the knee, five either way');
-    assert.equal(await page.textContent('#band-foot'), '85\u2013110', 'and the foot, taken at the heel');
+    assert.equal(await page.textContent('#band-foot'), '75\u201395', 'and the foot, taken at the heel');
     /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
        plank was just using */
     assert.equal(await page.inputValue('#cfg-target'), '10');
     assert.equal(await page.inputValue('#cfg-calls'), '5');
     assert.equal(await page.textContent('#hold-k'), 'left of 10 s');
+    /* and it can be changed, a second at a time, which a step of five could not do */
+    assert.equal(await page.getAttribute('#cfg-target', 'step'), '1');
+    await page.focus('#cfg-target');
+    await page.keyboard.press('ArrowUp');
+    await page.dispatchEvent('#cfg-target', 'change');
+    assert.equal(await page.inputValue('#cfg-target'), '11', 'the arrows move it by one');
+    await page.waitForFunction(() => document.getElementById('hold-k').textContent === 'left of 11 s', null, { timeout: 5000 });
     /* two seconds a rep and three of them, so a set finishes inside a test */
     await page.fill('#cfg-target', '2'); await page.dispatchEvent('#cfg-target', 'change');
     await page.fill('#cfg-calls', '1'); await page.dispatchEvent('#cfg-calls', 'change');
@@ -409,7 +478,7 @@ try {
   });
 
   await step('a rep is counted on the way back down, not at the top', async () => {
-    await set({ thigh: 88, kneeUp: 90, foot: 95 });
+    await set({ thigh: 88, kneeUp: 90, foot: 85 });
     /* no "that is it" asserted here: these reps are two seconds so the coach can
        finish a set inside a test, and a two second hold has no room to say hold and
        then count it down. The unit tests cover that at the real ten. */
@@ -433,7 +502,7 @@ try {
     for (let i = 0; i < 3; i++) {
       await set({ thigh: 0, kneeUp: 180, foot: 90 });
       await wait(900);
-      await set({ thigh: 88, kneeUp: 90, foot: 95 });
+      await set({ thigh: 88, kneeUp: 90, foot: 85 });
       await wait(3400);
       await set({ thigh: 0, kneeUp: 180, foot: 90 });
       await wait(900);

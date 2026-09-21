@@ -45,6 +45,18 @@ takes effect. During a set it does not: a recording that changes shape halfway
 through is not a file most players will take, so the canvas is held and the
 fitting absorbs the change instead.
 
+**When the phone does not turn the picture itself.** Some browsers hand over the
+frame the way the sensor sits rather than the way the phone is held, so a phone
+stood on its end still gives a landscape frame with the body lying down in it.
+Every angle taken against vertical or the floor is then a quarter turn wrong — a
+shin is only plumb with respect to gravity. So the frame is turned before
+anything is read from it, not after, and the landmarks are turned with it. On
+**Automatic** that happens only when the shape that arrived is not the shape the
+exercise asked for, with the direction guessed from the screen's own orientation.
+A guess can be wrong, which shows up at once as an upside-down picture, so the
+other quarter turn is one setting away. There is a test that reads a body from an
+upright frame and from a sideways one put right, and requires the same numbers.
+
 **Out loud.** Every cue is spoken as well as written. Three things make a
 browser swallow speech quietly, and all three are handled rather than left to
 chance: Safari only begins speaking from inside a user gesture, so the engine is
@@ -77,7 +89,7 @@ instead of the page just being silent.
 | | |
 |---|---|
 | **Knee** | the angle at the raised knee, between hip and ankle. A right angle, **85–95°**. |
-| **Foot** | the angle at that heel, between the toe and the knee — the foot's own line against the shin's. Allowed **85–110°**. Past 110° the foot is pointing away and the toes come up; under 85° they are pulled too far. |
+| **Foot** | the angle at that heel, between the toe and the knee — the foot's own line against the shin's. Allowed **75–95°**. Past 95° the foot is pointing away and the toes come up; under 75° they are pulled too far. |
 
 Ten seconds held, lowered slowly, and the rep counts when you are back to
 standing. Ten reps.
@@ -87,7 +99,8 @@ where the foot meets the floor and is the end of the segment being measured. It
 is a different number from the angle at the ankle, and where a comfortable foot
 falls within it depends on where the pose model puts your heel relative to your
 ankle — so the band is a setting. Watch the reading on yourself for a rep and
-move the band if it sits off.
+move the band if it sits off. So is how long each rep is held, and how many of
+them there are.
 
 *One thing worth saying about this one.* Those two right angles do not by
 themselves describe a knee raise: a heel tucked up behind makes both of them
@@ -173,6 +186,19 @@ exercise rather than to the app: a plank is held for a minute and a knee raise
 for ten seconds a rep, and neither inherits the other's clock.
 
 ## The recording
+
+**How long it is.** Asking a canvas for a stream at thirty frames a second means
+asking for it to be sampled that often. The pose model takes long enough that the
+canvas is not repainted anything like that often, and what an encoder does with
+the shortfall is its own business: some repeat the last frame and the film comes
+out the right length, some write the frames they were given at the spacing they
+were promised, and a minute of wall sit plays back in twenty seconds. So the
+frames are asked for on a clock instead — thirty times a real second, whatever
+the model is doing — and the recording is written in one piece rather than a run
+of fragments glued together. One frame per tick of real time is a film the length
+of the thing it filmed, on any engine. The browser suite records a set with the
+model slowed to seven frames a second and checks the file's duration against the
+clock.
 
 The canvas **is** the recording: camera frame, skeleton, every angle drawn where
 it is measured, the lines each is judged against, the readings, the countdown and

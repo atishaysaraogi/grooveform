@@ -43,8 +43,8 @@
      bumped whenever a default moves, and a store written under an older one is
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
-  const SETTINGS_V = 5;
-  const COMMON_KEYS = ['cool', 'model', 'mirror'];
+  const SETTINGS_V = 6;
+  const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate'];
   /* One input each, but the value belongs to the exercise: a plank is held for a
      minute and a knee raise for ten seconds a rep, and neither should inherit the
      other's clock just because they share a box on the settings panel. */
@@ -71,6 +71,7 @@
     c.callAtSec = (calls.length ? calls : c.callAtSec).sort((a, b) => b - a);
     c.model = $('cfg-model').value;
     c.mirror = $('cfg-mirror').value === 'on';
+    c.rotate = $('cfg-rotate').value;
     return c;
   }
 
@@ -257,6 +258,31 @@
   }
 
   /* ---------- camera ---------- */
+  /* A phone stood on its end does not always hand over a frame stored that way up:
+     some browsers give the sensor's own landscape frame and leave the turning to
+     whoever displays it. Then a standing body arrives lying down, and every angle
+     taken against vertical or the floor is ninety degrees wrong. So the frame is
+     turned here, before anything is read from it.
+
+     `auto` turns it only when the shape the move asked for is not the shape that
+     came, and guesses the direction from the screen's own orientation. A guess can
+     be wrong, which shows up immediately as an upside-down picture, so the other
+     direction is one setting away. */
+  function quarterTurn() {
+    const w = video.videoWidth, h = video.videoHeight, want = move.camera;
+    const pick = cfg().rotate;
+    if (pick === 'right') return 1;
+    if (pick === 'left') return 3;
+    if (pick !== 'auto' || !want || !w || !h) return 0;
+    if ((want === 'wide') === (w > h)) return 0;          // already the right way round
+    const a = (window.screen && screen.orientation && screen.orientation.angle) || 0;
+    return a === 90 ? 3 : 1;
+  }
+  /* the frame's size once it has been turned */
+  const turned = (q) => (q % 2
+    ? { w: video.videoHeight || 720, h: video.videoWidth || 1280 }
+    : { w: video.videoWidth || 1280, h: video.videoHeight || 720 });
+
   let camShape = null;              // the frame shape the running camera was asked for
   async function startCamera() {
     stopCamera();
@@ -277,7 +303,8 @@
      most players will take. Between sets it follows the camera, which is how
      turning the phone over takes effect. */
   function sizeCanvas(force) {
-    const want = Core.canvasSize(move.camera, video.videoWidth || 1280, video.videoHeight || 720);
+    const t = turned(quarterTurn());
+    const want = Core.canvasSize(move.camera, t.w, t.h);
     if (!want) return;
     if (!force && rec && rec.mr && rec.mr.state === 'recording') return;
     if (canvas.width === want.w && canvas.height === want.h) return;
@@ -289,17 +316,27 @@
   /* ---------- drawing ---------- */
   function drawFrame(reading, verdict, out) {
     const W = canvas.width, H = canvas.height, m = cfg().mirror;
-    const vw = video.videoWidth || W, vh = video.videoHeight || H;
+    const q = quarterTurn(), t = turned(q);
     /* All of the picture, none of it stretched. A squashed body reads squashed
        angles, and every threshold in this app is an angle, so filling the canvas
        by distorting the frame would quietly corrupt every number on the screen.
        Bars at the sides are the honest answer. */
-    const fit = Core.fitRect(vw, vh, W, H);
+    const fit = Core.fitRect(t.w, t.h, W, H);
     ctx.save();
     if (m) { ctx.translate(W, 0); ctx.scale(-1, 1); }
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(video, fit.x, fit.y, fit.w, fit.h);
-    if (reading && reading.ok) drawBody(reading, verdict, vw / vh, fit);
+    if (q) {
+      /* turned about the middle of where it is going: after the turn the frame's
+         own width runs down the rectangle and its height across it */
+      ctx.save();
+      ctx.translate(fit.x + fit.w / 2, fit.y + fit.h / 2);
+      ctx.rotate((q * Math.PI) / 2);
+      ctx.drawImage(video, -fit.h / 2, -fit.w / 2, fit.h, fit.w);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, fit.x, fit.y, fit.w, fit.h);
+    }
+    if (reading && reading.ok) drawBody(reading, verdict, t.w / t.h, fit);
     ctx.restore();
     drawHud(reading, verdict, out, W, H);
   }
@@ -476,10 +513,11 @@
     }
     sizeCanvas();
     showFraming();
-    /* the landmarks are shares of the VIDEO frame, so that is the space an angle
-       has to be worked out in — the canvas may be a different shape entirely */
-    const aspect = (video.videoWidth || canvas.width) / (video.videoHeight || canvas.height);
-    const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
+    /* the landmarks are shares of the video frame, turned the same way the picture
+       is, so that is the space an angle has to be worked out in — the canvas may be
+       a different shape entirely */
+    const q = quarterTurn(), t = turned(q);
+    const reading = smoother.apply(move.read(Core.rotateLandmarks(lm, q), t.w / t.h, coach.cfg));
     const out = coach.step(reading, now - t0);
     if (out.cue) fire(out.cue);
     drawFrame(reading, out.verdict, out);
@@ -497,7 +535,8 @@
 
   let framingNote = null;
   function showFraming() {
-    const msg = Core.framing(move.camera, canvas.width, canvas.height);
+    const t = turned(quarterTurn());
+    const msg = Core.framing(move.camera, t.w, t.h);
     if (msg === framingNote) return;
     framingNote = msg;
     const e = $('orient');
@@ -558,22 +597,46 @@
     for (const m of want) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
     return '';
   }
+  /* Asking a canvas for a stream at some frame rate means asking it to be sampled
+     that often. The pose model takes long enough that the canvas is not repainted
+     anything like that often, and what an encoder does with the shortfall is its
+     own business: some repeat the last frame and the film comes out the right
+     length, some write the frames they were given at the spacing they were
+     promised, and the set plays back at three times the speed it was done at.
+
+     So the frames are asked for on a clock instead. `captureStream(0)` hands over
+     nothing until it is asked, and it is asked thirty times a real second, whatever
+     the model is doing. One frame per tick of real time is a film the length of the
+     thing it filmed, on any engine. Where a browser cannot be asked, the stream is
+     left to emit on its own as the canvas changes, which at least carries real
+     timestamps. */
+  const REC_FPS = 30;
   function startRecording() {
     if (!window.MediaRecorder || !canvas.captureStream) return null;
     try {
       const a = initAudio();
-      const s = canvas.captureStream(30);
+      let s = canvas.captureStream(0), pump = 0;
+      const vt = s.getVideoTracks()[0];
+      if (vt && typeof vt.requestFrame === 'function') {
+        pump = setInterval(() => { try { vt.requestFrame(); } catch { } }, 1000 / REC_FPS);
+      } else {
+        s.getTracks().forEach((t) => { try { t.stop(); } catch { } });
+        s = canvas.captureStream();
+      }
       if (a) for (const t of a.dest.stream.getAudioTracks()) s.addTrack(t);
       const mimeType = pickMime();
       const mr = new MediaRecorder(s, mimeType ? { mimeType, videoBitsPerSecond: 3.5e6 } : undefined);
       const chunks = [];
       mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      mr.start(1000);
-      return { mr, chunks, mimeType: mimeType || 'video/webm' };
+      /* no timeslice: one recording, written once, rather than a run of fragments
+         glued together and hoped over */
+      mr.start();
+      return { mr, chunks, pump, mimeType: mimeType || 'video/webm' };
     } catch { return null; }
   }
   function stopRecording() {
     return new Promise((res) => {
+      if (rec && rec.pump) { clearInterval(rec.pump); rec.pump = 0; }
       if (!rec || !rec.mr || rec.mr.state === 'inactive') return res(null);
       rec.mr.onstop = () => res(new Blob(rec.chunks, { type: rec.mimeType }));
       try { rec.mr.stop(); } catch { res(null); }
@@ -687,6 +750,7 @@
     const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
   };
   for (const k of COMMON_KEYS.concat(PER_MOVE)) if (k !== 'model') $('cfg-' + k).onchange = saveSettings;
+  $('cfg-rotate').onchange = () => { saveSettings(); sizeCanvas(true); framingNote = undefined; };
   $('cfg-model').onchange = async () => {
     saveSettings();
     if (!landmarker) return;
@@ -721,5 +785,6 @@
     $('veil-text').textContent = 'This needs a browser with camera access, served over https.';
     $('go').disabled = true;
   }
-  window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; }, cfg, fire, drawFrame, paintUi };
+  window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
+    get blob() { return rec && rec.blob; }, cfg, fire, drawFrame, paintUi };
 })();

@@ -108,3 +108,53 @@ test('the edge of a band is inside it, on every move', () => {
   assert.equal(Core.within(-12 - 1e-13, 12), true);
   assert.equal(Core.within(12.1, 12), false);
 });
+
+/* ---------- turning a frame that arrived the wrong way up ---------- */
+
+test('a quarter turn moves the corners where a quarter turn should', () => {
+  const corners = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+  /* clockwise: the top-left corner goes to the top-right */
+  assert.deepEqual(Core.rotateLandmarks(corners, 1).map((p) => [p.x, p.y]),
+    [[1, 0], [1, 1], [0, 1], [0, 0]]);
+  /* and anticlockwise the other way round */
+  assert.deepEqual(Core.rotateLandmarks(corners, 3).map((p) => [p.x, p.y]),
+    [[0, 1], [0, 0], [1, 0], [1, 1]]);
+  /* four turns is where it started, and no turn is the array it was handed */
+  assert.deepEqual(Core.rotateLandmarks(corners, 4).map((p) => [p.x, p.y]), corners.map((p) => [p.x, p.y]));
+  assert.equal(Core.rotateLandmarks(corners, 0), corners);
+  /* whatever else a landmark carries comes through it */
+  assert.equal(Core.rotateLandmarks([{ x: 0.2, y: 0.3, z: 1, visibility: 0.7 }], 1)[0].visibility, 0.7);
+});
+
+test('a body that arrived on its side reads the same as one that arrived upright', () => {
+  /* This is the whole point of turning it. Every angle taken at a joint survives a
+     rotation on its own, but the ones taken against vertical or the floor do not —
+     a shin is only plumb with respect to gravity — so a frame stored the wrong way
+     up has to be put right before anything is read, not after. */
+  const M = Moves.wallsit;
+  const cfg = Object.assign({}, Core.COMMON, M.defaults);
+  const TALL = 9 / 16;
+
+  /* the same body, once in a tall frame the right way up, once in the wide frame a
+     phone hands over when it declines to turn the picture itself */
+  const upright = [], onSide = [];
+  for (let i = 0; i < 33; i++) { upright.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 }); onSide.push(null); }
+  const P = { shoulder: [0.18, 0.22], hip: [0.18, 0.48], knee: [0.34, 0.5], ankle: [0.35, 0.69], heel: [0.33, 0.71], toe: [0.44, 0.72] };
+  for (const side of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[side])) {
+    const p = P[name]; if (!p) continue;
+    upright[i] = { x: p[0] / TALL, y: p[1], z: 0, visibility: 0.95 };
+  }
+  /* turning it anticlockwise is what a clockwise turn has to undo */
+  const wide = Core.rotateLandmarks(upright, 3);
+
+  const a = M.read(upright, TALL, cfg);
+  const b = M.read(Core.rotateLandmarks(wide, 1), TALL, cfg);
+  assert.ok(a.ok && b.ok);
+  for (const k of ['knee', 'shin', 'tilt']) {
+    assert.ok(Math.abs(a[k] - b[k]) < 1e-9, `${k}: upright ${a[k].toFixed(3)}, turned back ${b[k].toFixed(3)}`);
+  }
+  /* and left as it came, the gravity-bound readings are wrong by a quarter turn */
+  const raw = M.read(wide, 1 / TALL, cfg);
+  assert.ok(Math.abs(raw.shin - a.shin) > 45, 'unturned, the shin reads nothing like it: ' + raw.shin.toFixed(1));
+  assert.ok(Math.abs(raw.knee - a.knee) < 1e-9, 'while the angle at the knee is a rotation apart from nobody');
+});

@@ -181,6 +181,25 @@
     return { x: (W - w) / 2, y: (H - h) / 2, w, h };
   }
 
+  /* A quarter turn of the landmarks, for when the browser hands over a frame that
+     is stored the other way round from the world it was taken in. Every joint angle
+     survives a rotation untouched, but the ones taken against vertical or the floor
+     do not — a shin is only plumb with respect to gravity — so the frame has to be
+     put upright before any of them is read, not after.
+
+     `quarter` is 1 for a turn clockwise and 3 for one anticlockwise, in the same
+     sense the picture is turned. */
+  function rotateLandmarks(lm, quarter) {
+    const q = ((quarter % 4) + 4) % 4;
+    if (!lm || !q) return lm;
+    return lm.map((p) => {
+      if (!p) return p;
+      const x = p.x, y = p.y;
+      const n = q === 1 ? { x: 1 - y, y: x } : q === 2 ? { x: 1 - x, y: 1 - y } : { x: y, y: 1 - x };
+      return Object.assign({}, p, n);
+    });
+  }
+
   /* Said by every move, so they live here rather than in each one. */
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
@@ -421,5 +440,5 @@
   }
 
   return { SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
-    lineBend, fromDown, inBand, within, visOf, pickSide, sidePoints, frame, framing, canvasSize, fitRect, Coach, Smoother };
+    lineBend, fromDown, inBand, within, visOf, pickSide, sidePoints, frame, framing, canvasSize, fitRect, rotateLandmarks, Coach, Smoother };
 });
