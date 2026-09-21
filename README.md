@@ -222,9 +222,23 @@ repainted only when the model lets it, seven or eight times a second on a phone,
 and a film taken at thirty a second carries each real frame three or four times
 over — which plays as a judder. So the model runs in a thread of its own. The
 page's thread only ever draws, at the camera's rate, over whichever pose the
-model last handed back, and a frame is taken for the film each time the canvas is
-drawn, with a clock behind it that only steps in if drawing has stalled. Where a
-browser cannot give the model its own thread, it runs on the page's as before.
+model last handed back. Where a browser cannot give the model its own thread, it
+runs on the page's as before.
+
+**Frames for the film come from a clock, and nowhere else.** Thirty a second,
+whatever the draw loop is doing. A recording of a real set showed what asking on
+every draw does on a phone: bursts of hundreds of frames a second, most of them
+two milliseconds apart, until the encoder gave up and the picture stopped at
+twelve seconds of a twenty-one second set while the sound went on. The browser
+suite counts how often the canvas is asked for a frame over two seconds of a set
+and requires the clock's rate and no more.
+
+**The screen stays on.** A phone stood on the floor is not being touched, and a
+phone not being touched turns its screen off inside a minute; when it does, the
+page is hidden, nothing is drawn, and a recording keeps only its sound. A wake
+lock is held for as long as a set runs. If the page is hidden anyway and comes
+back with a set still running, it says so out loud, because that stretch of the
+set was not seen.
 
 The canvas **is** the recording: camera frame, skeleton, every angle drawn where
 it is measured, the lines each is judged against, the readings, the countdown and

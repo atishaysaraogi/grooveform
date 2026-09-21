@@ -260,6 +260,26 @@ try {
     assert.match(out.note, /MB/, 'with something in it: ' + out.note);
   });
 
+  await step('frames are taken for the film thirty times a second, and from nowhere else', async () => {
+    /* A real set on a phone came back with 2415 frames in twelve seconds, most of
+       them two milliseconds apart, and then no picture at all for the last nine
+       seconds while the sound went on: frames were being asked for on every draw as
+       well as on the clock, and the encoder gave up. So the number of times the
+       canvas is asked for a frame is counted here, over two seconds of a running
+       set, and has to be the clock's rate and no more. */
+    await page.click('#startstop');                  // a set of its own, so a film is being made
+    await wait(600);
+    const n = await page.evaluate(() => new Promise((res) => {
+      const proto = Object.getPrototypeOf(document.getElementById('view').captureStream(0).getVideoTracks()[0]);
+      const orig = proto.requestFrame; let count = 0;
+      proto.requestFrame = function () { count++; return orig.apply(this, arguments); };
+      setTimeout(() => { proto.requestFrame = orig; res(count); }, 2000);
+    }));
+    assert.ok(n >= 40 && n <= 75, 'asked for ' + n + ' frames in two seconds; thirty a second is the film');
+    await page.click('#startstop');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+  });
+
   await step('the recording is as long as the set was, even when the model is slow', async () => {
     /* The failure this guards against: a canvas asked for thirty frames a second
        that is only repainted seven times a second, and an encoder that writes the

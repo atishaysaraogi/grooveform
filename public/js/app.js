@@ -582,13 +582,19 @@
     const out = coach.step(reading, now - t0);
     if (out.cue) fire(out.cue);
     drawFrame(reading, out.verdict, out);
-    captureFrame();
     paintUi(reading, out.verdict, out);
     state = out;
   }
+  /* paced by the camera where the browser allows, and held to about the camera's
+     rate where it must fall back to the display's, which on a phone can be four
+     times faster and has nothing new to show */
+  let lastTick = 0;
   function schedule() {
     if (video.requestVideoFrameCallback) raf = video.requestVideoFrameCallback(() => tick());
-    else raf = requestAnimationFrame(() => tick());
+    else raf = requestAnimationFrame((t) => {
+      if (t - lastTick < 1000 / 32) { schedule(); return; }
+      lastTick = t; tick();
+    });
   }
   function unschedule() {
     if (video.cancelVideoFrameCallback && raf) { try { video.cancelVideoFrameCallback(raf); } catch { } }
@@ -673,10 +679,9 @@
      left to emit on its own as the canvas changes, which at least carries real
      timestamps. */
   const REC_FPS = 30;
-  let recTrack = null, lastCapture = 0;
+  let recTrack = null;
   function captureFrame() {
     if (!recTrack) return;
-    lastCapture = performance.now();
     try { recTrack.requestFrame(); } catch { }
   }
   function startRecording() {
@@ -686,12 +691,14 @@
       let s = canvas.captureStream(0), pump = 0;
       const vt = s.getVideoTracks()[0];
       if (vt && typeof vt.requestFrame === 'function') {
-        /* a frame is taken each time the canvas is drawn, so the film is in step with
-           the picture; the clock behind it only steps in when drawing has stalled */
-        recTrack = vt; lastCapture = 0;
-        pump = setInterval(() => {
-          if (performance.now() - lastCapture > 1000 / REC_FPS * 2) captureFrame();
-        }, 1000 / REC_FPS);
+        /* One frame per tick of a real clock, and from nowhere else. A recording of
+           a real set showed what asking on every draw does on a phone: bursts of
+           hundreds of frames a second, most of them two milliseconds apart, until the
+           encoder gave up and the picture stopped at twelve seconds of a twenty-one
+           second set while the sound went on. Thirty a second is the film; the draw
+           loop's rate is its own business. */
+        recTrack = vt;
+        pump = setInterval(captureFrame, 1000 / REC_FPS);
       } else {
         s.getTracks().forEach((t) => { try { t.stop(); } catch { } });
         s = canvas.captureStream();
@@ -723,6 +730,28 @@
   }
   const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
+  /* ---------- keeping the screen on ----------
+     A phone stood on the floor is not being touched, and a phone not being touched
+     turns its screen off inside a minute. When it does, the page is hidden: nothing
+     is drawn, the camera may be paused, and a recording keeps only its sound. A set
+     ends by itself in silence. So a wake lock is held for as long as a set runs, and
+     taken again if the page comes back into view with one still running. */
+  let wake = null;
+  async function stayAwake() {
+    if (wake || !navigator.wakeLock) return;
+    try { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+    catch { wake = null; }
+  }
+  function letSleep() { if (wake) { try { wake.release(); } catch { } wake = null; } }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (inSet) { stayAwake(); if (running && !raf) schedule(); }
+      if (hidAt && inSet) fire({ id: 'lost', text: 'The screen went off — that part of the set was not seen', t: 0 });
+      hidAt = 0;
+    } else if (inSet) hidAt = performance.now();
+  });
+  let hidAt = 0;
+
   /* ---------- the set ---------- */
   async function begin() {
     const note = (t) => { $('veil-note').textContent = t; };
@@ -753,6 +782,7 @@
        second `say` would cancel the first mid-word */
     fire({ id: 'start', text: move.start, t: 0 });
     rec = startRecording(); inSet = true;
+    stayAwake();
     if (!raf) schedule();
     $('rec-note').textContent = rec ? '' : 'This browser will not record from a canvas, so there is no video to download.';
     $('startstop').disabled = false;
@@ -760,7 +790,7 @@
   }
 
   async function endSet() {
-    inSet = false;
+    inSet = false; letSleep();
     const blob = await stopRecording();
     rec = rec ? Object.assign(rec, { blob }) : null;
     const s = coach.summary();
