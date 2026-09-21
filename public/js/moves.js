@@ -19,7 +19,7 @@
   else root.Moves = factory(root.Core);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (Core) {
   'use strict';
-  const { angleAt, tiltFromVertical, fromFloor, fromDown, lineBend, inBand, within, frame, sidePoints } = Core;
+  const { angleAt, tiltFromVertical, fromFloor, fromDown, lineBend, rise, inBand, within, frame, sidePoints } = Core;
 
   /* =======================================================================
      Wall sit — side on, back against a wall.
@@ -228,10 +228,12 @@
       holdTargetSec: 10,
       callAtSec: [5],
       repCount: 10,
+      lowerSec: 1,                  // "lower slowly": the way down should take at least this long
       deepAt: 8,                    // tight bands, so "a long way out" has to be tighter too
     },
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
-            { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 }],
+            { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 },
+            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 }],
 
     joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
     needed: ['hip', 'knee', 'ankle', 'heel', 'toe'],
@@ -323,5 +325,140 @@
     },
   };
 
-  return { wallsit, plank, kneeraise, list: [wallsit, plank, kneeraise] };
+  /* =======================================================================
+     Glute bridge — lying on the back, side on, knees bent, feet flat, hips
+     lifted until knee, hip and shoulder are in a line, and lowered slowly.
+     ======================================================================= */
+  const bridge = {
+    id: 'bridge',
+    name: 'Glute bridge',
+    hint: 'Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.',
+    start: 'Lay the phone on its side on the floor, then lie down side on to it, knees bent, feet flat, and lift your hips.',
+    camera: 'wide',                 // a body lying down is long and low, like the plank
+    reps: true,
+    holdLabel: 'Hold at the top for',
+
+    defaults: {
+      /* The shin, taken at the heel between the toe and the knee — the foot's own
+         line against the shin's, as in the knee raise. Under the band the knee is
+         out over the toes and the feet are too far from the hips; over it the knee
+         is back behind the heel and they are too close. */
+      shinMin: 85, shinMax: 110,
+      /* The top of the rep: the angle at the hip between knee and shoulder. Straight
+         is 180 and the line is asked for to within twenty degrees. */
+      hipMin: 160, hipMax: 180,
+      /* How far the hip may sit above the knee, as the rise of the knee→hip line.
+         Level is 0; the hips are not to go higher than the knees, and the three
+         degrees are for the pose model's wobble, not for the person. */
+      overMax: 3, overMin: -90,
+      /* The foot line, heel against toe, off the floor either way: heels lifting
+         tilt it one way, toes lifting the other. */
+      footFlat: 10,
+      /* Where the hip angle has to get to before this counts as a lift, and where
+         it has to come back to before the rep is finished. Not coached, not marked:
+         they tell the phases apart. Lying with the knees up the hip reads around
+         125–140, so the lift is called at 150 and the return at 140. */
+      raiseAt: 150,
+      downAt: 140,
+      holdTargetSec: 2,             // a squeeze at the top, then down
+      callAtSec: [],
+      repCount: 10,
+      lowerSec: 1,                  // the way down should take at least this long
+      deepAt: 10,
+    },
+    extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
+            { key: 'raiseAt', label: 'Hip angle that counts as lifted', min: 120, max: 175 },
+            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 }],
+
+    joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
+    needed: ['shoulder', 'hip', 'knee', 'heel', 'toe'],
+    bones: [['shoulder', 'hip'], ['hip', 'knee'], ['knee', 'ankle'], ['ankle', 'heel'], ['ankle', 'toe'], ['heel', 'toe']],
+    dots: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
+    limb: { 'shoulder|hip': 'hip', 'hip|knee': 'hip', 'knee|ankle': 'shin', 'ankle|heel': 'foot', 'ankle|toe': 'foot', 'heel|toe': 'foot' },
+
+    bands: [
+      { key: 'shin', of: 'shin', label: 'toe, heel, knee', hud: 'SHIN', note: 'target',
+        lo: 'shinMin', hi: 'shinMax', scale: [40, 170],
+        set: [{ key: 'shinMin', label: 'Shin angle, lowest', min: 30, max: 165 },
+              { key: 'shinMax', label: 'Shin angle, highest', min: 35, max: 170 }] },
+      { key: 'hip', of: 'hip', label: 'knee, hip, shoulder', hud: 'HIP', note: 'at the top',
+        min: 'hipMin', scale: [90, 180],
+        set: [{ key: 'hipMin', label: 'Hip angle at the top, at least', min: 120, max: 179 }] },
+      { key: 'over', of: 'over', label: 'hip above knee', hud: 'RISE', note: 'at most',
+        max: 'overMax', scale: [-40, 40],
+        set: [{ key: 'overMax', label: 'Hip above the knee, at most', min: 0, max: 20 }] },
+      { key: 'foot', of: 'foot', label: 'foot off the floor', hud: 'FEET', note: 'flat',
+        sym: 'footFlat', scale: [-40, 40],
+        set: [{ key: 'footFlat', label: 'Foot off the floor, at most', min: 2, max: 30 }] },
+    ],
+
+    /* The chain: where the feet are decides what the hips can do, so the feet are
+       coached first, and at the start, before the lift is asked for. Then the feet
+       staying down, then the hips: too high before not high enough, because a hip
+       driven past the knees is the one that hurts. */
+    faults: ['lost', 'feetFar', 'feetClose', 'raise', 'heelsUp', 'toesUp', 'hipHigh', 'hipLow'],
+    setup: ['feetFar', 'feetClose'],
+    prompts: ['raise'],
+    cues: {
+      raise: { text: 'Lift your hips' },
+      feetFar: { text: 'Bring your feet in toward you', deep: 'Feet in — your knees are out over your toes' },
+      feetClose: { text: 'Walk your feet out a little', deep: 'Feet out — your knees are back behind your heels' },
+      heelsUp: { text: 'Keep your heels down', deep: 'Heels down — they are coming off the floor' },
+      toesUp: { text: 'Keep your toes down', deep: 'Toes down — they are coming off the floor' },
+      hipHigh: { text: 'Not so high — hips no higher than your knees', deep: 'Lower your hips — they are well above your knees' },
+      hipLow: { text: 'Lift your hips higher', deep: 'Higher — knees, hips and shoulders in one line' },
+      lower: { text: 'Lower slowly' },
+      early: { text: 'Hold it at the top next time' },
+      lost: { text: 'Lie down side on to the camera, whole body in' },
+    },
+
+    read(lm, aspect, cfg) {
+      const f = frame(lm, aspect, cfg, bridge.joints, bridge.needed);
+      if (!f || !f.ok) return f;
+      const P = f.points;
+      /* which way the feet are: the knees lie that way from the hips whatever the
+         hips are doing */
+      const facing = Math.sign(P.knee.x - P.hip.x) || 1;
+      return Object.assign(f, {
+        facing, angles: ['shin', 'hip', 'over', 'foot'],
+        shin: angleAt(P.toe, P.heel, P.knee),        // toe → heel → knee
+        hip: angleAt(P.knee, P.hip, P.shoulder),     // knee → hip → shoulder
+        over: rise(P.knee, P.hip),                    // + = hip above the knee
+        foot: rise(P.toe, P.heel),                    // + = heel above the toe
+      });
+    },
+
+    judge(r, cfg) {
+      if (!r || !r.ok || r.shin == null || r.hip == null || r.over == null || r.foot == null) {
+        return { ok: false, inPosition: false, raised: false, atStart: false, good: {}, faults: {} };
+      }
+      const faults = {}, good = {};
+      good.shin = inBand(r.shin, cfg.shinMin, cfg.shinMax);
+      if (r.shin < cfg.shinMin) faults.feetFar = cfg.shinMin - r.shin;
+      else if (r.shin > cfg.shinMax) faults.feetClose = r.shin - cfg.shinMax;
+      good.hip = inBand(r.hip, cfg.hipMin, cfg.hipMax);
+      if (r.hip < cfg.hipMin) faults.hipLow = cfg.hipMin - r.hip;
+      good.over = inBand(r.over, cfg.overMin, cfg.overMax);
+      if (r.over > cfg.overMax) faults.hipHigh = r.over - cfg.overMax;
+      good.foot = within(r.foot, cfg.footFlat);
+      if (r.foot > cfg.footFlat) faults.heelsUp = r.foot - cfg.footFlat;
+      else if (r.foot < -cfg.footFlat) faults.toesUp = -r.foot - cfg.footFlat;
+      const raised = r.hip >= cfg.raiseAt, atStart = r.hip <= cfg.downAt;
+      return { ok: true, good, faults, raised, atStart,
+        inPosition: raised && good.shin && good.hip && good.over && good.foot };
+    },
+
+    /* The line the hips are lifted to, knee to shoulder; the angle at the hip
+       against it; the shin's angle at the heel; and a floor line through the knee,
+       which is the height the hips are not to pass. */
+    draw(d, r, v) {
+      d.guide(r.points.knee, r.points.shoulder, v.good.hip);
+      if (r.hip != null) d.angleAt(r.points.hip, r.points.knee, r.points.shoulder, r.hip, v.good.hip, 0.8);
+      if (r.shin != null) d.angleAt(r.points.heel, r.points.toe, r.points.knee, r.shin, v.good.shin, 0.7);
+      d.floor(r.points.knee, -1);                 // run back toward the hips, which is where it matters
+      if (r.over != null) d.readout(r.points.hip, r.over, v.good.over, 1);   // under the hip, clear of the arc's number
+    },
+  };
+
+  return { wallsit, plank, kneeraise, bridge, list: [wallsit, plank, kneeraise, bridge] };
 });

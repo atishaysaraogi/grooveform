@@ -137,7 +137,7 @@
   function syncBands() {
     const c = cfg();
     for (const b of move.bands) {
-      const lo = b.sym ? -c[b.sym] : c[b.lo], hi = b.sym ? c[b.sym] : c[b.hi];
+      const { lo, hi } = bandRange(b, c);
       $('band-' + b.key).textContent = bandText(b, c);
       $('ok-' + b.key).style.left = pct(lo, b.scale[0], b.scale[1]) + '%';
       $('ok-' + b.key).style.width = (pct(hi, b.scale[0], b.scale[1]) - pct(lo, b.scale[0], b.scale[1])) + '%';
@@ -148,9 +148,19 @@
     $('r-target').textContent = `of ${c.holdTargetSec}`;
     $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
   }
+  /* A band is two edges (lo, hi), a symmetric one (sym), or one edge with the
+     other end of the meter as the other (min: at least; max: at most). */
+  function bandRange(b, c) {
+    if (b.sym) return { lo: -c[b.sym], hi: c[b.sym] };
+    if (b.min) return { lo: c[b.min], hi: b.scale[1] };
+    if (b.max) return { lo: b.scale[0], hi: c[b.max] };
+    return { lo: c[b.lo], hi: c[b.hi] };
+  }
   /* "-5–15" reads as a subtraction, so a band that starts below zero is spelt out */
   function bandText(b, c) {
     if (b.sym) return `±${c[b.sym]}`;
+    if (b.min) return `≥ ${c[b.min]}`;
+    if (b.max) return `≤ ${c[b.max]}`;
     return c[b.lo] < 0 ? `${c[b.lo]} to ${c[b.hi]}` : `${c[b.lo]}–${c[b.hi]}`;
   }
   const pct = (v, lo, hi) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
@@ -430,11 +440,12 @@
         ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - fit.h * share); ctx.stroke(); ctx.setLineDash([]);
       },
-      /* a dashed floor line through a point */
-      floor(p) {
-        const [x, y] = at(p);
+      /* a dashed floor line through a point, run mostly the way the body faces, or
+         the other way for a negative `dir` */
+      floor(p, dir) {
+        const [x, y] = at(p), f = r.facing * (dir || 1);
         ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-        ctx.beginPath(); ctx.moveTo(x - r.facing * fit.w * 0.05, y); ctx.lineTo(x + r.facing * fit.w * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x - f * fit.w * 0.05, y); ctx.lineTo(x + f * fit.w * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
       },
       /* the straight line a joint is judged against, drawn end to end */
       guide(a, b, ok) {

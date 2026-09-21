@@ -99,6 +99,15 @@
     return s * (180 - straight);
   }
 
+  /* How far b sits above a, as the angle the a→b line makes with the floor:
+     + above, − below, 0 level. Signed, unlike fromFloor, because here the side
+     matters: a hip above the knee is the fault and a hip below it is not. */
+  function rise(a, b) {
+    const dx = Math.abs(b.x - a.x), dy = a.y - b.y;
+    if (!dx && !dy) return null;
+    return Math.atan2(dy, dx) * DEG;
+  }
+
   const visOf = (p) => (p && p.visibility === undefined ? 1 : p ? p.visibility : 0);
 
   /* Side-on, one limb hides the other and the pose model guesses at the far one.
@@ -193,6 +202,7 @@
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
     lost: { text: 'Step into the camera, side on' },
+    fast: { text: 'slower on the way down' },
   };
 
   /* ---- what to say, and when ----
@@ -211,6 +221,7 @@
       this.called = {};                 // which time calls have already been made
       this.lastSpoke = 0;               // when anything was last said, whatever it was
       this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
+      this.lowerAt = 0;                 // when the lowering began, for a move that wants it slow
       this.lastT = null; this.log = [];
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
@@ -330,7 +341,7 @@
       if (this.phase === 'down' && raised) {
         this.phase = 'up'; this.repHoldMs = 0; this.inSince = 0; this.called = {};
       } else if (this.phase === 'up') {
-        if (this.repHoldMs >= targetMs) { this.phase = 'lower'; cue = this.offer('lower', t, C.lower.text, true); }
+        if (this.repHoldMs >= targetMs) { this.phase = 'lower'; this.lowerAt = t; cue = this.offer('lower', t, C.lower.text, true); }
         else if (atStart) {
           /* back down before the hold was finished: nothing to count, and worth saying
              so, because the alternative is someone quietly doing ten half reps */
@@ -340,9 +351,15 @@
       } else if (this.phase === 'lower' && atStart) {
         this.reps += 1; this.repHoldMs = 0;
         this.phase = this.reps >= total ? 'done' : 'down';
+        /* "lower slowly" is judged, not just said: a move that names how long the
+           lowering should take is told when it took less. The remark rides on the
+           count rather than queueing behind it, so it lands on the rep it is about. */
+        const fast = cfg.lowerSec > 0 && this.lowerAt && t - this.lowerAt < cfg.lowerSec * 1000;
+        if (fast) this.fastReps = (this.fastReps || 0) + 1;
+        const tail = fast ? ` \u2014 ${C.fast.text}` : '';
         cue = this.phase === 'done'
-          ? this.offer('done', t, `${total} reps \u2014 done`, true)
-          : this.offer('count' + this.reps, t, String(this.reps), true);
+          ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
+          : this.offer('count' + this.reps, t, String(this.reps) + tail, true);
       }
 
       const leftMs = Math.max(0, targetMs - this.repHoldMs);
@@ -364,10 +381,18 @@
       }
 
       /* only the position being worked on is coached: telling someone standing still
-         to straighten a knee they have not lifted yet is noise */
+         to straighten a knee they have not lifted yet is noise. A move can name the
+         faults that are about the set-up — where the feet are — and those are
+         coached at the start too, before the rep is asked for, because they decide
+         what the rep can be. */
       if (!cue) {
-        const on = !v.ok ? { lost: 99 } : this.phase === 'up' ? v.faults
-          : this.phase === 'down' ? { raise: 99 } : {};
+        let on = {};
+        if (!v.ok) on = { lost: 99 };
+        else if (this.phase === 'up') on = v.faults;
+        else if (this.phase === 'down') {
+          on = { raise: 99 };
+          for (const id of this.move.setup || []) if (v.faults[id] != null) on[id] = v.faults[id];
+        }
         cue = this.correct(on, t);
       }
 
@@ -429,8 +454,8 @@
   }
 
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-21c';
+  const VER = '2026-09-21d';
 
   return { VER, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
-    lineBend, fromDown, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
+    lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

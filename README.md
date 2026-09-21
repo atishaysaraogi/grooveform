@@ -125,8 +125,26 @@ raise from standing still and from the next rep starting, and it is not marked
 or coached — the two angles asked for stay the only things being judged. Widen
 or narrow it in the settings; make it a band of its own if you want it called.
 
-**Which way the phone goes.** The plank wants it on its side; the wall sit and
-the knee raise are standing bodies and want it stood up. Each asks the camera for
+**Glute bridge** — on your back, side on, knees bent, feet flat, phone on its side.
+
+| | |
+|---|---|
+| **Shin** | the angle at the heel between the toe and the knee, as in the knee raise. Allowed **85–110°**. Under it the knee is out over the toes and the feet are too far from the hips; over it the knee is back behind the heel and they are too close. This is where the feet are, so it is coached at the start, before the lift is asked for. |
+| **Hip** | the angle at the hip between knee and shoulder: the line the hips are lifted to. **At least 160°** at the top. |
+| **Rise** | how far the hip sits above the knee, as the rise of the knee→hip line. **At most 3°**: the hips are not to go higher than the knees, and the three degrees are for the pose model's wobble. A floor line is drawn through the knee, which is the height not to pass. |
+| **Feet** | the foot's own line, heel against toe, off the floor: **±10°**. Heels lifting tilt it one way and toes lifting the other, so the cue says which. |
+
+Two seconds held at the top, lowered slowly, and the rep counts when the hips
+are back down. Ten reps.
+
+**"Lower slowly" is judged, not just said.** A move that names how long the way
+down should take (a setting, one second for the bridge and the knee raise) is
+told when it took less. The rep still counts — it was done — and the remark rides
+on the count rather than queueing behind it, so it lands on the rep it is about:
+"three — slower on the way down".
+
+**Which way the phone goes.** The plank and the bridge want it on its side; the
+wall sit and the knee raise are standing bodies and want it stood up. Each asks the camera for
 that shape, says so in the words it opens with, and says so again — on screen and
 out loud — if what arrives is the other way round.
 
@@ -140,7 +158,7 @@ plank suite reads the same plank at half the size in frame and checks the
 numbers do not move.
 
 **What it cannot see.** The spine rounding between hip and shoulder. No pose
-model gives a mid-spine point, so both moves judge that line by its ends and
+model gives a mid-spine point, so every move judges that line by its ends and
 nothing more.
 
 ## What it says
@@ -190,7 +208,7 @@ exercise. It starts after 0.7 s in the bands and stops the instant any of them i
 broken. The time left is called out at 45, 30, 10 and 5 seconds, and those calls
 jump the 1.5 s queue, because "ten seconds left" said two seconds late is a lie.
 
-For the knee raise: the same clock, only per rep. Come to the start, go to the
+For the knee raise and the bridge: the same clock, only per rep. Come to the start, go to the
 position, hold it for the count, lower, and come back to standing — and the rep
 is counted on that last step, not at the top. The lowering is part of the
 exercise, and a knee dropped from the top is not the same as one put down. A
@@ -277,6 +295,8 @@ test/
   wallsit.test.js   the wall sit, against synthetic bodies
   plank.test.js     the plank, likewise
   kneeraise.test.js the knee raise, and a whole set of reps
+  bridge.test.js    the glute bridge: feet, line, height, flat feet, and the way down
+  mp4.test.js       the file the page writes, timed by the clock
   framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
 ```
@@ -322,7 +342,7 @@ the very number the setting says is allowed. "Five degrees either way" has to
 include five, and now does, on every move.
 
 `smoke.mjs` then drives a real browser with the pose model stood in for, through
-all three exercises. It counts the frames handed to the encoder over two seconds
+all four exercises. It counts the frames handed to the encoder over two seconds
 of a set (the clock's thirty a second, no more), records a set with the model
 slowed to a phone's pace and checks the file's length against the clock, and then
 reads the file back box by box: index before data, every frame's duration about

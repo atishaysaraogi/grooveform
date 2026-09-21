@@ -30,7 +30,7 @@ function aspect() {
 const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
                R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
 window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0,
-                  thigh: 0, kneeUp: 180, foot: 90, vis: 0.95 };
+                  thigh: 0, kneeUp: 180, foot: 90, bShin: 95, dip: 50, hipAng: 130, bFoot: 0, vis: 0.95 };
 
 function wallsitBody(o, f) {
   const thigh = 0.2, shinLen = 0.22, torso = 0.26;
@@ -83,11 +83,28 @@ function kneeraiseBody(o, f) {
   return { R: Object.assign({}, top, leg(o.thigh, o.kneeUp, o.foot)),
     L: Object.assign({}, top, leg(0, 180, 90)) };
 }
+/* on the back, side on: the same rig as bridge.test.js */
+function bridgeBody(o, f) {
+  const footLen = 0.07, shinLen = 0.15, thighLen = 0.17, torso = 0.2;
+  const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
+  const heel = { x: 0.64, y: 0.68 };
+  const toeDir = { x: f * Math.cos(o.bFoot * D), y: Math.sin(o.bFoot * D) };
+  const toe = { x: heel.x + footLen * toeDir.x, y: heel.y + footLen * toeDir.y };
+  const sd = rot(toeDir, -f * o.bShin * D);
+  const knee = { x: heel.x + shinLen * sd.x, y: heel.y + shinLen * sd.y };
+  const ankle = { x: heel.x + shinLen * 0.12 * sd.x, y: heel.y + shinLen * 0.12 * sd.y };
+  const td = { x: -f * Math.cos(o.dip * D), y: Math.sin(o.dip * D) };
+  const hip = { x: knee.x + thighLen * td.x, y: knee.y + thighLen * td.y };
+  const bd = rot({ x: -td.x, y: -td.y }, -f * o.hipAng * D);
+  const shoulder = { x: hip.x + torso * bd.x, y: hip.y + torso * bd.y };
+  return { heel, toe, knee, ankle, hip, shoulder, ear: { x: shoulder.x - f * 0.05, y: shoulder.y - 0.01 } };
+}
 window.__poseSource = function () {
   const o = window.__pose; if (!o) return null;
   const A = aspect();
   const B = o.move === 'plank' ? plankBody(o, 1)
-    : o.move === 'kneeraise' ? kneeraiseBody(o, 1) : wallsitBody(o, 1);
+    : o.move === 'kneeraise' ? kneeraiseBody(o, 1)
+    : o.move === 'bridge' ? bridgeBody(o, 1) : wallsitBody(o, 1);
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   for (const s of ['L', 'R']) {
     /* side on, most bodies here have their two sides on top of each other; the one
@@ -500,7 +517,7 @@ try {
        picture by itself; asked for 720×1280 it crops a strip out of the sensor and
        turns that instead, which lands as a wide band with the legs gone. So the
        request must be the sensor's own shape whatever the exercise wants. */
-    for (const id of ['wallsit', 'kneeraise', 'plank']) {
+    for (const id of ['wallsit', 'kneeraise', 'plank', 'bridge']) {
       await set({ move: id });
       await page.selectOption('#move', id);
       await wait(400);
@@ -585,6 +602,57 @@ try {
     assert.equal(await page.textContent('#r-move'), 'Knee raise');
     assert.equal(await page.isVisible('#r-reps'), true, 'the set is reported in reps');
     assert.equal(await page.textContent('#r-reps-v'), '3/3');
+  });
+
+  await step('the glute bridge: a wide frame, four readings, the feet coached before the lift', async () => {
+    await set({ move: 'bridge', bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
+    await page.selectOption('#move', 'bridge');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Glute bridge', null, { timeout: 5000 });
+    await page.waitForSelector('#read-over');
+    assert.equal(await page.textContent('#band-shin'), '85\u2013110', 'the shin at the heel');
+    assert.equal(await page.textContent('#band-hip'), '\u2265 160', 'the line at the top');
+    assert.equal(await page.textContent('#band-over'), '\u2264 3', 'the hips no higher than the knees');
+    assert.equal(await page.textContent('#band-foot'), '\u00b110', 'the feet flat');
+    assert.equal(await page.inputValue('#cfg-target'), '2', 'a two second squeeze at the top');
+    assert.equal(await page.textContent('#target-label'), 'Hold at the top for');
+    /* a wide frame is what it wants, and the stand-in gives one, so no notice */
+    await wait(400);
+    assert.equal(await page.isHidden('#orient'), true, 'lying down suits a phone on its side');
+    await page.fill('#cfg-repCount', '2'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await page.click('#startstop');
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
+    await page.waitForFunction(() => document.getElementById('v-hip').textContent !== '\u2014', null, { timeout: 10000 });
+    assert.ok(Math.abs(Number(await page.textContent('#v-hip')) - 130) <= 1, 'lying there reads the hip angle');
+    assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the knee');
+    /* feet too far out: said before the lift is asked for */
+    await set({ bShin: 70 });                     // fifteen past the band, so the stronger words
+    await saw('feet in');
+    await heard('feet in');
+    await set({ bShin: 95 });
+    await saw('lift your hips');
+  });
+
+  await step('a bridge lifted past the knees is told so, and a rep counts on the way down', async () => {
+    await set({ bShin: 95, dip: -10, hipAng: 150, bFoot: 0 });
+    await saw('no higher than your knees');
+    await heard('no higher than your knees');
+    await set({ bShin: 95, dip: 5, hipAng: 170, bFoot: 0 });
+    await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
+    assert.equal(await page.textContent('#rep-v'), '0', 'the top is not the rep');
+    /* SMOKE_SHOT=<dir> keeps a picture of the top of the rep, for looking at */
+    if (process.env.SMOKE_SHOT) await page.locator('#stage').screenshot({ path: (await import('node:path')).join(process.env.SMOKE_SHOT, 'bridge-top.png') });
+    await set({ dip: 25, hipAng: 145 });
+    await wait(1300);
+    await set({ dip: 50, hipAng: 130 });
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
+    await page.click('#startstop');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.textContent('#r-move'), 'Glute bridge');
+    assert.equal(await page.textContent('#r-reps-v'), '1/2');
+    /* back to the knee raise, which the reload step below expects to find */
+    await set({ move: 'kneeraise' });
+    await page.selectOption('#move', 'kneeraise');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
   await step('the exercise and its bands are remembered across a reload', async () => {

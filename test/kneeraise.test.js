@@ -173,6 +173,7 @@ function play(c, o, ms, t0) {
 }
 const UP = { thigh: 88, knee: 90, foot: 85 };
 const DOWN = { thigh: 0, knee: 180, foot: 90 };
+const HALFWAY = { thigh: 35, knee: 120, foot: 88 };   // on the way down: below the raise mark, above the start
 
 test('a rep is up, held to the count, lowered, and only then counted', () => {
   const c = new Core.Coach(M);
@@ -188,11 +189,38 @@ test('a rep is up, held to the count, lowered, and only then counted', () => {
   assert.ok(up.said.some((x) => x.id === 'call5'), 'and the time was called');
   assert.ok(up.said.some((x) => x.id === 'lower' && /lower slowly/i.test(x.text)), 'and told to lower');
 
+  const mid = play(c, HALFWAY, 1300, t); t = mid.t;   // lowered over a second and a bit
+  assert.equal(c.reps, 0, 'halfway down is not down');
   const down = play(c, DOWN, 1000, t);
   assert.equal(c.reps, 1, 'back to standing is what counts it');
   assert.equal(down.last.reps, 1);
   assert.equal(down.last.repTarget, 10);
   assert.ok(down.said.some((x) => x.text === '1'), 'and the count is called: ' + JSON.stringify(down.said.map((x) => x.text)));
+});
+
+test('"lower slowly" is judged: a knee dropped from the top is counted, and told so with the count', () => {
+  const c = new Core.Coach(M, { holdTargetSec: 2, callAtSec: [] });
+  let t = 0;
+  ({ t } = play(c, DOWN, 800, t));
+  ({ t } = play(c, UP, 3200, t));
+  const drop = play(c, DOWN, 900, t);                  // straight down in one frame
+  assert.equal(c.reps, 1, 'it is still a rep');
+  const count = drop.said.find((x) => x.id === 'count1');
+  assert.ok(count && /^1 \u2014 slower on the way down$/.test(count.text), 'the count carries the remark: ' + (count && count.text));
+  assert.equal(c.fastReps, 1);
+  /* and one that takes its time is just counted */
+  ({ t } = play(c, UP, 3200, drop.t));
+  ({ t } = play(c, HALFWAY, 1300, t));
+  const eased = play(c, DOWN, 900, t);
+  assert.equal(c.reps, 2);
+  assert.equal(eased.said.find((x) => x.id === 'count2').text, '2');
+  assert.equal(c.fastReps, 1, 'no remark on that one');
+  /* the check is a setting, and off at zero */
+  const off = new Core.Coach(M, { holdTargetSec: 2, callAtSec: [], lowerSec: 0 });
+  let u = 0;
+  ({ t: u } = play(off, DOWN, 800, u)); ({ t: u } = play(off, UP, 3200, u));
+  const p = play(off, DOWN, 900, u);
+  assert.equal(p.said.find((x) => x.id === 'count1').text, '1');
 });
 
 test('a knee dropped before the count is finished is not a rep, and is said so', () => {
