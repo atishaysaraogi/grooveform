@@ -247,11 +247,15 @@ was the last word, and the person breathes. The picture stays full screen and
 the film runs on. After the last set, or on "Finish", the session ends: the
 film stops and the results add the sets up, with the cue log by set.
 
-**The move, drawn.** The stick figure from the OnTrack build is on the start
-screen and on the page: a move gives its two keyframes as joint angles and
-`figure.js` turns them into points, plants the foot that stays on the floor so
-it does not slide between them, and animates from the one to the other and
-back. A hold stands still. The bridge's keyframes came from a recorded take.
+**The move, drawn — set aside for now.** `figure.js` builds the stick figure
+from the OnTrack build (a move gives its two keyframes as joint angles; the
+builder turns them into points, plants the foot that stays on the floor, and
+animates between them) and every move carries its keyframes, but the figure is
+not on the page: on a phone it made the start screen taller than the stage and
+pushed the button that starts the camera out of reach. The start screen now
+scrolls whatever is on it, and the page carries the scripts' version so a page
+kept from before a change is fetched again rather than run against scripts
+that expect what it lacks.
 
 **Angles off the picture.** The skeleton's colour says what is off and the
 words say which; the arcs, degree numbers and guide lines are not drawn

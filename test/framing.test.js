@@ -170,4 +170,7 @@ test('every script the page loads carries the current version, so a phone that c
   for (const t of tags) assert.equal(t[3], Core.VER, t[1] + ' is stamped ' + t[3]);
   const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
   assert.match(app, /pose-worker\.js\?v=' \+ Core\.VER/, 'and so is the worker');
+  /* and the page itself, so a page kept from before the scripts changed is fetched again */
+  const v = /<html[^>]*data-v="([^"]*)"/.exec(html);
+  assert.ok(v && v[1] === Core.VER, 'the page carries the version: ' + (v && v[1]));
 });

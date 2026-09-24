@@ -70,6 +70,8 @@ body.full .float { display: flex; }
 .veil {
   position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
   background: rgba(13,17,23,.9); backdrop-filter: blur(3px); padding: 20px;
+  /* whatever is on it, the button that starts the camera can be reached */
+  overflow: auto;
 }
 .veil[hidden] { display: none; }
 .veil-in { display: grid; gap: 10px; justify-items: center; max-width: 34ch; }
@@ -77,15 +79,6 @@ body.full .float { display: flex; }
 .muted { color: var(--muted); margin: 0; font-size: .92rem; }
 .tiny { color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
 
-/* ---- the move, drawn: a stick figure from the OnTrack build ---- */
-.fig { width: min(100%, 300px); }
-.demo-fig { width: 100%; max-width: 460px; aspect-ratio: 4 / 3; height: auto; display: block; margin: 0 auto; }
-.demo-fig.lying { aspect-ratio: auto; }
-.demo-fig .ink { stroke: var(--ink); fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
-.demo-fig .ink.far { stroke: var(--muted); opacity: .4; stroke-width: 2.5; }
-.demo-fig .floor { stroke: var(--line); stroke-width: 2; }
-.demo-fig .lbl { font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--muted); }
-.panel.demo h2 { text-align: center; }
 .log .set { list-style: none; margin: 8px 0 2px -20px; color: var(--ink); font-weight: 700; }
 
 /* ---- readings ---- */

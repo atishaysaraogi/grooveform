@@ -24,6 +24,9 @@
   const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', shadow: 'rgba(0,0,0,.55)' };
 
   const $ = (id) => document.getElementById(id);
+  /* an element a page from before it existed may not have: setting a field on
+     nothing is nothing, and reading one gives undefined */
+  const opt = (id) => document.getElementById(id) || {};
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
   const video = $('cam'), canvas = $('view'), ctx = canvas.getContext('2d');
 
@@ -80,7 +83,7 @@
     c.model = $('cfg-model').value;
     c.mirror = $('cfg-mirror').value === 'on';
     c.rotate = $('cfg-rotate').value;
-    c.angles = $('cfg-angles').value === 'on';
+    c.angles = opt('cfg-angles').value === 'on';
     return c;
   }
 
@@ -153,10 +156,6 @@
     $('target-label').textContent = move.holdLabel || 'Hold the set for';
     $('r-target').textContent = `of ${c.holdTargetSec}`;
     $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
-    /* the move, drawn: on the start screen and on the page */
-    const fig = window.Figure ? Figure.svg(move) : '';
-    $('veil-fig').innerHTML = fig; $('demo').innerHTML = fig ? `<h2>${move.name}</h2>${fig}` : '';
-    $('demo').hidden = !fig;
   }
   /* A band is two edges (lo, hi), a symmetric one (sym), or one edge with the
      other end of the meter as the other (min: at least; max: at most). */
@@ -746,7 +745,7 @@
       $('read-reps').className = 'read' + (out.done ? ' good' : '');
     }
 
-    $('faults').textContent = faultWords(out);
+    opt('faults').textContent = faultWords(out);
     const chip = $('state');
     if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
     else if (!live) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
@@ -1021,7 +1020,7 @@
     if (fresh) { setNo = 1; setsDone = []; $('result').hidden = true; $('log').innerHTML = ''; }
     else setNo += 1;
     between = false;
-    $('cue').textContent = ''; $('faults').textContent = '';
+    $('cue').textContent = ''; opt('faults').textContent = '';
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; t0 = performance.now(); state = null;
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
@@ -1039,9 +1038,9 @@
   function buttons() {
     const last = setNo >= cfg().setCount;
     $('startstop').disabled = false;
-    if (!inSet) { $('startstop').textContent = 'Start another session'; $('startstop').className = 'btn primary'; $('endall').hidden = true; $('finish-full').textContent = 'Start'; $('endall-full').hidden = true; }
-    else if (between) { $('startstop').textContent = 'Next set'; $('startstop').className = 'btn primary'; $('endall').hidden = false; $('finish-full').textContent = 'Next set'; $('endall-full').hidden = false; }
-    else { $('startstop').textContent = last ? 'End the last set' : 'End this set'; $('startstop').className = 'btn stop'; $('endall').hidden = true; $('finish-full').textContent = last ? 'End the last set' : 'End this set'; $('endall-full').hidden = true; }
+    if (!inSet) { $('startstop').textContent = 'Start another session'; $('startstop').className = 'btn primary'; opt('endall').hidden = true; opt('finish-full').textContent = 'Start'; opt('endall-full').hidden = true; }
+    else if (between) { $('startstop').textContent = 'Next set'; $('startstop').className = 'btn primary'; opt('endall').hidden = false; opt('finish-full').textContent = 'Next set'; opt('endall-full').hidden = false; }
+    else { $('startstop').textContent = last ? 'End the last set' : 'End this set'; $('startstop').className = 'btn stop'; opt('endall').hidden = true; opt('finish-full').textContent = last ? 'End the last set' : 'End this set'; opt('endall-full').hidden = true; }
   }
   /* The set is over — the target reached, or ended by hand. Nothing is said from
      here until the next set begins: the count or the done call was the last word.
@@ -1052,7 +1051,7 @@
     setsDone.push(s);
     /* the last word stays on screen; the faults do not */
     between = true;
-    $('faults').textContent = '';
+    opt('faults').textContent = '';
     if ('speechSynthesis' in window && !s.reachedTarget) speechSynthesis.cancel();
     if (setNo >= cfg().setCount) { endSession(); return; }
     buttons();
@@ -1097,8 +1096,8 @@
   };
   $('startstop').onclick = () => (!inSet || between ? startSet() : finishSet());
   $('finish-full').onclick = () => (!inSet || between ? startSet() : finishSet());
-  $('endall').onclick = () => endSession();
-  $('endall-full').onclick = () => endSession();
+  opt('endall').onclick = () => endSession();
+  opt('endall-full').onclick = () => endSession();
   $('page-btn').onclick = () => { pageMode = true; applyFull(); };
   $('full-btn').onclick = () => { pageMode = false; applyFull(); };
   $('move').onchange = async () => {
@@ -1160,6 +1159,14 @@
   window.addEventListener('orientationchange', () => setTimeout(() => { sizeCanvas(); reshapeMidSet(); framingNote = undefined; }, 300));
   window.addEventListener('pagehide', () => { unschedule(); stopCamera(); });
 
+  /* A page kept from before the scripts changed is missing what the scripts
+     expect; the scripts carry a version and so does the page, and if they do not
+     agree the page is fetched again, once. */
+  if (document.documentElement.dataset.v !== Core.VER) {
+    let done = false;
+    try { done = sessionStorage.getItem('reloaded') === Core.VER; sessionStorage.setItem('reloaded', Core.VER); } catch { }
+    if (!done) location.reload();
+  }
   loadSettings();
   $('veil-title').textContent = move.name;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {

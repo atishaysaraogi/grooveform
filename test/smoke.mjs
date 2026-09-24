@@ -187,12 +187,11 @@ try {
     assert.equal(await page.textContent('#band-shin'), '85–95');
     assert.equal(await page.textContent('#band-back'), '±12');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
-    /* the move, drawn, is on the start screen and on the page; the angles are not
-       on the picture unless asked for */
-    assert.ok(await page.$('#veil-fig svg'), 'the figure is on the start screen');
-    assert.ok(await page.$('#demo svg'), 'and on the page');
-    assert.match(await page.getAttribute('#veil-fig svg', 'aria-label'), /Wall sit: hold still/);
+    /* the angles are not on the picture unless asked for; the start button is
+       within the stage, where a tap can reach it */
     assert.equal(await page.evaluate(() => window.__app.cfg().angles), false, 'angles off the picture by default');
+    const reach = await page.evaluate(() => { const s = document.getElementById('stage').getBoundingClientRect(), g = document.getElementById('go').getBoundingClientRect(); return g.bottom <= s.bottom + 1 && g.top >= s.top - 1; });
+    assert.ok(reach, 'the start button is inside the stage');
     assert.equal(await page.inputValue('#cfg-setCount'), '3', 'three sets by default');
     await oneSet();
   });
@@ -427,7 +426,6 @@ try {
     await page.selectOption('#move', 'plank');
     await page.waitForSelector('#read-stack');
     await oneSet();
-    assert.match(await page.getAttribute('#demo svg', 'aria-label'), /Elbow plank/, 'the figure follows the exercise');
     assert.equal(await page.textContent('#band-stack'), '-5 to 15', 'the shoulder band');
     assert.equal(await page.textContent('#band-line'), '±5', 'the hip band');
     assert.equal(await page.$('#read-knee'), null, 'and the wall sit\'s readings are gone');
@@ -781,7 +779,6 @@ try {
     assert.equal(await page.textContent('#band-arm'), '85\u2013105');
     assert.equal(await page.textContent('#band-elbow'), '\u2265 165');
     assert.equal(await page.textContent('#band-back'), '\u00b110');
-    assert.match(await page.getAttribute('#demo svg', 'aria-label'), /Donkey kick: repeat slowly/);
     await page.fill('#cfg-repCount', '1'); await page.dispatchEvent('#cfg-repCount', 'change');
     await page.fill('#cfg-setCount', '2'); await page.dispatchEvent('#cfg-setCount', 'change');
     await page.click('#startstop');
