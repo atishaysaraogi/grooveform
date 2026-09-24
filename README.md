@@ -137,6 +137,23 @@ or narrow it in the settings; make it a band of its own if you want it called.
 Two seconds held at the top, lowered slowly, and the rep counts when the hips
 are back down. Ten reps.
 
+**Donkey kick** — on hands and knees, side on, phone on its side.
+
+| | |
+|---|---|
+| **Arm** | the wrist→shoulder line from the floor, **85–105°**: 90 is the shoulders over the wrists, more is ahead of them, less is sitting back. |
+| **Elbow** | the angle at the elbow, **at least 165°**: straight arms. |
+| **Back** | the hip→shoulder line off level, **±10°**: shoulders above hips is sagging, below is rounding. |
+| **Knee** | the working knee, kept at a right angle, **80–100°**. |
+| **Lift** | the angle at the hip between knee and shoulder, **at least 165°** at the top: the thigh in line with the back. |
+| **Over** | how far the thigh rises above the back's line, **at most 5°**: past it the lower back is arching to make height, which every guide names as the fault. |
+
+Two seconds held at the top, lowered slowly, counted when the knee is back
+down. Ten reps, one leg per set, and the sets alternate legs — each set after
+the first is announced as "the other leg". The app follows whichever leg is
+lifted, so kick with the leg nearest the camera. The hands, arms and back are
+the set-up and are coached at the start, before the kick is asked for.
+
 **"Lower slowly" is judged, not just said.** A move that names how long the way
 down should take (a setting, one second for the bridge and the knee raise) is
 told when it took less. The rep still counts — it was done — and the remark rides
@@ -144,8 +161,9 @@ on the count rather than queueing behind it, so it lands on the rep it is about:
 "three — slower on the way down".
 
 **Which way the phone goes.** Every exercise is one of two kinds: phone on its
-side, or phone stood up. The plank and the bridge want it on its side; the wall
-sit and the knee raise are standing bodies and want it stood up. While the camera
+side, or phone stood up. The plank, the bridge and the donkey kick want it on
+its side; the wall sit and the knee raise are standing bodies and want it stood
+up. While the camera
 is giving the other shape the page stays a page, with a notice — on screen and
 out loud — saying which way to turn it. The moment the shape is right and a set
 is under way, the picture takes the whole screen, fitted inside it and never
@@ -340,6 +358,7 @@ test/
   plank.test.js     the plank, likewise
   kneeraise.test.js the knee raise, and a whole set of reps
   bridge.test.js    the glute bridge: feet, line, height, flat feet, and the way down
+  donkeykick.test.js the donkey kick: hands, arms, back, the bent knee and the lift to the line
   mp4.test.js       the file the page writes, timed by the clock
   framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
@@ -386,7 +405,7 @@ the very number the setting says is allowed. "Five degrees either way" has to
 include five, and now does, on every move.
 
 `smoke.mjs` then drives a real browser with the pose model stood in for, through
-all four exercises. It counts the frames handed to the encoder over two seconds
+all five exercises. It counts the frames handed to the encoder over two seconds
 of a set (the clock's thirty a second, no more), records a set with the model
 slowed to a phone's pace and checks the file's length against the clock, and then
 reads the file back box by box: index before data, every frame's duration about

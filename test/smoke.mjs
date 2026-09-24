@@ -30,7 +30,8 @@ function aspect() {
 const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
                R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
 window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0,
-                  thigh: 0, kneeUp: 180, foot: 90, bShin: 95, dip: 50, hipAng: 130, bFoot: 0, vis: 0.95 };
+                  thigh: 0, kneeUp: 180, foot: 90, bShin: 95, dip: 50, hipAng: 130, bFoot: 0,
+                  dBack: 0, dArm: 90, dElbow: 180, dLift: 90, dOver: null, dKnee: 90, vis: 0.95 };
 
 function wallsitBody(o, f) {
   const thigh = 0.2, shinLen = 0.22, torso = 0.26;
@@ -99,12 +100,35 @@ function bridgeBody(o, f) {
   const shoulder = { x: hip.x + torso * bd.x, y: hip.y + torso * bd.y };
   return { heel, toe, knee, ankle, hip, shoulder, ear: { x: shoulder.x - f * 0.05, y: shoulder.y - 0.01 } };
 }
+/* on hands and knees, side on: the same rig as donkeykick.test.js */
+function donkeykickBody(o, f) {
+  const torso = 0.22, uarm = 0.11, farm = 0.11, thigh = 0.16, shin = 0.15;
+  const hip = { x: 0.62, y: 0.5 };
+  const shoulder = { x: hip.x + f * torso * Math.cos(o.dBack * D), y: hip.y - torso * Math.sin(o.dBack * D) };
+  const a = o.dArm * D, dirx = f * Math.cos(a), diry = Math.sin(a);
+  const d = Math.sqrt(uarm * uarm + farm * farm - 2 * uarm * farm * Math.cos(o.dElbow * D));
+  const wrist = { x: shoulder.x + d * dirx, y: shoulder.y + d * diry };
+  const alpha = Math.acos(Math.max(-1, Math.min(1, (uarm * uarm + d * d - farm * farm) / (2 * uarm * d)))), turn = -f * alpha;
+  const elbow = { x: shoulder.x + uarm * (dirx * Math.cos(turn) - diry * Math.sin(turn)), y: shoulder.y + uarm * (dirx * Math.sin(turn) + diry * Math.cos(turn)) };
+  const tx = (shoulder.x - hip.x) / torso, ty = (shoulder.y - hip.y) / torso;
+  const rot = (vx, vy, ang) => ({ x: vx * Math.cos(ang) - vy * Math.sin(ang), y: vx * Math.sin(ang) + vy * Math.cos(ang) });
+  const th = o.dOver == null ? rot(tx, ty, f * o.dLift * D) : rot(-tx, -ty, f * o.dOver * D);
+  const knee = { x: hip.x + thigh * th.x, y: hip.y + thigh * th.y };
+  const sh = rot(-th.x, -th.y, -f * o.dKnee * D);
+  const ankle = { x: knee.x + shin * sh.x, y: knee.y + shin * sh.y };
+  const work = { hip, knee, ankle, heel: { x: ankle.x + shin * 0.1 * sh.x, y: ankle.y + shin * 0.1 * sh.y }, toe: { x: ankle.x - f * 0.05, y: ankle.y + 0.02 } };
+  const kneeK = { x: hip.x, y: hip.y + thigh };
+  const rest = { hip, knee: kneeK, ankle: { x: kneeK.x - f * shin, y: kneeK.y }, heel: { x: kneeK.x - f * shin * 1.05, y: kneeK.y }, toe: { x: kneeK.x - f * shin * 1.3, y: kneeK.y } };
+  const top = { shoulder, elbow, wrist, ear: { x: shoulder.x + f * 0.08, y: shoulder.y - 0.02 } };
+  return { R: Object.assign({}, top, work), L: Object.assign({}, top, rest) };
+}
 window.__poseSource = function () {
   const o = window.__pose; if (!o) return null;
   const A = aspect();
   const B = o.move === 'plank' ? plankBody(o, 1)
     : o.move === 'kneeraise' ? kneeraiseBody(o, 1)
-    : o.move === 'bridge' ? bridgeBody(o, 1) : wallsitBody(o, 1);
+    : o.move === 'bridge' ? bridgeBody(o, 1)
+    : o.move === 'donkeykick' ? donkeykickBody(o, 1) : wallsitBody(o, 1);
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   for (const s of ['L', 'R']) {
     /* side on, most bodies here have their two sides on top of each other; the one
@@ -552,7 +576,7 @@ try {
        picture by itself; asked for 720×1280 it crops a strip out of the sensor and
        turns that instead, which lands as a wide band with the legs gone. So the
        request must be the sensor's own shape whatever the exercise wants. */
-    for (const id of ['wallsit', 'kneeraise', 'plank', 'bridge']) {
+    for (const id of ['wallsit', 'kneeraise', 'plank', 'bridge', 'donkeykick']) {
       await set({ move: id });
       await page.selectOption('#move', id);
       await wait(400);
@@ -739,6 +763,54 @@ try {
     assert.equal(await page.textContent('#r-reps-v'), '1/1 · 0/1', 'both sets in the results');
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
     assert.ok(rows.includes('Set 1') && rows.includes('Set 2'), 'and the log is by set: ' + JSON.stringify(rows.slice(0, 4)));
+    await oneSet();
+    /* back to the knee raise, which the reload step below expects to find */
+    await set({ move: 'kneeraise' });
+    await page.selectOption('#move', 'kneeraise');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
+  });
+
+  await step('the donkey kick: hands and back coached before the kick, the kick judged at the top, the sets alternate legs', async () => {
+    await set({ move: 'donkeykick', dBack: 0, dArm: 90, dElbow: 180, dLift: 90, dOver: null, dKnee: 90 });
+    await page.selectOption('#move', 'donkeykick');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Donkey kick', null, { timeout: 5000 });
+    await page.waitForSelector('#read-lift');
+    assert.equal(await page.textContent('#band-knee'), '80\u2013100');
+    assert.equal(await page.textContent('#band-lift'), '\u2265 165');
+    assert.equal(await page.textContent('#band-over'), '\u2264 5');
+    assert.equal(await page.textContent('#band-arm'), '85\u2013105');
+    assert.equal(await page.textContent('#band-elbow'), '\u2265 165');
+    assert.equal(await page.textContent('#band-back'), '\u00b110');
+    assert.match(await page.getAttribute('#demo svg', 'aria-label'), /Donkey kick: repeat slowly/);
+    await page.fill('#cfg-repCount', '1'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await page.fill('#cfg-setCount', '2'); await page.dispatchEvent('#cfg-setCount', 'change');
+    await page.click('#startstop');
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
+    await page.waitForFunction(() => document.getElementById('v-lift').textContent !== '\u2014', null, { timeout: 10000 });
+    assert.ok(Math.abs(Number(await page.textContent('#v-lift')) - 90) <= 1, 'kneeling reads a right angle at the hip');
+    /* bent elbows at the start come before the kick is asked for */
+    await set({ dElbow: 140 });
+    await saw('straighten your arms');
+    await heard('straighten your arms');
+    await set({ dElbow: 180 });
+    await saw('kick up');
+    /* kicked past the back's line: too high */
+    await set({ dOver: 14, dKnee: 90 });
+    await saw('not so high');
+    await heard('not so high');
+    /* a good kick, held, lowered, counted — and with one rep to the set, the set ends */
+    await set({ dOver: null, dLift: 172, dKnee: 90 });
+    await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
+    await set({ dLift: 112 }); await wait(1300);
+    await set({ dLift: 90 });
+    await page.waitForFunction(() => window.__app.session.between, null, { timeout: 8000 });
+    /* the next set is the other leg, and says so */
+    await page.click('#finish-full');
+    await heard('set 2 of 2 . the other leg');
+    await page.click('#finish-full');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.textContent('#r-move'), 'Donkey kick \u2014 2 sets');
+    assert.equal(await page.textContent('#r-reps-v'), '1/1 \u00b7 0/1');
     await oneSet();
     /* back to the knee raise, which the reload step below expects to find */
     await set({ move: 'kneeraise' });

@@ -480,5 +480,171 @@
     },
   };
 
-  return { wallsit, plank, kneeraise, bridge, list: [wallsit, plank, kneeraise, bridge] };
+  /* =======================================================================
+     Donkey kick — on hands and knees, side on, one knee kept bent at a right
+     angle and the thigh lifted until it is in line with the back, held, and
+     lowered. One leg per set; the sets alternate.
+     ======================================================================= */
+  const donkeykick = {
+    id: 'donkeykick',
+    name: 'Donkey kick',
+    hint: 'Phone on its side on the floor, side on to you, on your hands and knees, whole body in frame.',
+    start: 'Lay the phone on its side on the floor, then get on your hands and knees side on to it, and kick one leg up.',
+    camera: 'wide',
+    reps: true,
+    holdLabel: 'Hold at the top for',
+    alternate: true,                // the sets alternate legs
+    /* the move, drawn: on all fours facing left, one leg kicked up level with the back */
+    pose: { A: { face: 'left', torso: -88, neck: -25, thigh: 0, shin: -90, foot: 180, uarm: 0, farm: 0 },
+            B: { face: 'left', torso: -88, neck: -25, thigh: -90, shin: 180, foot: 60, uarm: 0, farm: 0, thighF: 0, shinF: -90, footF: 180 } },
+
+    defaults: {
+      kneeMin: 80, kneeMax: 100,    // the working knee stays at a right angle
+      /* the lift: the angle at the hip between knee and shoulder. Kneeling it is
+         about 90; the thigh in line with the back is 180. The top is asked for to
+         within fifteen degrees, and not past the line. */
+      liftMin: 165, liftMax: 180,
+      /* how far the thigh may rise above the back's line, in degrees. Past it the
+         lower back is arching to make height, which is the fault every guide names. */
+      overMax: 5, overMin: -90,
+      /* the arms: the wrist→shoulder line from the floor, 90 plumb; over 90 the
+         shoulders are ahead of the wrists (toward the head), under it behind them */
+      armMin: 85, armMax: 105,
+      elbowMin: 165, elbowMax: 180, // straight arms
+      backLevel: 10,                // the hip→shoulder line off level, either way
+      raiseAt: 120, downAt: 105,    // the lift that counts as a kick, and the return
+      holdTargetSec: 2,
+      callAtSec: [],
+      repCount: 10,
+      lowerSec: 1,
+      restSec: 2,
+      deepAt: 10,
+    },
+    extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
+            { key: 'raiseAt', label: 'Hip angle that counts as a kick', min: 100, max: 160 },
+            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 },
+            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 },
+            { key: 'setCount', label: 'Sets', min: 1, max: 10 }],
+
+    joints: ['shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle'],
+    needed: ['shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle'],
+    bones: [['shoulder', 'elbow'], ['elbow', 'wrist'], ['shoulder', 'hip'], ['hip', 'knee'], ['knee', 'ankle'], ['ankle', 'heel'], ['ankle', 'toe']],
+    dots: ['shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle'],
+    limb: { 'shoulder|elbow': 'arm', 'elbow|wrist': 'arm', 'shoulder|hip': 'back', 'hip|knee': 'lift', 'knee|ankle': 'knee' },
+
+    bands: [
+      { key: 'knee', of: 'knee', label: 'knee angle', hud: 'KNEE', note: 'bent',
+        lo: 'kneeMin', hi: 'kneeMax', scale: [40, 180],
+        set: [{ key: 'kneeMin', label: 'Knee angle, lowest', min: 40, max: 175 },
+              { key: 'kneeMax', label: 'Knee angle, highest', min: 45, max: 180 }] },
+      { key: 'lift', of: 'lift', label: 'knee, hip, shoulder', hud: 'LIFT', note: 'at the top',
+        min: 'liftMin', scale: [60, 180],
+        set: [{ key: 'liftMin', label: 'Lift at the top, at least', min: 120, max: 179 }] },
+      { key: 'over', of: 'over', label: 'thigh above the back', hud: 'OVER', note: 'at most',
+        max: 'overMax', scale: [-40, 40],
+        set: [{ key: 'overMax', label: 'Thigh above the back, at most', min: 0, max: 30 }] },
+      { key: 'arm', of: 'arm', label: 'arm from the floor', hud: 'ARM', note: 'target',
+        lo: 'armMin', hi: 'armMax', scale: [50, 130],
+        set: [{ key: 'armMin', label: 'Arm angle, lowest', min: 50, max: 90 },
+              { key: 'armMax', label: 'Arm angle, highest', min: 90, max: 130 }] },
+      { key: 'elbow', of: 'elbow', label: 'elbow', hud: 'ELBOW', note: 'straight',
+        min: 'elbowMin', scale: [90, 180],
+        set: [{ key: 'elbowMin', label: 'Elbow angle, at least', min: 120, max: 179 }] },
+      { key: 'back', of: 'back', label: 'back off level', hud: 'BACK', note: 'level',
+        sym: 'backLevel', scale: [-40, 40],
+        set: [{ key: 'backLevel', label: 'Back off level, at most', min: 3, max: 30 }] },
+    ],
+
+    /* The chain: the hands, then the arms, then the back they carry, then the leg —
+       the knee's bend before the lift, and too high before not high enough, because
+       a thigh past the back's line is the lower back arching. The hands, arms and
+       back are the set-up, coached before the kick is asked for. */
+    faults: ['lost', 'armBack', 'armFwd', 'elbowBent', 'backSag', 'backRound', 'raise', 'kneeOpen', 'kneeShut', 'liftHigh', 'liftLow'],
+    setup: ['armBack', 'armFwd', 'elbowBent', 'backSag', 'backRound'],
+    prompts: ['raise'],
+    cues: {
+      raise: { text: 'Kick up' },
+      armBack: { label: 'Shoulders behind wrists', text: 'Shoulders forward over your wrists', deep: 'Shoulders forward — you are sitting back on your heels' },
+      armFwd: { label: 'Shoulders ahead of wrists', text: 'Shoulders back over your wrists', deep: 'Shoulders back — they are well ahead of your wrists' },
+      elbowBent: { label: 'Elbows bent', text: 'Straighten your arms', deep: 'Straighten your arms — the elbows are well bent' },
+      backSag: { label: 'Back sagging', text: 'Lift your belly — your back is sagging', deep: 'Belly up — your back is sagging toward the floor' },
+      backRound: { label: 'Back rounding', text: 'Flatten your back', deep: 'Flatten your back — it is rounding up' },
+      kneeOpen: { label: 'Knee straightening', text: 'Keep the knee bent — sole to the ceiling', deep: 'Bend the knee to a right angle — the leg is straightening' },
+      kneeShut: { label: 'Knee too closed', text: 'Open the knee a little', deep: 'Open the knee out to a right angle' },
+      liftHigh: { label: 'Thigh above back', text: 'Not so high — thigh in line with your back', deep: 'Lower it — the thigh is past your back and the back is arching' },
+      liftLow: { label: 'Thigh short of the line', text: 'Lift higher — thigh level with your back', deep: 'Higher — knee, hip and shoulder in one line' },
+      lower: { text: 'Lower slowly' },
+      early: { text: 'Hold it at the top next time' },
+      lost: { text: 'Get onto your hands and knees, side on to the camera' },
+    },
+
+    /* Side-on the two legs sit on top of each other. The one being kicked is the one
+       to measure, so the knee that is higher wins; visibility decides when neither is. */
+    read(lm, aspect, cfg) {
+      if (!lm || lm.length < 33) return null;
+      const opts = [];
+      for (const side of ['L', 'R']) {
+        const P = sidePoints(lm, aspect, side);
+        if (!P) return null;
+        const ok = donkeykick.needed.every((k) => P[k].v >= cfg.vis);
+        opts.push({ side, P, ok, up: -P.knee.y, vis: donkeykick.joints.reduce((a, k) => a + P[k].v, 0) / donkeykick.joints.length });
+      }
+      const usable = opts.filter((o) => o.ok);
+      if (!usable.length) {
+        return { ok: false, side: opts[0].side, vis: Math.max(...opts.map((o) => o.vis)), why: 'Some of you is out of shot or hidden' };
+      }
+      const pick = usable.slice().sort((a, b) => (b.up - a.up) || (b.vis - a.vis))[0];
+      const P = pick.P;
+      /* the head end: the shoulders lie that way from the hips */
+      const facing = Math.sign(P.shoulder.x - P.hip.x) || 1;
+      return {
+        ok: true, side: pick.side, vis: pick.vis, facing, points: P,
+        angles: ['knee', 'lift', 'over', 'arm', 'elbow', 'back'],
+        knee: angleAt(P.hip, P.knee, P.ankle),                 // hip → knee → ankle
+        lift: angleAt(P.knee, P.hip, P.shoulder),              // knee → hip → shoulder
+        /* the thigh's rise over the back's line: the knee above the hip plus the
+           shoulder above the hip is zero when the three are in a line, positive
+           when the knee is past it */
+        over: rise(P.hip, P.knee) + rise(P.hip, P.shoulder),
+        arm: 90 + tiltFromVertical(P.wrist, P.shoulder, facing),   // 90 plumb, more = shoulder ahead
+        elbow: angleAt(P.shoulder, P.elbow, P.wrist),
+        back: rise(P.hip, P.shoulder),                          // + = shoulders above hips: sagging
+      };
+    },
+
+    judge(r, cfg) {
+      if (!r || !r.ok || ['knee', 'lift', 'over', 'arm', 'elbow', 'back'].some((k) => r[k] == null)) {
+        return { ok: false, inPosition: false, raised: false, atStart: false, good: {}, faults: {} };
+      }
+      const faults = {}, good = {};
+      good.arm = inBand(r.arm, cfg.armMin, cfg.armMax);
+      if (r.arm < cfg.armMin) faults.armBack = cfg.armMin - r.arm;
+      else if (r.arm > cfg.armMax) faults.armFwd = r.arm - cfg.armMax;
+      good.elbow = inBand(r.elbow, cfg.elbowMin, cfg.elbowMax);
+      if (r.elbow < cfg.elbowMin) faults.elbowBent = cfg.elbowMin - r.elbow;
+      good.back = within(r.back, cfg.backLevel);
+      if (r.back > cfg.backLevel) faults.backSag = r.back - cfg.backLevel;
+      else if (r.back < -cfg.backLevel) faults.backRound = -r.back - cfg.backLevel;
+      good.knee = inBand(r.knee, cfg.kneeMin, cfg.kneeMax);
+      if (r.knee > cfg.kneeMax) faults.kneeOpen = r.knee - cfg.kneeMax;
+      else if (r.knee < cfg.kneeMin) faults.kneeShut = cfg.kneeMin - r.knee;
+      good.over = inBand(r.over, cfg.overMin, cfg.overMax);
+      if (r.over > cfg.overMax) faults.liftHigh = r.over - cfg.overMax;
+      good.lift = inBand(r.lift, cfg.liftMin, cfg.liftMax);
+      if (r.lift < cfg.liftMin && !faults.liftHigh) faults.liftLow = cfg.liftMin - r.lift;
+      const raised = inBand(r.lift, cfg.raiseAt, 180), atStart = inBand(r.lift, 0, cfg.downAt);
+      return { ok: true, good, faults, raised, atStart,
+        inPosition: raised && good.knee && good.lift && good.over && good.arm && good.elbow && good.back };
+    },
+
+    draw(d, r, v) {
+      d.guide(r.points.shoulder, r.points.hip, v.good.back);
+      if (r.lift != null) d.angleAt(r.points.hip, r.points.knee, r.points.shoulder, r.lift, v.good.lift && v.good.over, 0.8);
+      if (r.knee != null) d.angleAt(r.points.knee, r.points.hip, r.points.ankle, r.knee, v.good.knee, 0.7);
+      d.plumb(r.points.wrist, 0.3);
+      if (r.arm != null) d.angleTo(r.points.wrist, r.points.shoulder, 0, r.arm - 90, v.good.arm, 0.6);
+    },
+  };
+
+  return { wallsit, plank, kneeraise, bridge, donkeykick, list: [wallsit, plank, kneeraise, bridge, donkeykick] };
 });

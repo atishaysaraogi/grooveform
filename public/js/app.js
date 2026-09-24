@@ -1027,7 +1027,8 @@
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
-    fire({ id: 'start', text: fresh ? move.start : `Set ${setNo} of ${cfg().setCount}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`, t: 0 });
+    fire({ id: 'start', text: fresh ? move.start
+      : `Set ${setNo} of ${cfg().setCount}${move.alternate ? ' \u2014 the other leg' : ''}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`, t: 0 });
     if (fresh) { rec = startRecording(); inSet = true; stayAwake(); }
     pageMode = false;
     if (!raf) schedule();
