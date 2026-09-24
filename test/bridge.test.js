@@ -246,3 +246,59 @@ test('ten reps finish the set; the number is a setting', () => {
   const s = c.summary();
   assert.equal(s.reps, 3); assert.equal(s.repTarget, 3); assert.equal(s.reachedTarget, true);
 });
+
+test('after a rep is counted there is a quiet two seconds before the next is asked for', () => {
+  const c = new Core.Coach(M);
+  let t = 0;
+  ({ t } = play(c, REST, 1000, t));
+  ({ t } = play(c, TOP, 3500, t));
+  ({ t } = play(c, HALFWAY, 1300, t));
+  const down = play(c, REST, 2600, t);
+  const count = down.said.find((x) => x.id === 'count1');
+  const next = down.said.find((x) => x.id === 'raise');
+  assert.ok(count, texts(down));
+  assert.ok(next, 'the next rep is asked for eventually: ' + texts(down));
+  assert.ok(next.t - count.t >= 2000, `and not for two seconds: ${next.t - count.t} ms after the count`);
+  assert.ok(down.said.slice(0, -1).every((x) => x.id !== 'raise' || x.t - count.t >= 2000));
+  /* a set-up fault waits for the quiet too */
+  const c2 = new Core.Coach(M);
+  let u = 0;
+  ({ t: u } = play(c2, REST, 1000, u)); ({ t: u } = play(c2, TOP, 3500, u)); ({ t: u } = play(c2, HALFWAY, 1300, u));
+  const far = play(c2, Object.assign({}, REST, { shin: 70 }), 2600, u);
+  const cnt = far.said.find((x) => x.id === 'count1'), feet = far.said.find((x) => x.id === 'feetFar');
+  assert.ok(feet && feet.t - cnt.t >= 2000, 'feet corrected only after the quiet: ' + texts(far));
+  /* and it is a setting: none at zero */
+  const c3 = new Core.Coach(M, { restSec: 0 });
+  let w = 0;
+  ({ t: w } = play(c3, REST, 1000, w)); ({ t: w } = play(c3, TOP, 3500, w)); ({ t: w } = play(c3, HALFWAY, 1300, w));
+  const quick = play(c3, REST, 2600, w);
+  const q0 = quick.said.find((x) => x.id === 'count1'), q1 = quick.said.find((x) => x.id === 'raise');
+  assert.ok(q1 && q1.t - q0.t < 2000, texts(quick));
+});
+
+test('every fault present is on view in words, whether or not it is the one being said', () => {
+  const c = new Core.Coach(M);
+  let t = 0;
+  ({ t } = play(c, REST, 1000, t));
+  /* at the top with three things wrong: the voice says one, the words show all three */
+  const out = c.step(read(body({ shin: 120, dip: -10, hipAng: 150, foot: 16 }), c.cfg), t);
+  assert.deepEqual(out.active, ['heelsUp', 'feetClose', 'hipHigh', 'hipLow'], 'in the move\'s order');
+  for (const id of out.active) assert.ok(M.cues[id].label, id + ' has short words');
+  /* at rest only the set-up faults are on view; the hips being down is not a fault there */
+  const rest = c.step(read(body(Object.assign({}, REST, { shin: 70 })), c.cfg), t + 33);
+  assert.deepEqual(rest.active, ['feetFar']);
+  /* and a prompt is not a fault */
+  const clean = c.step(read(body(REST), c.cfg), t + 66);
+  assert.deepEqual(clean.active, []);
+});
+
+test('every fault of every move has short words for the picture', () => {
+  const Moves = require('../public/js/moves.js');
+  for (const m of Moves.list) {
+    for (const id of m.faults) {
+      if (id === 'lost' || (m.prompts || []).includes(id)) continue;
+      assert.ok(m.cues[id] && m.cues[id].label, m.id + ': ' + id);
+      assert.ok(m.cues[id].label.length <= 26, m.id + ': ' + id + ' is short');
+    }
+  }
+});

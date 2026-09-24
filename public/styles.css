@@ -105,6 +105,9 @@ body.full .float { display: flex; }
 .note[hidden] { display: none; }
 
 .cue { min-height: 1.6em; margin: 0; font-weight: 700; font-size: 1.05rem; text-align: center; }
+/* every fault present right now, in words, whether or not the voice got to it */
+.faults { min-height: 1.4em; margin: -8px 0 0; text-align: center; font-size: .82rem; font-weight: 700; color: var(--bad); letter-spacing: .01em; }
+.faults:empty { display: none; }
 .cue.warn { color: var(--warn); } .cue.bad { color: var(--bad); } .cue.good { color: var(--good); }
 
 /* ---- controls ---- */

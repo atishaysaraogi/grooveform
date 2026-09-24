@@ -72,3 +72,55 @@ test('VP9 goes in the same file with its own sample entry, and needs no descript
   assert.throws(() => Mp4.write({ width: 1, height: 1, codec: 'avc', samples }), /description/, 'but avc without one is refused');
   assert.throws(() => Mp4.write({ width: 1, height: 1, codec: 'avc', description: avcC, samples: [] }), /no frames/);
 });
+
+/* ---------- sound ---------- */
+const aacPacket = (n) => ({ data: new Uint8Array(n).fill(0x21), ts: 0, key: true });
+
+test('a sound track goes in beside the picture: AAC, 1024 samples a packet, its own chunk after the video', () => {
+  const samples = [];
+  for (let i = 0; i < 60; i++) samples.push(Object.assign(frame(i % 30 === 0 ? 3000 : 800, i % 30 === 0), { ts: i * 33333 }));
+  const packets = [];
+  for (let i = 0; i < 94; i++) packets.push(Object.assign(aacPacket(120), { ts: Math.round(i * 1024 * 1e6 / 48000) }));   // two seconds of sound
+  const file = Mp4.write({ width: 640, height: 480, codec: 'avc', description: avcC, samples,
+    audio: { sampleRate: 48000, channels: 1, description: new Uint8Array([0x11, 0x88]), samples: packets, bitrate: 96000 } });
+  const f = Mp4.inspect(file);
+  assert.equal(f.tracks, 2);
+  assert.equal(f.sound.handler, 'soun');
+  assert.equal(f.sound.codec, 'mp4a');
+  assert.equal(f.sound.sampleRate, 48000); assert.equal(f.sound.channels, 1);
+  assert.equal(f.sound.samples, 94); assert.equal(f.sound.sampleDuration, 1024);
+  assert.ok(Math.abs(f.sound.duration - 94 * 1024 / 48000) < 0.001, 'two seconds of sound: ' + f.sound.duration);
+  assert.deepEqual(f.sound.config, [0x11, 0x88], 'the decoder description the encoder gave is in the entry');
+  const videoBytes = samples.reduce((a, s) => a + s.data.length, 0);
+  assert.equal(f.sound.chunkOffset, f.chunkOffset + videoBytes, 'the sound follows the picture in mdat');
+  assert.equal(file[f.sound.chunkOffset], 0x21, 'and the first byte there is the first packet');
+  assert.ok(Math.abs(f.duration - Math.max(2, 94 * 1024 / 48000)) < 0.01, 'the film is as long as the longer track: ' + f.duration);
+  assert.equal(f.sound.delay, 0); assert.equal(f.delay, 0);
+});
+
+test('the two tracks share one clock: whichever started later gets an empty edit for the gap', () => {
+  const samples = [0, 33333, 66666].map((t, i) => Object.assign(frame(500, i === 0), { ts: 140000 + t }));   // picture from 140 ms
+  const packets = [0, 1, 2, 3].map((i) => Object.assign(aacPacket(100), { ts: 20000 + Math.round(i * 1024 * 1e6 / 48000) }));   // sound from 20 ms
+  const f = Mp4.inspect(Mp4.write({ width: 320, height: 240, codec: 'avc', description: avcC, samples,
+    audio: { sampleRate: 48000, channels: 1, samples: packets } }));
+  assert.ok(Math.abs(f.delay - 0.12) < 0.0015, 'the picture waits the difference: ' + f.delay);
+  assert.equal(f.sound.delay, 0, 'and the sound, which came first, does not');
+  /* the other way round */
+  const g = Mp4.inspect(Mp4.write({ width: 320, height: 240, codec: 'avc', description: avcC,
+    samples: samples.map((s) => Object.assign({}, s, { ts: s.ts - 140000 })),
+    audio: { sampleRate: 48000, channels: 1, samples: packets.map((p) => Object.assign({}, p, { ts: p.ts + 60000 })) } }));
+  assert.equal(g.delay, 0);
+  assert.ok(Math.abs(g.sound.delay - 0.08) < 0.0015, 'the sound waits: ' + g.sound.delay);
+});
+
+test('without a description from the encoder, AAC-LC\'s own two bytes are written from the rate and channels', () => {
+  assert.deepEqual(Array.from(Mp4.aacConfig(48000, 1)), [0x11, 0x88]);
+  assert.deepEqual(Array.from(Mp4.aacConfig(44100, 1)), [0x12, 0x08]);
+  assert.deepEqual(Array.from(Mp4.aacConfig(44100, 2)), [0x12, 0x10]);
+  const f = Mp4.inspect(Mp4.write({ width: 320, height: 240, codec: 'avc', description: avcC,
+    samples: [Object.assign(frame(10, true), { ts: 0 })], audio: { sampleRate: 44100, channels: 1, samples: [aacPacket(10)] } }));
+  assert.deepEqual(f.sound.config, [0x12, 0x08]);
+  /* and no sound at all is the file as before */
+  const s = Mp4.inspect(Mp4.write({ width: 320, height: 240, codec: 'avc', description: avcC, samples: [Object.assign(frame(10, true), { ts: 0 })], audio: null }));
+  assert.equal(s.tracks, 1); assert.equal(s.sound, null);
+});

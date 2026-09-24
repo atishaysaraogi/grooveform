@@ -379,3 +379,13 @@ test('smoothing settles on the truth and ignores a single wild frame', () => {
   const after = s.of('knee', 160);
   assert.ok(after < 125, 'one bad frame does not take it there: ' + after.toFixed(1));
 });
+
+test('a hold shows every fault present in words, in the move\'s order', () => {
+  const c = new Core.Coach(M);
+  /* the knee too open and the back off the wall: two faults on view, one at a time in the voice */
+  const out = c.step(W.read(body({ knee: 130, shin: 90, tilt: 20 }), ASPECT, c.cfg), 0);
+  assert.deepEqual(out.active, ['high', 'forward']);
+  assert.equal(M.cues.high.label, 'Too high');
+  const fine = c.step(W.read(body({ knee: 95, shin: 90, tilt: 0 }), ASPECT, c.cfg), 33);
+  assert.deepEqual(fine.active, []);
+});

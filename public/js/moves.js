@@ -62,12 +62,12 @@
 
     faults: ['lost', 'feetback', 'feetfwd', 'high', 'low', 'forward', 'back'],
     cues: {
-      feetback: { text: 'Bring your feet back', deep: 'Bring your feet back — your heels are well ahead of your knees' },
-      feetfwd: { text: 'Bring your feet forward', deep: 'Walk your feet further out — your heels are behind your knees' },
-      high: { text: 'Lower down', deep: 'Slide further down the wall' },
-      low: { text: 'Come up a little', deep: 'Come up — that is too deep' },
-      forward: { text: 'Press your back flat to the wall', deep: 'Back flat — your shoulders are ahead of your hips' },
-      back: { text: 'Bring your hips under your shoulders' },
+      feetback: { label: 'Feet ahead of knees', text: 'Bring your feet back', deep: 'Bring your feet back — your heels are well ahead of your knees' },
+      feetfwd: { label: 'Feet behind knees', text: 'Bring your feet forward', deep: 'Walk your feet further out — your heels are behind your knees' },
+      high: { label: 'Too high', text: 'Lower down', deep: 'Slide further down the wall' },
+      low: { label: 'Too deep', text: 'Come up a little', deep: 'Come up — that is too deep' },
+      forward: { label: 'Leaning forward', text: 'Press your back flat to the wall', deep: 'Back flat — your shoulders are ahead of your hips' },
+      back: { label: 'Hips ahead of shoulders', text: 'Bring your hips under your shoulders' },
       lost: { text: 'Step into the camera, side on' },
     },
 
@@ -156,10 +156,10 @@
 
     faults: ['lost', 'stackback', 'stackfwd', 'hipup', 'hipdown'],
     cues: {
-      stackback: { text: 'Bring your shoulders over your elbows', deep: 'Shoulders forward — they are well behind your elbows' },
-      stackfwd: { text: 'Bring your shoulders back over your elbows', deep: 'Shoulders back — they are well ahead of your elbows' },
-      hipup: { text: 'Lower your hips', deep: 'Lower your hips — shoulders to heels in one line' },
-      hipdown: { text: 'Lift your hips', deep: 'Lift your hips — shoulders to heels in one line' },
+      stackback: { label: 'Shoulders behind elbows', text: 'Bring your shoulders over your elbows', deep: 'Shoulders forward — they are well behind your elbows' },
+      stackfwd: { label: 'Shoulders ahead of elbows', text: 'Bring your shoulders back over your elbows', deep: 'Shoulders back — they are well ahead of your elbows' },
+      hipup: { label: 'Hips piked', text: 'Lower your hips', deep: 'Lower your hips — shoulders to heels in one line' },
+      hipdown: { label: 'Hips sagging', text: 'Lift your hips', deep: 'Lift your hips — shoulders to heels in one line' },
       lost: { text: 'Step into the camera, side on' },
     },
 
@@ -229,11 +229,13 @@
       callAtSec: [5],
       repCount: 10,
       lowerSec: 1,                  // "lower slowly": the way down should take at least this long
+      restSec: 2,                   // the quiet after a rep is counted, before the next is asked for
       deepAt: 8,                    // tight bands, so "a long way out" has to be tighter too
     },
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
             { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 },
-            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 }],
+            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 },
+            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 }],
 
     joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
     needed: ['hip', 'knee', 'ankle', 'heel', 'toe'],
@@ -256,11 +258,11 @@
     prompts: ['raise'],
     cues: {
       raise: { text: 'Raise one knee' },
-      kneeOpen: { text: 'Bend your knee more', deep: 'Bend your knee to a right angle' },
-      kneeShut: { text: 'Open your knee a little', deep: 'Open your knee out to a right angle' },
+      kneeOpen: { label: 'Knee too open', text: 'Bend your knee more', deep: 'Bend your knee to a right angle' },
+      kneeShut: { label: 'Knee too closed', text: 'Open your knee a little', deep: 'Open your knee out to a right angle' },
       /* the ankle angle grows as the toes point away and shrinks as they come up */
-      toesDown: { text: 'Pull your toes up', deep: 'Pull your toes up — your foot is pointing away' },
-      toesUp: { text: 'Ease your toes down', deep: 'Ease your toes down — your toes are pulled too far up' },
+      toesDown: { label: 'Foot pointing away', text: 'Pull your toes up', deep: 'Pull your toes up — your foot is pointing away' },
+      toesUp: { label: 'Toes pulled up', text: 'Ease your toes down', deep: 'Ease your toes down — your toes are pulled too far up' },
       lower: { text: 'Lower slowly' },
       early: { text: 'Hold it to the end of the count next time' },
       lost: { text: 'Step into the camera, side on' },
@@ -364,11 +366,13 @@
       callAtSec: [],
       repCount: 10,
       lowerSec: 1,                  // the way down should take at least this long
+      restSec: 2,                   // the quiet after a rep is counted, before the next is asked for
       deepAt: 10,
     },
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
             { key: 'raiseAt', label: 'Hip angle that counts as lifted', min: 120, max: 175 },
-            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 }],
+            { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 },
+            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 }],
 
     joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
     needed: ['shoulder', 'hip', 'knee', 'heel', 'toe'],
@@ -401,12 +405,12 @@
     prompts: ['raise'],
     cues: {
       raise: { text: 'Lift your hips' },
-      feetFar: { text: 'Bring your feet in toward you', deep: 'Feet in — your knees are out over your toes' },
-      feetClose: { text: 'Walk your feet out a little', deep: 'Feet out — your knees are back behind your heels' },
-      heelsUp: { text: 'Keep your heels down', deep: 'Heels down — they are coming off the floor' },
-      toesUp: { text: 'Keep your toes down', deep: 'Toes down — they are coming off the floor' },
-      hipHigh: { text: 'Not so high — hips no higher than your knees', deep: 'Lower your hips — they are well above your knees' },
-      hipLow: { text: 'Lift your hips higher', deep: 'Higher — knees, hips and shoulders in one line' },
+      feetFar: { label: 'Feet too far out', text: 'Bring your feet in toward you', deep: 'Feet in — your knees are out over your toes' },
+      feetClose: { label: 'Feet too close', text: 'Walk your feet out a little', deep: 'Feet out — your knees are back behind your heels' },
+      heelsUp: { label: 'Heels lifting', text: 'Keep your heels down', deep: 'Heels down — they are coming off the floor' },
+      toesUp: { label: 'Toes lifting', text: 'Keep your toes down', deep: 'Toes down — they are coming off the floor' },
+      hipHigh: { label: 'Hips above knees', text: 'Not so high — hips no higher than your knees', deep: 'Lower your hips — they are well above your knees' },
+      hipLow: { label: 'Hips short of the line', text: 'Lift your hips higher', deep: 'Higher — knees, hips and shoulders in one line' },
       lower: { text: 'Lower slowly' },
       early: { text: 'Hold it at the top next time' },
       lost: { text: 'Lie down side on to the camera, whole body in' },

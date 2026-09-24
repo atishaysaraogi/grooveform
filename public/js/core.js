@@ -33,6 +33,7 @@
     gapMs: 1500,          // the least silence between any two cues
     settleMs: 700,        // how long in position before the hold clock starts
     holdTargetSec: 60,    // the set: this many seconds in position
+    restSec: 2,           // reps: the quiet after one is counted before the next is asked for
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     deepAt: 18,           // degrees past the band at which the stronger words are used
   };
@@ -222,6 +223,7 @@
       this.lastSpoke = 0;               // when anything was last said, whatever it was
       this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
       this.lowerAt = 0;                 // when the lowering began, for a move that wants it slow
+      this.countedAt = 0;               // when the last rep was counted, for the quiet after it
       this.lastT = null; this.log = [];
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
@@ -296,9 +298,17 @@
 
       if (!cue) cue = this.correct(on, t);
       return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs,
+        active: this.active(on),
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
 
+    /* The faults present this frame, in the move's order, whether or not any of
+       them gets said: what the picture shows in words while the voice keeps to
+       one thing at a time. Prompts and losing sight of the person are not faults. */
+    active(on) {
+      const prompts = this.move.prompts || [];
+      return this.move.faults.filter((id) => on[id] != null && id !== 'lost' && !prompts.includes(id));
+    }
     /* Whatever is wrong, the one earliest in the move's order is the one to say. */
     correct(on, t) {
       const cfg = this.cfg;
@@ -356,6 +366,7 @@
            count rather than queueing behind it, so it lands on the rep it is about. */
         const fast = cfg.lowerSec > 0 && this.lowerAt && t - this.lowerAt < cfg.lowerSec * 1000;
         if (fast) this.fastReps = (this.fastReps || 0) + 1;
+        this.countedAt = t;
         const tail = fast ? ` \u2014 ${C.fast.text}` : '';
         cue = this.phase === 'done'
           ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
@@ -385,19 +396,21 @@
          faults that are about the set-up — where the feet are — and those are
          coached at the start too, before the rep is asked for, because they decide
          what the rep can be. */
-      if (!cue) {
-        let on = {};
-        if (!v.ok) on = { lost: 99 };
-        else if (this.phase === 'up') on = v.faults;
-        else if (this.phase === 'down') {
-          on = { raise: 99 };
-          for (const id of this.move.setup || []) if (v.faults[id] != null) on[id] = v.faults[id];
-        }
-        cue = this.correct(on, t);
+      let on = {};
+      if (!v.ok) on = { lost: 99 };
+      else if (this.phase === 'up') on = v.faults;
+      else if (this.phase === 'down') {
+        on = { raise: 99 };
+        for (const id of this.move.setup || []) if (v.faults[id] != null) on[id] = v.faults[id];
       }
+      /* the breath after a rep: for a moment after one is counted nothing is asked
+         for and nothing is corrected, so the count is heard and the person can
+         settle before the next is called */
+      const resting = this.phase === 'down' && this.countedAt && t - this.countedAt < (cfg.restSec || 0) * 1000;
+      if (!cue && !resting) cue = this.correct(on, t);
 
       return { reading: r, verdict: v, holding, cue, phase: this.phase,
-        done: this.phase === 'done', leftMs, targetMs,
+        done: this.phase === 'done', leftMs, targetMs, active: this.active(on), resting,
         reps: this.reps, repTarget: total,
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
@@ -454,7 +467,7 @@
   }
 
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-21e';
+  const VER = '2026-09-24a';
 
   return { VER, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };

@@ -207,6 +207,18 @@ try {
     assert.ok(Math.abs(b.mean - a.mean) > 0.01 || b.mean > 4, 'and it keeps being drawn');
   });
 
+  await step('every fault present is written on the page, not only the one being said', async () => {
+    /* the knee too open and the back off the wall at once: the voice takes one, the
+       words show both, in the move's order */
+    await set({ knee: 130, shin: 90, tilt: 20 });
+    /* the readings are smoothed, so the second fault lands a few frames after the first */
+    await page.waitForFunction(() => /Too high\s+\u00b7\s+Leaning forward/.test(document.getElementById('faults').textContent), null, { timeout: 8000 });
+    const words = await page.textContent('#faults');
+    assert.match(words, /^Too high\s+\u00b7\s+Leaning forward$/, 'both faults, in order, and nothing else: ' + words);
+    await set({ knee: 95, shin: 90, tilt: 0 });
+    await page.waitForFunction(() => document.getElementById('faults').textContent === '', null, { timeout: 8000 });
+  });
+
   await step('the legs being too straight is called', async () => {
     await set({ knee: 122 });
     await saw('lower down');
@@ -276,6 +288,9 @@ try {
     assert.ok(out.rows.length >= 4 && /\d+\.\ds —/.test(out.rows[0]), 'the log has times and words: ' + JSON.stringify(out.rows.slice(0, 3)));
     assert.ok(out.canDownload, 'and there is a video to download — ' + out.note);
     assert.match(out.note, /MB/, 'with something in it: ' + out.note);
+    /* this browser build has no AAC encoder, so the film is silent and the note says
+       so rather than pretending; a phone's has one, and the note says that instead */
+    assert.match(out.note, /with the sound the microphone heard|silent — this browser cannot encode sound/, out.note);
   });
 
   await step('the page encodes the film itself, thirty frames a second from the clock and from nowhere else', async () => {
@@ -529,9 +544,12 @@ try {
       await page.selectOption('#move', id);
       await wait(400);
       const req = await page.evaluate(() => window.__app.cameraRequest);
-      assert.equal(req.width.ideal, 1280, id + ' asks for the sensor\'s width');
-      assert.equal(req.height.ideal, 720, id + ' and its height');
-      assert.equal(req.aspectRatio, undefined, id + ' and dictates no aspect ratio');
+      assert.equal(req.video.width.ideal, 1280, id + ' asks for the sensor\'s width');
+      assert.equal(req.video.height.ideal, 720, id + ' and its height');
+      assert.equal(req.video.aspectRatio, undefined, id + ' and dictates no aspect ratio');
+      /* and the microphone, with the browser's clean-up off so the spoken cues from
+         the phone's own speaker stay on the film */
+      assert.equal(req.audio.echoCancellation, false, id + ' asks for the microphone as it is');
     }
     await set({ move: 'kneeraise' });
     await page.selectOption('#move', 'kneeraise');

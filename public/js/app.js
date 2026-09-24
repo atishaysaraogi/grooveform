@@ -221,9 +221,22 @@
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
     const ac = new AC();
     const out = ac.createGain(); out.gain.value = 0.18; out.connect(ac.destination);
-    const dest = ac.createMediaStreamDestination(); out.connect(dest);
-    audio = { ac, out, dest };
+    /* the bus is what the film hears: the tones, and the microphone once there is one.
+       It goes to a stream (for the browser's own recorder) and is read as samples
+       (for the encoder); it never goes to the speaker */
+    const bus = ac.createGain(); bus.gain.value = 1; out.connect(bus);
+    const dest = ac.createMediaStreamDestination(); bus.connect(dest);
+    audio = { ac, out, bus, dest, mic: null, micTrack: null };
     return audio;
+  }
+  /* the camera's stream came with a microphone track: put it on the bus */
+  function hearMic() {
+    const a = initAudio(); if (!a || !stream) return;
+    const track = stream.getAudioTracks()[0];
+    if (!track || track === a.micTrack) return;
+    if (a.mic) { try { a.mic.disconnect(); } catch { } }
+    try { a.mic = a.ac.createMediaStreamSource(new MediaStream([track])); a.mic.connect(a.bus); a.micTrack = track; }
+    catch { a.mic = null; a.micTrack = null; }
   }
   function tone(seq) {
     const a = initAudio(); if (!a || !voice.on) return;
@@ -342,10 +355,18 @@
   async function startCamera() {
     stopCamera();
     camShape = move.camera || null;
-    const want = { video: Object.assign({ facingMode: camFacing }, CAMERA), audio: false };
-    lastCameraRequest = want.video;
+    /* the microphone too, with the browser's clean-up turned off: echo cancellation
+       is built to remove the phone's own speaker from the microphone, and the spoken
+       cues come out of that speaker — they are the sound the film is for */
+    const want = { video: Object.assign({ facingMode: camFacing }, CAMERA),
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
+    lastCameraRequest = want;
     try { stream = await navigator.mediaDevices.getUserMedia(want); }
-    catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
+    catch {
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: want.video, audio: false }); }
+      catch { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
+    }
+    hearMic();
     video.srcObject = stream;
     await video.play();
     await new Promise((r) => (video.videoWidth ? r() : (video.onloadedmetadata = r)));
@@ -544,6 +565,16 @@
        between the two stacks, because the bottom of the frame belongs to the cue. */
     line(move.name, W / 2, pad, fs * 0.66, C.dim, 'center');
 
+    /* every fault present right now, in words, above the cue: the voice keeps to
+       one thing at a time, the picture need not */
+    const words = faultWords(out);
+    if (words) {
+      ctx.font = `700 ${fs * 0.62}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const y = H - fs * 2.2 - pad - fs * 0.7;
+      ctx.lineWidth = fs * 0.18; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
+      ctx.strokeText(words, W / 2, y); ctx.fillStyle = C.bad; ctx.fillText(words, W / 2, y);
+    }
     /* the cue, kept on screen a moment after it was said so the recording shows it */
     if (banner && performance.now() - banner.at < 2600) {
       const bh = fs * 2.2, y = H - bh - pad;
@@ -555,6 +586,12 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = banner.colour; ctx.fillText(banner.text, W / 2, y + bh / 2);
     }
+  }
+
+  /* the faults present this frame, as short words joined by dots */
+  function faultWords(out) {
+    if (!out || !out.active || !out.active.length || !coach) return '';
+    return out.active.map((id) => { const c = coach.cues[id]; return (c && (c.label || c.text)) || id; }).join('  \u00b7  ');
   }
 
   /* ---------- the loop ---------- */
@@ -687,6 +724,7 @@
       $('read-reps').className = 'read' + (out.done ? ' good' : '');
     }
 
+    $('faults').textContent = faultWords(out);
     const chip = $('state');
     if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
     else if (!live) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
@@ -746,6 +784,66 @@
   }
   const bytesOf = (d) => d instanceof ArrayBuffer ? new Uint8Array(d.slice(0)) : new Uint8Array(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength));
 
+  /* The sound for the film the page writes itself: the bus (microphone and tones)
+     read as samples and handed to an AAC encoder, stamped on the same clock as
+     the picture. Where the browser has no AAC encoder the film is silent, and
+     says so. */
+  async function pickSound(sampleRate) {
+    if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') return null;
+    const config = { codec: 'mp4a.40.2', sampleRate, numberOfChannels: 1, bitrate: 96000 };
+    try { const r = await AudioEncoder.isConfigSupported(config); return r && r.supported ? config : null; }
+    catch { return null; }
+  }
+  function startSound(start, film) {
+    const a = initAudio(); if (!a) return null;
+    const sr = a.ac.sampleRate, packets = []; let enc = null, desc = null, tap = null, sink = null, frames = 0, ts0 = null;
+    const ready = (async () => {
+      const config = await pickSound(sr);
+      if (!config || !film.live) return;
+      enc = new AudioEncoder({
+        output: (chunk, meta) => {
+          const dc = meta && meta.decoderConfig;
+          if (dc && dc.description && !desc) desc = bytesOf(dc.description);
+          const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data);
+          packets.push({ data, ts: chunk.timestamp, key: true });
+        },
+        error: (e) => { film.why = film.why || e; },
+      });
+      enc.configure(config);
+      /* a script processor is the one way to read a graph as samples that every
+         browser has; the sink it needs to run is silent */
+      tap = a.ac.createScriptProcessor(4096, 1, 1);
+      sink = a.ac.createGain(); sink.gain.value = 0; tap.connect(sink); sink.connect(a.ac.destination);
+      tap.onaudioprocess = (e) => {
+        if (!enc || enc.state !== 'configured') return;
+        const ch = e.inputBuffer.getChannelData(0);
+        const n = ch.length;
+        /* the first buffer's samples were taken over the last buffer-length of
+           time; every later buffer follows on by its own length, sample for sample */
+        if (ts0 == null) ts0 = Math.max(0, Math.round((performance.now() - start) * 1000 - n * 1e6 / sr));
+        const ts = ts0 + Math.round(frames * 1e6 / sr);
+        try {
+          const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: 1, timestamp: ts, data: new Float32Array(ch) });
+          enc.encode(ad); ad.close();
+        } catch (err) { film.why = film.why || err; }
+        frames += n;
+      };
+      a.bus.connect(tap);
+      film.sound = true;
+    })();
+    return {
+      ready,
+      async stop() {
+        await ready;
+        if (tap) { try { a.bus.disconnect(tap); tap.disconnect(); sink.disconnect(); } catch { } tap.onaudioprocess = null; }
+        if (!enc) return null;
+        try { if (enc.state === 'configured') await enc.flush(); } catch (e) { film.why = film.why || e; }
+        try { enc.close(); } catch { }
+        return packets.length ? { sampleRate: sr, channels: 1, description: desc, samples: packets, bitrate: 96000 } : null;
+      },
+    };
+  }
+
   /* The film under way. `live` while frames are being taken — the canvas keeps its
      shape for as long as that is so. `kind` is which of the two ways is making it,
      once that is known. `stop()` gives the file, or null with `why` saying what
@@ -753,8 +851,8 @@
   function startRecording() {
     const w = canvas.width, h = canvas.height;
     if (!w || !h) return null;
-    const film = { live: true, kind: '', taken: 0, dropped: 0, blob: null, why: null, mime: '' };
-    const samples = []; let enc = null, desc = null, pick = null, start = 0, pump = 0, lastPainted = -1;
+    const film = { live: true, kind: '', taken: 0, dropped: 0, blob: null, why: null, mime: '', sound: false };
+    const samples = []; let enc = null, desc = null, pick = null, start = 0, pump = 0, lastPainted = -1, sound = null;
     let mr = null, recTrack = null; const chunks = [];
 
     /* one frame, now, at the clock's time — if the canvas has been drawn since the
@@ -814,6 +912,7 @@
       enc.configure(pick.config);
       film.kind = 'codec'; film.mime = 'video/mp4'; start = performance.now();
       pump = setInterval(snap, 1000 / REC_FPS);
+      sound = startSound(start, film);
     })();
 
     film.stop = async () => {
@@ -824,9 +923,12 @@
       if (enc) {
         try { if (enc.state === 'configured') await enc.flush(); } catch (e) { film.why = film.why || e; }
         try { enc.close(); } catch { }
+        let audioTrack = null;
+        if (sound) { try { audioTrack = await sound.stop(); } catch (e) { film.why = film.why || e; } }
+        film.sound = !!audioTrack;
         if (!samples.length) { film.why = film.why || new Error('the encoder gave nothing back'); return null; }
         try {
-          const file = Mp4.write({ width: w, height: h, codec: pick.kind, description: desc, codecString: pick.codec, samples, created: new Date() });
+          const file = Mp4.write({ width: w, height: h, codec: pick.kind, description: desc, codecString: pick.codec, samples, created: new Date(), audio: audioTrack });
           return new Blob([file], { type: 'video/mp4' });
         } catch (e) { film.why = e; return null; }
       }
@@ -922,7 +1024,7 @@
       '<li>Nothing needed saying.</li>';
     $('dl-video').disabled = !blob;
     $('rec-note').textContent = blob
-      ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? 'silent, with the cues written on the picture' : 'the cues are on it as tones and as text on the picture'}.`
+      ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? 'with the sound the microphone heard' : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
       : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
     $('result').hidden = false;
     $('startstop').textContent = 'Start another set'; $('startstop').className = 'btn primary';

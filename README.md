@@ -172,6 +172,15 @@ nothing more.
 
 ## What it says
 
+**Every fault is on view in words**, above the cue on the picture and under it
+on the page: the voice keeps to one thing at a time, and the words show the
+rest. Each fault has short words of its own ("Heels lifting", "Hips above
+knees"), in the move's order, and they go when the fault does.
+
+**A breath between reps.** For two seconds after a rep is counted nothing is
+asked for and nothing is corrected, so the count is heard and the person can
+settle before the next is called. It is a setting on each rep move.
+
 One cue at a time, spoken and written, and only when it has held for half a
 second — an instruction given for a flicker is noise. The same cue is not
 repeated inside its cooldown (4 s by default), and no two cues are said within
@@ -248,12 +257,18 @@ recorder had stamped as if they fit in nine tenths of a second, with a sound tra
 that stopped after one. The frames were right and the recorder's clock was not,
 and there is nothing a page can do about a recorder's clock except keep its own.
 
-**The film is silent.** The cues are written on the picture, and the cue log
-downloads beside it with timings. (Where a browser has no encoder to hand over,
-the old way still runs: its recorder takes a stream from the canvas, fed one
-frame per tick of the same clock, with the cue tones mixed in — a browser will
-not let a page capture its own speech. MP4 where it can write one, WebM where
-it cannot.)
+**The film has sound.** The microphone is asked for with the camera, with the
+browser's echo cancellation switched off — it exists to remove the phone's own
+speaker from the microphone, and the spoken cues come out of that speaker. What
+the microphone hears, cues and tones included, is read from the audio graph as
+samples, encoded as AAC by the browser (WebCodecs), and written into the same
+MP4 as a second track on the same clock; whichever track started later gets an
+empty edit for the difference. A browser with no AAC encoder (the open-source
+build the tests run in) gets a silent film and the note under the download says
+so. The cue log downloads beside it with timings. (Where a browser has no video
+encoder either, the old way still runs: its recorder takes a stream from the
+canvas, fed one frame per tick of the same clock, with the microphone and tones
+mixed in. MP4 where it can write one, WebM where it cannot.)
 
 **How smooth it is.** The pose model takes long enough per frame that, run on
 the page's own thread, it stops the page for that long each time: the canvas is
