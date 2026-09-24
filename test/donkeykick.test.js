@@ -147,10 +147,11 @@ function play(c, o, ms, t0) {
 }
 const REST = {}, HALFWAY = { lift: 112 };
 const texts = (p) => JSON.stringify(p.said.map((x) => x.text));
+const settle = (c, t0) => play(c, REST, 2300, t0).t;
 
 test('a rep: kick up, hold two seconds, lower slowly, and it counts when the knee is down', () => {
   const c = new Core.Coach(M);
-  let t = 0;
+  let t = settle(c, 0);
   const rest = play(c, REST, 1200, t); t = rest.t;
   assert.ok(rest.said.some((x) => x.id === 'raise' && /kick up/i.test(x.text)), texts(rest));
   const up = play(c, TOP, 3500, t); t = up.t;
@@ -164,12 +165,12 @@ test('a rep: kick up, hold two seconds, lower slowly, and it counts when the kne
 
 test('arms and back are corrected at the start, before the kick is asked for; too high before not high enough', () => {
   const c = new Core.Coach(M);
-  const bent = play(c, { elbow: 140 }, 1500, 0);
+  const bent = play(c, { elbow: 140 }, 3800, 0);
   const first = bent.said.find((x) => x.id !== 'lost');
   assert.equal(first && first.id, 'elbowBent', texts(bent));
   assert.ok(!bent.said.some((x) => x.id === 'raise'));
   const c2 = new Core.Coach(M);
-  let t = 0;
+  let t = settle(c2, 0);
   ({ t } = play(c2, REST, 1000, t));
   const high = play(c2, { over: 14, knee: 90 }, 2500, t);
   const said = high.said.find((x) => x.id !== 'lost');

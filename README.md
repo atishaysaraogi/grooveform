@@ -130,7 +130,7 @@ or narrow it in the settings; make it a band of its own if you want it called.
 | | |
 |---|---|
 | **Feet** | the foot's own line, heel against toe, off the floor: **±10°**. Heels lifting tilt it one way and toes lifting the other, so the cue says which. Checked first, and at the start. |
-| **Shin** | the angle at the heel between the toe and the knee, as in the knee raise. Allowed **85–110°**. Under it the knee is out over the toes and the feet are too far from the hips; over it the knee is back behind the heel and they are too close. This is where the feet are, so it too is coached at the start, before the lift is asked for. |
+| **Shin** | the angle at the heel between the toe and the knee, as in the knee raise. Allowed **85–110°**. The toes point away from the head, so over the band the knee leans toward the head and the feet are out too far ("walk your feet in"); under it the knee is out over the toes and they are too close ("walk your feet out"). This is where the feet are, so it too is coached at the start, before the lift is asked for. |
 | **Hip** | the angle at the hip between knee and shoulder: the line the hips are lifted to. **At least 160°** at the top. |
 | **Rise** | how far the hip sits above the knee, as the rise of the knee→hip line. **At most 3°**: the hips are not to go higher than the knees, and the three degrees are for the pose model's wobble. A floor line is drawn through the knee, which is the height not to pass. |
 
@@ -194,6 +194,12 @@ nothing more.
 on the page: the voice keeps to one thing at a time, and the words show the
 rest. Each fault has short words of its own ("Heels lifting", "Hips above
 knees"), in the move's order, and they go when the fault does.
+
+**The set-up wait.** A rep move opens by saying where to go and that it will
+wait. Until the person has been at the start position for two seconds nothing
+else is said, nothing is judged and no rep is counted: they are getting down
+onto the floor, and a correction shouted at that is noise. Leaving the start
+before the two seconds are up starts the wait again. Each set begins with it.
 
 **A breath between reps.** For two seconds after a rep is counted nothing is
 asked for and nothing is corrected, so the count is heard and the person can

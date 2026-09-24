@@ -174,10 +174,12 @@ function play(c, o, ms, t0) {
 const UP = { thigh: 88, knee: 90, foot: 85 };
 const DOWN = { thigh: 0, knee: 180, foot: 90 };
 const HALFWAY = { thigh: 35, knee: 120, foot: 88 };   // on the way down: below the raise mark, above the start
+/* the set-up wait: standing at the start for two seconds before anything is coached */
+const settle = (c, t0) => play(c, DOWN, 2300, t0).t;
 
 test('a rep is up, held to the count, lowered, and only then counted', () => {
   const c = new Core.Coach(M);
-  let t = 0, said = [];
+  let t = settle(c, 0), said = [];
   ({ t } = Object.assign({}, (() => { const p = play(c, DOWN, 1000, t); said = said.concat(p.said); return p; })()));
   assert.equal(c.reps, 0, 'standing there is not a rep');
 
@@ -200,7 +202,7 @@ test('a rep is up, held to the count, lowered, and only then counted', () => {
 
 test('"lower slowly" is judged: a knee dropped from the top is counted, and told so with the count', () => {
   const c = new Core.Coach(M, { holdTargetSec: 2, callAtSec: [] });
-  let t = 0;
+  let t = settle(c, 0);
   ({ t } = play(c, DOWN, 800, t));
   ({ t } = play(c, UP, 3200, t));
   const drop = play(c, DOWN, 900, t);                  // straight down in one frame
@@ -217,7 +219,7 @@ test('"lower slowly" is judged: a knee dropped from the top is counted, and told
   assert.equal(c.fastReps, 1, 'no remark on that one');
   /* the check is a setting, and off at zero */
   const off = new Core.Coach(M, { holdTargetSec: 2, callAtSec: [], lowerSec: 0 });
-  let u = 0;
+  let u = settle(off, 0);
   ({ t: u } = play(off, DOWN, 800, u)); ({ t: u } = play(off, UP, 3200, u));
   const p = play(off, DOWN, 900, u);
   assert.equal(p.said.find((x) => x.id === 'count1').text, '1');
@@ -225,7 +227,7 @@ test('"lower slowly" is judged: a knee dropped from the top is counted, and told
 
 test('a knee dropped before the count is finished is not a rep, and is said so', () => {
   const c = new Core.Coach(M);
-  let t = 0;
+  let t = settle(c, 0);
   ({ t } = play(c, DOWN, 800, t));
   ({ t } = play(c, UP, 4000, t));              // up, but only four of the ten seconds
   const early = play(c, DOWN, 1500, t);
@@ -236,7 +238,7 @@ test('a knee dropped before the count is finished is not a rep, and is said so',
 
 test('ten reps finish the set, and the clock is per rep rather than per set', () => {
   const c = new Core.Coach(M, { holdTargetSec: 2, callAtSec: [1], repCount: 3 });
-  let t = 0;
+  let t = settle(c, 0);
   for (let i = 0; i < 3; i++) {
     ({ t } = play(c, DOWN, 700, t));
     ({ t } = play(c, UP, 3200, t));
@@ -253,7 +255,7 @@ test('ten reps finish the set, and the clock is per rep rather than per set', ()
 
 test('standing still is prompted to start, and that prompt is not counted as a correction', () => {
   const c = new Core.Coach(M);
-  const r = play(c, DOWN, 2000, 0);
+  const r = play(c, DOWN, 4300, 0);          // two seconds of set-up wait, then the prompt
   assert.ok(r.said.some((x) => x.id === 'raise' && /raise one knee/i.test(x.text)),
     'said: ' + JSON.stringify(r.said.map((x) => x.text)));
   assert.deepEqual(c.summary().cues, {}, 'and nothing was wrong with anything');
@@ -266,14 +268,14 @@ test('the knee and the foot are only corrected once the knee is actually up', ()
   assert.deepEqual(a.said.filter((x) => /toes|knee/i.test(x.id)).map((x) => x.id), []);
   /* the same foot with the knee up is */
   const upc = new Core.Coach(M);
-  let t = 0; ({ t } = play(upc, DOWN, 700, t));
+  let t = settle(upc, 0); ({ t } = play(upc, DOWN, 700, t));
   const b = play(upc, { thigh: 88, knee: 90, foot: 140 }, 2500, t);
   assert.ok(b.said.some((x) => x.id === 'toesDown'), 'said: ' + JSON.stringify(b.said.map((x) => x.text)));
 });
 
 test('the knee is corrected before the foot, being what the foot hangs off', () => {
   const c = new Core.Coach(M);
-  let t = 0; ({ t } = play(c, DOWN, 700, t));
+  let t = settle(c, 0); ({ t } = play(c, DOWN, 700, t));
   const r = play(c, { thigh: 88, knee: 130, foot: 140 }, 2000, t);
   const first = r.said.filter((x) => /knee|toes/i.test(x.id))[0];
   assert.equal(first.id, 'kneeOpen', 'said: ' + JSON.stringify(r.said.map((x) => x.text)));

@@ -624,6 +624,10 @@ try {
     /* the card is rebuilt when the exercise changes, so wait for the count rather
        than reading whatever happens to be in the DOM at this instant */
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
+    /* the opening words, then two seconds standing at the start before the coach
+       says anything more — then the prompt */
+    assert.equal(await page.textContent('#state'), 'Getting set');
+    await page.waitForFunction(() => window.__app.state && window.__app.state.ready === true, null, { timeout: 8000 });
     await saw('raise one knee');
     await heard('raise one knee');
   });
@@ -696,10 +700,12 @@ try {
     assert.equal(await page.isVisible('#finish-full'), true, 'with the finish button on it');
     assert.ok(Math.abs(Number(await page.textContent('#v-hip')) - 130) <= 1, 'lying there reads the hip angle');
     assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the knee');
-    /* feet too far out: said before the lift is asked for */
-    await set({ bShin: 70 });                     // fifteen past the band, so the stronger words
-    await saw('feet in');
-    await heard('feet in');
+    /* feet too far out — the shin angle over its band — said before the lift is
+       asked for, and only once the person has been at the start for two seconds */
+    assert.match(await cue(), /I will wait while you get set up/i, 'the opening words');
+    await set({ bShin: 125 });                    // fifteen past the band, so the stronger words
+    await saw('walk your feet in', 10000);
+    await heard('walk your feet in');
     await set({ bShin: 95 });
     await saw('lift your hips');
   });

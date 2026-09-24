@@ -34,6 +34,7 @@
     settleMs: 700,        // how long in position before the hold clock starts
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
+    readyMs: 2000,        // reps: how long the start position is held before the coaching begins
     setCount: 3,          // how many sets make the session
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     deepAt: 18,           // degrees past the band at which the stronger words are used
@@ -225,6 +226,7 @@
       this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
       this.lowerAt = 0;                 // when the lowering began, for a move that wants it slow
       this.countedAt = 0;               // when the last rep was counted, for the quiet after it
+      this.ready = false; this.readySince = 0;   // reps: the set-up wait, until the start is held
       this.lastT = null; this.log = [];
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
@@ -339,6 +341,20 @@
       const targetMs = cfg.holdTargetSec * 1000, total = cfg.repCount;
       const raised = !!(v.ok && v.raised), atStart = !!(v.ok && v.atStart);
 
+      /* The set-up wait. The opening words said where to go; until the person has
+         been at the start position for a moment, nothing else is said, nothing is
+         judged, and no rep is counted — they are getting down onto the floor, and
+         a correction shouted at that is noise. */
+      if (!this.ready) {
+        if (atStart) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
+        else this.readySince = 0;
+        if (!this.ready) {
+          return { reading: r, verdict: v, holding: false, cue: null, phase: 'setup', ready: false,
+            done: false, leftMs: targetMs, targetMs, active: [], resting: false,
+            reps: this.reps, repTarget: total, holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
+        }
+      }
+
       let holding = false;
       if (v.inPosition && this.phase === 'up') {
         if (!this.inSince) this.inSince = t;
@@ -410,7 +426,7 @@
       const resting = this.phase === 'down' && this.countedAt && t - this.countedAt < (cfg.restSec || 0) * 1000;
       if (!cue && !resting) cue = this.correct(on, t);
 
-      return { reading: r, verdict: v, holding, cue, phase: this.phase,
+      return { reading: r, verdict: v, holding, cue, phase: this.phase, ready: true,
         done: this.phase === 'done', leftMs, targetMs, active: this.active(on), resting,
         reps: this.reps, repTarget: total,
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
@@ -468,7 +484,7 @@
   }
 
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-24d';
+  const VER = '2026-09-24e';
 
   return { VER, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };

@@ -446,9 +446,12 @@
     const tone = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
     const whole = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
 
+    /* thick enough to read from across the room, see-through enough to leave the
+       body visible under it */
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.shadowColor = C.shadow; ctx.shadowBlur = s * 2;
-    ctx.lineWidth = s * 1.6; ctx.setLineDash([]);
+    ctx.lineWidth = s * 3.2; ctx.setLineDash([]);
+    ctx.globalAlpha = 0.55;
     for (const [a, b] of move.bones) {
       const p = r.points[a], q = r.points[b]; if (!p || !q) continue;
       /* each part is drawn in the colour of the verdict that is about it */
@@ -459,8 +462,9 @@
     ctx.shadowBlur = 0; ctx.fillStyle = whole;
     for (const k of move.dots) {
       const p = r.points[k]; if (!p) continue; const [x, y] = at(p);
-      ctx.beginPath(); ctx.arc(x, y, s * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, s * 2.2, 0, Math.PI * 2); ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
     /* what the move asks to be drawn — the angles, arcs and guide lines — only
        when asked for: the skeleton's colour says what is off, and the words do */
@@ -750,6 +754,7 @@
     if (out.done) { chip.textContent = 'Done'; chip.className = 'chip good'; }
     else if (!live) { chip.textContent = 'Can’t see you'; chip.className = 'chip warn'; }
     else if (out.holding) { chip.textContent = `${Math.ceil(leftSec)} s left`; chip.className = 'chip good'; }
+    else if (out.ready === false) { chip.textContent = 'Getting set'; chip.className = 'chip'; }
     else if (v.inPosition) { chip.textContent = 'Settling'; chip.className = 'chip good'; }
     else if (move.reps && out.phase !== 'up') { chip.textContent = `Rep ${out.reps + 1} of ${out.repTarget}`; chip.className = 'chip'; }
     else {
@@ -759,7 +764,7 @@
       chip.className = 'chip bad';
     }
   }
-  const PHASE = { down: 'ready', up: 'holding', lower: 'lower slowly', done: 'set done' };
+  const PHASE = { setup: 'getting set', down: 'ready', up: 'holding', lower: 'lower slowly', done: 'set done' };
 
   /* ---------- recording ----------
      Two ways to make the film, tried in this order.

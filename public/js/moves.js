@@ -344,7 +344,7 @@
     id: 'bridge',
     name: 'Glute bridge',
     hint: 'Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.',
-    start: 'Lay the phone on its side on the floor, then lie down side on to it, knees bent, feet flat, and lift your hips.',
+    start: 'Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent.',
     camera: 'wide',                 // a body lying down is long and low, like the plank
     reps: true,
     holdLabel: 'Hold at the top for',
@@ -357,9 +357,10 @@
 
     defaults: {
       /* The shin, taken at the heel between the toe and the knee — the foot's own
-         line against the shin's, as in the knee raise. Under the band the knee is
-         out over the toes and the feet are too far from the hips; over it the knee
-         is back behind the heel and they are too close. */
+         line against the shin's, as in the knee raise. The toes point away from the
+         head, so over the band the knee leans toward the head, which is the feet
+         out too far from the hips; under it the knee is out over the toes, which is
+         the feet in too close. */
       shinMin: 85, shinMax: 110,
       /* The top of the rep: the angle at the hip between knee and shoulder. Straight
          is 180 and the line is asked for to within twenty degrees. */
@@ -421,8 +422,8 @@
     prompts: ['raise'],
     cues: {
       raise: { text: 'Lift your hips' },
-      feetFar: { label: 'Feet too far out', text: 'Bring your feet in toward you', deep: 'Feet in — your knees are out over your toes' },
-      feetClose: { label: 'Feet too close', text: 'Walk your feet out a little', deep: 'Feet out — your knees are back behind your heels' },
+      feetFar: { label: 'Feet too far out', text: 'Walk your feet in', deep: 'Walk your feet in toward you — they are well out' },
+      feetClose: { label: 'Feet too close', text: 'Walk your feet out a little', deep: 'Walk your feet out — your knees are out over your toes' },
       heelsUp: { label: 'Heels lifting', text: 'Keep your heels down', deep: 'Heels down — they are coming off the floor' },
       toesUp: { label: 'Toes lifting', text: 'Keep your toes down', deep: 'Toes down — they are coming off the floor' },
       hipHigh: { label: 'Hips above knees', text: 'Not so high — hips no higher than your knees', deep: 'Lower your hips — they are well above your knees' },
@@ -454,8 +455,8 @@
       }
       const faults = {}, good = {};
       good.shin = inBand(r.shin, cfg.shinMin, cfg.shinMax);
-      if (r.shin < cfg.shinMin) faults.feetFar = cfg.shinMin - r.shin;
-      else if (r.shin > cfg.shinMax) faults.feetClose = r.shin - cfg.shinMax;
+      if (r.shin > cfg.shinMax) faults.feetFar = r.shin - cfg.shinMax;
+      else if (r.shin < cfg.shinMin) faults.feetClose = cfg.shinMin - r.shin;
       good.hip = inBand(r.hip, cfg.hipMin, cfg.hipMax);
       if (r.hip < cfg.hipMin) faults.hipLow = cfg.hipMin - r.hip;
       good.over = inBand(r.over, cfg.overMin, cfg.overMax);
