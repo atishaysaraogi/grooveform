@@ -34,6 +34,7 @@
     settleMs: 700,        // how long in position before the hold clock starts
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
+    setCount: 3,          // how many sets make the session
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     deepAt: 18,           // degrees past the band at which the stronger words are used
   };
@@ -467,7 +468,7 @@
   }
 
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-24a';
+  const VER = '2026-09-24b';
 
   return { VER, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };

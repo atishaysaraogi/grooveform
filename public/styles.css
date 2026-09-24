@@ -77,6 +77,17 @@ body.full .float { display: flex; }
 .muted { color: var(--muted); margin: 0; font-size: .92rem; }
 .tiny { color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
 
+/* ---- the move, drawn: a stick figure from the OnTrack build ---- */
+.fig { width: min(100%, 300px); }
+.demo-fig { width: 100%; max-width: 460px; aspect-ratio: 4 / 3; height: auto; display: block; margin: 0 auto; }
+.demo-fig.lying { aspect-ratio: auto; }
+.demo-fig .ink { stroke: var(--ink); fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.demo-fig .ink.far { stroke: var(--muted); opacity: .4; stroke-width: 2.5; }
+.demo-fig .floor { stroke: var(--line); stroke-width: 2; }
+.demo-fig .lbl { font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--muted); }
+.panel.demo h2 { text-align: center; }
+.log .set { list-style: none; margin: 8px 0 2px -20px; color: var(--ink); font-weight: 700; }
+
 /* ---- readings ---- */
 .reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .read { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }

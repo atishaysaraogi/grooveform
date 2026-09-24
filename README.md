@@ -219,6 +219,26 @@ point of the rule rather than a flaw in it.
 
 ## The set
 
+**Sets.** A session is a number of sets, a setting on every move (three by
+default), with the reps a set holds a setting on the rep moves. The first set
+starts the film and the wake lock; each set after it is a fresh coach on the
+same film. A set ends when its target is reached — the reps done, or the hold
+held — or when "End this set" is tapped, and from that moment nothing is said
+and no fault is shown until "Next set" is tapped: the count or the done call
+was the last word, and the person breathes. The picture stays full screen and
+the film runs on. After the last set, or on "Finish", the session ends: the
+film stops and the results add the sets up, with the cue log by set.
+
+**The move, drawn.** The stick figure from the OnTrack build is on the start
+screen and on the page: a move gives its two keyframes as joint angles and
+`figure.js` turns them into points, plants the foot that stays on the floor so
+it does not slide between them, and animates from the one to the other and
+back. A hold stands still. The bridge's keyframes came from a recorded take.
+
+**Angles off the picture.** The skeleton's colour says what is off and the
+words say which; the arcs, degree numbers and guide lines are not drawn
+unless the setting "Angles on the picture" is turned on.
+
 For the two holds: sixty seconds, counted down from the moment the position is
 right. The clock is spent from time **in position**, so coming out of it pauses
 the clock rather than running it down — sixty seconds means sixty seconds of the

@@ -36,7 +36,11 @@
   let running = false, raf = 0, lastTs = 0;
   let coach = null, smoother = null, state = null;
   let banner = null;                      // the cue painted on the frame, and when it appeared
-  let rec = null, inSet = false;          // the film under way (see startRecording), and whether a set is
+  let rec = null, inSet = false;          // the film under way (see startRecording), and whether a session is
+  /* the session: which set this is, the ones done, and whether the last one has
+     ended with the next not yet begun — the camera and the film run on through
+     that, the coaching does not */
+  let setNo = 0, setsDone = [], between = false;
   let audio = null;                       // WebAudio graph: speakers + a track for the recording
   let t0 = 0;
 
@@ -47,7 +51,7 @@
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
   const SETTINGS_V = 7;
-  const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate'];
+  const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate', 'angles'];
   /* One input each, but the value belongs to the exercise: a plank is held for a
      minute and a knee raise for ten seconds a rep, and neither should inherit the
      other's clock just because they share a box on the settings panel. */
@@ -65,7 +69,8 @@
 
   function cfg() {
     const c = Object.assign({}, Core.COMMON, move.defaults);
-    for (const s of settingsOf(move)) c[s.key] = num('cfg-' + s.key, move.defaults[s.key]);
+    const own = Object.assign({}, Core.COMMON, move.defaults);
+    for (const s of settingsOf(move)) c[s.key] = num('cfg-' + s.key, own[s.key]);
     /* the time calls are typed as a list, so anything unreadable falls back
        rather than silently leaving the set with no calls in it */
     const calls = String(($('cfg-calls') || {}).value || '').split(/[^\d]+/).map(Number).filter((x) => x > 0);
@@ -75,6 +80,7 @@
     c.model = $('cfg-model').value;
     c.mirror = $('cfg-mirror').value === 'on';
     c.rotate = $('cfg-rotate').value;
+    c.angles = $('cfg-angles').value === 'on';
     return c;
   }
 
@@ -92,7 +98,7 @@
       const lab = el('label', null, `${s.label}<input type="number" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1">`);
       host.appendChild(lab);
       const input = lab.querySelector('input');
-      input.value = mine[s.key] != null ? mine[s.key] : move.defaults[s.key];
+      input.value = mine[s.key] != null ? mine[s.key] : fallback[s.key];
       input.onchange = saveSettings;
     }
   }
@@ -147,6 +153,10 @@
     $('target-label').textContent = move.holdLabel || 'Hold the set for';
     $('r-target').textContent = `of ${c.holdTargetSec}`;
     $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
+    /* the move, drawn: on the start screen and on the page */
+    const fig = window.Figure ? Figure.svg(move) : '';
+    $('veil-fig').innerHTML = fig; $('demo').innerHTML = fig ? `<h2>${move.name}</h2>${fig}` : '';
+    $('demo').hidden = !fig;
   }
   /* A band is two edges (lo, hi), a symmetric one (sym), or one edge with the
      other end of the meter as the other (min: at least; max: at most). */
@@ -453,8 +463,9 @@
       ctx.beginPath(); ctx.arc(x, y, s * 1.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    /* what the move asks to be drawn, in terms that say nothing about which move it is */
-    move.draw({
+    /* what the move asks to be drawn — the angles, arcs and guide lines — only
+       when asked for: the skeleton's colour says what is off, and the words do */
+    if (cfg().angles) move.draw({
       /* a dashed line straight up (or down, for a negative share) from a point */
       plumb(p, share) {
         const [x, y] = at(p);
@@ -546,17 +557,19 @@
       };
     };
     const L = stack(pad, 'left');
-    for (const b of move.bands) {
+    if (c.angles) for (const b of move.bands) {
       const val = live && r[b.of] != null ? `${Math.round(r[b.of])}°` : '—';
       L(`${b.hud} ${val}`, `${b.note} ${bandText(b, c)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
     }
+    /* which set this is */
+    if (setNo) L(`SET ${setNo} of ${c.setCount}`, out.between ? 'done' : '', out.between ? C.good : C.dim);
 
     /* the countdown, which is what the set is */
     const R = stack(W - pad, 'right');
     const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
     const under = out.done ? (move.reps ? `${out.repTarget} reps` : `${target} s held`)
       : move.reps ? `rep ${Math.min(out.reps + 1, out.repTarget)} of ${out.repTarget}` : `left of ${target} s`;
-    const ry = R(out.done ? 'DONE' : `${left}s`, under, out.done || out.holding ? C.good : C.ink, 1.5);
+    const ry = R(out.done || out.between ? 'DONE' : `${left}s`, under, out.done || out.between || out.holding ? C.good : C.ink, 1.5);
     if (rec && rec.live) {
       line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
       ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
@@ -567,13 +580,13 @@
 
     /* every fault present right now, in words, above the cue: the voice keeps to
        one thing at a time, the picture need not */
-    const words = faultWords(out);
+    const words = out.between ? (setNo >= c.setCount ? 'All sets done' : `Set ${setNo} done \u2014 tap Next set when you are ready`) : faultWords(out);
     if (words) {
       ctx.font = `700 ${fs * 0.62}px ui-sans-serif, system-ui, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const y = H - fs * 2.2 - pad - fs * 0.7;
       ctx.lineWidth = fs * 0.18; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
-      ctx.strokeText(words, W / 2, y); ctx.fillStyle = C.bad; ctx.fillText(words, W / 2, y);
+      ctx.strokeText(words, W / 2, y); ctx.fillStyle = out.between ? C.good : C.bad; ctx.fillText(words, W / 2, y);
     }
     /* the cue, kept on screen a moment after it was said so the recording shows it */
     if (banner && performance.now() - banner.at < 2600) {
@@ -631,11 +644,20 @@
        a different shape entirely */
     const q = quarterTurn(), t = turned(q);
     const reading = smoother.apply(move.read(Core.rotateLandmarks(lm, q), t.w / t.h, coach.cfg));
-    const out = coach.step(reading, now - t0);
-    if (out.cue) fire(out.cue);
+    let out;
+    if (between) {
+      /* the set is over and the next has not begun: the picture and the skeleton go
+         on, nothing is judged and nothing is said */
+      out = Object.assign({}, state || {}, { cue: null, active: [], holding: false, between: true, verdict: { ok: !!(reading && reading.ok), good: {}, faults: {}, inPosition: false } });
+    } else {
+      out = coach.step(reading, now - t0);
+      if (out.cue) fire(out.cue);
+    }
     drawFrame(reading, out.verdict, out);
     paintUi(reading, out.verdict, out);
     state = out;
+    /* the target reached ends the set by itself */
+    if (!between && out.done) finishSet();
   }
   /* paced by the camera where the browser allows, and held to about the camera's
      rate where it must fall back to the display's, which on a phone can be four
@@ -992,45 +1014,75 @@
     startSet();
   }
 
+  /* A session is a number of sets. The first set starts the film and the wake
+     lock; each set after it is a fresh coach on the same film. */
   function startSet() {
-    $('result').hidden = true; $('log').innerHTML = ''; $('cue').textContent = '';
+    const fresh = !inSet;
+    if (fresh) { setNo = 1; setsDone = []; $('result').hidden = true; $('log').innerHTML = ''; }
+    else setNo += 1;
+    between = false;
+    $('cue').textContent = ''; $('faults').textContent = '';
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; t0 = performance.now(); state = null;
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
-    fire({ id: 'start', text: move.start, t: 0 });
-    rec = startRecording(); inSet = true; pageMode = false;
-    stayAwake();
+    fire({ id: 'start', text: fresh ? move.start : `Set ${setNo} of ${cfg().setCount}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`, t: 0 });
+    if (fresh) { rec = startRecording(); inSet = true; stayAwake(); }
+    pageMode = false;
     if (!raf) schedule();
     $('rec-note').textContent = rec ? '' : 'The camera has not given a picture yet, so there is nothing to film.';
+    buttons();
+  }
+  /* what the buttons say: end this set, go on to the next, or finish */
+  function buttons() {
+    const last = setNo >= cfg().setCount;
     $('startstop').disabled = false;
-    $('startstop').textContent = 'Finish the set'; $('startstop').className = 'btn stop';
+    if (!inSet) { $('startstop').textContent = 'Start another session'; $('startstop').className = 'btn primary'; $('endall').hidden = true; $('finish-full').textContent = 'Start'; $('endall-full').hidden = true; }
+    else if (between) { $('startstop').textContent = 'Next set'; $('startstop').className = 'btn primary'; $('endall').hidden = false; $('finish-full').textContent = 'Next set'; $('endall-full').hidden = false; }
+    else { $('startstop').textContent = last ? 'End the last set' : 'End this set'; $('startstop').className = 'btn stop'; $('endall').hidden = true; $('finish-full').textContent = last ? 'End the last set' : 'End this set'; $('endall-full').hidden = true; }
+  }
+  /* The set is over — the target reached, or ended by hand. Nothing is said from
+     here until the next set begins: the count or the done call was the last word.
+     After the last set the session finishes by itself. */
+  function finishSet() {
+    if (!inSet || between) return;
+    const s = coach.summary();
+    setsDone.push(s);
+    /* the last word stays on screen; the faults do not */
+    between = true;
+    $('faults').textContent = '';
+    if ('speechSynthesis' in window && !s.reachedTarget) speechSynthesis.cancel();
+    if (setNo >= cfg().setCount) { endSession(); return; }
+    buttons();
   }
 
-  async function endSet() {
-    inSet = false; letSleep(); applyFull();
+  /* The session is over: the film stops, the sets are added up, the results show. */
+  async function endSession() {
+    if (!inSet) return;
+    if (!between) setsDone.push(coach.summary());
+    inSet = false; between = false; letSleep(); applyFull();
     await refilm;
     const blob = rec ? await rec.stop() : null;
     if (rec) rec.blob = blob;
-    const s = coach.summary();
-    $('r-move').textContent = move.name;
-    $('r-hold').textContent = s.holdSec; $('r-best').textContent = s.bestSec;
-    $('r-target').textContent = move.reps ? `${s.reps} of ${s.repTarget} reps` : `of ${s.targetSec}`;
+    const sets = setsDone, n = sets.length;
+    const sum = (k) => +sets.reduce((a, s) => a + s[k], 0).toFixed(1);
+    $('r-move').textContent = `${move.name} — ${n} set${n === 1 ? '' : 's'}`;
+    $('r-hold').textContent = sum('holdSec'); $('r-best').textContent = Math.max(0, ...sets.map((s) => s.bestSec));
+    $('r-target').textContent = move.reps ? `of ${n * (sets[0] ? sets[0].repTarget : 0)} reps` : `of ${n} × ${sets[0] ? sets[0].targetSec : 0}`;
     $('r-reps').hidden = !move.reps;
-    $('r-reps-v').textContent = move.reps ? `${s.reps}/${s.repTarget}` : '';
-    $('r-cues').textContent = Object.values(s.cues).reduce((a, b) => a + b, 0);
-    $('log').innerHTML = s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') ||
-      '<li>Nothing needed saying.</li>';
+    $('r-reps-v').textContent = move.reps ? sets.map((s) => `${s.reps}/${s.repTarget}`).join(' · ') : '';
+    $('r-cues').textContent = sets.reduce((a, s) => a + Object.values(s.cues).reduce((x, y) => x + y, 0), 0);
+    $('log').innerHTML = sets.map((s, i) => `<li class="set">Set ${i + 1}</li>` + (s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') || '<li>Nothing needed saying.</li>')).join('');
     $('dl-video').disabled = !blob;
     $('rec-note').textContent = blob
       ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? 'with the sound the microphone heard' : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
       : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
     $('result').hidden = false;
-    $('startstop').textContent = 'Start another set'; $('startstop').className = 'btn primary';
-    voice.say(move.reps ? `Set done. ${s.reps} of ${s.repTarget} reps.`
-      : s.reachedTarget ? `Set done. You held the full ${s.targetSec} seconds.`
-        : s.holdSec >= 1 ? `Set done. ${Math.round(s.holdSec)} of ${s.targetSec} seconds in position.` : 'Set done.');
+    buttons();
+    const reps = sets.reduce((a, s) => a + s.reps, 0);
+    voice.say(move.reps ? `All done. ${n} set${n === 1 ? '' : 's'}, ${reps} reps.`
+      : `All done. ${n} set${n === 1 ? '' : 's'}, ${Math.round(sum('holdSec'))} seconds in position.`);
     $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1042,8 +1094,10 @@
     const a = initAudio(); if (a && a.ac.state === 'suspended') a.ac.resume();
     begin();
   };
-  $('startstop').onclick = () => (inSet ? endSet() : startSet());
-  $('finish-full').onclick = () => { if (inSet) endSet(); };
+  $('startstop').onclick = () => (!inSet || between ? startSet() : finishSet());
+  $('finish-full').onclick = () => (!inSet || between ? startSet() : finishSet());
+  $('endall').onclick = () => endSession();
+  $('endall-full').onclick = () => endSession();
   $('page-btn').onclick = () => { pageMode = true; applyFull(); };
   $('full-btn').onclick = () => { pageMode = false; applyFull(); };
   $('move').onchange = async () => {
@@ -1053,7 +1107,7 @@
     /* finish whatever was under way, then start again from this exercise's own
        coach — otherwise the readouts keep being painted by the last one, with its
        bands and its clock, until something else happens to replace it */
-    if (inSet) await endSet();
+    if (inSet) await endSession();
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; state = null; t0 = performance.now();
     syncBands();
@@ -1087,13 +1141,16 @@
     save(rec.blob, `${move.id}-${stamp()}.${rec.blob.type.includes('mp4') ? 'mp4' : 'webm'}`);
   };
   $('dl-log').onclick = () => {
-    const s = coach ? coach.summary() : { log: [], targetSec: 0, holdSec: 0, bestSec: 0 };
+    const sets = setsDone.length ? setsDone : (coach ? [coach.summary()] : []);
     const c = cfg();
     const bands = move.bands.map((b) => `${b.label} ${bandText(b, c)}°`).join(', ');
-    const body = [`${move.name} — ${new Date().toLocaleString()}`, bands,
-      move.reps ? `${s.reps} of ${s.repTarget} reps, ${s.targetSec}s each — in position ${s.holdSec}s, longest hold ${s.bestSec}s`
-        : `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`, '',
-      ...s.log.map((c2) => `${(c2.t / 1000).toFixed(1)}s\t${c2.text}`)].join('\n');
+    const lines = [`${move.name} — ${new Date().toLocaleString()}`, bands];
+    sets.forEach((s, i) => {
+      lines.push('', `Set ${i + 1}: ` + (move.reps ? `${s.reps} of ${s.repTarget} reps, ${s.targetSec}s each — in position ${s.holdSec}s, longest hold ${s.bestSec}s`
+        : `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`));
+      for (const c2 of s.log) lines.push(`${(c2.t / 1000).toFixed(1)}s\t${c2.text}`);
+    });
+    const body = lines.join('\n');
     save(new Blob([body], { type: 'text/plain' }), `${move.id}-${stamp()}.txt`);
   };
   /* turning the phone over changes the frame the camera gives, and the browser
@@ -1111,5 +1168,5 @@
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, cfg, fire, drawFrame, paintUi };
+    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, cfg, fire, drawFrame, paintUi };
 })();

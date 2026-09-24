@@ -30,6 +30,9 @@
     hint: 'Phone standing up on the floor, side on to you, whole body in frame.',
     start: 'Stand the phone up on the floor, then step into the frame, side on, back against the wall.',
     camera: 'tall',                 // a standing body needs the height, not the width
+    /* the move, drawn: seated in the air against a wall, held */
+    pose: { A: { torso: 0, thigh: 90, shin: 0, uarm: 8, farm: 8 }, wall: 'behind', hold: true },
+    extra: [{ key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     defaults: {
       kneeMin: 85,          // below this the legs are too bent — too low
@@ -123,6 +126,8 @@
     start: 'Lay the phone on its side on the floor, then get into your plank, side on, down onto your forearms.',
     /* a plank is long and low, so the frame has to be too */
     camera: 'wide',
+    pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -80, shin: -80, foot: -60, uarm: -20, farm: 70 }, hold: true },
+    extra: [{ key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     defaults: {
       /* The upper arm's lean off vertical, positive toward the head. The shoulder
@@ -211,6 +216,9 @@
     camera: 'tall',                 // a standing body needs the height, not the width
     reps: true,
     holdLabel: 'Hold each rep for',
+    /* standing, then one knee up to a right angle, the other leg holding */
+    pose: { A: { torso: 0, thigh: 0, shin: 0, uarm: 8, farm: 8 },
+            B: { torso: 0, thigh: 90, shin: 0, foot: 0, uarm: 8, farm: 8, thighF: 0, shinF: 0, footF: 0 } },
 
     defaults: {
       kneeMin: 80, kneeMax: 100,    // the angle at the knee, hip to ankle: a right angle, 10° either way
@@ -235,7 +243,8 @@
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
             { key: 'raiseAt', label: 'Thigh angle that counts as raised', min: 20, max: 89 },
             { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 },
-            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 }],
+            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 },
+            { key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
     needed: ['hip', 'knee', 'ankle', 'heel', 'toe'],
@@ -339,6 +348,12 @@
     camera: 'wide',                 // a body lying down is long and low, like the plank
     reps: true,
     holdLabel: 'Hold at the top for',
+    /* the move, drawn: the keyframes from a recorded bridge in the OnTrack build,
+       lying with the feet to the left, hips up and down */
+    figure: { A: { h: [380, 144], sh: [362, 150], hip: [289, 145], kn: [255, 98], an: [254, 150], ft: [230, 157], el: [325, 155], wr: [288, 158],
+                   knF: [254, 101], anF: [252, 149], ftF: [230, 158], elF: [323, 144], wrF: [295, 149] },
+              B: { h: [386, 144], sh: [368, 150], hip: [304, 122], kn: [254, 95], an: [251, 152], ft: [226, 161], el: [329, 153], wr: [294, 156],
+                   knF: [262, 102], anF: [252, 145], ftF: [232, 150], elF: [375, 123], wrF: [380, 136] } },
 
     defaults: {
       /* The shin, taken at the heel between the toe and the knee — the foot's own
@@ -372,7 +387,8 @@
     extra: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 },
             { key: 'raiseAt', label: 'Hip angle that counts as lifted', min: 120, max: 175 },
             { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 },
-            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 }],
+            { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 },
+            { key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     joints: ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'],
     needed: ['shoulder', 'hip', 'knee', 'heel', 'toe'],

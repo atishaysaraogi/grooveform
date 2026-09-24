@@ -150,6 +150,9 @@ const cue = () => page.textContent('#cue');
 const chip = () => page.textContent('#state');
 const spoken = () => page.evaluate(() => window.__spoken.map((u) => u.text));
 const heard = (re, ms) => page.waitForFunction((r) => window.__spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 8000 });
+/* one set to a session for most of the suite, so ending a set shows the results;
+   the sets themselves are tried in a step of their own */
+const oneSet = () => page.evaluate(() => { const i = document.getElementById('cfg-setCount'); i.value = '1'; i.dispatchEvent(new Event('change')); });
 const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 8000 });
 
 try {
@@ -160,6 +163,14 @@ try {
     assert.equal(await page.textContent('#band-shin'), '85–95');
     assert.equal(await page.textContent('#band-back'), '±12');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
+    /* the move, drawn, is on the start screen and on the page; the angles are not
+       on the picture unless asked for */
+    assert.ok(await page.$('#veil-fig svg'), 'the figure is on the start screen');
+    assert.ok(await page.$('#demo svg'), 'and on the page');
+    assert.match(await page.getAttribute('#veil-fig svg', 'aria-label'), /Wall sit: hold still/);
+    assert.equal(await page.evaluate(() => window.__app.cfg().angles), false, 'angles off the picture by default');
+    assert.equal(await page.inputValue('#cfg-setCount'), '3', 'three sets by default');
+    await oneSet();
   });
 
   await step('starting the camera starts the set and says where to put the phone', async () => {
@@ -171,7 +182,7 @@ try {
     assert.equal(first.volume, 0, 'the waking utterance is silent: ' + JSON.stringify(first));
     await page.waitForFunction(() => document.getElementById('veil').hidden, null, { timeout: 20000 });
     /* no second tap: the set is already running and recording */
-    assert.equal(await page.textContent('#startstop'), 'Finish the set');
+    assert.equal(await page.textContent('#startstop'), 'End the last set');
     assert.match(await cue(), /stand the phone up on the floor/i, 'and the instruction is on screen');
     assert.match(await cue(), /step into the frame/i);
     await heard('stand the phone up');   // and said out loud, not only written
@@ -275,10 +286,10 @@ try {
     await page.click('#startstop');
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
     const out = await page.evaluate(() => ({
-      move: document.getElementById('r-move').textContent,
+      move: document.getElementById('r-move').textContent.replace(/ — .*$/, ''),
       best: document.getElementById('r-best').textContent,
       cues: Number(document.getElementById('r-cues').textContent),
-      rows: [...document.querySelectorAll('#log li')].map((li) => li.textContent),
+      rows: [...document.querySelectorAll('#log li')].map((li) => li.textContent).filter((t) => !/^Set \d+$/.test(t)),
       canDownload: !document.getElementById('dl-video').disabled,
       note: document.getElementById('rec-note').textContent,
     }));
@@ -391,6 +402,8 @@ try {
     await set({ move: 'plank', stack: 0, sag: 0 });
     await page.selectOption('#move', 'plank');
     await page.waitForSelector('#read-stack');
+    await oneSet();
+    assert.match(await page.getAttribute('#demo svg', 'aria-label'), /Elbow plank/, 'the figure follows the exercise');
     assert.equal(await page.textContent('#band-stack'), '-5 to 15', 'the shoulder band');
     assert.equal(await page.textContent('#band-line'), '±5', 'the hip band');
     assert.equal(await page.$('#read-knee'), null, 'and the wall sit\'s readings are gone');
@@ -441,9 +454,9 @@ try {
     await saw('6 seconds . done', 12000);
     assert.match(await chip(), /done/i);
     assert.equal(await page.textContent('#hold-v'), '0.0', 'nothing left to do');
-    await page.click('#finish-full');            // a fresh set is full screen again
+    /* the target reached ends the set by itself, and the one set ends the session */
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
-    assert.equal(await page.textContent('#r-move'), 'Elbow plank');
+    assert.equal(await page.textContent('#r-move'), 'Elbow plank — 1 set');
     assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held');
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
     assert.ok(rows.some((t) => /4 seconds left/.test(t)) && rows.some((t) => /done/.test(t)),
@@ -461,7 +474,7 @@ try {
 
   await step('every cue that was written was also said out loud', async () => {
     const said = await spoken();
-    const written = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent.replace(/^[\d.]+s\s*—\s*/, '')));
+    const written = await page.$$eval('#log li', (ls) => ls.filter((l) => !l.classList.contains('set')).map((l) => l.textContent.replace(/^[\d.]+s\s*—\s*/, '')));
     const missing = written.filter((t) => !said.some((u) => u === t));
     assert.deepEqual(missing, [], 'these reached the log but never the voice: ' + JSON.stringify(missing));
     assert.ok(said.length > 10, 'and there was plenty of it: ' + said.length);
@@ -584,6 +597,7 @@ try {
     await page.fill('#cfg-target', '2'); await page.dispatchEvent('#cfg-target', 'change');
     await page.fill('#cfg-calls', '1'); await page.dispatchEvent('#cfg-calls', 'change');
     await page.fill('#cfg-repCount', '3'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await oneSet();
     await page.click('#startstop');
     /* the card is rebuilt when the exercise changes, so wait for the count rather
        than reading whatever happens to be in the DOM at this instant */
@@ -625,9 +639,9 @@ try {
     }
     await page.waitForFunction(() => /done/i.test(document.getElementById('state').textContent), null, { timeout: 10000 });
     assert.equal(await page.textContent('#rep-v'), '3');
-    await page.click('#startstop');
+    /* the reps done end the set by themselves */
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
-    assert.equal(await page.textContent('#r-move'), 'Knee raise');
+    assert.equal(await page.textContent('#r-move'), 'Knee raise — 1 set');
     assert.equal(await page.isVisible('#r-reps'), true, 'the set is reported in reps');
     assert.equal(await page.textContent('#r-reps-v'), '3/3');
   });
@@ -647,6 +661,7 @@ try {
     await wait(400);
     assert.equal(await page.isHidden('#orient'), true, 'lying down suits a phone on its side');
     await page.fill('#cfg-repCount', '2'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await oneSet();
     await page.click('#startstop');
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
     await page.waitForFunction(() => document.getElementById('v-hip').textContent !== '\u2014', null, { timeout: 10000 });
@@ -680,11 +695,51 @@ try {
     await wait(1300);
     await set({ dip: 50, hipAng: 130 });
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
+    assert.equal(await page.textContent('#finish-full'), 'End the last set');
     await page.click('#finish-full');                // the button on the picture ends the set
     await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
     assert.equal(await page.evaluate(() => document.body.classList.contains('full')), false, 'and the page is a page again');
-    assert.equal(await page.textContent('#r-move'), 'Glute bridge');
+    assert.equal(await page.textContent('#r-move'), 'Glute bridge — 1 set');
     assert.equal(await page.textContent('#r-reps-v'), '1/2');
+  });
+
+  await step('sets: a rep done ends the set, nothing is said until the next set is asked for, and the sets add up', async () => {
+    await page.fill('#cfg-repCount', '1'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await page.fill('#cfg-setCount', '2'); await page.dispatchEvent('#cfg-setCount', 'change');
+    await set({ bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
+    await page.click('#startstop');                  // a session of two sets
+    await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
+    await saw('lift your hips');
+    /* one rep */
+    await set({ bShin: 95, dip: 5, hipAng: 170, bFoot: 0 });
+    await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
+    await set({ dip: 25, hipAng: 145 }); await wait(1300);
+    await set({ dip: 50, hipAng: 130 });
+    await page.waitForFunction(() => window.__app.session.between, null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => window.__app.session.setNo), 1);
+    assert.equal(await page.textContent('#finish-full'), 'Next set', 'the picture offers the next set');
+    assert.equal(await page.isVisible('#endall-full'), true, 'and finishing early');
+    assert.equal(await page.evaluate(() => document.body.classList.contains('full')), true, 'still full screen');
+    /* the quiet: a fault held for three seconds gets no cue and no words */
+    const before = (await spoken()).length;
+    await set({ bShin: 70, dip: -12, hipAng: 150, bFoot: 16 });
+    await wait(3000);
+    assert.equal((await spoken()).length, before, 'nothing said between sets');
+    assert.equal(await page.textContent('#faults'), '', 'and no fault words');
+    /* the next set: asked for, announced, and coached again */
+    await set({ bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
+    await page.click('#finish-full');
+    await page.waitForFunction(() => window.__app.session.setNo === 2 && !window.__app.session.between, null, { timeout: 5000 });
+    await heard('set 2 of 2');
+    await saw('lift your hips');
+    assert.equal(await page.textContent('#finish-full'), 'End the last set');
+    await page.click('#finish-full');
+    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    assert.equal(await page.textContent('#r-move'), 'Glute bridge — 2 sets');
+    assert.equal(await page.textContent('#r-reps-v'), '1/1 · 0/1', 'both sets in the results');
+    const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
+    assert.ok(rows.includes('Set 1') && rows.includes('Set 2'), 'and the log is by set: ' + JSON.stringify(rows.slice(0, 4)));
+    await oneSet();
     /* back to the knee raise, which the reload step below expects to find */
     await set({ move: 'kneeraise' });
     await page.selectOption('#move', 'kneeraise');

@@ -27,9 +27,10 @@
   <div class="stage" id="stage">
     <video id="cam" playsinline muted></video>
     <canvas id="view"></canvas>
-    <div class="float"><button class="btn stop" id="finish-full">Finish the set</button><button class="btn" id="page-btn">Show the page</button></div>
+    <div class="float"><button class="btn stop" id="finish-full">End this set</button><button class="btn" id="endall-full" hidden>Finish</button><button class="btn" id="page-btn">Show the page</button></div>
     <div class="veil" id="veil">
       <div class="veil-in">
+        <div class="fig" id="veil-fig"></div>
         <p class="big" id="veil-title">Wall sit</p>
         <p class="muted" id="veil-text">The camera never leaves this device.</p>
         <button class="btn primary" id="go">Start the camera</button>
@@ -44,7 +45,8 @@
   <p class="faults" id="faults"></p>
 
   <div class="row">
-    <button class="btn stop" id="startstop" disabled>Finish the set</button>
+    <button class="btn stop" id="startstop" disabled>End this set</button>
+    <button class="btn" id="endall" hidden>Finish</button>
     <button class="btn" id="full-btn" hidden>Full screen</button>
     <button class="btn" id="flip" disabled>Flip camera</button>
     <button class="btn" id="mute" aria-pressed="false">Voice on</button>
@@ -54,6 +56,9 @@
   <!-- one card per thing this exercise measures, built from the move itself -->
   <div class="reads" id="reads"></div>
 
+  <!-- the move, drawn -->
+  <section class="panel demo" id="demo" hidden></section>
+
   <section class="panel" id="settings" hidden>
     <div class="grid" id="band-settings"></div>
     <div class="grid">
@@ -62,6 +67,9 @@
       <label>Seconds between repeats<input type="number" id="cfg-cool" value="4" min="1" max="15" step="1"></label>
       <label>Pose model
         <select id="cfg-model"><option value="full">Full — steadier, the default here</option><option value="lite">Lite — faster on an old phone</option></select>
+      </label>
+      <label>Angles on the picture
+        <select id="cfg-angles"><option value="off">Off — skeleton and words only</option><option value="on">On — every angle, arc and guide line</option></select>
       </label>
       <label>Mirror the picture
         <select id="cfg-mirror"><option value="off">Off</option><option value="on">On</option></select>
@@ -79,7 +87,7 @@
   </section>
 
   <section class="panel" id="result" hidden>
-    <h2>That set — <span id="r-move">Wall sit</span></h2>
+    <h2>That session — <span id="r-move">Wall sit</span></h2>
     <div class="reads">
       <div class="read"><div class="v"><span id="r-hold">0</span><i>s</i></div><div class="k">in position<span class="band" id="r-target">of 60</span></div></div>
       <div class="read"><div class="v"><span id="r-best">0</span><i>s</i></div><div class="k">longest hold</div></div>
@@ -106,9 +114,10 @@
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-24a"></script>
-<script src="js/moves.js?v=2026-09-24a"></script>
-<script src="js/mp4.js?v=2026-09-24a"></script>
-<script src="js/app.js?v=2026-09-24a"></script>
+<script src="js/core.js?v=2026-09-24b"></script>
+<script src="js/moves.js?v=2026-09-24b"></script>
+<script src="js/mp4.js?v=2026-09-24b"></script>
+<script src="js/figure.js?v=2026-09-24b"></script>
+<script src="js/app.js?v=2026-09-24b"></script>
 </body>
 </html>
