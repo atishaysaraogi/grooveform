@@ -344,6 +344,42 @@ it is measured, the lines each is judged against, the readings, the countdown an
 the cue banner are all painted onto it, so the file you download is the picture
 you watched.
 
+## Review: recordings judged after the fact, and the numbers tuned
+
+`review.html` (the Review link in the header) is the tuning bench, carrying the
+OnTrack Studio's method over to this app's moves.
+
+**Recordings.** Load a video of a set — the app's own download or any phone
+clip. The pose model reads it once, frame by frame (fifteen a second by
+default), into a *trace*: the landmarks with their times. From then on the
+recording is judged from the trace, by the same `read` and `judge` and the
+same coach the phone runs, so the lanes show every reading against its band,
+the frames where each band was out, the phases, and every cue at the moment it
+would have been said. Tap the lanes to go to that moment; the skeleton is drawn
+over the video there. Every number the move owns is a slider, and moving one
+judges the whole recording again on the spot — the model is never run twice.
+
+**Takes and the rule.** A recording can be added as a take: clean, or showing
+one named fault. The verdict table holds the numbers to the Studio's rule for
+each fault — quiet on every clean take, firing on every take of that fault —
+and says pass or fail. Takes save to one file and load again.
+
+**Saving the numbers.** "Use these numbers in the coach on this device" writes
+them into the coach's own settings store for that move, so the next set on the
+same phone runs on them. "Download the numbers" gives a file to carry into the
+move's defaults in `moves.js`. A trace saves to a file too: far smaller than the
+video, and enough to judge again anywhere, including in the unit tests.
+
+**Animation.** The second tab is the editor for the move's muscle figure — the
+anatomical one from the OnTrack build (`anatomy.js`), drawn as a body with the
+muscles working. The two keyframes are edited by dragging joints (shift drags
+the whole figure), each muscle's effort is a slider, a hold or a repeat, which
+way it faces, the working side and a wall are settings, and the animated
+preview runs beside it. The figure downloads as the JSON a move carries.
+
+`trace.js` is the pure part — run a move over a trace, the fault stretches, the
+takes' verdicts, a trace to and from a file — and `trace.test.js` holds it.
+
 ## Running it
 
 ```sh
@@ -368,6 +404,7 @@ test/
   plank.test.js     the plank, likewise
   kneeraise.test.js the knee raise, and a whole set of reps
   bridge.test.js    the glute bridge: feet, line, height, flat feet, and the way down
+  trace.test.js     a recording judged after the fact, and the takes' rule
   donkeykick.test.js the donkey kick: hands, arms, back, the bent knee and the lift to the line
   mp4.test.js       the file the page writes, timed by the clock
   framing.test.js   which way the phone goes, and fitting a frame to a canvas

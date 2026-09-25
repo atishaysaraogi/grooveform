@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-v="2026-09-25a">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Form Coach — Review</title>
+<link rel="stylesheet" href="styles.css?v=2026-09-25a">
+</head>
+<body class="review">
+<header class="bar">
+  <h1>Form <span class="sub">Coach</span> · Review</h1>
+  <select id="move" class="pick" aria-label="Exercise">
+    <option value="wallsit">Wall sit</option>
+    <option value="plank">Elbow plank</option>
+    <option value="kneeraise">Knee raise</option>
+    <option value="bridge">Glute bridge</option>
+    <option value="donkeykick">Donkey kick</option>
+  </select>
+  <nav class="tabs" role="tablist">
+    <button class="tab" id="tab-review" role="tab" aria-selected="true">Recordings</button>
+    <button class="tab" id="tab-anim" role="tab" aria-selected="false">Animation</button>
+  </nav>
+  <a class="chip" href="index.html">Back to the coach</a>
+</header>
+
+<main>
+  <!-- ============ recordings: judge a video after the fact, tune the numbers against it ============ -->
+  <section id="pane-review">
+    <p class="muted">Load a recording of a set. The pose model reads it once, frame by frame; after that every band edge can be moved and the whole recording is judged again on the spot. Tag recordings as clean or as showing one fault, and the numbers are held to the rule: quiet on every clean take, firing on every take of the fault.</p>
+
+    <div class="row">
+      <label class="btn primary file"><input type="file" id="video-file" accept="video/*,.mp4,.webm,.mov">Load a video</label>
+      <label class="btn file"><input type="file" id="trace-file" accept=".json,application/json">Load a trace</label>
+      <button class="btn" id="export-trace" disabled>Save the trace</button>
+      <label>Frames a second read<input type="number" id="fps" value="15" min="5" max="30" step="1" style="width:5em"></label>
+    </div>
+    <p class="note" id="progress" hidden></p>
+
+    <div class="review-grid">
+      <div class="stage small" id="stage">
+        <video id="clip" playsinline muted controls></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="panel">
+        <h2>Numbers <span class="tiny" id="tuned-note"></span></h2>
+        <div class="grid sliders" id="sliders"></div>
+        <div class="row">
+          <button class="btn primary" id="apply">Use these numbers in the coach on this device</button>
+          <button class="btn" id="reset">Back to the defaults</button>
+          <button class="btn" id="download-numbers">Download the numbers</button>
+        </div>
+        <p class="tiny" id="apply-note"></p>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2>What was read <span class="tiny" id="trace-note">no recording yet</span></h2>
+      <canvas id="lanes" height="10"></canvas>
+      <p class="tiny">Each lane is one reading against its band (green). Red marks are frames where that band was out. The bottom lane is the coach: phases, and the cues it would have said, at the moments it would have said them. Tap anywhere to go to that moment.</p>
+      <ol class="log" id="cue-log"></ol>
+    </section>
+
+    <section class="panel">
+      <h2>Takes and the rule</h2>
+      <div class="row">
+        <label>This recording shows
+          <select id="take-tag"><option value="clean">a clean set</option></select>
+        </label>
+        <input type="text" id="take-name" placeholder="a name for it" style="min-width:12em">
+        <button class="btn" id="add-take" disabled>Add it as a take</button>
+        <button class="btn" id="export-takes" disabled>Save all takes</button>
+        <label class="btn file"><input type="file" id="takes-file" accept=".json,application/json">Load takes</label>
+      </div>
+      <ul class="takes" id="takes"></ul>
+      <table class="verdicts" id="verdicts"></table>
+    </section>
+  </section>
+
+  <!-- ============ animation: the move drawn with its muscles, edited by hand ============ -->
+  <section id="pane-anim" hidden>
+    <p class="muted">The move as a body with the muscles working. Drag the joints to set the start (A) and the end (B) of the movement; set how hard each muscle works; watch it move. The figure is saved as JSON to go into the move.</p>
+    <div class="review-grid">
+      <div class="panel">
+        <div class="row">
+          <span class="seg" role="radiogroup" aria-label="Keyframe">
+            <button class="btn" id="kf-A" aria-pressed="true">A — start</button>
+            <button class="btn" id="kf-B" aria-pressed="false">B — end</button>
+          </span>
+          <button class="btn" id="anim-load">Load the move's figure</button>
+          <button class="btn" id="anim-copy-ab">Copy A to B</button>
+        </div>
+        <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
+        <p class="tiny">Drag a joint. Hold shift to move the whole figure. The far limbs are the dimmer ones.</p>
+        <div class="grid">
+          <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
+          <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
+          <label>Working side<select id="anim-side"><option value="both">Both</option><option value="R">Near</option><option value="L">Far</option></select></label>
+          <label>Wall at x (blank for none)<input type="number" id="anim-wall" min="200" max="420" step="1"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Preview</h2>
+        <canvas class="demo-fig muscle" data-anat="edit" role="img" aria-label="The move, animated"></canvas>
+        <h2>Muscles working</h2>
+        <div class="grid sliders" id="weights"></div>
+        <div class="row">
+          <button class="btn primary" id="anim-download">Download the figure</button>
+          <button class="btn" id="anim-copy">Copy as JSON</button>
+        </div>
+        <textarea id="anim-json" rows="6" spellcheck="false" aria-label="The figure as JSON"></textarea>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/core.js?v=2026-09-25a"></script>
+<script src="js/moves.js?v=2026-09-25a"></script>
+<script src="js/trace.js?v=2026-09-25a"></script>
+<script src="js/figure.js?v=2026-09-25a"></script>
+<script src="js/anatomy.js?v=2026-09-25a"></script>
+<script src="js/review.js?v=2026-09-25a"></script>
+</body>
+</html>

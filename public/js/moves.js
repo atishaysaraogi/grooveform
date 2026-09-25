@@ -32,6 +32,7 @@
     camera: 'tall',                 // a standing body needs the height, not the width
     /* the move, drawn: seated in the air against a wall, held */
     pose: { A: { torso: 0, thigh: 90, shin: 0, uarm: 8, farm: 8 }, wall: 'behind', hold: true },
+    muscles: { thigh: 1, calf: .45, glute: .55, abs: .3 },     // what works, for the muscle figure
     extra: [{ key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     defaults: {
@@ -127,6 +128,7 @@
     /* a plank is long and low, so the frame has to be too */
     camera: 'wide',
     pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -80, shin: -80, foot: -60, uarm: -20, farm: 70 }, hold: true },
+    muscles: { abs: 1, oblique: .8, shoulder: .55, thigh: .45, back: .3 },
     extra: [{ key: 'setCount', label: 'Sets', min: 1, max: 10 }],
 
     defaults: {
@@ -219,6 +221,7 @@
     /* standing, then one knee up to a right angle, the other leg holding */
     pose: { A: { torso: 0, thigh: 0, shin: 0, uarm: 8, farm: 8 },
             B: { torso: 0, thigh: 90, shin: 0, foot: 0, uarm: 8, farm: 8, thighF: 0, shinF: 0, footF: 0 } },
+    muscles: { thigh: .8, abs: .5, calf: .3 },
 
     defaults: {
       kneeMin: 80, kneeMax: 100,    // the angle at the knee, hip to ankle: a right angle, 10° either way
@@ -353,7 +356,9 @@
     figure: { A: { h: [380, 144], sh: [362, 150], hip: [289, 145], kn: [255, 98], an: [254, 150], ft: [230, 157], el: [325, 155], wr: [288, 158],
                    knF: [254, 101], anF: [252, 149], ftF: [230, 158], elF: [323, 144], wrF: [295, 149] },
               B: { h: [386, 144], sh: [368, 150], hip: [304, 122], kn: [254, 95], an: [251, 152], ft: [226, 161], el: [329, 153], wr: [294, 156],
-                   knF: [262, 102], anF: [252, 145], ftF: [232, 150], elF: [375, 123], wrF: [380, 136] } },
+                   knF: [262, 102], anF: [252, 145], ftF: [232, 150], elF: [375, 123], wrF: [380, 136] },
+              flip: true },
+    muscles: { glute: 1, ham: .5, abs: .3 },
 
     defaults: {
       /* The shin, taken at the heel between the toe and the knee — the foot's own
@@ -498,6 +503,7 @@
     /* the move, drawn: on all fours facing left, one leg kicked up level with the back */
     pose: { A: { face: 'left', torso: -88, neck: -25, thigh: 0, shin: -90, foot: 180, uarm: 0, farm: 0 },
             B: { face: 'left', torso: -88, neck: -25, thigh: -90, shin: 180, foot: 60, uarm: 0, farm: 0, thighF: 0, shinF: -90, footF: 180 } },
+    muscles: { glute: 1, ham: .5, back: .3, abs: .3 },
 
     defaults: {
       kneeMin: 80, kneeMax: 100,    // the working knee stays at a right angle

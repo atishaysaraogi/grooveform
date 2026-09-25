@@ -821,6 +821,70 @@ try {
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
+  await step('the Review page judges a trace, holds takes to the rule, and hands the numbers to the coach', async () => {
+    await page.goto(base + '/review.html?move=bridge');
+    await page.waitForSelector('#sliders input');
+    /* the stand-in bodies are in every page of this context: a clean rep and a rep
+       past the knees, as traces at fifteen frames a second */
+    const traces = await page.evaluate(() => {
+      const mk = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 66) { Object.assign(window.__pose, { move: 'bridge' }, pose); frames.push({ t, lm: window.__poseSource() }); } return frames; };
+      const REST = { bShin: 95, dip: 50, hipAng: 130, bFoot: 0 }, TOP = { bShin: 95, dip: 5, hipAng: 170, bFoot: 0 }, HALF = { bShin: 95, dip: 25, hipAng: 145, bFoot: 0 };
+      return { clean: mk([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 3000], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]) };
+    });
+    await page.evaluate((f) => window.__review.loadTrace(f, document.getElementById('cam') ? 16 / 9 : 16 / 9, 'clean'), traces.clean);
+    await page.waitForFunction(() => /1 reps/.test(document.getElementById('trace-note').textContent), null, { timeout: 5000 });
+    const cues = await page.$$eval('#cue-log li', (l) => l.map((x) => x.textContent));
+    assert.ok(cues.some((c) => /Lift your hips/.test(c)) && cues.some((c) => /— 1$/.test(c)), 'the coach\'s cues, at their moments: ' + JSON.stringify(cues));
+    assert.ok((await page.evaluate(() => document.getElementById('lanes').height)) > 100, 'the lanes are drawn');
+    await page.fill('#take-name', 'clean 1'); await page.click('#add-take');
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
+    await page.selectOption('#take-tag', 'hipHigh'); await page.fill('#take-name', 'high'); await page.click('#add-take');
+    await wait(200);
+    const row = async () => (await page.$$eval('#verdicts tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /Hips above knees/.test(t));
+    assert.match(await row(), /1 of 1 \| 1 of 1 \| passes/, 'quiet on the clean take, fires on its own: ' + await row());
+    /* a band edge moved: judged again at once, and the rule now fails */
+    await page.evaluate(() => window.__review.setTuned('overMax', 15));
+    await wait(200);
+    assert.match(await row(), /0 of 1 \| fails/, 'with the allowance at fifteen the fault never fires: ' + await row());
+    await page.click('#apply');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wallsit')).bands.bridge.overMax), '15', 'the number went into the coach\'s own store');
+    assert.match(await page.textContent('#apply-note'), /Saved for the Glute bridge/);
+  });
+
+  await step('the Review page reads a video into a trace, and the animation editor edits the muscle figure', async () => {
+    /* the model stood in for by the clean trace, frame for frame, over a short clip */
+    await page.evaluate(() => {
+      const frames = window.__review.trace.frames;
+      window.__reviewPose = (ts) => frames[Math.min(frames.length - 1, Math.floor(ts / 66))].lm;
+    });
+    await page.fill('#fps', '5');
+    await page.setInputFiles('#video-file', new URL('./fixtures/clip.webm', import.meta.url).pathname);
+    await page.waitForFunction(() => window.__review.trace && window.__review.trace.source === 'video', null, { timeout: 30000 });
+    const n = await page.evaluate(() => window.__review.trace.frames.length);
+    assert.ok(n >= 15 && n <= 25, 'four seconds at five a second: ' + n + ' frames');
+    await page.click('#lanes', { position: { x: 400, y: 20 } });
+    await wait(300);
+    assert.ok((await page.evaluate(() => document.getElementById('clip').currentTime)) > 0.5, 'a tap on the lanes goes to that moment');
+    /* the animation editor */
+    await page.click('#tab-anim');
+    await wait(300);
+    const before = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
+    assert.match(await page.inputValue('#anim-json'), /"view":"side","A":\{"h"/, 'the bridge\'s figure loaded');
+    assert.equal(await page.$$eval('#weights input', (l) => l.length), 12, 'a slider per muscle region');
+    assert.equal(await page.evaluate(() => window.__review.fig.w.glute), 1, 'with the move\'s muscles');
+    /* drag the near knee: find it on the canvas through the editor's own transform */
+    const kn = await page.evaluate(() => { const c = document.getElementById('anim-edit'), r = c.getBoundingClientRect(); return { r: [r.left, r.top, r.width, r.height], A: window.__review.fig.A }; });
+    const box = await page.evaluate(() => { const f = window.__review.fig; const xs = [216, 400], ys = [26, 168]; for (const K of [f.A, f.B || f.A]) for (const k in K) { xs.push(K[k][0]); ys.push(K[k][1]); } const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 10, y0 = Math.min(...ys) - 16; return { x: x0, y: y0, w: x1 - x0, h: 168 - y0 }; });
+    const s = Math.min(kn.r[2] / box.w, kn.r[3] / box.h) * 0.94, tx = kn.r[2] / 2 - (box.x + box.w / 2) * s, ty = kn.r[3] / 2 - (box.y + box.h / 2) * s;
+    const px = kn.r[0] + tx + kn.A.kn[0] * s, py = kn.r[1] + ty + kn.A.kn[1] * s;
+    await page.mouse.move(px, py); await page.mouse.down(); await page.mouse.move(px + 20, py - 20, { steps: 4 }); await page.mouse.up();
+    const after = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
+    assert.notEqual(after, before, 'the knee moved: ' + before + ' to ' + after);
+    assert.ok((await page.inputValue('#anim-json')).includes('"kn":' + after), 'and the JSON follows');
+    await page.goto(base + '/');
+    await page.waitForSelector('#go');
+  });
+
   await step('the exercise and its bands are remembered across a reload', async () => {
     await page.reload();
     await page.waitForSelector('#go');

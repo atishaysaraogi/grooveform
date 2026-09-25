@@ -3,6 +3,10 @@
   --good: #35d07f; --warn: #ffb545; --bad: #ff5c6c; --accent: #5aa9ff;
   --r: 16px;
   --stage-h: 62vh;      /* how much of the screen the picture may take, so the set button stays on it */
+  /* the muscle figure's palette (anatomy.js reads these): skin and muscle in the dark theme, and the
+     warm-to-hot run a working muscle takes */
+  --fig-skin: #46295f; --fig-line: #7658a0; --fig-muscle: #55367a; --fig-far: #38215a; --fig-farline: #4d3178;
+  --tangerine: #ffb545; --pink: #ff5c8a; --surface-2: #1d2430;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -140,3 +144,34 @@ body.full .float { display: flex; }
 .log b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 420px) { .read .v { font-size: 1.6rem; } .btn { flex-basis: 100%; } }
+
+/* ---- the Review page ---- */
+.tabs { display: flex; gap: 6px; }
+.tab { background: var(--surface); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+a.chip { text-decoration: none; }
+.review-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 900px) { .review-grid { grid-template-columns: 1fr 1fr; align-items: start; } }
+.stage.small { max-height: 48vh; }
+.stage.small video { opacity: 1; object-fit: contain; }
+.stage.small canvas { pointer-events: none; }
+.btn.file { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
+.btn.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.sliders label span { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .8rem; }
+.sliders label span b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.sliders input[type=range] { width: 100%; accent-color: var(--accent); }
+#lanes { width: 100%; display: block; border-radius: 12px; background: #0b0f16; cursor: crosshair; }
+.takes { margin: 10px 0; padding-left: 20px; color: var(--muted); font-size: .9rem; display: grid; gap: 4px; }
+.takes b { color: var(--ink); }
+.tiny-btn { min-height: 26px; padding: 0 10px; font-size: .75rem; flex: 0 0 auto; margin-left: 8px; }
+.verdicts { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.verdicts th, .verdicts td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); }
+.verdicts th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+.verdicts .ok { color: var(--good); font-weight: 700; } .verdicts .no { color: var(--bad); font-weight: 700; }
+.edit-fig { width: 100%; aspect-ratio: 4 / 3; background: #0b0f16; border-radius: 12px; touch-action: none; display: block; }
+.demo-fig { width: 100%; max-width: 460px; aspect-ratio: 4 / 3; height: auto; display: block; margin: 0 auto; }
+.demo-fig.muscle { aspect-ratio: 16 / 9; background: #0b0f16; border-radius: 12px; }
+.seg { display: inline-flex; gap: 6px; }
+.seg .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+#anim-json { width: 100%; background: #0b0f16; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 8px; }
+body.review .panel h2 .tiny { font-weight: 500; margin-left: 8px; }
