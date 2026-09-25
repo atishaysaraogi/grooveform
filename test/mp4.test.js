@@ -124,3 +124,18 @@ test('without a description from the encoder, AAC-LC\'s own two bytes are writte
   const s = Mp4.inspect(Mp4.write({ width: 320, height: 240, codec: 'avc', description: avcC, samples: [Object.assign(frame(10, true), { ts: 0 })], audio: null }));
   assert.equal(s.tracks, 1); assert.equal(s.sound, null);
 });
+
+test('the sound config is read out of whatever the encoder called its description', () => {
+  /* a phone's film: Chrome on Android hands over the whole ES_Descriptor, and the
+     writer once wrapped that as the config — a track no player could open */
+  const fromPhone = [0x03, 0x80, 0x80, 0x80, 0x22, 0x00, 0x00, 0x00, 0x04, 0x80, 0x80, 0x80, 0x14, 0x40, 0x14, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x80, 0x80, 0x80, 0x02, 0x11, 0x88, 0x06, 0x80, 0x80, 0x80, 0x01, 0x02];
+  assert.deepEqual(Array.from(Mp4.asc(fromPhone, 48000, 1)), [0x11, 0x88], 'the two bytes of config inside it');
+  assert.deepEqual(Array.from(Mp4.asc(new Uint8Array([0x11, 0x88]), 48000, 1)), [0x11, 0x88], 'a bare config is kept');
+  assert.deepEqual(Array.from(Mp4.asc(null, 44100, 1)), Array.from(Mp4.aacConfig(44100, 1)), 'none at all: made from the rate');
+  assert.deepEqual(Array.from(Mp4.asc(new Uint8Array([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]), 44100, 1)), Array.from(Mp4.aacConfig(44100, 1)), 'nonsense: likewise');
+  /* and a file written with the phone's description now carries the real config */
+  const samples = []; for (let i = 0; i < 30; i++) samples.push({ data: new Uint8Array(200), ts: i * 33333, key: i === 0 });
+  const packets = []; for (let i = 0; i < 47; i++) packets.push({ data: new Uint8Array(120), ts: Math.round(i * 1024 * 1e6 / 48000), key: true });
+  const f = Mp4.inspect(Mp4.write({ width: 640, height: 480, codec: 'avc', description: avcC, samples, audio: { sampleRate: 48000, channels: 1, description: Uint8Array.from(fromPhone), samples: packets, bitrate: 96000 } }));
+  assert.deepEqual(f.sound.config, [0x11, 0x88]);
+});

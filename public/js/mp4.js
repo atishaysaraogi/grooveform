@@ -113,6 +113,34 @@
     const es = cat([u8(0x03, 3 + dcd.length + sl.length), u16(0), u8(0), dcd, sl]);
     return full('esds', 0, 0, es);
   }
+  /* The AudioSpecificConfig, from whatever the encoder handed over as its
+     description. The spec says two to five bytes of config; Chrome on Android
+     hands over the whole ES_Descriptor around it instead (tag 3, then 4, then
+     the config under tag 5, lengths in the 0x80-continued form), and one phone's
+     film after another carried that wrapped as if it were the config — a sound
+     track no player could open. Either form is read here; anything else falls
+     back to a config made from the rate and the channels. */
+  function readLen(b, i) { let n = 0, k = 0; while (k < 4) { const x = b[i + k]; k++; n = (n << 7) | (x & 0x7f); if (!(x & 0x80)) break; } return [n, i + k]; }
+  function asc(description, sampleRate, channels) {
+    const d = description && description.length ? Uint8Array.from(description) : null;
+    if (!d) return aacConfig(sampleRate, channels);
+    if (d.length >= 2 && d.length <= 7 && (d[0] >> 3) >= 1 && (d[0] >> 3) <= 4) return d;   // a bare config: AAC main/LC/SSR/LTP
+    /* a full esds box, or the ES_Descriptor inside one: walk to tag 5 */
+    let i = 0;
+    if (d.length > 8 && String.fromCharCode(d[4], d[5], d[6], d[7]) === 'esds') i = 12;
+    const dive = (tag, at, end) => {   // find `tag` among the descriptors from `at`
+      while (at < end) { const t = d[at]; const [n, p] = readLen(d, at + 1); if (t === tag) return [p, Math.min(end, p + n)]; at = p + n; }
+      return null;
+    };
+    let es = d[i] === 3 ? dive(3, i, d.length) : null;
+    if (es) {
+      let at = es[0] + 3;   // ES_ID, flags
+      const flags = d[es[0] + 2]; if (flags & 0x80) at += 2; if (flags & 0x40) at += 1 + d[at]; if (flags & 0x20) at += 2;
+      const dcd = dive(4, at, es[1]);
+      if (dcd) { const dsi = dive(5, dcd[0] + 13, dcd[1]); if (dsi && dsi[1] > dsi[0]) return d.slice(dsi[0], dsi[1]); }
+    }
+    return aacConfig(sampleRate, channels);
+  }
   function mp4a(sampleRate, channels, config, bitrate) {
     return box('mp4a',
       u8(0, 0, 0, 0, 0, 0), u16(1),              // reserved, data reference index
@@ -158,7 +186,7 @@
     if (snd) {
       aScale = snd.sampleRate; aTotal = snd.samples.length * AAC_FRAME;
       aDurMs = Math.round(aTotal * movieScale / aScale);
-      const config = snd.description && snd.description.length ? snd.description : aacConfig(snd.sampleRate, snd.channels || 1);
+      const config = asc(snd.description, snd.sampleRate, snd.channels || 1);
       aStsd = full('stsd', 0, 0, u32(1), mp4a(snd.sampleRate, snd.channels || 1, config, snd.bitrate));
       aStts = full('stts', 0, 0, u32(1), u32(snd.samples.length), u32(AAC_FRAME));
       aStsc = full('stsc', 0, 0, u32(1), u32(1), u32(snd.samples.length), u32(1));
@@ -305,5 +333,5 @@
     };
   }
 
-  return { TIMESCALE, write, durations, boxes, find, inspect, aacConfig };
+  return { TIMESCALE, write, durations, boxes, find, inspect, aacConfig, asc };
 });
