@@ -163,6 +163,9 @@ const browser = await chromium.launch({
 });
 const ctx = await browser.newContext({ viewport: { width: 900, height: 1200 }, permissions: ['camera'] });
 const page = await ctx.newPage();
+/* SMOKE_SLOW=4 runs the page on a quarter of the processor, the way a busy CI
+   runner or an old phone would */
+if (Number(process.env.SMOKE_SLOW) > 1) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SMOKE_SLOW) }); }
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
@@ -320,8 +323,12 @@ try {
     await set({ knee: 95, tilt: 2, shin: 90 });
     await saw('hold');
     await heard('that is it');
-    /* the readout counts down from sixty, so time banked is what it has come off */
-    await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) < 58.5, null, { timeout: 8000 });
+    /* the readout counts down from sixty, so time banked is what it has come off.
+       The longest single run is waited for too: on a slow machine the frames come
+       far enough apart that the smoothing lingers in the band for a moment on the
+       way between two faults, and that moment banks time without being a hold */
+    await page.waitForFunction(() => Number(document.getElementById('hold-v').textContent) < 58.5
+      && Number((document.getElementById('best-v').textContent.match(/best ([\d.]+)/) || [])[1]) >= 1.2, null, { timeout: 10000 });
     assert.match(await chip(), /\d+ s left/i);
     assert.match(await page.getAttribute('#read-knee', 'class'), /good/, 'and the reading reads as good');
   });

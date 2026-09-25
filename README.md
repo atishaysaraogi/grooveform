@@ -499,9 +499,12 @@ reads the file back box by box: index before data, every frame's duration about
 what it was on screen for and none of them two milliseconds, the header's length
 the played length. `mp4.test.js` holds the writer to the same things in node,
 without a browser. The suite ends by downloading the video and checking there
-are frames in it (`SMOKE_KEEP=<dir>` keeps the file). It also watches what is handed to the speech engine: headless Chromium
-makes no sound, but a cue that never reaches the engine is silent on a real
-phone too, so the suite checks that every cue in the log was also spoken.
+are frames in it (`SMOKE_KEEP=<dir>` keeps the file). It also watches what the
+coach says by either voice: headless Chromium makes no sound, but a cue that
+never reaches a voice is silent on a real phone too, so the suite checks that
+every cue in the log was also spoken, and that the coach's own voice lands on
+the bus the film reads. `SMOKE_SLOW=4` runs the page on a quarter of the
+processor, the way a busy CI runner or an old phone would.
 
 ## History
 

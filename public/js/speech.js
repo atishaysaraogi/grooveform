@@ -124,10 +124,13 @@
       this.pending.set(key, p);
       return p;
     }
-    /* a list made ahead of time, in order, one after another */
+    /* a list made ahead of time, in order, one after another, with a breath
+       between them: on a phone with few cores the engine's thread and the page's
+       share a processor, and a set is under way */
     warm(list) {
       const todo = (list || []).filter((t) => !this.cache.has(String(t)) && !this.pending.has(String(t)));
-      const step = () => { const t = todo.shift(); if (t != null) this.synth(t).then(step, step); };
+      const next = () => setTimeout(step, 40);
+      const step = () => { const t = todo.shift(); if (t != null) this.synth(t).then(next, next); };
       step();
     }
   }
