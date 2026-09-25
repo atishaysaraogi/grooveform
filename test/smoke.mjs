@@ -177,11 +177,12 @@ const cue = () => page.textContent('#cue');
 const chip = () => page.textContent('#state');
 /* what the coach said, by either voice: the page's own (on the film) or the phone's */
 const spoken = () => page.evaluate(() => window.__app.voice.spoken.map((u) => u.text));
-const heard = (re, ms) => page.waitForFunction((r) => window.__app.voice.spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 8000 });
+const heard = (re, ms) => page.waitForFunction((r) => window.__app.voice.spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 14000 });
 /* one set to a session for most of the suite, so ending a set shows the results;
    the sets themselves are tried in a step of their own */
 const oneSet = () => page.evaluate(() => { const i = document.getElementById('cfg-setCount'); i.value = '1'; i.dispatchEvent(new Event('change')); });
-const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 8000 });
+/* a cue can wait on the opening words and the set-up wait, so the patience here is theirs plus the cue's */
+const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 14000 });
 
 try {
   await step('the page comes up and offers the camera', async () => {

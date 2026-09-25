@@ -124,9 +124,9 @@ test('a hold is cut into the stretches its clock ran', () => {
   const W = Moves.wallsit;
   const frames = [];
   /* the wall sit rig is not here; the bridge as a hold stands in — the coach treats any move without reps as a hold */
-  const H = Object.assign({}, M, { reps: false, defaults: Object.assign({}, M.defaults, { holdTargetSec: 60, callAtSec: [] }) });
+  const H = Object.assign({}, M, { reps: false, ready: null, defaults: Object.assign({}, M.defaults, { holdTargetSec: 60, callAtSec: [] }) });
   let t = 0; for (const [pose, ms] of [[TOP, 2500], [REST, 800], [TOP, 2500], [REST, 400]]) for (const end = t + ms; t < end; t += 33) frames.push({ t, lm: body(pose) });
-  const r = Trace.run(H, {}, frames, ASPECT);
+  const r = Trace.run(H, { readyMs: 0 }, frames, ASPECT);   // the set-up wait has tests of its own
   const holds = Trace.reps(r, H);
   assert.equal(holds.length, 2, 'two stretches: ' + holds.length);
   assert.ok(holds[0].holdMs > 1000 && holds[1].holdMs > 1000);

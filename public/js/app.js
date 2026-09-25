@@ -192,6 +192,13 @@
     },
     /* the move's cues made before they are needed, in the voice's own thread */
     warm() { if (this.engine && this.engine.ready) this.engine.warm(Speech.texts(move, cfg(), Core.SHARED_CUES)); },
+    /* how long a text takes to say: the made sound's length when it is to hand,
+       otherwise a reading-speed guess */
+    durationOf(text) {
+      const pcm = this.own && this.engine.get(text);
+      if (pcm) return Math.round((pcm.data.length / pcm.rate) * 1000);
+      return Math.min(12000, 350 + String(text).length * 62);
+    },
     ready() {
       if (!this.ok) return;
       const vs = speechSynthesis.getVoices();
@@ -844,8 +851,11 @@
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
-    fire({ id: 'start', text: fresh ? move.start
-      : `Set ${setNo} of ${cfg().setCount}${move.alternate ? ' \u2014 the other leg' : ''}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`, t: 0 });
+    const opening = fresh ? move.start
+      : `Set ${setNo} of ${cfg().setCount}${move.alternate ? ' \u2014 the other leg' : ''}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`;
+    fire({ id: 'start', text: opening, t: 0 });
+    /* nothing else is said over the opening words */
+    coach.quiet(voice.durationOf(opening) + 400);
     if (fresh) { rec = startRecording(); inSet = true; stayAwake(); }
     pageMode = false;
     if (!raf) schedule();

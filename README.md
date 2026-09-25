@@ -218,11 +218,24 @@ on the page: the voice keeps to one thing at a time, and the words show the
 rest. Each fault has short words of its own ("Heels lifting", "Hips above
 knees"), in the move's order, and they go when the fault does.
 
-**The set-up wait.** A rep move opens by saying where to go and that it will
-wait. Until the person has been at the start position for two seconds nothing
-else is said, nothing is judged and no rep is counted: they are getting down
-onto the floor, and a correction shouted at that is noise. Leaving the start
-before the two seconds are up starts the wait again. Each set begins with it.
+**The opening, and the set-up wait.** Every move opens by saying where the
+phone goes and what position to get into, and nothing is said over those
+words: a correction waits until they are done (a count or a time call, true
+at one moment only, does not). Then, until the person has held the starting
+position for two seconds, seen the whole time, nothing else is said, nothing
+is judged and no clock runs: they are getting down onto the floor, and a
+correction shouted at that is noise. Each move says what its starting
+position is — the glute bridge's is lying down with the knees bent, so lying
+there with the legs out straight is not it — a rep move's being its start by
+default and a hold's being seen. Leaving the position before the two seconds
+are up starts the wait again. Each set begins with it.
+
+**Nobody in the frame.** "I can't see you — step into the camera" once the
+frame has been empty for a moment, and again every fifteen seconds for as
+long as it stays so, during the set-up wait as much as during the set. It is
+the one thing said on that slow clock; a correction repeats every four
+seconds. Out of sight, the clocks stop, and a frame with nobody in it never
+counts toward being ready.
 
 **A breath between reps.** For two seconds after a rep is counted nothing is
 asked for and nothing is corrected, so the count is heard and the person can
@@ -477,6 +490,14 @@ test/
 ```
 
 ## Adding a move
+
+`docs/exercise-template.xlsx` is the brief a new move is written from: one
+sheet each for the exercise (the phone, the set, the opening words, the
+starting position and its rule, what a rep is), the measurements (landmarks,
+bands, how each is drawn), the faults (words, order, which side of the band,
+set-up or not, the tone), the fixed words and timing rules, the muscles, the
+figure's keyframes, and a checklist for switching it on. The glute bridge is
+filled in as the example. `scripts/exercise-template.py` builds it.
 
 A move is data plus two functions. `read` turns landmarks into named angles;
 `judge` turns those into a verdict and a set of faults with how far out each one

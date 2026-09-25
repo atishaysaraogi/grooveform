@@ -29,6 +29,7 @@
     name: 'Wall sit',
     hint: 'Phone standing up on the floor, side on to you, whole body in frame.',
     start: 'Stand the phone up on the floor, then step into the frame, side on, back against the wall.',
+    position: 'Stand side on to the phone with your back against the wall and your feet a step out from it.',
     camera: 'tall',                 // a standing body needs the height, not the width
     /* the move, drawn: seated in the air against a wall, held */
     pose: { A: { torso: 0, thigh: 90, shin: 0, uarm: 8, farm: 8 }, wall: 'behind', hold: true },
@@ -125,6 +126,7 @@
     name: 'Elbow plank',
     hint: 'Phone on its side on the floor, side on to you, forearms down, whole body in frame.',
     start: 'Lay the phone on its side on the floor, then get into your plank, side on, down onto your forearms.',
+    position: 'Side on to the phone, down on your forearms and toes, elbows under your shoulders, body in one line.',
     /* a plank is long and low, so the frame has to be too */
     camera: 'wide',
     pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -80, shin: -80, foot: -60, uarm: -20, farm: 70 }, hold: true },
@@ -215,6 +217,7 @@
     name: 'Knee raise',
     hint: 'Phone standing up, side on to you, whole body in frame.',
     start: 'Stand the phone up on the floor, then stand side on, tall, and raise one knee.',
+    position: 'Stand side on to the phone, tall, feet together, arms relaxed at your sides.',
     camera: 'tall',                 // a standing body needs the height, not the width
     reps: true,
     holdLabel: 'Hold each rep for',
@@ -348,6 +351,10 @@
     name: 'Glute bridge',
     hint: 'Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.',
     start: 'Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent.',
+    position: 'Lie on your back, side on to the phone, knees bent, feet flat on the floor, arms by your sides.',
+    /* the start position is lying down with the knees bent: hips on the floor and
+       the shin standing up off the heel, whatever the feet are doing yet */
+    ready: (r, v) => !!(v.atStart && r.shin != null && r.shin >= 45 && r.shin <= 150),
     camera: 'wide',                 // a body lying down is long and low, like the plank
     reps: true,
     holdLabel: 'Hold at the top for',
@@ -501,6 +508,7 @@
     name: 'Donkey kick',
     hint: 'Phone on its side on the floor, side on to you, on your hands and knees, whole body in frame.',
     start: 'Lay the phone on its side on the floor, then get on your hands and knees side on to it, and kick one leg up.',
+    position: 'On your hands and knees, side on to the phone, hands under your shoulders, knees under your hips, back level.',
     camera: 'wide',
     reps: true,
     holdLabel: 'Hold at the top for',

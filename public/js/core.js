@@ -34,7 +34,8 @@
     settleMs: 700,        // how long in position before the hold clock starts
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
-    readyMs: 2000,        // reps: how long the start position is held before the coaching begins
+    readyMs: 2000,        // how long the start position is held before the coaching begins
+    lostEverySec: 15,     // how often "I can't see you" is said while nobody is in the frame
     setCount: 3,          // how many sets make the session
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
     deepAt: 18,           // degrees past the band at which the stronger words are used
@@ -204,7 +205,7 @@
   /* Said by every move, so they live here rather than in each one. */
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
-    lost: { text: 'Step into the camera, side on' },
+    lost: { text: 'I can\u2019t see you \u2014 step into the camera, side on' },
     fast: { text: 'slower on the way down' },
   };
 
@@ -226,10 +227,16 @@
       this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
       this.lowerAt = 0;                 // when the lowering began, for a move that wants it slow
       this.countedAt = 0;               // when the last rep was counted, for the quiet after it
-      this.ready = false; this.readySince = 0;   // reps: the set-up wait, until the start is held
+      this.ready = false; this.readySince = 0;   // the set-up wait, until the start position is held
+      this.quietUntil = 0;              // nothing is said before this: the opening words are being said
+      this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
       this.lastT = null; this.log = [];
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
+
+    /* Nothing is said before `untilMs` on the coach's clock: the opening words
+       are being said, and a correction over them is two voices at once. */
+    quiet(untilMs) { this.quietUntil = Math.max(this.quietUntil, untilMs); }
 
     /* One frame. `t` is a millisecond clock the caller owns. Returns the frame's
        verdict and, at most, one cue to speak. */
@@ -237,7 +244,51 @@
       const dt = this.lastT == null ? 0 : Math.min(t - this.lastT, 250);
       this.lastT = t; this.totalMs += dt;
       const v = this.move.judge(r, this.cfg);
+      const held = this.gate(r, t, v);
+      if (held) return held;
       return this.move.reps ? this.stepReps(r, t, v, dt) : this.stepHold(r, t, v, dt);
+    }
+
+    /* Before the coaching, and whenever nobody is in the frame.
+
+       The set-up wait: the opening words said where to go and how to start; until
+       the person has been at the start position for `readyMs`, seen, nothing else
+       is said, nothing is judged, and no clock runs — they are getting down onto
+       the floor, and a correction shouted at that is noise. A move says what its
+       start position is (`ready`); a rep move's is its start by default, a hold's
+       is being seen.
+
+       Nobody in the frame: "I can't see you" once the frame has been empty for a
+       moment, and again every `lostEverySec` for as long as it stays so — not
+       every few seconds like a correction. The clocks stop. A frame with nobody in
+       it never counts toward being ready. */
+    gate(r, t, v) {
+      const cfg = this.cfg, reps = !!this.move.reps;
+      const targetMs = cfg.holdTargetSec * 1000;
+      const shape = (extra) => Object.assign({ reading: r, verdict: v, holding: false, cue: null, done: false, leftMs: targetMs, targetMs, active: [],
+        ready: this.ready, holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs },
+        reps ? { phase: this.ready ? this.phase : 'setup', resting: false, reps: this.reps, repTarget: cfg.repCount, done: this.phase === 'done',
+          leftMs: Math.max(0, targetMs - this.repHoldMs) } : { done: this.holdMs >= targetMs, leftMs: Math.max(0, targetMs - this.holdMs) }, extra);
+      if (!v.ok) {
+        if (!this.lostSince) this.lostSince = t;
+        this.readySince = 0;
+        /* out of sight, the clocks stop and every fault's timer is let go */
+        this.inSince = 0; this.runMs = 0; this.holdDue = 0; this.wasIn = false; this.since = {};
+        let cue = null;
+        if (t - this.lostSince >= cfg.persistMs && (!this.lastLost || t - this.lastLost >= (cfg.lostEverySec || 15) * 1000)) {
+          cue = this.offer('lost', t, this.cues.lost.text);
+          if (cue) this.lastLost = t;
+        }
+        return shape({ cue });
+      }
+      this.lostSince = 0;
+      if (!this.ready) {
+        const at = this.move.ready ? !!this.move.ready(r, v, cfg) : reps ? !!v.atStart : true;
+        if (at) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
+        else this.readySince = 0;
+        if (!this.ready) return shape({});
+      }
+      return null;
     }
 
     /* A position held once, for as long as the target says. */
@@ -245,7 +296,7 @@
       const cfg = this.cfg, faults = this.move.faults;
 
       /* which faults are true this frame, and by how much */
-      const on = v.ok ? v.faults : { lost: 99 };
+      const on = v.faults;
       for (const id of faults) {
         if (on[id] != null) { if (!this.since[id]) this.since[id] = t; }
         else this.since[id] = 0;
@@ -300,7 +351,7 @@
       }
 
       if (!cue) cue = this.correct(on, t);
-      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs,
+      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs, ready: true,
         active: this.active(on),
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
@@ -319,7 +370,8 @@
         if (on[id] != null) { if (!this.since[id]) this.since[id] = t; }
         else this.since[id] = 0;
       }
-      const ready = this.move.faults.filter((id) => on[id] != null && this.since[id] && t - this.since[id] >= cfg.persistMs);
+      /* nobody in the frame is said by the gate, on its own clock, never here */
+      const ready = this.move.faults.filter((id) => id !== 'lost' && on[id] != null && this.since[id] && t - this.since[id] >= cfg.persistMs);
       for (const id of ready) {
         const c = this.cues[id];
         const cue = this.offer(id, t, (on[id] > cfg.deepAt && c.deep) || c.text);
@@ -340,20 +392,6 @@
       const cfg = this.cfg, C = this.cues;
       const targetMs = cfg.holdTargetSec * 1000, total = cfg.repCount;
       const raised = !!(v.ok && v.raised), atStart = !!(v.ok && v.atStart);
-
-      /* The set-up wait. The opening words said where to go; until the person has
-         been at the start position for a moment, nothing else is said, nothing is
-         judged, and no rep is counted — they are getting down onto the floor, and
-         a correction shouted at that is noise. */
-      if (!this.ready) {
-        if (atStart) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
-        else this.readySince = 0;
-        if (!this.ready) {
-          return { reading: r, verdict: v, holding: false, cue: null, phase: 'setup', ready: false,
-            done: false, leftMs: targetMs, targetMs, active: [], resting: false,
-            reps: this.reps, repTarget: total, holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
-        }
-      }
 
       let holding = false;
       if (v.inPosition && this.phase === 'up') {
@@ -414,8 +452,7 @@
          coached at the start too, before the rep is asked for, because they decide
          what the rep can be. */
       let on = {};
-      if (!v.ok) on = { lost: 99 };
-      else if (this.phase === 'up') on = v.faults;
+      if (this.phase === 'up') on = v.faults;
       else if (this.phase === 'down') {
         on = { raise: 99 };
         for (const id of this.move.setup || []) if (v.faults[id] != null) on[id] = v.faults[id];
@@ -440,6 +477,9 @@
        said two seconds late is a lie. It still sets the clock, so the next
        correction waits rather than treading on it. */
     offer(id, t, text, urgent) {
+      /* a correction waits for the opening words to finish; a count, a time call
+         or the end of a set does not — those are true at one moment only */
+      if (!urgent && t < this.quietUntil) return null;
       if (this.last[id] && t - this.last[id] < this.cfg.cooldownMs) return null;
       if (!urgent && this.lastSpoke && t - this.lastSpoke < this.cfg.gapMs) return null;
       this.last[id] = t; this.lastSpoke = t; this.said[id] = (this.said[id] || 0) + 1;

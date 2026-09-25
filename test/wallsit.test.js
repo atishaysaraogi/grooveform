@@ -5,11 +5,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Core = require('../public/js/core.js');
+/* the cue rules, without the set-up wait in front of them (the wait has tests of its own) */
+const Coach0 = (cfg) => new Core.Coach(M, Object.assign({ readyMs: 0 }, cfg));
 const M = require('../public/js/moves.js').wallsit;
 /* the wall sit's own read/judge, and the shared clock told which move it is coaching */
 const W = { read: (lm, a, c) => M.read(lm, a, Object.assign({}, Core.COMMON, M.defaults, c)),
   judge: (r, c) => M.judge(r, Object.assign({}, Core.COMMON, M.defaults, c)),
-  Coach: function (cfg) { return new Core.Coach(M, cfg); },
+  Coach: function (cfg) { return Coach0(cfg); },
   Smoother: Core.Smoother, SIDE: Core.SIDE };
 
 const D = Math.PI / 180;
@@ -381,7 +383,7 @@ test('smoothing settles on the truth and ignores a single wild frame', () => {
 });
 
 test('a hold shows every fault present in words, in the move\'s order', () => {
-  const c = new Core.Coach(M);
+  const c = Coach0();
   /* the knee too open and the back off the wall: two faults on view, one at a time in the voice */
   const out = c.step(W.read(body({ knee: 130, shin: 90, tilt: 20 }), ASPECT, c.cfg), 0);
   assert.deepEqual(out.active, ['high', 'forward']);

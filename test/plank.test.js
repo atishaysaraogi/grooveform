@@ -5,6 +5,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Core = require('../public/js/core.js');
+/* the cue rules, without the set-up wait in front of them (the wait has tests of its own) */
+const Coach0 = (cfg) => new Core.Coach(M, Object.assign({ readyMs: 0 }, cfg));
 const M = require('../public/js/moves.js').plank;
 
 const D = Math.PI / 180;
@@ -154,20 +156,20 @@ function play(coach, opts, ms, t0 = 0) {
 }
 
 test('hips above the line are told to come down, hips below it to lift', () => {
-  const up = play(new Core.Coach(M), { sag: 12 }, 1200).said;
+  const up = play(Coach0(), { sag: 12 }, 1200).said;
   assert.equal(up[0].id, 'hipup', 'said: ' + JSON.stringify(up.map((x) => x.text)));
   assert.match(up[0].text, /lower your hips/i);
-  const down = play(new Core.Coach(M), { sag: -12 }, 1200).said;
+  const down = play(Coach0(), { sag: -12 }, 1200).said;
   assert.equal(down[0].id, 'hipdown');
   assert.match(down[0].text, /lift your hips/i);
   /* a long way off gets the stronger words, and the plank's bands are tight enough
      that "a long way" has to mean something tighter than the wall sit's */
-  const far = play(new Core.Coach(M), { sag: -20 }, 1200).said;
+  const far = play(Coach0(), { sag: -20 }, 1200).said;
   assert.match(far[0].text, /one line/i, 'fifteen degrees past the line is not a nudge');
 });
 
 test('the shoulders are called before the hips, being what the hips are measured from', () => {
-  const c = new Core.Coach(M);
+  const c = Coach0();
   /* shoulders barely out, hips miles out: the base still goes first */
   const first = play(c, { stack: -7, sag: 25 }, 1200);
   assert.equal(first.said[0].id, 'stackback', 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
@@ -178,13 +180,13 @@ test('the shoulders are called before the hips, being what the hips are measured
 });
 
 test('shoulders too far in front are told to come back', () => {
-  const said = play(new Core.Coach(M), { stack: 25 }, 1200).said;
+  const said = play(Coach0(), { stack: 25 }, 1200).said;
   assert.equal(said[0].id, 'stackfwd');
   assert.match(said[0].text, /shoulders back/i);
 });
 
 test('a good plank is told to hold, and the same countdown runs', () => {
-  const c = new Core.Coach(M, { holdTargetSec: 10, callAtSec: [5] });
+  const c = Coach0({ holdTargetSec: 10, callAtSec: [5] });
   const r = play(c, { stack: 5, sag: 1 }, 12000);
   assert.equal(r.said.filter((x) => x.id === 'hold').length, 1, 'said once');
   const calls = r.said.filter((x) => /^call\d|^done$/.test(x.id));
@@ -197,7 +199,7 @@ test('a good plank is told to hold, and the same countdown runs', () => {
 });
 
 test('coming out of the plank pauses the countdown rather than running it down', () => {
-  const c = new Core.Coach(M, { holdTargetSec: 30 });
+  const c = Coach0({ holdTargetSec: 30 });
   let t = 0;
   ({ t } = play(c, { stack: 5, sag: 1 }, 10000, t));
   const left = c.step(read(body({ stack: 5, sag: 1 })), t).leftMs;
@@ -207,7 +209,7 @@ test('coming out of the plank pauses the countdown rather than running it down',
 });
 
 test('the bands are settings, not rules baked into the code', () => {
-  const strict = new Core.Coach(M, { hipLine: 2 });
+  const strict = Coach0({ hipLine: 2 });
   assert.equal(judge(readOf({ sag: 4 }), { hipLine: 2 }).good.line, false, 'narrowed, four degrees is out');
   assert.equal(judge(readOf({ sag: 4 })).good.line, true, 'and the default band is unchanged');
   assert.equal(strict.cfg.hipLine, 2);

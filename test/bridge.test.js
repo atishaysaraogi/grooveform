@@ -307,6 +307,17 @@ test('after a rep is counted there is a quiet two seconds before the next is ask
   assert.ok(q1 && q1.t - q0.t < 2000, texts(quick));
 });
 
+test('the bridge starts lying down with the knees bent: straight legs on the floor are not the start', () => {
+  const c = new Core.Coach(M);
+  let t = 0, out = null;
+  /* on the back with the legs out straight: the hips are down but the shin lies along the floor */
+  for (; t < 3000; t += 33) out = c.step(read(body({ shin: 20, dip: 50, hipAng: 130 }), c.cfg), t);
+  assert.equal(out.ready, false, 'not the start: ' + out.phase);
+  for (; t < 5200; t += 33) out = c.step(read(body(REST), c.cfg), t);
+  assert.equal(out.ready, true, 'knees bent for two seconds, and the coaching begins');
+  assert.match(M.position, /knees bent/i);
+});
+
 test('every fault present is on view in words, whether or not it is the one being said', () => {
   const c = new Core.Coach(M);
   let t = settle(c, 0);
