@@ -1,4 +1,4 @@
-# Form Coach
+# OnTrack
 
 A side-on coach for held positions, running entirely in the browser. Put the
 phone on the floor, step into the frame, and it watches the angles that decide
@@ -12,6 +12,14 @@ raise**. Nothing is uploaded — the pose model, the coaching and the video file
 are all made on the device.
 
 ## Starting
+
+**The page.** The exercises are cards at the top — what each is, which way
+the phone goes, what a set is, what works — and picking one fills the set-up
+card on the picture: place the phone (which way, how far), get into position
+(in this exercise's words), then just move. The camera starts the set. While
+a set runs the cards give way to the picture; the settings are in two groups,
+this exercise's numbers and the coach and the phone; the About text is the
+picked exercise's. None of it touches what is measured or said.
 
 The front camera opens first, because it is the one you can see while you are
 setting the phone down. Starting the camera *is* starting the set: it says out

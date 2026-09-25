@@ -132,7 +132,42 @@
     move = Moves[saved.move] || Moves.wallsit;
     $('move').value = move.id;
     for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
-    buildSettings(); buildReads(); syncBands();
+    buildSettings(); buildReads(); syncBands(); buildPicker(); showMove();
+  }
+
+  /* ---------- the page around the coach ----------
+     The exercises as cards — what each is, which way the phone goes, what a set
+     is, what works — and, once one is picked, how to set up: where the phone
+     goes and what position to take, in words, before the camera is asked for.
+     None of this touches what is measured or said; that is the moves' own. */
+  const placement = (m) => m.camera === 'wide'
+    ? 'Lay the phone on its side on the floor, two or three metres away, side on to where you will be.'
+    : 'Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.';
+  const setWords = (m) => {
+    const d = Object.assign({}, Core.COMMON, m.defaults);
+    return m.reps ? `${d.repCount} reps × ${d.setCount} sets, ${d.holdTargetSec} s at the top` : `hold ${d.holdTargetSec} s × ${d.setCount} sets`;
+  };
+  const muscleWords = (m) => Object.entries(m.muscles || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLE[k] || k).join(', ');
+  const MUSCLE = { thigh: 'thighs', calf: 'calves', glute: 'glutes', abs: 'abs', oblique: 'obliques', shoulder: 'shoulders', back: 'back', ham: 'hamstrings', chest: 'chest', arm: 'arms', forearm: 'forearms', neck: 'neck' };
+  function buildPicker() {
+    const host = opt('picker'); if (!host.appendChild) return;
+    host.innerHTML = '';
+    for (const m of Moves.list) {
+      const card = el('button', 'card', `<h3>${esc(m.name)}</h3><p class="what">${esc(m.position || m.hint || '')}</p>` +
+        `<div class="badges"><span class="badge accent">${m.camera === 'wide' ? 'phone on its side' : 'phone stood up'}</span><span class="badge">${esc(setWords(m))}</span></div>` +
+        (m.muscles ? `<p class="muscles"><b>Works</b> ${esc(muscleWords(m))}</p>` : ''));
+      card.type = 'button'; card.dataset.move = m.id;
+      card.onclick = () => { if (move.id === m.id) { $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } $('move').value = m.id; $('move').dispatchEvent(new Event('change')); };
+      host.appendChild(card);
+    }
+  }
+  /* the picked exercise, everywhere the page names it */
+  function showMove() {
+    document.querySelectorAll('#picker .card').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.move === move.id)));
+    document.querySelectorAll('#about p[data-move]').forEach((pp) => pp.classList.toggle('on', pp.dataset.move === move.id));
+    opt('setup-place').textContent = placement(move);
+    opt('setup-position').textContent = move.position || move.hint || '';
+    $('veil-title').textContent = move.name;
   }
   function saveSettings() {
     saved.move = move.id;
@@ -156,7 +191,7 @@
     if (!inSet) { $('hold-v').textContent = c.holdTargetSec.toFixed(1); $('hold-k').textContent = `left of ${c.holdTargetSec} s`; }
     $('target-label').textContent = move.holdLabel || 'Hold the set for';
     $('r-target').textContent = `of ${c.holdTargetSec}`;
-    $('veil-text').textContent = move.hint + ' The camera never leaves this device.';
+    $('veil-text').textContent = 'The camera never leaves this device. The video you download is made here, cues and all.';
   }
   /* A band is two edges (lo, hi), a symmetric one (sym), or one edge with the
      other end of the meter as the other (min: at least; max: at most). */
@@ -857,6 +892,8 @@
     /* nothing else is said over the opening words */
     coach.quiet(voice.durationOf(opening) + 400);
     if (fresh) { rec = startRecording(); inSet = true; stayAwake(); }
+    /* the cards are for choosing; once a set is under way the picture comes first */
+    document.body.classList.add('running');
     pageMode = false;
     if (!raf) schedule();
     $('rec-note').textContent = rec ? '' : 'The camera has not given a picture yet, so there is nothing to film.';
@@ -890,6 +927,7 @@
     if (!inSet) return;
     if (!between) setsDone.push(coach.summary());
     inSet = false; between = false; letSleep(); applyFull();
+    document.body.classList.remove('running');
     await refilm;
     const blob = rec ? await rec.stop() : null;
     if (rec) rec.blob = blob;
@@ -930,8 +968,7 @@
   $('full-btn').onclick = () => { pageMode = false; applyFull(); };
   $('move').onchange = async () => {
     move = Moves[$('move').value] || Moves.wallsit;
-    buildSettings(); buildReads(); saveSettings();
-    $('veil-title').textContent = move.name;
+    buildSettings(); buildReads(); saveSettings(); showMove();
     /* finish whatever was under way, then start again from this exercise's own
        coach — otherwise the readouts keep being painted by the last one, with its
        bands and its clock, until something else happens to replace it */

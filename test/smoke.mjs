@@ -201,6 +201,28 @@ try {
     await oneSet();
   });
 
+  await step('the exercises are cards, and picking one says how to set up', async () => {
+    const cards = await page.$$eval('#picker .card', (l) => l.map((c) => ({ id: c.dataset.move, on: c.getAttribute('aria-pressed'), text: c.textContent })));
+    assert.equal(cards.length, 5, 'one card per exercise: ' + cards.map((c) => c.id).join(','));
+    assert.equal(cards.find((c) => c.id === 'wallsit').on, 'true', 'the picked one is marked');
+    assert.match(cards.find((c) => c.id === 'bridge').text, /phone on its side/i);
+    assert.match(cards.find((c) => c.id === 'bridge').text, /10 reps/i);
+    assert.match(cards.find((c) => c.id === 'bridge').text, /glutes/i, 'what works: ' + cards.find((c) => c.id === 'bridge').text);
+    /* the set-up card: the phone, the position, in this exercise's words */
+    assert.match(await page.textContent('#setup-place'), /stand the phone up/i);
+    assert.match(await page.textContent('#setup-position'), /back against the wall/i);
+    await page.click('#picker .card[data-move="bridge"]');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Glute bridge', null, { timeout: 5000 });
+    assert.match(await page.textContent('#setup-place'), /lay the phone on its side/i);
+    assert.match(await page.textContent('#setup-position'), /knees bent/i);
+    assert.equal(await page.evaluate(() => document.querySelector('#picker .card[data-move="bridge"]').getAttribute('aria-pressed')), 'true');
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('#about p[data-move].on')].map((p) => p.dataset.move).join()), 'bridge', 'the about text is this exercise\'s');
+    /* and back, the way the rest of the suite expects to find the page */
+    await page.click('#picker .card[data-move="wallsit"]');
+    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Wall sit', null, { timeout: 5000 });
+    assert.equal(await page.textContent('#band-knee'), '85–110');
+  });
+
   await step('starting the camera starts the set and says where to put the phone', async () => {
     await page.click('#go');
     /* the engine is woken on the tap itself, silently, because Safari will not
