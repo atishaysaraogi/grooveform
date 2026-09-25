@@ -151,7 +151,8 @@
       }
     } catch (e) { note('Could not read the video: ' + (e.message || e)); return; }
     note('');
-    trace = { frames, aspect, name: file.name, source: 'video', fps, duration: dur * 1000 };
+    trace = { frames, aspect, name: file.name, source: 'video', fps, duration: dur * 1000, file };
+    $('render-demo').disabled = false;
     await seekTo(0);
     sizeOverlay();
     rerun();
@@ -287,33 +288,20 @@
     let best = null; for (const r of result.rows) { if (!best || Math.abs(r.t - tMs) < Math.abs(best.t - tMs)) best = r; }
     return best;
   }
+  /* the picture at this moment, drawn by the same drawing the coach's page uses,
+     over the video: the skeleton, the readings, the counters, the cue as it was */
+  const isCorrection = (cue) => Overlay.isCorrection(cue, move);
   function drawOverlay(atMs) {
     const ctx = overlay.getContext('2d'); ctx.clearRect(0, 0, overlay.width, overlay.height);
-    const r = rowAt(atMs != null ? atMs : video.currentTime * 1000);
-    if (!r || !r.reading || !r.reading.ok) return;
-    /* the video sits inside the box letterboxed: the same fit as the coach uses */
-    const fit = Core.fitRect(trace.aspect, 1, overlay.width, overlay.height);
-    const at = (p) => [fit.x + (p.x / trace.aspect) * fit.w, fit.y + p.y * fit.h];
-    const v = r.verdict, whole = v.inPosition ? C.good : C.bad;
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, overlay.width / 160); ctx.globalAlpha = 0.6;
-    for (const [a, b] of move.bones) {
-      const p = r.reading.points[a], q = r.reading.points[b]; if (!p || !q) continue;
-      const owner = move.limb[a + '|' + b];
-      ctx.strokeStyle = owner ? bandColour(v.good[owner]) : whole;
-      ctx.beginPath(); ctx.moveTo(...at(p)); ctx.lineTo(...at(q)); ctx.stroke();
-    }
-    ctx.fillStyle = whole;
-    for (const k of move.dots) { const p = r.reading.points[k]; if (!p) continue; const [x, y] = at(p); ctx.beginPath(); ctx.arc(x, y, ctx.lineWidth * 0.7, 0, Math.PI * 2); ctx.fill(); }
-    ctx.globalAlpha = 1;
-    /* the readings at this moment, small, in the corner */
-    ctx.font = `700 ${Math.max(11, overlay.width / 60)}px ui-sans-serif, system-ui, sans-serif`; ctx.textBaseline = 'top';
-    move.bands.forEach((b, i) => {
-      const val = r.reading[b.of]; if (val == null) return;
-      ctx.fillStyle = bandColour(v.good[b.key]);
-      ctx.fillText(`${b.hud} ${Math.round(val)}°`, 8, 8 + i * (overlay.width / 60 + 6));
+    const t = atMs != null ? atMs : video.currentTime * 1000;
+    const r = rowAt(t);
+    if (!r || !trace) return;
+    Overlay.draw(ctx, {
+      W: overlay.width, H: overlay.height, source: null, aspect: trace.aspect,
+      move, cfg: Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: true, setCount: 1 }),
+      reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1,
+      banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues,
     });
-    const words = (r.out && r.out.active || []).map((id) => (move.cues[id] && move.cues[id].label) || id).join(' · ');
-    if (words) { ctx.fillStyle = C.bad; ctx.textAlign = 'center'; ctx.fillText(words, overlay.width / 2, overlay.height - overlay.width / 40 - 8); ctx.textAlign = 'left'; }
   }
   video.addEventListener('timeupdate', () => { drawOverlay(); drawLanes(); });
   video.addEventListener('seeked', () => { drawOverlay(); drawLanes(); });
@@ -473,7 +461,116 @@
   $('tab-anim').onclick = () => showTab('anim');
   $('move').onchange = () => pickMove($('move').value);
 
+  /* ---------- a demo film: the clip drawn over and voiced, after the fact ----------
+     The same drawing the coach's page makes (overlay.js) on every frame of the
+     clip, and the same sounds — the coach's own voice for each cue at its moment
+     and the tone the app plays with it — mixed the way the page's own graph mixes
+     them, over the clip's own sound where it has one, with that turned down while
+     the voice speaks. The picture is encoded frame by frame and the sound as one
+     track, into the same MP4 the coach writes. */
+  let speech = null, demo = null;
+  function loadSpeech() {
+    if (!speech) speech = (window.Speech ? Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js') : Promise.reject(new Error('no voice'))).catch(() => null);
+    return speech;
+  }
+  const rmsAround = (pcm, sr, cues) => cues.slice(0, 3).map((c) => {
+    const a = Math.round((c.t / 1000) * sr), b = Math.min(pcm.length, a + sr); let sum = 0;
+    for (let i = a; i < b; i++) sum += pcm[i] * pcm[i];
+    return Math.sqrt(sum / Math.max(1, b - a));
+  });
+  async function renderDemo() {
+    const note = (t) => { $('demo-note').textContent = t; };
+    if (!trace || !result || trace.source !== 'video' || !trace.file || !video.videoWidth) { note('Load a video first: a trace alone has no picture to draw on.'); return; }
+    const btn = $('render-demo'); btn.disabled = true;
+    const overlayOn = $('demo-overlay').checked;
+    demo = null;
+    try {
+      const dur = trace.duration / 1000, fps = 24, sr = 44100;
+      let W = video.videoWidth, H = video.videoHeight;
+      if (W > 1280) { H = Math.round((H * 1280) / W); W = 1280; }
+      W -= W % 2; H -= H % 2;
+      const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      const cues = result.cues;
+
+      /* the sound: rendered offline, in one go */
+      note('Making the voice\u2026');
+      const client = await loadSpeech();
+      const oac = new OfflineAudioContext(1, Math.ceil((dur + 1) * sr), sr);
+      const tones = oac.createGain(); tones.gain.value = Sound.OUT_GAIN; tones.connect(oac.destination);
+      const speechGain = oac.createGain(); speechGain.connect(oac.destination);
+      const own = oac.createGain(); own.connect(oac.destination);
+      let original = false;
+      try {
+        const buf = await oac.decodeAudioData(await trace.file.arrayBuffer());
+        const src = oac.createBufferSource(); src.buffer = buf; src.connect(own); src.start(0); original = true;
+      } catch { original = false; }
+      let voiced = 0;
+      for (let i = 0; i < cues.length; i++) {
+        const c = cues[i], at = c.t / 1000, next = cues[i + 1] ? cues[i + 1].t / 1000 : null;
+        Sound.tone(oac, tones, Sound.toneFor(c.id), at);
+        const pcm = client && client.ready ? await client.synth(c.text) : null;
+        if (!pcm) continue;
+        const b = oac.createBuffer(1, pcm.data.length, pcm.rate); b.copyToChannel(pcm.data, 0);
+        const src = oac.createBufferSource(); src.buffer = b; src.connect(speechGain); src.start(at);
+        /* a cue said while the last is still being said cuts it off, as it does live */
+        const end = next != null && next < at + b.duration ? next : at + b.duration;
+        if (end < at + b.duration) src.stop(end);
+        own.gain.setTargetAtTime(0.1, at, 0.015); own.gain.setTargetAtTime(1, end + 0.1, 0.05);
+        voiced += 1;
+        note(`Making the voice\u2026 ${i + 1} of ${cues.length}`);
+      }
+      const rendered = await oac.startRendering();
+      const pcmAll = rendered.getChannelData(0).subarray(0, Math.ceil(dur * sr));
+
+      /* the picture: every frame drawn fresh at the film's rate */
+      const pick = await Codec.pickCodec(W, H, fps, false);
+      if (!pick) throw new Error('this browser cannot encode video');
+      const samples = []; let desc = null, why = null;
+      const enc = new VideoEncoder({
+        output: (chunk, meta) => {
+          const dc = meta && meta.decoderConfig;
+          if (dc && dc.description && !desc) desc = Codec.bytesOf(dc.description);
+          const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data);
+          samples.push({ data, ts: chunk.timestamp, key: chunk.type === 'key' });
+        },
+        error: (e) => { why = why || e; },
+      });
+      enc.configure(pick.config);
+      const cfg = Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: false, setCount: 1 });
+      let n = 0;
+      for (let t = 0; t < dur; t += 1 / fps, n++) {
+        await seekTo(Math.min(t, dur - 0.001));
+        const row = rowAt(t * 1000);
+        if (overlayOn) {
+          Overlay.draw(ctx, { W, H, source: { image: video, w: video.videoWidth, h: video.videoHeight, quarter: 0, mirror: false },
+            move, cfg, reading: row && row.reading, verdict: row && row.verdict, out: row && row.out, setNo: 1,
+            banner: Overlay.bannerAt(cues, t * 1000, isCorrection), now: t * 1000, rec: false, cues: move.cues });
+        } else ctx.drawImage(video, 0, 0, W, H);
+        while (enc.encodeQueueSize > 4) await new Promise((r) => setTimeout(r, 5));
+        const f = new VideoFrame(canvas, { timestamp: Math.round(t * 1e6) });
+        try { enc.encode(f, { keyFrame: n % (fps * 2) === 0 }); } finally { f.close(); }
+        if (why) throw why;
+        if (n % 12 === 0) note(`Drawing the film\u2026 ${Math.round((t / dur) * 100)}%`);
+      }
+      await enc.flush(); enc.close();
+      if (!samples.length) throw new Error('the encoder gave nothing back');
+
+      note('Encoding the sound\u2026');
+      let audio = null;
+      try { audio = await Codec.encodeAudio(pcmAll, sr); } catch { audio = null; }
+      const file = Mp4.write({ width: W, height: H, codec: pick.kind, description: desc, codecString: pick.codec, samples, created: new Date(), audio });
+      const blob = new Blob([file], { type: 'video/mp4' });
+      demo = { blob, frames: samples.length, sound: !!audio, voiced, cues: cues.length, original, overlay: overlayOn, rms: rmsAround(pcmAll, sr, cues), width: W, height: H };
+      save(blob, `${String(trace.name || 'clip').replace(/\.[^.]+$/, '')}-demo.mp4`);
+      note(`${(blob.size / 1e6).toFixed(1)} MB \u00b7 ${samples.length} frames \u00b7 ${audio ? `the voice on ${voiced} of ${cues.length} cues and every tone` : 'silent \u2014 this browser cannot encode sound'}${original ? ', over the clip\u2019s own sound' : ''}${overlayOn ? ', the coaching drawn on every frame' : ', the picture as it was'}.`);
+    } catch (e) { note('Could not render: ' + (e.message || e)); demo = { why: String(e && e.message || e) }; }
+    finally { btn.disabled = false; try { await seekTo(0); } catch { } }
+  }
+  $('render-demo').onclick = renderDemo;
+
   window.__review = {
+    get demo() { return demo; },
     get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
     get fig() { return figureJson(); }, pickMove, setTuned, showTab,
     loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; judge(); },

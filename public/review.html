@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-25e">
+<html lang="en" data-v="2026-09-25f">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>Form Coach — Review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-25e">
+<link rel="stylesheet" href="styles.css?v=2026-09-25f">
 </head>
 <body class="review">
 <header class="bar">
@@ -51,6 +51,13 @@
           <button class="btn" id="download-numbers">Download the numbers</button>
         </div>
         <p class="tiny" id="apply-note"></p>
+        <h2>A demo film</h2>
+        <p class="tiny">The clip drawn over and voiced after the fact: the skeleton, the counters and every cue on the picture, and on the sound the coach's own voice and the tones at the moments they would have played, over the clip's own sound if it has any. The same drawing and the same sounds as the coach's page.</p>
+        <div class="row">
+          <button class="btn primary" id="render-demo" disabled>Render a demo film</button>
+          <label><input type="checkbox" id="demo-overlay" checked> Draw the coaching on the picture</label>
+        </div>
+        <p class="tiny" id="demo-note"></p>
       </div>
     </div>
 
@@ -120,11 +127,16 @@
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-25e"></script>
-<script src="js/moves.js?v=2026-09-25e"></script>
-<script src="js/trace.js?v=2026-09-25e"></script>
-<script src="js/figure.js?v=2026-09-25e"></script>
-<script src="js/anatomy.js?v=2026-09-25e"></script>
-<script src="js/review.js?v=2026-09-25e"></script>
+<script src="js/core.js?v=2026-09-25f"></script>
+<script src="js/moves.js?v=2026-09-25f"></script>
+<script src="js/trace.js?v=2026-09-25f"></script>
+<script src="js/overlay.js?v=2026-09-25f"></script>
+<script src="js/sound.js?v=2026-09-25f"></script>
+<script src="js/codec.js?v=2026-09-25f"></script>
+<script src="js/mp4.js?v=2026-09-25f"></script>
+<script src="js/speech.js?v=2026-09-25f"></script>
+<script src="js/figure.js?v=2026-09-25f"></script>
+<script src="js/anatomy.js?v=2026-09-25f"></script>
+<script src="js/review.js?v=2026-09-25f"></script>
 </body>
 </html>

@@ -21,7 +21,7 @@
     full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
     lite: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
   };
-  const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', shadow: 'rgba(0,0,0,.55)' };
+  const C = Overlay.C;   // the colours, shared with the drawing (overlay.js)
 
   const $ = (id) => document.getElementById(id);
   /* an element a page from before it existed may not have: setting a field on
@@ -167,12 +167,7 @@
     return { lo: c[b.lo], hi: c[b.hi] };
   }
   /* "-5–15" reads as a subtraction, so a band that starts below zero is spelt out */
-  function bandText(b, c) {
-    if (b.sym) return `±${c[b.sym]}`;
-    if (b.min) return `≥ ${c[b.min]}`;
-    if (b.max) return `≤ ${c[b.max]}`;
-    return c[b.lo] < 0 ? `${c[b.lo]} to ${c[b.hi]}` : `${c[b.lo]}–${c[b.hi]}`;
-  }
+  const bandText = Overlay.bandText;
   const pct = (v, lo, hi) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
 
   /* ---------- voice ----------
@@ -300,31 +295,9 @@
   function tone(seq) {
     const a = initAudio(); if (!a || !voice.on) return;
     if (a.ac.state === 'suspended') a.ac.resume();
-    let at = a.ac.currentTime;
-    for (const [hz, dur] of seq) {
-      const o = a.ac.createOscillator(), g = a.ac.createGain();
-      o.type = 'sine'; o.frequency.value = hz;
-      g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(1, at + 0.012);
-      g.gain.setValueAtTime(1, at + dur - 0.03); g.gain.linearRampToValueAtTime(0, at + dur);
-      o.connect(g); g.connect(a.out); o.start(at); o.stop(at + dur);
-      at += dur + 0.02;
-    }
+    Sound.tone(a.ac, a.out, seq, a.ac.currentTime);
   }
-  const DOWN = [[660, 0.1], [440, 0.14]], UP = [[440, 0.1], [660, 0.14]];
-  const TONES = {
-    high: DOWN, low: UP, hipup: DOWN, hipdown: UP,
-    forward: [[300, 0.16]], back: [[300, 0.16]],
-    feetback: [[520, 0.09], [392, 0.09], [330, 0.13]],   // walking back: a falling run
-    feetfwd: [[330, 0.09], [392, 0.09], [520, 0.13]],    // walking out: the same run, rising
-    stackback: [[330, 0.09], [392, 0.09], [520, 0.13]],
-    stackfwd: [[520, 0.09], [392, 0.09], [330, 0.13]],
-    hold: [[880, 0.09], [1175, 0.13]],
-    call: [[988, 0.07], [988, 0.09]],                    // the clock, twice, out of the way
-    done: [[784, 0.1], [988, 0.1], [1319, 0.22]],
-    lost: [[350, 0.08]],
-  };
-  /* every call shares one tone, so `call30` and `call5` do not each need an entry */
-  const toneFor = (id) => TONES[id] || (/^call\d/.test(id) ? TONES.call : TONES.lost);
+  const toneFor = Sound.toneFor;
 
   /* ---------- the pose model ----------
      In its own thread wherever the browser allows it, so that the page's thread
@@ -455,235 +428,20 @@
 
   /* ---------- drawing ---------- */
   let painted = 0;                        // how many times the canvas has been drawn, so a film takes no frame twice
+  /* the whole picture, drawn by overlay.js — the same drawing the Review page
+     renders a film with after the fact, so the two can never differ */
   function drawFrame(reading, verdict, out) {
     painted++;
-    const W = canvas.width, H = canvas.height, m = cfg().mirror;
-    const q = quarterTurn(), t = turned(q);
-    /* All of the picture, none of it stretched. A squashed body reads squashed
-       angles, and every threshold in this app is an angle, so filling the canvas
-       by distorting the frame would quietly corrupt every number on the screen.
-       Bars at the sides are the honest answer. */
-    const fit = Core.fitRect(t.w, t.h, W, H);
-    ctx.save();
-    if (m) { ctx.translate(W, 0); ctx.scale(-1, 1); }
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-    if (q) {
-      /* turned about the middle of where it is going: after the turn the frame's
-         own width runs down the rectangle and its height across it */
-      ctx.save();
-      ctx.translate(fit.x + fit.w / 2, fit.y + fit.h / 2);
-      ctx.rotate((q * Math.PI) / 2);
-      ctx.drawImage(video, -fit.h / 2, -fit.w / 2, fit.h, fit.w);
-      ctx.restore();
-    } else {
-      ctx.drawImage(video, fit.x, fit.y, fit.w, fit.h);
-    }
-    if (reading && reading.ok) drawBody(reading, verdict, t.w / t.h, fit);
-    ctx.restore();
-    drawHud(reading, verdict, out, W, H);
+    const q = quarterTurn(), t = turned(q), c = cfg();
+    Overlay.draw(ctx, {
+      W: canvas.width, H: canvas.height,
+      source: { image: video, w: t.w, h: t.h, quarter: q, mirror: c.mirror },
+      move, cfg: c, reading, verdict, out, setNo, banner, now: performance.now(),
+      rec: !!(rec && rec.live), cues: coach ? coach.cues : {},
+    });
   }
 
-  /* The points are in the VIDEO's square space (x already × the video's aspect),
-     and the video occupies `fit` inside the canvas — so they are painted into that
-     rectangle, not the whole canvas. Sizes scale with the picture rather than the
-     canvas too, so a pillarboxed frame gets a skeleton that fits it. */
-  function drawBody(r, v, A, fit) {
-    const at = (p) => [fit.x + (p.x / A) * fit.w, fit.y + p.y * fit.h];
-    const W = fit.w, H = fit.h;
-    const s = Math.max(2, W / 320);
-    const rad = Math.max(18, W * 0.045);
-    const fs = Math.max(14, W * 0.032);
-    const tone = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
-    const whole = !v.ok ? C.dim : v.inPosition ? C.good : C.bad;
-
-    /* thick enough to read from across the room, see-through enough to leave the
-       body visible under it */
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.shadowColor = C.shadow; ctx.shadowBlur = s * 2;
-    ctx.lineWidth = s * 3.2; ctx.setLineDash([]);
-    ctx.globalAlpha = 0.55;
-    for (const [a, b] of move.bones) {
-      const p = r.points[a], q = r.points[b]; if (!p || !q) continue;
-      /* each part is drawn in the colour of the verdict that is about it */
-      const owner = move.limb[a + '|' + b];
-      ctx.strokeStyle = !v.ok ? C.dim : owner ? tone(v.good[owner]) : whole;
-      ctx.beginPath(); ctx.moveTo(...at(p)); ctx.lineTo(...at(q)); ctx.stroke();
-    }
-    ctx.shadowBlur = 0; ctx.fillStyle = whole;
-    for (const k of move.dots) {
-      const p = r.points[k]; if (!p) continue; const [x, y] = at(p);
-      ctx.beginPath(); ctx.arc(x, y, s * 2.2, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    /* what the move asks to be drawn — the angles, arcs and guide lines — only
-       when asked for: the skeleton's colour says what is off, and the words do */
-    if (cfg().angles) move.draw({
-      /* a dashed line straight up (or down, for a negative share) from a point */
-      plumb(p, share) {
-        const [x, y] = at(p);
-        ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - fit.h * share); ctx.stroke(); ctx.setLineDash([]);
-      },
-      /* a dashed floor line through a point, run mostly the way the body faces, or
-         the other way for a negative `dir` */
-      floor(p, dir) {
-        const [x, y] = at(p), f = r.facing * (dir || 1);
-        ctx.setLineDash([s * 1.5, s * 2]); ctx.lineWidth = s * 0.8; ctx.strokeStyle = C.dim;
-        ctx.beginPath(); ctx.moveTo(x - f * fit.w * 0.05, y); ctx.lineTo(x + f * fit.w * 0.11, y); ctx.stroke(); ctx.setLineDash([]);
-      },
-      /* the straight line a joint is judged against, drawn end to end */
-      guide(a, b, ok) {
-        const p = at(a), q = at(b);
-        ctx.setLineDash([s * 2.5, s * 2.5]); ctx.lineWidth = s * 0.9; ctx.strokeStyle = ok ? C.dim : C.bad;
-        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); ctx.setLineDash([]);
-      },
-      /* the angle at b between a and c */
-      angleAt(b, a, c, deg, ok, k) {
-        const [cx, cy] = at(b);
-        const ang = (p) => { const [x, y] = at(p); return Math.atan2(y - cy, x - cx); };
-        sweep(cx, cy, rad * k, ang(a), ang(c), tone(ok), s, `${Math.round(deg)}°`, fs);
-      },
-      /* the angle at `from` between a reference direction and `to`: a floor ray
-         when `dir` is a facing, straight up when it is 0 */
-      angleTo(from, to, dir, deg, ok, k) {
-        const [cx, cy] = at(from), [tx, ty] = at(to);
-        const a0 = dir === 'down' ? Math.PI / 2 : dir ? (dir > 0 ? 0 : Math.PI) : -Math.PI / 2;
-        sweep(cx, cy, rad * k, a0, Math.atan2(ty - cy, tx - cx), tone(ok), s, `${Math.round(deg)}°`, fs);
-      },
-      /* a bare number beside a point, pushed clear on the side it is signed toward */
-      readout(p, deg, ok, side) {
-        const [x, y] = at(p);
-        label(`${deg > 0 ? '+' : ''}${Math.round(deg)}°`, x, y + side * fs * 1.6, fs, tone(ok), cfg().mirror);
-      },
-    }, r, v);
-  }
-
-  /* An arc the short way round between two directions, with its number set on the
-     bisector just outside it — so the number is plainly the label of that arc and
-     the arc is plainly the angle, not its reflex. */
-  function sweep(cx, cy, rad, a0, a1, colour, s, text, fs) {
-    let d = a1 - a0;
-    while (d < -Math.PI) d += Math.PI * 2; while (d > Math.PI) d -= Math.PI * 2;
-    ctx.strokeStyle = colour; ctx.lineWidth = s * 1.1; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(cx, cy, rad, a0, a1, d < 0); ctx.stroke();
-    const mid = a0 + d / 2, out = rad + fs * 0.95;
-    label(text, cx + Math.cos(mid) * out, cy + Math.sin(mid) * out, fs, colour, cfg().mirror);
-  }
-
-  /* The body is drawn under a mirror when mirroring, which would write the text
-     backwards. Flipping about the label's own x un-mirrors the glyphs and leaves
-     the anchor where it is, so the same (x, y) means the same place on screen
-     either way — and centred text needs no side-swap to go with it. */
-  function label(text, x, y, size, colour, mirrored) {
-    ctx.save();
-    if (mirrored) { ctx.translate(x, y); ctx.scale(-1, 1); ctx.translate(-x, -y); }
-    ctx.font = `700 ${size}px ui-sans-serif, system-ui, sans-serif`;
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-    ctx.lineWidth = size * 0.28; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
-    ctx.strokeText(text, x, y); ctx.fillStyle = colour; ctx.fillText(text, x, y);
-    ctx.restore();
-  }
-
-  function drawHud(r, v, out, W, H) {
-    const pad = Math.round(W * 0.022), fs = Math.max(15, Math.round(W * 0.028));
-    const live = r && r.ok;
-    const edge = out.done ? C.good : !live ? C.dim : v.inPosition ? C.good : C.bad;
-    ctx.strokeStyle = edge; ctx.lineWidth = Math.max(3, W * 0.006);
-    ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, W - ctx.lineWidth, H - ctx.lineWidth);
-
-    const c = cfg();
-    const line = (text, x, y, size, colour, align) => {
-      ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.textBaseline = 'top'; ctx.textAlign = align || 'left';
-      ctx.lineWidth = size * 0.26; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
-      ctx.strokeText(text, x, y); ctx.fillStyle = colour; ctx.fillText(text, x, y);
-    };
-    /* one cursor down each side, so no two lines can ever be laid on top of each other */
-    const stack = (x, align) => {
-      let y = pad;
-      return (big, small, colour, scale) => {
-        const sz = fs * (scale || 1);
-        line(big, x, y, sz, colour, align); y += sz * 1.12;
-        line(small, x, y, fs * 0.62, C.dim, align); y += fs * 0.95;
-        return y;
-      };
-    };
-    const L = stack(pad, 'left');
-    if (c.angles) for (const b of move.bands) {
-      const val = live && r[b.of] != null ? `${Math.round(r[b.of])}°` : '—';
-      L(`${b.hud} ${val}`, `${b.note} ${bandText(b, c)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
-    }
-    /* which set this is, and under it the reps counted so far */
-    if (setNo) L(`SET ${setNo} of ${c.setCount}`, out.between ? 'done' : '', C.ink);
-    if (setNo && move.reps) L(`REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : '', C.ink);
-
-    /* the countdown, which is what the set is: the hold, or the hold at the top of a rep */
-    const R = stack(W - pad, 'right');
-    const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
-    const under = out.done ? (move.reps ? `${out.repTarget} reps` : `${target} s held`)
-      : move.reps ? `of ${target} s at the top` : `left of ${target} s`;
-    const ry = R(out.done || out.between ? 'DONE' : `${left}s`, under, C.ink, 1.5);
-    if (rec && rec.live) {
-      line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
-      ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
-    }
-    /* the move's name, so the recording says what it is a recording of. Top centre,
-       between the two stacks, because the bottom of the frame belongs to the cue. */
-    line(move.name, W / 2, pad, fs * 0.66, C.dim, 'center');
-
-    /* the mark, bottom right, on every frame of the film */
-    const wmSize = Math.round(fs * 0.62);
-    ctx.save(); ctx.globalAlpha = 0.72;
-    line('OnTrack', W - pad, H - pad - wmSize, wmSize, C.ink, 'right');
-    ctx.restore();
-    /* what is drawn above the mark stacks upwards from here */
-    let floor = H - pad - wmSize - fs * 0.5;
-
-    /* the cue, kept on screen a moment after it was said so the recording shows
-       it. Wrapped to the frame, never past its edge: a long instruction takes
-       two or three lines, and shrinks a little rather than take four. */
-    const measure = (str) => ctx.measureText(str).width;
-    if (banner && performance.now() - banner.at < 2600) {
-      const maxW = W - pad * 2 - fs * 1.6;
-      let size = fs, lines;
-      for (;;) {
-        ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
-        lines = Core.wrapWords(banner.text, maxW, measure);
-        if (lines.length <= 3 || size <= fs * 0.62) break;
-        size = Math.round(size * 0.88);
-      }
-      const lh = size * 1.22, bh = lh * lines.length + size;
-      const bw = Math.min(W - pad * 2, Math.max(...lines.map(measure)) + fs * 1.6);
-      const y = floor - bh;
-      ctx.fillStyle = 'rgba(13,17,23,.82)';
-      ctx.beginPath(); ctx.roundRect((W - bw) / 2, y, bw, bh, Math.min(bh / 2, fs * 1.1)); ctx.fill();
-      ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = banner.colour;
-      lines.forEach((str, i) => ctx.fillText(str, W / 2, y + size * 0.5 + lh * (i + 0.5)));
-      banner.lines = lines; banner.size = size; banner.width = bw; banner.frame = W;
-      floor = y - fs * 0.4;
-    }
-    /* every fault present right now, in words, above the cue: the voice keeps to
-       one thing at a time, the picture need not. Faults are the one thing in red. */
-    const words = out.between ? (setNo >= c.setCount ? 'All sets done' : `Set ${setNo} done \u2014 tap Next set when you are ready`) : faultWords(out);
-    if (words) {
-      const ws = fs * 0.62;
-      ctx.font = `700 ${ws}px ui-sans-serif, system-ui, sans-serif`;
-      const wl = Core.wrapWords(words, W - pad * 2, measure);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = fs * 0.18; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
-      ctx.fillStyle = out.between ? C.ink : C.bad;
-      wl.forEach((str, i) => { const y = floor - ws * 1.2 * (wl.length - i - 0.5); ctx.strokeText(str, W / 2, y); ctx.fillText(str, W / 2, y); });
-    }
-  }
-
-  /* the faults present this frame, as short words joined by dots */
-  function faultWords(out) {
-    if (!out || !out.active || !out.active.length || !coach) return '';
-    return out.active.map((id) => { const c = coach.cues[id]; return (c && (c.label || c.text)) || id; }).join('  \u00b7  ');
-  }
-
+  const faultWords = (out) => Overlay.faultWords(out, coach && coach.cues);
   /* ---------- the loop ---------- */
   function tick() {
     if (!running) return;
@@ -794,12 +552,7 @@
   /* a correction — one of the move's faults, a rep dropped early, or a count
      carrying the slow-down remark — is the one thing shown in red; the prompts,
      the counts, the time calls and the rest are neutral */
-  function isCorrection(cue) {
-    const id = cue.id, prompts = move.prompts || [];
-    if (id === 'early') return true;
-    if (move.faults.includes(id) && id !== 'lost' && !prompts.includes(id)) return true;
-    return /^(count\d+|done)$/.test(id) && cue.text.includes(Core.SHARED_CUES.fast.text);
-  }
+  const isCorrection = (cue) => Overlay.isCorrection(cue, move);
   function fire(cue) {
     const bad = isCorrection(cue);
     banner = { text: cue.text, colour: bad ? C.bad : C.ink, at: performance.now() };
@@ -867,41 +620,18 @@
         stream from the canvas, fed one frame per tick of the same clock, with the
         cue tones mixed in. MP4 where it can write one, WebM where it cannot. */
   const REC_FPS = 30;
-  /* H.264 first, for every player; the levels cover a phone's frame at thirty a
-     second and a larger one. VP9 in MP4 where H.264 cannot be encoded, which is
-     the open-source browser build the tests run in. */
-  const CODECS = [
-    ['avc1.42E01F', 'avc'], ['avc1.42E028', 'avc'], ['avc1.42E02A', 'avc'],
-    ['avc1.4D401F', 'avc'], ['avc1.4D4028', 'avc'], ['avc1.64001F', 'avc'], ['avc1.640028', 'avc'], ['avc1.64002A', 'avc'],
-    ['vp09.00.31.08', 'vp9'], ['vp09.00.40.08', 'vp9'], ['vp09.00.51.08', 'vp9'],
-  ];
-  async function pickCodec(w, h) {
-    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined' || !window.Mp4) return null;
-    for (const [codec, kind] of CODECS) {
-      const config = { codec, width: w, height: h, bitrate: 3.5e6, framerate: REC_FPS, latencyMode: 'realtime' };
-      if (kind === 'avc') config.avc = { format: 'avc' };
-      try { const r = await VideoEncoder.isConfigSupported(config); if (r && r.supported) return { config, kind, codec }; }
-      catch { }
-    }
-    return null;
-  }
+  const pickCodec = (w, h) => Codec.pickCodec(w, h, REC_FPS);
   function pickMime() {
     const want = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
     for (const m of want) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
     return '';
   }
-  const bytesOf = (d) => d instanceof ArrayBuffer ? new Uint8Array(d.slice(0)) : new Uint8Array(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength));
-
+  const bytesOf = Codec.bytesOf;
   /* The sound for the film the page writes itself: the bus (microphone and tones)
      read as samples and handed to an AAC encoder, stamped on the same clock as
      the picture. Where the browser has no AAC encoder the film is silent, and
      says so. */
-  async function pickSound(sampleRate) {
-    if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') return null;
-    const config = { codec: 'mp4a.40.2', sampleRate, numberOfChannels: 1, bitrate: 96000 };
-    try { const r = await AudioEncoder.isConfigSupported(config); return r && r.supported ? config : null; }
-    catch { return null; }
-  }
+  const pickSound = Codec.pickSound;
   function startSound(start, film) {
     const a = initAudio(); if (!a) return null;
     const sr = a.ac.sampleRate, packets = []; let enc = null, desc = null, tap = null, sink = null, frames = 0, ts0 = null;

@@ -970,6 +970,30 @@ try {
     const after = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
     assert.notEqual(after, before, 'the knee moved: ' + before + ' to ' + after);
     assert.ok((await page.inputValue('#anim-json')).includes('"kn":' + after), 'and the JSON follows');
+  });
+
+  await step('the Review page renders a demo film: the coaching drawn on every frame, the voice and the tones on the sound', async () => {
+    /* the same clip, drawn over and voiced after the fact, into the same MP4 the coach writes */
+    assert.equal(await page.evaluate(() => document.getElementById('render-demo').disabled), false, 'a video is loaded, so a demo can be made');
+    await page.evaluate(() => document.getElementById('render-demo').click());
+    await page.waitForFunction(() => window.__review.demo, null, { timeout: 120000 });
+    const d = await page.evaluate(async () => {
+      const d = window.__review.demo; if (d.why) return d;
+      const buf = new Uint8Array(await d.blob.arrayBuffer());
+      const info = window.Mp4.inspect(buf);
+      return { frames: d.frames, sound: d.sound, voiced: d.voiced, cues: d.cues, overlay: d.overlay, rms: d.rms, size: buf.length, width: d.width, height: d.height,
+        info: { samples: info.samples, duration: info.duration, codec: info.codec, width: info.width, height: info.height, tracks: info.tracks }, note: document.getElementById('demo-note').textContent };
+    });
+    assert.ok(!d.why, 'rendered: ' + d.why);
+    const secs = await page.evaluate(() => window.__review.trace.duration / 1000);
+    assert.ok(d.frames >= secs * 24 * 0.9 && d.frames === d.info.samples, `a frame for every tick of the film's clock: ${d.frames} of ${(secs * 24).toFixed(0)}, ${d.info.samples} in the file`);
+    assert.ok(Math.abs(d.info.duration - secs) < 0.3, 'the file is as long as the clip: ' + d.info.duration + ' vs ' + secs);
+    assert.equal(d.info.width, d.width, 'the frame is the clip\'s size');
+    assert.ok(d.cues > 0 && d.voiced === d.cues, `the voice was made for every cue: ${d.voiced} of ${d.cues}`);
+    assert.ok(d.rms[0] > 0.02, 'and is on the rendered sound at the first cue: ' + JSON.stringify(d.rms));
+    assert.match(d.note, /frames/, d.note);
+    /* this browser build cannot encode AAC, so the file is silent and the note says so; a phone's can */
+    assert.match(d.note, /the voice on \d+ of \d+ cues and every tone|silent \u2014 this browser cannot encode sound/, d.note);
     await page.goto(base + '/');
     await page.waitForSelector('#go');
   });

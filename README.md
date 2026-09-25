@@ -394,6 +394,18 @@ would have been said. Tap the lanes to go to that moment; the skeleton is drawn
 over the video there. Every number the move owns is a slider, and moving one
 judges the whole recording again on the spot — the model is never run twice.
 
+**A demo film.** With a video loaded, "Render a demo film" draws the coaching
+on every frame of it — the skeleton, the counters, the fault words and the cue
+as it was at that moment — and puts the coach's own voice and the tones on the
+sound at the moments they would have played, over the clip's own sound if it
+has any (turned down while the voice speaks). It is the same drawing
+(`js/overlay.js`) and the same sounds (`js/sound.js`) the coach's page uses, so
+the film cannot differ from what the coach would have shown; the picture is
+encoded frame by frame and the sound as one track into the same MP4 the coach
+writes. A clip the app made already carries the drawing, so the box to draw it
+again can be unticked and only the sound is added. A clip from anywhere else
+gets the coaching drawn on for the first time.
+
 **Rep by rep.** The run is cut at the coach's own phases into reps — counted,
 or attempts it dropped — and each is listed with every fault the coach had on
 the screen inside it and from when to when (a fault the coach was not watching
@@ -444,6 +456,9 @@ public/
   js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
   js/moves.js      the exercises: what each measures, allows and says, and in what order
   js/app.js        camera, drawing, voice, recording
+  js/overlay.js    the drawing over the picture: skeleton, counters, words, cue, mark — the coach's and the Review page's
+  js/sound.js      the tones, and the rule for which cue gets which
+  js/codec.js      which encoders the browser has; sound encoded as one track
   js/speech.js     the coach's own voice: the engine, a text as samples, the set's cues made ahead
   js/speech-worker.js the voice's own thread
   js/vendor/mespeak eSpeak compiled to JavaScript (GPL; see NOTICE there), bundled by scripts/vendor-mespeak.js
