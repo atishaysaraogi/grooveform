@@ -180,8 +180,31 @@
     result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect) : null;
     $('export-trace').disabled = !trace; $('add-take').disabled = !trace;
     $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') : '') : 'no recording yet';
-    drawLanes(); drawOverlay(); listCues(); renderVerdicts();
+    drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts();
   }
+  /* ---------- the reps, one by one ---------- */
+  let focusRep = null;
+  const sec = (ms) => (ms / 1000).toFixed(1) + 's';
+  function renderReps() {
+    const host = $('reps');
+    if (!result) { host.innerHTML = ''; $('reps-note').textContent = ''; return; }
+    const reps = Trace.reps(result, move);
+    const label = (id) => (move.cues[id] && move.cues[id].label) || id;
+    const counted = reps.filter((r) => r.counted).length;
+    $('reps-note').textContent = move.reps ? `${counted} counted${reps.length > counted ? `, ${reps.length - counted} not` : ''}` : `${reps.length} stretch${reps.length === 1 ? '' : 'es'} held`;
+    const faultLine = (f) => `<b>${esc(label(f.id))}</b> ${f.stretches.map((s) => s.t0 === s.t1 ? sec(s.t0) : sec(s.t0) + '–' + sec(s.t1)).join(', ')}` +
+      (f.said.length ? ` <span class="said">said at ${f.said.map(sec).join(', ')}</span>` : ' <span class="muted">not said</span>');
+    host.innerHTML = reps.map((r, i) => {
+      const head = move.reps ? (r.counted ? `Rep ${r.n}` : (r.open ? 'Under way at the end' : 'Attempt, not counted')) : `Hold ${r.n}`;
+      const meta = [`${sec(r.t0)} to ${sec(r.t1)}`, r.holdMs ? `held ${sec(r.holdMs)}` : null, r.lowerMs != null ? `lowered over ${sec(r.lowerMs)}` : null].filter(Boolean).join(' · ');
+      const before = r.before.faults.length ? `<div class="rep-before">before it: ${r.before.faults.map(faultLine).join('; ')}</div>` : '';
+      const inside = r.faults.length ? `<ul>${r.faults.map((f) => `<li>${faultLine(f)}</li>`).join('')}</ul>` : '<div class="clean">clean</div>';
+      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${before}${inside}</li>`;
+    }).join('') || '<li class="muted">No rep seen yet.</li>';
+    host.querySelectorAll('li.rep').forEach((li) => { li.onclick = () => { const i = Number(li.dataset.i); focusRep = i; const r = reps[i]; if (video.duration) video.currentTime = r.t0 / 1000; else drawOverlay(r.t0); drawLanes(); renderReps(); }; });
+    lanesReps = reps;
+  }
+  let lanesReps = [];
   const bandColour = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
   function drawLanes() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -232,6 +255,15 @@
       const words = (move.cues[cue.id] && move.cues[cue.id].label) || cue.id;
       ctx.save(); ctx.translate(px + 4, yb + 36); ctx.fillStyle = ctx.fillStyle; ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 16), 0, 0); ctx.restore();
     }
+    /* the reps, marked off */
+    ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif';
+    lanesReps.forEach((r, i) => {
+      const x0 = left + x(r.t0) * (1 - left / W), x1 = left + x(r.t1) * (1 - left / W);
+      if (focusRep === i) { ctx.fillStyle = 'rgba(90,169,255,.10)'; ctx.fillRect(x0, 0, x1 - x0, H); }
+      ctx.strokeStyle = r.counted ? 'rgba(232,237,244,.35)' : 'rgba(255,181,69,.5)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = r.counted ? C.ink : C.warn; ctx.fillText(r.counted ? String(r.n) : '×', x0 + 3, 2);
+    });
     /* the playhead */
     if (video.duration) { const px = left + x(video.currentTime * 1000) * (1 - left / W); ctx.strokeStyle = C.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke(); }
   }

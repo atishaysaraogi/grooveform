@@ -854,8 +854,14 @@ try {
     const cues = await page.$$eval('#cue-log li', (l) => l.map((x) => x.textContent));
     assert.ok(cues.some((c) => /Lift your hips/.test(c)) && cues.some((c) => /— 1$/.test(c)), 'the coach\'s cues, at their moments: ' + JSON.stringify(cues));
     assert.ok((await page.evaluate(() => document.getElementById('lanes').height)) > 100, 'the lanes are drawn');
+    const reps = await page.$$eval('#reps li.rep', (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    assert.equal(reps.length, 1, 'one rep broken out');
+    assert.match(reps[0], /^Rep 1 .*held .*clean$/, 'counted, held, clean: ' + reps[0]);
     await page.fill('#take-name', 'clean 1'); await page.click('#add-take');
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
+    await page.waitForFunction(() => /Hips above knees/.test(document.getElementById('reps').textContent), null, { timeout: 5000 });
+    const rep1 = await page.$eval('#reps li.rep', (x) => x.textContent.replace(/\s+/g, ' ').trim());
+    assert.match(rep1, /Hips above knees \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
     await page.selectOption('#take-tag', 'hipHigh'); await page.fill('#take-name', 'high'); await page.click('#add-take');
     await wait(200);
     const row = async () => (await page.$$eval('#verdicts tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /Hips above knees/.test(t));
@@ -864,6 +870,7 @@ try {
     await page.evaluate(() => window.__review.setTuned('overMax', 15));
     await wait(200);
     assert.match(await row(), /0 of 1 \| fails/, 'with the allowance at fifteen the fault never fires: ' + await row());
+    assert.match(await page.$eval('#reps li.rep', (x) => x.textContent), /clean/, 'and the rep reads clean under the new number');
     await page.click('#apply');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wallsit')).bands.bridge.overMax), '15', 'the number went into the coach\'s own store');
     assert.match(await page.textContent('#apply-note'), /Saved for the Glute bridge/);

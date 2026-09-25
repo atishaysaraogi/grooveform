@@ -487,7 +487,7 @@
      tuned numbers into the same store, so both have to agree on it */
   const SETTINGS_V = 7;
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-25b';
+  const VER = '2026-09-25c';
 
   return { VER, SETTINGS_V, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };

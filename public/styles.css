@@ -175,3 +175,15 @@ a.chip { text-decoration: none; }
 .seg .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 #anim-json { width: 100%; background: #0b0f16; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 8px; }
 body.review .panel h2 .tiny { font-weight: 500; margin-left: 8px; }
+
+.reps { margin: 10px 0 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.reps .rep { background: #0b0f16; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; font-size: .9rem; }
+.reps .rep.not { border-style: dashed; }
+.reps .rep.focus { border-color: var(--accent); }
+.reps .rep-head b { color: var(--ink); }
+.reps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); display: grid; gap: 3px; }
+.reps ul b { color: var(--bad); }
+.reps .rep-before { color: var(--muted); margin-top: 4px; }
+.reps .rep-before b { color: var(--warn); }
+.reps .clean { color: var(--good); font-weight: 700; margin-top: 4px; }
+.reps .said { color: var(--ink); }

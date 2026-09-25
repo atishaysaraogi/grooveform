@@ -365,6 +365,17 @@ would have been said. Tap the lanes to go to that moment; the skeleton is drawn
 over the video there. Every number the move owns is a slider, and moving one
 judges the whole recording again on the spot — the model is never run twice.
 
+**Rep by rep.** The run is cut at the coach's own phases into reps — counted,
+or attempts it dropped — and each is listed with every fault the coach had on
+the screen inside it and from when to when (a fault the coach was not watching
+in that phase, or one that held for less than the persist time, is not listed:
+neither would ever be said), whether it was said and at what moment, the
+hold it earned and how long the lowering took, and the set-up faults in the
+pause before it. A hold move is cut into the stretches its clock ran, with what
+broke them in between. Move a number and the list changes with it: which reps
+would flag, and at what moments. The reps are marked off on the lanes, and a
+tap on one goes to it.
+
 **Takes and the rule.** A recording can be added as a take: clean, or showing
 one named fault. The verdict table holds the numbers to the Studio's rule for
 each fault — quiet on every clean take, firing on every take of that fault —

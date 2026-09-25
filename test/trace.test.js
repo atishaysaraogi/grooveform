@@ -91,3 +91,45 @@ test('a trace survives a trip through a file, and the settings list is the panel
   assert.equal(Trace.defaults(M).overMax, 3);
   assert.deepEqual(Trace.bandRange(M.bands[2], Trace.defaults(M)), { lo: -40, hi: 3 });
 });
+
+test('the reps are broken out one by one, with the faults inside each and when they were said', () => {
+  /* two reps, the first past the knees for a moment at the top, then a dropped attempt */
+  const frames = take([[REST, 3000], [TOP, 1500], [Object.assign({}, TOP, { dip: -12 }), 1500], [TOP, 2500], [HALF, 1300], [REST, 2600],
+    [TOP, 3500], [HALF, 1300], [REST, 2600],
+    [TOP, 800], [REST, 1500]]);
+  const r = Trace.run(M, {}, frames, ASPECT);
+  const reps = Trace.reps(r, M);
+  assert.equal(reps.length, 3, 'two reps and an attempt: ' + reps.map((x) => x.n).join(','));
+  assert.deepEqual(reps.map((x) => x.counted), [true, true, false]);
+  assert.deepEqual(reps.map((x) => x.n), [1, 2, null]);
+  assert.ok(reps[0].t0 >= 2900 && reps[0].t0 <= 3200, 'the first rep starts at the lift: ' + reps[0].t0);
+  const high = reps[0].faults.find((f) => f.id === 'hipHigh');
+  assert.ok(high, 'the first rep flags the hips past the knees: ' + JSON.stringify(reps[0].faults.map((f) => f.id)));
+  assert.ok(high.stretches[0].t0 >= 4400 && high.stretches[0].t0 <= 4700, 'from the moment it went past: ' + high.stretches[0].t0);
+  assert.ok(high.said.length === 1 && high.said[0] >= high.stretches[0].t0, 'and was said, once, after it held: ' + high.said);
+  assert.equal(reps[1].faults.length, 0, 'the second rep is clean — a hip still on its way up is not short of the line: ' + JSON.stringify(reps[1].faults));
+  assert.ok(reps[0].holdMs > 1500 && reps[1].holdMs > 1500, 'each earned its hold');
+  assert.ok(reps[0].lowerMs > 1000, 'and the lowering took its time: ' + reps[0].lowerMs);
+  assert.ok(reps[2].cues.some((c) => c.id === 'early'), 'the dropped attempt was told so');
+  /* the numbers moved: the fault leaves the rep */
+  const eased = Trace.reps(Trace.run(M, { overMax: 15 }, frames, ASPECT), M);
+  assert.ok(!eased[0].faults.some((f) => f.id === 'hipHigh'));
+  /* set-up faults in the pause before a rep */
+  const feet = take([[Object.assign({}, REST, { shin: 125 }), 3000], [REST, 800], [TOP, 3500], [HALF, 1300], [REST, 1500]]);
+  const rr = Trace.reps(Trace.run(M, {}, feet, ASPECT), M);
+  assert.ok(rr[0].before.faults.some((f) => f.id === 'feetFar'), 'the feet out, before the first rep');
+});
+
+test('a hold is cut into the stretches its clock ran', () => {
+  const W = Moves.wallsit;
+  const frames = [];
+  /* the wall sit rig is not here; the bridge as a hold stands in — the coach treats any move without reps as a hold */
+  const H = Object.assign({}, M, { reps: false, defaults: Object.assign({}, M.defaults, { holdTargetSec: 60, callAtSec: [] }) });
+  let t = 0; for (const [pose, ms] of [[TOP, 2500], [REST, 800], [TOP, 2500], [REST, 400]]) for (const end = t + ms; t < end; t += 33) frames.push({ t, lm: body(pose) });
+  const r = Trace.run(H, {}, frames, ASPECT);
+  const holds = Trace.reps(r, H);
+  assert.equal(holds.length, 2, 'two stretches: ' + holds.length);
+  assert.ok(holds[0].holdMs > 1000 && holds[1].holdMs > 1000);
+  assert.ok(holds[1].before.faults.some((f) => f.id === 'hipLow'), 'what broke the hold, in between');
+  assert.ok(W.faults.length, 'the wall sit exists');
+});
