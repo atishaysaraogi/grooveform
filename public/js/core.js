@@ -527,7 +527,7 @@
      tuned numbers into the same store, so both have to agree on it */
   const SETTINGS_V = 7;
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-25h';
+  const VER = '2026-09-25i';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
