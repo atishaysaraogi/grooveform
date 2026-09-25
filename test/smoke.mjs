@@ -821,6 +821,24 @@ try {
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
+  await step('the pose worker can load a script the old way, which the model\'s loader needs', async () => {
+    /* MediaPipe's loader pulls its WebAssembly glue in with importScripts(), which
+       a module worker refuses out of the box; every set on a phone hit that and
+       fell back to the page's thread. The worker gives importScripts back — a
+       script fetched whole and run as global code — and this proves it: a script
+       declaring `var __probe` is loaded and the value is seen on the global scope. */
+    const r = await page.evaluate(() => new Promise((res) => {
+      const w = new Worker('js/pose-worker.js?v=' + Core.VER, { type: 'module' });
+      const url = URL.createObjectURL(new Blob(['var __probe = 42;'], { type: 'text/javascript' }));
+      const giveUp = setTimeout(() => res({ ok: false, message: 'no answer' }), 8000);
+      w.onmessage = (e) => { if (e.data && e.data.type === 'probed') { clearTimeout(giveUp); w.terminate(); res(e.data); } };
+      w.onerror = (e) => { clearTimeout(giveUp); res({ ok: false, message: e.message }); };
+      w.postMessage({ type: 'probe', url });
+    }));
+    assert.equal(r.ok, true, 'importScripts works in the module worker: ' + (r.message || ''));
+    assert.equal(r.value, 42, 'and what it declares is on the global scope');
+  });
+
   await step('the Review page judges a trace, holds takes to the rule, and hands the numbers to the coach', async () => {
     await page.goto(base + '/review.html?move=bridge');
     await page.waitForSelector('#sliders input');

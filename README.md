@@ -323,7 +323,13 @@ the page's own thread, it stops the page for that long each time: the canvas is
 repainted only when the model lets it, seven or eight times a second on a phone,
 and a film taken at thirty a second would carry each real frame three or four
 times over. So the model runs in a thread of its own; the page's thread only ever
-draws, at the camera's rate, over whichever pose the model last handed back. And
+draws, at the camera's rate, over whichever pose the model last handed back.
+That thread is a module worker, because the model's bundle is an ES module, and
+the model's own loader pulls in its WebAssembly glue with `importScripts()`,
+which a module worker refuses — so for a while every phone quietly fell back to
+the page's thread. The worker now gives `importScripts` back, done the way it
+always was underneath (the script fetched whole and run as global code), and
+the browser suite proves a script loaded that way lands on the global scope. And
 a frame is only taken for the film when the canvas has been drawn since the last
 one: a page stalled by anything fires its late timer ticks in a bunch when it
 comes back, and the frame before a stall covers the stall rather than being put

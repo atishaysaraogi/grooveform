@@ -99,13 +99,38 @@
     });
     return ready;
   }
+  /* where the worker cannot be had, the model on the page's thread, as the coach does */
+  let inline = null, inlineLoad = null, lastTs = 0;
+  function ensureInline() {
+    if (inlineLoad) return inlineLoad;
+    inlineLoad = (async () => {
+      const MP = '0.10.21';
+      const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/vision_bundle.mjs`);
+      const fileset = await vision.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/wasm`);
+      const opts = (delegate) => ({ baseOptions: { modelAssetPath: MODELS.full, delegate }, runningMode: 'VIDEO', numPoses: 1,
+        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+      try { inline = await vision.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
+      catch { inline = await vision.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
+      return inline;
+    })();
+    return inlineLoad;
+  }
+  let workerFailed = null;
   async function poseFor(v, ts) {
     /* the model stood in for, as the browser suite does */
     if (window.__reviewPose) return window.__reviewPose(ts, v);
-    const w = await ensureWorker();
-    const bitmap = await createImageBitmap(v);
-    const id = ++seq;
-    return new Promise((res) => { waiting.set(id, res); w.postMessage({ type: 'frame', bitmap, ts, seq: id }, [bitmap]); });
+    if (!workerFailed) {
+      try {
+        const w = await ensureWorker();
+        const bitmap = await createImageBitmap(v);
+        const id = ++seq;
+        return await new Promise((res) => { waiting.set(id, res); w.postMessage({ type: 'frame', bitmap, ts, seq: id }, [bitmap]); });
+      } catch (e) { workerFailed = e; $('progress').textContent = `The model's own thread failed (${e.message || e}); reading on the page instead…`; }
+    }
+    const lmk = await ensureInline();
+    const t = Math.max(ts, lastTs + 1); lastTs = t;
+    const res = lmk.detectForVideo(v, t);
+    return res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
   }
   const seekTo = (t) => new Promise((res) => { const done = () => { video.removeEventListener('seeked', done); res(); }; video.addEventListener('seeked', done); video.currentTime = t; });
 

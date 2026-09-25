@@ -11,9 +11,29 @@
    Messages in: { type: 'load', model }   load or swap the model
                 { type: 'frame', bitmap, ts, seq }   one frame to read
                 { type: 'ping' }
+                { type: 'probe', url }   load a script the old way, to prove that works here
    Messages out: { type: 'ready', model } | { type: 'error', message }
                  { type: 'pose', lm, ts, seq } | { type: 'pong' }
+                 { type: 'probed', ok, value, message }
+
+   This is a module worker, because the model's bundle is an ES module. But the
+   model's own loader pulls in its WebAssembly glue the old way, with
+   importScripts(), which a module worker refuses: "Module scripts don't support
+   importScripts()". Every set on a phone hit that, and the coach quietly fell
+   back to running the model on the page's thread. So importScripts is given
+   back here, done the way it always was underneath: the script fetched in one
+   go and run as global code, so the `var` it declares lands on the global scope
+   where the loader looks for it.
    --------------------------------------------------------------------------- */
+self.importScripts = function (...urls) {
+  for (const url of urls) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', String(url), false);
+    xhr.send();
+    if (xhr.status && (xhr.status < 200 || xhr.status >= 400)) throw new Error(`importScripts: ${url} answered ${xhr.status}`);
+    (0, eval)(xhr.responseText + `\n//# sourceURL=${url}`);
+  }
+};
 const MP = '0.10.21';
 const MODELS = {
   full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
@@ -37,6 +57,11 @@ async function load(model) {
 self.onmessage = async (e) => {
   const m = e.data || {};
   if (m.type === 'ping') { self.postMessage({ type: 'pong' }); return; }
+  if (m.type === 'probe') {
+    try { self.importScripts(m.url); self.postMessage({ type: 'probed', ok: true, value: self.__probe }); }
+    catch (err) { self.postMessage({ type: 'probed', ok: false, message: String(err && err.message || err) }); }
+    return;
+  }
   if (m.type === 'load') {
     try { await load(m.model); self.postMessage({ type: 'ready', model: m.model }); }
     catch (err) { self.postMessage({ type: 'error', message: String(err && err.message || err) }); }
