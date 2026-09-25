@@ -54,7 +54,7 @@
      dropped rather than silently holding the old band on a page that says it
      uses the new one. */
   const SETTINGS_V = Core.SETTINGS_V;
-  const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate', 'angles'];
+  const COMMON_KEYS = ['cool', 'model', 'mirror', 'rotate', 'angles', 'voice'];
   /* One input each, but the value belongs to the exercise: a plank is held for a
      minute and a knee raise for ten seconds a rep, and neither should inherit the
      other's clock just because they share a box on the settings panel. */
@@ -84,6 +84,7 @@
     c.mirror = $('cfg-mirror').value === 'on';
     c.rotate = $('cfg-rotate').value;
     c.angles = opt('cfg-angles').value === 'on';
+    c.voice = voice.kind;
     return c;
   }
 
@@ -180,6 +181,22 @@
      than left to chance. */
   const voice = {
     on: true, pick: null, ok: 'speechSynthesis' in window, primed: false,
+    /* the coach's own voice (see speech.js): made by the page as sound, so it
+       goes through the page's graph and onto the film. The phone's own engine
+       cannot be recorded, so it is the choice for someone who would rather have
+       the natural voice than the cues on the film, and the fallback while the
+       engine is loading or where it cannot load. */
+    engine: null, loading: null, current: null, spoken: [], seq: 0,
+    get kind() { const e = opt('cfg-voice'); return e && e.value === 'phone' ? 'phone' : 'own'; },
+    get own() { return this.kind === 'own' && !!(this.engine && this.engine.ready); },
+    load() {
+      if (this.loading || typeof Speech === 'undefined') return this.loading;
+      this.loading = Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js').then((e) => { this.engine = e; this.warm(); return e; })
+        .catch((e) => { this.engine = null; this.why = e; return null; });
+      return this.loading;
+    },
+    /* the move's cues made before they are needed, in the voice's own thread */
+    warm() { if (this.engine && this.engine.ready) this.engine.warm(Speech.texts(move, cfg(), Core.SHARED_CUES)); },
     ready() {
       if (!this.ok) return;
       const vs = speechSynthesis.getVoices();
@@ -199,7 +216,10 @@
       } catch { }
     },
     say(text) {
-      if (!this.on || !this.ok) return;
+      if (!this.on) return;
+      if (this.own) { this.spoken.push({ text, via: 'own', t: performance.now() }); this.sayOwn(text); return; }
+      if (!this.ok) return;
+      this.spoken.push({ text, via: 'phone', t: performance.now() });
       try {
         speechSynthesis.cancel();
         /* Chrome drops an utterance queued in the same turn as a cancel, and after
@@ -216,15 +236,41 @@
         }, 0);
       } catch { }
     },
+    /* the page's own voice: the text as samples, played into the graph — the
+       speaker and the film's bus alike — with the microphone turned down on the
+       bus while it plays, so the film carries the voice once and not the voice
+       and the room's echo of it a few milliseconds behind */
+    sayOwn(text) {
+      const a = initAudio(); if (!a) return;
+      if (a.ac.state === 'suspended') a.ac.resume();
+      this.stopOwn();
+      const seq = ++this.seq;
+      const made = this.engine.get(text);
+      if (made) this.play(made);
+      /* not made yet: played when it arrives, unless something else has been said since */
+      else this.engine.synth(text).then((pcm) => { if (pcm && this.seq === seq) this.play(pcm); });
+    },
+    play(pcm) {
+      const a = initAudio(); if (!a) return;
+      const buf = a.ac.createBuffer(1, pcm.data.length, pcm.rate);
+      buf.copyToChannel(pcm.data, 0);
+      const src = a.ac.createBufferSource(); src.buffer = buf; src.connect(a.speech);
+      const t = a.ac.currentTime, dur = buf.duration;
+      a.micGain.gain.cancelScheduledValues(t);
+      a.micGain.gain.setTargetAtTime(0.1, t, 0.015);
+      a.micGain.gain.setTargetAtTime(1, t + dur + 0.1, 0.05);
+      src.onended = () => { if (this.current === src) this.current = null; };
+      src.start(t); this.current = src;
+      if (rec && rec.live) rec.voiced = true;
+    },
+    stopOwn() { if (this.current) { try { this.current.stop(); } catch { } this.current = null; } },
   };
   if (voice.ok) { voice.ready(); speechSynthesis.onvoiceschanged = () => voice.ready(); }
 
   /* ---------- tones ----------
      Every cue also gets a short tone: something to hear from across the room
-     that is not words, at the moment the words start. Where the film is made by
-     the browser's own recorder (see startRecording) the tones are mixed into it
-     too, since it cannot capture the browser's speech; the film the page writes
-     itself is silent, with the cues on the picture. */
+     that is not words, at the moment the words start. The graph here is what
+     the film hears: the tones, the coach's own voice, and the microphone. */
   function initAudio() {
     if (audio) return audio;
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
@@ -234,8 +280,12 @@
        It goes to a stream (for the browser's own recorder) and is read as samples
        (for the encoder); it never goes to the speaker */
     const bus = ac.createGain(); bus.gain.value = 1; out.connect(bus);
+    /* the coach's own voice, at full volume, to the speaker and the bus alike */
+    const speech = ac.createGain(); speech.gain.value = 1; speech.connect(ac.destination); speech.connect(bus);
+    /* the microphone reaches the bus through a gain of its own, turned down while the voice plays */
+    const micGain = ac.createGain(); micGain.gain.value = 1; micGain.connect(bus);
     const dest = ac.createMediaStreamDestination(); bus.connect(dest);
-    audio = { ac, out, bus, dest, mic: null, micTrack: null };
+    audio = { ac, out, bus, speech, micGain, dest, mic: null, micTrack: null };
     return audio;
   }
   /* the camera's stream came with a microphone track: put it on the bus */
@@ -244,7 +294,7 @@
     const track = stream.getAudioTracks()[0];
     if (!track || track === a.micTrack) return;
     if (a.mic) { try { a.mic.disconnect(); } catch { } }
-    try { a.mic = a.ac.createMediaStreamSource(new MediaStream([track])); a.mic.connect(a.bus); a.micTrack = track; }
+    try { a.mic = a.ac.createMediaStreamSource(new MediaStream([track])); a.mic.connect(a.micGain); a.micTrack = track; }
     catch { a.mic = null; a.micTrack = null; }
   }
   function tone(seq) {
@@ -877,7 +927,7 @@
   function startRecording() {
     const w = canvas.width, h = canvas.height;
     if (!w || !h) return null;
-    const film = { live: true, kind: '', taken: 0, dropped: 0, blob: null, why: null, mime: '', sound: false };
+    const film = { live: true, kind: '', taken: 0, dropped: 0, blob: null, why: null, mime: '', sound: false, voiced: false };
     const samples = []; let enc = null, desc = null, pick = null, start = 0, pump = 0, lastPainted = -1, sound = null;
     let mr = null, recTrack = null; const chunks = [];
 
@@ -1028,6 +1078,7 @@
     $('cue').textContent = ''; opt('faults').textContent = '';
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; t0 = performance.now(); state = null;
+    voice.warm();
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
@@ -1081,7 +1132,7 @@
     $('log').innerHTML = sets.map((s, i) => `<li class="set">Set ${i + 1}</li>` + (s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') || '<li>Nothing needed saying.</li>')).join('');
     $('dl-video').disabled = !blob;
     $('rec-note').textContent = blob
-      ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? 'with the sound the microphone heard' : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
+      ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? (rec.voiced ? 'with the cues spoken and what the microphone heard' : 'with what the microphone heard — the phone\'s own voice is not on it') : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
       : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
     $('result').hidden = false;
     buttons();
@@ -1095,7 +1146,7 @@
   /* ---------- wiring ---------- */
   $('go').onclick = () => {
     /* before any await: this is the only moment the browser counts as a gesture */
-    voice.prime();
+    voice.prime(); voice.load();
     const a = initAudio(); if (a && a.ac.state === 'suspended') a.ac.resume();
     begin();
   };
@@ -1124,11 +1175,11 @@
     camFacing = camFacing === 'user' ? 'environment' : 'user';
     unschedule(); try { await startCamera(); } catch { } if (running) schedule();
   };
-  if (!voice.ok) { $('mute').textContent = 'No voice here'; $('mute').disabled = true; }
+  if (!voice.ok && typeof Speech === 'undefined') { $('mute').textContent = 'No voice here'; $('mute').disabled = true; }
   $('mute').onclick = (e) => {
     voice.on = !voice.on; e.target.setAttribute('aria-pressed', String(!voice.on));
     e.target.textContent = voice.on ? 'Voice on' : 'Voice off';
-    if (!voice.on && 'speechSynthesis' in window) speechSynthesis.cancel();
+    if (!voice.on) { voice.stopOwn(); if ('speechSynthesis' in window) speechSynthesis.cancel(); }
   };
   $('settings-btn').onclick = (e) => {
     const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
@@ -1181,5 +1232,5 @@
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, cfg, fire, drawFrame, paintUi };
+    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, cfg, fire, drawFrame, paintUi };
 })();

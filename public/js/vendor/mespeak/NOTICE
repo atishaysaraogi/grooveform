@@ -1,0 +1,13 @@
+meSpeak — eSpeak text-to-speech compiled to JavaScript
+------------------------------------------------------
+mespeak.js is meSpeak v1.9.6 by Norbert Landsteiner (www.masswerk.at/mespeak),
+a mod of speak.js (github.com/kripken/speak.js), which is eSpeak compiled with
+Emscripten. Taken from the npm package mespeak@2.0.2 and bundled into one
+browser file by scripts/vendor-mespeak.js, unchanged otherwise.
+mespeak_config.json is the engine's data; en-us.json is the American English
+voice, both from the same package.
+
+eSpeak, speak.js and meSpeak are free software under the GNU General Public
+License, version 3 (https://www.gnu.org/licenses/gpl-3.0.html). They are used
+here as a separate, unmodified library; the rest of this app is under its own
+licence (see the repository). The engine's source is at the addresses above.

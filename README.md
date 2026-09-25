@@ -73,14 +73,27 @@ from an upright frame and from a sideways one put right, and requires the same
 numbers — and checks the converse too, that an angle at a joint is the same
 either way, which is why the turn has to happen before the reading and not after.
 
-**Out loud.** Every cue is spoken as well as written. Three things make a
-browser swallow speech quietly, and all three are handled rather than left to
-chance: Safari only begins speaking from inside a user gesture, so the engine is
-woken silently on the tap that starts the camera, long before the first cue —
-by the time the camera and the model have loaded, the gesture is gone. Chrome
-drops an utterance queued in the same turn as a cancel, so the next one waits a
-tick. And Chrome leaves the engine paused after a spell of silence, so every cue
-resumes it first. If the browser has no speech at all, the voice button says so
+**Out loud.** Every cue is spoken as well as written, by one of two voices.
+The coach's own voice is the default: eSpeak compiled to JavaScript
+(`js/vendor/mespeak`, see its NOTICE), which the page loads on the tap that
+starts the camera and runs in a thread of its own (`js/speech-worker.js`, on
+the page's thread where a worker cannot be had), so a cue is made as sound and
+played through the page's own audio graph — the speaker, and the film. The
+move's cues are all made ahead of the set so none is late the first time it is
+needed; a text once made is kept. One instance of the engine dies at about its
+eightieth call, so it is renewed every forty. The voice is plainer than the
+phone's. The
+phone's own voice (the browser's speech engine) is the other choice, in the
+settings: more natural, but it speaks straight to the speaker and hands the
+page nothing, so it can never be on the film — and it is the fallback while the
+engine loads or where it cannot. Three things make a browser swallow that
+speech quietly, and all three are handled rather than left to chance: Safari
+only begins speaking from inside a user gesture, so the engine is woken
+silently on the tap that starts the camera, long before the first cue — by the
+time the camera and the model have loaded, the gesture is gone. Chrome drops an
+utterance queued in the same turn as a cancel, so the next one waits a tick.
+And Chrome leaves the engine paused after a spell of silence, so every cue
+resumes it first. If the browser has neither voice, the voice button says so
 instead of the page just being silent.
 
 ## What it measures
@@ -305,13 +318,19 @@ recorder had stamped as if they fit in nine tenths of a second, with a sound tra
 that stopped after one. The frames were right and the recorder's clock was not,
 and there is nothing a page can do about a recorder's clock except keep its own.
 
-**The film has sound.** The microphone is asked for with the camera, with the
-browser's echo cancellation switched off — it exists to remove the phone's own
-speaker from the microphone, and the spoken cues come out of that speaker. What
-the microphone hears, cues and tones included, is read from the audio graph as
-samples, encoded as AAC by the browser (WebCodecs), and written into the same
-MP4 as a second track on the same clock; whichever track started later gets an
-empty edit for the difference. A browser with no AAC encoder (the open-source
+**The film has sound, and the cues are on it.** The film hears the page's
+audio graph: the coach's own voice, the tones, and the microphone. The voice is
+on the film because the page makes it (see *Out loud*): a phone's own speech
+engine cannot be recorded, and a phone works hard to keep its own speaker out
+of its microphone — echo cancellation is asked to be off, but the hardware has
+its own — so a voice that only came out of the speaker was on the film by luck
+at best. The page's voice goes onto the bus directly, and while it plays the
+microphone is turned down on the bus, so the film carries the words once and
+not the words plus the room's echo of them a few milliseconds behind. What the
+graph carries is read as samples, encoded as AAC by the browser (WebCodecs),
+and written into the same MP4 as a second track on the same clock; whichever
+track started later gets an empty edit for the difference. The note under the
+download says whether the cues are on it. A browser with no AAC encoder (the open-source
 build the tests run in) gets a silent film and the note under the download says
 so. The cue log downloads beside it with timings. (Where a browser has no video
 encoder either, the old way still runs: its recorder takes a stream from the
@@ -415,6 +434,9 @@ public/
   js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
   js/moves.js      the exercises: what each measures, allows and says, and in what order
   js/app.js        camera, drawing, voice, recording
+  js/speech.js     the coach's own voice: the engine, a text as samples, the set's cues made ahead
+  js/speech-worker.js the voice's own thread
+  js/vendor/mespeak eSpeak compiled to JavaScript (GPL; see NOTICE there), bundled by scripts/vendor-mespeak.js
   js/pose-worker.js the pose model, in a thread of its own so the page only draws
 test/
   wallsit.test.js   the wall sit, against synthetic bodies
@@ -424,6 +446,7 @@ test/
   trace.test.js     a recording judged after the fact, and the takes' rule
   donkeykick.test.js the donkey kick: hands, arms, back, the bent knee and the lift to the line
   mp4.test.js       the file the page writes, timed by the clock
+  speech.test.js    the coach's own voice: a cue as sound, the WAV read, the set's cues listed
   framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
 ```

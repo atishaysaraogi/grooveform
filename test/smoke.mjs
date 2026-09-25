@@ -172,8 +172,9 @@ await page.addInitScript(SPY_SRC);
 const set = (o) => page.evaluate((v) => Object.assign(window.__pose, v), o);
 const cue = () => page.textContent('#cue');
 const chip = () => page.textContent('#state');
-const spoken = () => page.evaluate(() => window.__spoken.map((u) => u.text));
-const heard = (re, ms) => page.waitForFunction((r) => window.__spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 8000 });
+/* what the coach said, by either voice: the page's own (on the film) or the phone's */
+const spoken = () => page.evaluate(() => window.__app.voice.spoken.map((u) => u.text));
+const heard = (re, ms) => page.waitForFunction((r) => window.__app.voice.spoken.some((u) => new RegExp(r, 'i').test(u.text)), re, { timeout: ms || 8000 });
 /* one set to a session for most of the suite, so ending a set shows the results;
    the sets themselves are tried in a step of their own */
 const oneSet = () => page.evaluate(() => { const i = document.getElementById('cfg-setCount'); i.value = '1'; i.dispatchEvent(new Event('change')); });
@@ -215,6 +216,35 @@ try {
     assert.ok(Math.abs(Number(await page.textContent('#v-shin')) - 90) <= 1, 'and a plumb shin reads 90°');
   });
 
+
+  await step('the coach\'s own voice is made by the page and goes where the film listens', async () => {
+    /* the phone's speech engine hands the page nothing, so it can never be on
+       the film; the coach's own voice is samples the page makes and plays into
+       its graph — the speaker and the film's bus alike — with the microphone
+       turned down on the bus while it plays */
+    await page.waitForFunction(() => window.__app.voice.engine && window.__app.voice.engine.ready, null, { timeout: 30000 });
+    assert.equal(await page.evaluate(() => window.__app.cfg().voice), 'own', 'the coach\'s own voice, by default');
+    assert.equal(await page.evaluate(() => window.__app.voice.engine.kind), 'worker', 'made in a thread of its own, so the page never waits on it');
+    const r = await page.evaluate(async () => {
+      const a = window.__app.audio; if (a.ac.state !== 'running') await a.ac.resume();
+      const tap = a.ac.createScriptProcessor(2048, 1, 1), sink = a.ac.createGain(); sink.gain.value = 0;
+      let sum = 0, n = 0;
+      tap.onaudioprocess = (e) => { const d = e.inputBuffer.getChannelData(0); for (let i = 0; i < d.length; i++) { sum += d[i] * d[i]; n++; } };
+      a.bus.connect(tap); tap.connect(sink); sink.connect(a.ac.destination);
+      const before = window.__spoken.length;
+      window.__app.voice.say('Lift your hips');
+      await new Promise((res) => setTimeout(res, 700));
+      const mic = a.micGain.gain.value;
+      await new Promise((res) => setTimeout(res, 300));
+      a.bus.disconnect(tap); tap.disconnect(); sink.disconnect();
+      const last = window.__app.voice.spoken[window.__app.voice.spoken.length - 1];
+      return { rms: Math.sqrt(sum / Math.max(1, n)), n, state: a.ac.state, via: last && last.via, text: last && last.text, phoneUsed: window.__spoken.length - before, mic };
+    });
+    assert.equal(r.via, 'own', 'said by the page: ' + JSON.stringify(r));
+    assert.equal(r.phoneUsed, 0, 'and not handed to the phone\'s engine');
+    assert.ok(r.n > 0 && r.rms > 0.01, 'the voice is on the bus the film reads: ' + JSON.stringify(r));
+    assert.ok(r.mic < 0.5, 'the microphone is turned down on the bus while it plays: ' + r.mic);
+  });
   await step('the picture and the finish button are on screen together', async () => {
     const box = await page.evaluate(() => {
       const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; };
@@ -324,7 +354,7 @@ try {
     assert.match(out.note, /MB/, 'with something in it: ' + out.note);
     /* this browser build has no AAC encoder, so the film is silent and the note says
        so rather than pretending; a phone's has one, and the note says that instead */
-    assert.match(out.note, /with the sound the microphone heard|silent — this browser cannot encode sound/, out.note);
+    assert.match(out.note, /with the cues spoken and what the microphone heard|with what the microphone heard|silent — this browser cannot encode sound/, out.note);
   });
 
   await step('the page encodes the film itself, thirty frames a second from the clock and from nowhere else', async () => {
