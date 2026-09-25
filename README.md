@@ -203,6 +203,16 @@ nothing more.
 
 ## What it says
 
+**On the picture.** The cue at the bottom is wrapped to the frame — two or
+three lines for a long instruction, a little smaller rather than a fourth —
+so none of it is ever past the edge. Only a correction is red: one of the
+move's faults, a rep dropped early, or a count carrying the slow-down remark;
+the prompts, the counts, the time calls and the hold are neutral. The set is
+top left with the reps counted under it, the hold clock top right, and the
+OnTrack mark sits bottom right of every frame. For the glute bridge the foot
+is corrected before the shin is judged at all: the shin's angle is taken at
+the heel, so a heel or a toe off the floor moves it.
+
 **Every fault is on view in words**, above the cue on the picture and under it
 on the page: the voice keeps to one thing at a time, and the words show the
 rest. Each fault has short words of its own ("Heels lifting", "Hips above

@@ -459,16 +459,21 @@
         return { ok: false, inPosition: false, raised: false, atStart: false, good: {}, faults: {} };
       }
       const faults = {}, good = {};
+      /* the feet first: the shin's angle is taken at the heel, from the toe, so a
+         heel or a toe off the floor moves it — and until the foot is flat again
+         the shin is not judged at all, only the foot */
+      good.foot = within(r.foot, cfg.footFlat);
+      if (r.foot > cfg.footFlat) faults.heelsUp = r.foot - cfg.footFlat;
+      else if (r.foot < -cfg.footFlat) faults.toesUp = -r.foot - cfg.footFlat;
       good.shin = inBand(r.shin, cfg.shinMin, cfg.shinMax);
-      if (r.shin > cfg.shinMax) faults.feetFar = r.shin - cfg.shinMax;
-      else if (r.shin < cfg.shinMin) faults.feetClose = cfg.shinMin - r.shin;
+      if (good.foot) {
+        if (r.shin > cfg.shinMax) faults.feetFar = r.shin - cfg.shinMax;
+        else if (r.shin < cfg.shinMin) faults.feetClose = cfg.shinMin - r.shin;
+      }
       good.hip = inBand(r.hip, cfg.hipMin, cfg.hipMax);
       if (r.hip < cfg.hipMin) faults.hipLow = cfg.hipMin - r.hip;
       good.over = inBand(r.over, cfg.overMin, cfg.overMax);
       if (r.over > cfg.overMax) faults.hipHigh = r.over - cfg.overMax;
-      good.foot = within(r.foot, cfg.footFlat);
-      if (r.foot > cfg.footFlat) faults.heelsUp = r.foot - cfg.footFlat;
-      else if (r.foot < -cfg.footFlat) faults.toesUp = -r.foot - cfg.footFlat;
       const raised = r.hip >= cfg.raiseAt, atStart = r.hip <= cfg.downAt;
       return { ok: true, good, faults, raised, atStart,
         inPosition: raised && good.shin && good.hip && good.over && good.foot };

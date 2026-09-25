@@ -112,6 +112,13 @@ test('the shin band is 85 to 110 at the heel, edges included, and says which way
   assert.match(M.cues.feetClose.text, /feet out/i);
   /* the feet, flat and placed, are set-up faults, coached before the lift is asked for */
   assert.deepEqual(M.setup, ['heelsUp', 'toesUp', 'feetFar', 'feetClose']);
+  /* the shin's angle is taken at the heel: a heel or a toe off the floor moves
+     it, so the foot is corrected first and the shin is not judged until it is flat */
+  const up = (shin, foot) => judge(readOf(Object.assign({}, TOP, { shin, foot })));
+  assert.ok(up(125, 18).faults.heelsUp > 0 && up(125, 18).faults.feetFar == null, 'heels up: no word on the shin');
+  assert.ok(up(70, -18).faults.toesUp > 0 && up(70, -18).faults.feetClose == null, 'toes up: likewise');
+  assert.equal(up(125, 18).good.shin, false, 'the reading still shows the shin as out');
+  assert.ok(up(125, 0).faults.feetFar > 0, 'and flat again, the shin is judged');
 });
 
 test('the top is a hip angle of at least 160, and the hip no more than three degrees above the knee', () => {
@@ -306,7 +313,7 @@ test('every fault present is on view in words, whether or not it is the one bein
   ({ t } = play(c, REST, 1000, t));
   /* at the top with three things wrong: the voice says one, the words show all three */
   const out = c.step(read(body({ shin: 120, dip: -10, hipAng: 150, foot: 16 }), c.cfg), t);
-  assert.deepEqual(out.active, ['heelsUp', 'feetFar', 'hipHigh', 'hipLow'], 'in the move\'s order');
+  assert.deepEqual(out.active, ['heelsUp', 'hipHigh', 'hipLow'], 'in the move\'s order — and no word on the shin while a heel is up');
   for (const id of out.active) assert.ok(M.cues[id].label, id + ' has short words');
   /* at rest only the set-up faults are on view; the hips being down is not a fault there */
   const rest = c.step(read(body(Object.assign({}, REST, { shin: 70 })), c.cfg), t + 33);

@@ -614,15 +614,16 @@
       const val = live && r[b.of] != null ? `${Math.round(r[b.of])}°` : '—';
       L(`${b.hud} ${val}`, `${b.note} ${bandText(b, c)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
     }
-    /* which set this is */
-    if (setNo) L(`SET ${setNo} of ${c.setCount}`, out.between ? 'done' : '', out.between ? C.good : C.dim);
+    /* which set this is, and under it the reps counted so far */
+    if (setNo) L(`SET ${setNo} of ${c.setCount}`, out.between ? 'done' : '', C.ink);
+    if (setNo && move.reps) L(`REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : '', C.ink);
 
-    /* the countdown, which is what the set is */
+    /* the countdown, which is what the set is: the hold, or the hold at the top of a rep */
     const R = stack(W - pad, 'right');
     const left = (out.leftMs / 1000).toFixed(1), target = out.targetMs / 1000;
     const under = out.done ? (move.reps ? `${out.repTarget} reps` : `${target} s held`)
-      : move.reps ? `rep ${Math.min(out.reps + 1, out.repTarget)} of ${out.repTarget}` : `left of ${target} s`;
-    const ry = R(out.done || out.between ? 'DONE' : `${left}s`, under, out.done || out.between || out.holding ? C.good : C.ink, 1.5);
+      : move.reps ? `of ${target} s at the top` : `left of ${target} s`;
+    const ry = R(out.done || out.between ? 'DONE' : `${left}s`, under, C.ink, 1.5);
     if (rec && rec.live) {
       line('REC', W - pad - fs * 0.9, ry, fs * 0.66, C.bad, 'right');
       ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(W - pad - fs * 0.33, ry + fs * 0.33, fs * 0.3, 0, Math.PI * 2); ctx.fill();
@@ -631,26 +632,49 @@
        between the two stacks, because the bottom of the frame belongs to the cue. */
     line(move.name, W / 2, pad, fs * 0.66, C.dim, 'center');
 
+    /* the mark, bottom right, on every frame of the film */
+    const wmSize = Math.round(fs * 0.62);
+    ctx.save(); ctx.globalAlpha = 0.72;
+    line('OnTrack', W - pad, H - pad - wmSize, wmSize, C.ink, 'right');
+    ctx.restore();
+    /* what is drawn above the mark stacks upwards from here */
+    let floor = H - pad - wmSize - fs * 0.5;
+
+    /* the cue, kept on screen a moment after it was said so the recording shows
+       it. Wrapped to the frame, never past its edge: a long instruction takes
+       two or three lines, and shrinks a little rather than take four. */
+    const measure = (str) => ctx.measureText(str).width;
+    if (banner && performance.now() - banner.at < 2600) {
+      const maxW = W - pad * 2 - fs * 1.6;
+      let size = fs, lines;
+      for (;;) {
+        ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
+        lines = Core.wrapWords(banner.text, maxW, measure);
+        if (lines.length <= 3 || size <= fs * 0.62) break;
+        size = Math.round(size * 0.88);
+      }
+      const lh = size * 1.22, bh = lh * lines.length + size;
+      const bw = Math.min(W - pad * 2, Math.max(...lines.map(measure)) + fs * 1.6);
+      const y = floor - bh;
+      ctx.fillStyle = 'rgba(13,17,23,.82)';
+      ctx.beginPath(); ctx.roundRect((W - bw) / 2, y, bw, bh, Math.min(bh / 2, fs * 1.1)); ctx.fill();
+      ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = banner.colour;
+      lines.forEach((str, i) => ctx.fillText(str, W / 2, y + size * 0.5 + lh * (i + 0.5)));
+      banner.lines = lines; banner.size = size; banner.width = bw; banner.frame = W;
+      floor = y - fs * 0.4;
+    }
     /* every fault present right now, in words, above the cue: the voice keeps to
-       one thing at a time, the picture need not */
+       one thing at a time, the picture need not. Faults are the one thing in red. */
     const words = out.between ? (setNo >= c.setCount ? 'All sets done' : `Set ${setNo} done \u2014 tap Next set when you are ready`) : faultWords(out);
     if (words) {
-      ctx.font = `700 ${fs * 0.62}px ui-sans-serif, system-ui, sans-serif`;
+      const ws = fs * 0.62;
+      ctx.font = `700 ${ws}px ui-sans-serif, system-ui, sans-serif`;
+      const wl = Core.wrapWords(words, W - pad * 2, measure);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const y = H - fs * 2.2 - pad - fs * 0.7;
       ctx.lineWidth = fs * 0.18; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
-      ctx.strokeText(words, W / 2, y); ctx.fillStyle = out.between ? C.good : C.bad; ctx.fillText(words, W / 2, y);
-    }
-    /* the cue, kept on screen a moment after it was said so the recording shows it */
-    if (banner && performance.now() - banner.at < 2600) {
-      const bh = fs * 2.2, y = H - bh - pad;
-      ctx.font = `800 ${fs}px ui-sans-serif, system-ui, sans-serif`;
-      const bw = Math.min(W - pad * 2, ctx.measureText(banner.text).width + fs * 3);
-      ctx.fillStyle = 'rgba(13,17,23,.82)';
-      ctx.beginPath(); ctx.roundRect((W - bw) / 2, y, bw, bh, bh / 2); ctx.fill();
-      ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = banner.colour; ctx.fillText(banner.text, W / 2, y + bh / 2);
+      ctx.fillStyle = out.between ? C.ink : C.bad;
+      wl.forEach((str, i) => { const y = floor - ws * 1.2 * (wl.length - i - 0.5); ctx.strokeText(str, W / 2, y); ctx.fillText(str, W / 2, y); });
     }
   }
 
@@ -767,13 +791,21 @@
     });
   }
 
+  /* a correction — one of the move's faults, a rep dropped early, or a count
+     carrying the slow-down remark — is the one thing shown in red; the prompts,
+     the counts, the time calls and the rest are neutral */
+  function isCorrection(cue) {
+    const id = cue.id, prompts = move.prompts || [];
+    if (id === 'early') return true;
+    if (move.faults.includes(id) && id !== 'lost' && !prompts.includes(id)) return true;
+    return /^(count\d+|done)$/.test(id) && cue.text.includes(Core.SHARED_CUES.fast.text);
+  }
   function fire(cue) {
-    const good = cue.id === 'hold' || cue.id === 'done' || /^call\d/.test(cue.id);
-    const colour = good ? C.good : cue.id === 'lost' ? C.warn : C.bad;
-    banner = { text: cue.text, colour, at: performance.now() };
+    const bad = isCorrection(cue);
+    banner = { text: cue.text, colour: bad ? C.bad : C.ink, at: performance.now() };
     voice.say(cue.text); tone(toneFor(cue.id));
     const e = $('cue'); e.textContent = cue.text;
-    e.className = 'cue ' + (good ? 'good' : cue.id === 'lost' ? 'warn' : 'bad');
+    e.className = 'cue' + (bad ? ' bad' : '');
   }
 
   function paintUi(r, v, out) {
@@ -1232,5 +1264,5 @@
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, cfg, fire, drawFrame, paintUi };
+    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, cfg, fire, drawFrame, paintUi, isCorrection };
 })();

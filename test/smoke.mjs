@@ -286,6 +286,33 @@ try {
     await page.waitForFunction(() => document.getElementById('faults').textContent === '', null, { timeout: 8000 });
   });
 
+  await step('a long cue wraps inside the frame, the mark is on it, and only a correction is red', async () => {
+    const long = 'Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent, and take your time about it.';
+    const r = await page.evaluate((text) => {
+      const app = window.__app;
+      app.fire({ id: 'start', text, t: 0 });
+      return new Promise((res) => setTimeout(() => {
+        const b = app.banner, cls = document.getElementById('cue').className;
+        res({ lines: b.lines, width: b.width, frame: b.frame, size: b.size, cls, correction: app.isCorrection({ id: 'start', text }) });
+      }, 400));
+    }, long);
+    assert.ok(r.lines && r.lines.length >= 2 && r.lines.length <= 3, 'two or three lines: ' + JSON.stringify(r.lines));
+    assert.equal(r.lines.join(' '), long, 'the whole cue, in order');
+    assert.ok(r.width <= r.frame, 'the box is inside the frame: ' + r.width + ' of ' + r.frame);
+    assert.equal(r.cls, 'cue', 'an instruction is neutral on the page');
+    assert.equal(r.correction, false);
+    /* a fault is red; a count, a time call and the hold are not */
+    const colours = await page.evaluate(() => {
+      const app = window.__app, id = app.move.faults.find((f) => f !== 'lost' && !(app.move.prompts || []).includes(f));
+      app.fire({ id, text: app.coach.cues[id].text, t: 0 });
+      const fault = document.getElementById('cue').className;
+      return { fault, hold: app.isCorrection({ id: 'hold', text: 'That is it' }), call: app.isCorrection({ id: 'call10', text: '10 seconds left' }),
+        count: app.isCorrection({ id: 'count2', text: '2' }), slow: app.isCorrection({ id: 'count2', text: '2 \u2014 slower on the way down' }), early: app.isCorrection({ id: 'early', text: 'x' }) };
+    });
+    assert.equal(colours.fault, 'cue bad', 'a fault is red');
+    assert.deepEqual([colours.hold, colours.call, colours.count, colours.slow, colours.early], [false, false, false, true, true]);
+  });
+
   await step('the legs being too straight is called', async () => {
     await set({ knee: 122 });
     await saw('lower down');

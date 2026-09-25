@@ -487,8 +487,31 @@
      tuned numbers into the same store, so both have to agree on it */
   const SETTINGS_V = 7;
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-25d';
+  const VER = '2026-09-25e';
 
-  return { VER, SETTINGS_V, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor,
+  /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
+     width). A single word wider than the line is broken where it must be, so
+     nothing is ever wider than the frame it is drawn in. */
+  function wrapWords(text, maxWidth, measure) {
+    const lines = []; let cur = '';
+    const push = () => { if (cur) lines.push(cur); cur = ''; };
+    for (const word of String(text == null ? '' : text).split(/\s+/).filter(Boolean)) {
+      const tryLine = cur ? cur + ' ' + word : word;
+      if (measure(tryLine) <= maxWidth) { cur = tryLine; continue; }
+      push();
+      if (measure(word) <= maxWidth) { cur = word; continue; }
+      /* too wide on its own: as many characters as fit, then the rest */
+      let piece = '';
+      for (const ch of word) {
+        if (measure(piece + ch) <= maxWidth || !piece) piece += ch;
+        else { lines.push(piece); piece = ch; }
+      }
+      cur = piece;
+    }
+    push();
+    return lines;
+  }
+
+  return { VER, SETTINGS_V, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });
