@@ -116,9 +116,19 @@
     const x0 = Math.min(210, Math.min(...xs) - 14), x1 = Math.max(400, Math.max(...xs) + 14), y0 = Math.min(...ys) - 20;
     return { x0, y0, w: x1 - x0, h: 168 - y0 };
   }
+  const FRONT_CHAINS = [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR']];
+  const frontPath = (K) => FRONT_CHAINS.filter((c) => c.every((k) => K[k])).map((c) => P(...c.map((k) => K[k]))).join(' ');
   function svg(move, label) {
     const r = figureOf(move);
     if (!r) return '';
+    /* a figure seen from the front (a body lying on its side, facing the camera): its chains, plainly */
+    if (r.view === 'front' && r.A.hipL) {
+      const B = still(r) ? null : r.B, b = box(r);
+      const words = label != null ? label : (still(r) ? 'hold still' : 'repeat slowly');
+      return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${esc(move.name)}: ${esc(words)}">` +
+        `<line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>` + animPath(frontPath(r.A), B && frontPath(B), 'ink') + animHead(r.A.h, B && B.h) +
+        `<text x="${b.x0 + 10}" y="${b.y0 + 12}" text-anchor="start" class="lbl">${esc(words)}</text></svg>`;
+    }
     const B = still(r) ? null : r.B, b = box(r);
     let body = '';
     if (r.wall != null) body += `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="162" stroke-width="4"/>`;

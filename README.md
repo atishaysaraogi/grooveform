@@ -7,9 +7,12 @@ hold, and hands you a recording of the set with the cues on it.
 
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
-Five exercises so far — **wall sit**, **elbow plank**, **knee raise**,
-**glute bridge** and **donkey kick** — each one a file in
-`public/exercises/`, and a Build page that writes the next. Nothing is
+Thirteen exercises — **wall sit**, **elbow plank**, **knee raise**, **glute
+bridge**, **donkey kick**, the **four-way straight leg raises** (on the back,
+on the side, face down, inner thigh), **forward lunge**, **static quads**,
+**dynamic quads** and **step-up** — each one a file in `public/exercises/`,
+and a Build page that writes the next. The eight newer ones were built from
+published form standards, set out in `docs/standards.md` with their sources. Nothing is
 uploaded — the pose model, the coaching and the video file are all made on
 the device.
 
@@ -534,6 +537,7 @@ test/
   mp4.test.js       the file the page writes, timed by the clock
   speech.test.js    the coach's own voice: a cue as sound, the WAV read, the set's cues listed
   library.test.js   every file in the folder whole and indexed, and the file's language doing what it says
+  newmoves.test.js  the eight exercises built from published standards, each posed to its own numbers
   framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
 ```

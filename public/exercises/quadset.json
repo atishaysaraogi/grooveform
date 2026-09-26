@@ -1,0 +1,310 @@
+{
+  "v": 1,
+  "id": "quadset",
+  "name": "Static quads",
+  "order": 11,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "supine",
+    "quads",
+    "isometric",
+    "knee rehab"
+  ],
+  "equipment": [
+    "a mat",
+    "a rolled towel, optional"
+  ],
+  "type": "reps",
+  "position": "lying",
+  "movement": "the thigh tightened, the back of the knee pressed to the floor and the toes pulled up, held",
+  "sides": "alternate",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Lying with one leg straight: toes pulled up, knee pressed down, held five seconds.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, one knee bent, the other leg straight.",
+    "position": "Lie on your back, side on to the phone, one knee bent with the foot flat, the other leg straight and relaxed, heel on the floor.",
+    "top": "The toes pulled up toward you, the thigh tight and the back of the knee pressed into the floor, for the count.",
+    "howto": [
+      "Lie on your back with one knee bent. The straight leg is the working leg.",
+      "Pull the toes of that foot back toward you and press the back of the knee down into the floor. Feel the thigh tighten; the heel may lift an inch, which is fine.",
+      "Hold for the count — five seconds — breathing.",
+      "Let go completely, toes relaxed, before the next one. The rep counts as you let go."
+    ],
+    "cannot": "How hard the thigh is contracting: it sees the toes come up and the knee straighten, which go with the contraction, not the muscle itself. Press as hard as is comfortable.",
+    "about": "Static quads — lying on your back side on: the foot's angle at the heel between toe and knee, which falls as the toes are pulled up; the contraction is under way once it is below 98° and let go past 110°; and the knee, at least 170° while it is held. Hold five seconds, then relax fully; the rep counts on letting go.",
+    "lost": "Lie down side on to the camera, whole body in",
+    "lower": "And relax",
+    "early": "Hold it for the full count next time",
+    "holdLabel": "Hold the contraction for",
+    "safety": "Nothing should hurt: this is the gentlest knee exercise. A rolled towel under the knee helps if the thigh will not tighten.",
+    "easier": "A shorter hold; a towel under the knee.",
+    "harder": "A longer hold; more of them, every hour.",
+    "mistakes": "Letting the knee bend; forgetting to pull the toes up; holding the breath."
+  },
+  "muscles": {
+    "thigh": 1,
+    "calf": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 30,
+        "uarm": -90,
+        "farm": -90,
+        "thighF": -150,
+        "shinF": -30,
+        "footF": 90
+      },
+      "B": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 95,
+        "uarm": -90,
+        "farm": -90,
+        "thighF": -150,
+        "shinF": -30,
+        "footF": 90
+      }
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "knee"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "hip|knee": "knee",
+      "knee|ankle": "knee",
+      "ankle|toe": "foot",
+      "ankle|heel": "foot",
+      "heel|toe": "foot"
+    }
+  },
+  "measurements": [
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "pulled up",
+      "kind": "angle",
+      "a": "toe",
+      "b": "heel",
+      "c": "knee",
+      "band": {
+        "lo": "footMin",
+        "hi": "footMax"
+      },
+      "scale": [
+        40,
+        170
+      ],
+      "settings": [
+        {
+          "key": "footMin",
+          "label": "Foot angle, lowest",
+          "min": 30,
+          "max": 165
+        },
+        {
+          "key": "footMax",
+          "label": "Foot angle, highest (toes pulled up)",
+          "min": 35,
+          "max": 170
+        }
+      ],
+      "why": "The foot against the shin, at the heel: relaxed it reads 110–125, toes pulled up 90 or less. The progress measurement: pulling the toes up is the start of the contraction, letting them go is the end."
+    },
+    {
+      "key": "knee",
+      "label": "knee pressed straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+    }
+  ],
+  "progress": {
+    "measure": "foot",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "knee": [
+        150,
+        180
+      ]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Toes up and press the knee down",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeBend",
+      "measure": "knee",
+      "side": "below",
+      "label": "Knee not pressed down",
+      "text": "Press the back of your knee into the floor",
+      "deep": "Tighten the thigh — the knee is bent",
+      "tone": "plain"
+    },
+    {
+      "id": "toesLoose",
+      "measure": "foot",
+      "side": "above",
+      "label": "Toes not pulled up",
+      "text": "Pull your toes further toward you",
+      "tone": "plain"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "foot",
+      "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.8
+    }
+  ],
+  "defaults": {
+    "kneeMin": 170,
+    "footMin": 50,
+    "footMax": 100,
+    "raiseAt": 98,
+    "downAt": 110,
+    "holdTargetSec": 5,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 0,
+    "restSec": 3,
+    "deepAt": 10
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Foot angle that counts as toes up",
+      "min": 70,
+      "max": 115
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

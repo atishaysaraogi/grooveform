@@ -3,8 +3,16 @@
   "files": [
     "bridge.json",
     "donkeykick.json",
+    "innerraise.json",
+    "kneeext.json",
     "kneeraise.json",
+    "lunge.json",
     "plank.json",
+    "proneraise.json",
+    "quadset.json",
+    "sideraise.json",
+    "slr.json",
+    "stepup.json",
     "wallsit.json"
   ],
   "written": "2026-09-26"

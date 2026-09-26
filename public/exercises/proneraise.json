@@ -1,0 +1,363 @@
+{
+  "v": 1,
+  "id": "proneraise",
+  "name": "Prone leg raise",
+  "order": 8,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "prone",
+    "glutes",
+    "hip extension",
+    "reps",
+    "leg raise",
+    "four way"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "reps",
+  "position": "prone",
+  "movement": "one straight leg lifted a hand's width off the floor and lowered",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Lying face down, one straight leg lifted a little off the floor.",
+    "start": "Lay the phone on its side on the floor. Lie face down side on to it, legs straight, forehead on your hands.",
+    "position": "Lie face down, side on to the phone, legs straight, forehead resting on your hands, hips pressed into the floor.",
+    "top": "One straight leg lifted about ten to twenty degrees — a hand's width off the floor — hips still on the floor.",
+    "howto": [
+      "Lie face down with your forehead on your hands and both legs straight.",
+      "Tighten the buttock and lift one straight leg a hand's width off the floor — about six inches. Both hip bones stay on the floor.",
+      "Hold for the count without arching the lower back or lifting the chest.",
+      "Lower slowly. The rep counts when the foot is back down."
+    ],
+    "cannot": "The pelvis rolling and the lower back muscles taking over: it sees the lift, the knee and the shoulders coming up. Lift from the buttock, not the back.",
+    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle, 150–170° at the top (a lift of 10–30°, a hand's width off the floor); the knee at least 165° so the leg stays straight; and the shoulders no more than 12° above the hips, which is the back arching. Hold two seconds at the top, lower slowly, and the rep counts when the foot is down.",
+    "lost": "Lie face down, side on to the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "This is a small lift. Stop if the lower back pinches; lift less high next time.",
+    "easier": "A smaller lift; a pillow under the hips.",
+    "harder": "A longer hold; an ankle weight.",
+    "mistakes": "Lifting too high; arching the lower back; the knee bending; the chest coming off the floor."
+  },
+  "muscles": {
+    "glute": 1,
+    "ham": 0.6,
+    "back": 0.3
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": -90,
+        "uarm": 140,
+        "farm": 60
+      },
+      "B": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -108,
+        "shin": -108,
+        "foot": -90,
+        "uarm": 140,
+        "farm": 60,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": -90
+      }
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "knee"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "back",
+      "hip|knee": "lift",
+      "knee|ankle": "knee"
+    }
+  },
+  "measurements": [
+    {
+      "key": "lift",
+      "label": "shoulder, hip, ankle",
+      "hud": "LIFT",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "ankle",
+      "band": {
+        "lo": "liftMin",
+        "hi": "liftMax"
+      },
+      "scale": [
+        120,
+        180
+      ],
+      "settings": [
+        {
+          "key": "liftMin",
+          "label": "Hip angle at the top, lowest (highest lift)",
+          "min": 130,
+          "max": 170
+        },
+        {
+          "key": "liftMax",
+          "label": "Hip angle at the top, highest (smallest lift)",
+          "min": 150,
+          "max": 178
+        }
+      ],
+      "why": "The leg against the trunk: 180 flat, 165 a lift of 15°. A hand's width off the floor is 10–20°; past 30° the back is arching. Also the progress measurement."
+    },
+    {
+      "key": "knee",
+      "label": "knee straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+    },
+    {
+      "key": "back",
+      "label": "shoulders above hips",
+      "hud": "BACK",
+      "note": "flat",
+      "kind": "rise",
+      "a": "hip",
+      "b": "shoulder",
+      "band": {
+        "sym": "backLift"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "backLift",
+          "label": "Shoulders above the hips, at most",
+          "min": 3,
+          "max": 30
+        }
+      ],
+      "why": "The hip-to-shoulder line off level: the shoulders coming up is the chest lifting and the back arching to make height."
+    }
+  ],
+  "progress": {
+    "measure": "lift",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "knee": [
+        150,
+        180
+      ]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Lift one leg — just a little",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeBend",
+      "measure": "knee",
+      "side": "below",
+      "setup": true,
+      "label": "Knee bending",
+      "text": "Keep the knee straight",
+      "deep": "Straighten the knee — lift the whole leg",
+      "tone": "plain"
+    },
+    {
+      "id": "archBack",
+      "measure": "back",
+      "side": "above",
+      "label": "Back arching",
+      "text": "Chest down — lift from the hip, not the back",
+      "deep": "Lower the chest — the back is arching to make height",
+      "tone": "down"
+    },
+    {
+      "id": "liftHigh",
+      "measure": "lift",
+      "side": "below",
+      "label": "Too high",
+      "text": "Not so high — a hand's width off the floor",
+      "deep": "Lower it — a small lift, hips on the floor",
+      "tone": "down"
+    },
+    {
+      "id": "liftLow",
+      "measure": "lift",
+      "side": "above",
+      "label": "Lift short",
+      "text": "Lift a little higher",
+      "deep": "Higher — a hand's width off the floor",
+      "tone": "up"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "floor",
+      "at": "hip",
+      "dir": -1
+    },
+    {
+      "kind": "arc",
+      "measure": "lift",
+      "size": 0.8
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.7
+    },
+    {
+      "kind": "readout",
+      "measure": "back",
+      "at": "shoulder",
+      "side": -1
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "liftMin": 150,
+    "liftMax": 170,
+    "backLift": 12,
+    "raiseAt": 172,
+    "downAt": 176,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 8
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Hip angle that counts as lifted",
+      "min": 150,
+      "max": 178
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

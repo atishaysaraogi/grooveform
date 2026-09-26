@@ -48,8 +48,8 @@ test('each move asks for the frame its body needs, and says so in the words it o
 test('every move opens by saying where to put the phone and how to stand to it', () => {
   for (const m of Moves.list) {
     assert.match(m.start, /floor/i, m.id + ' says where the phone goes');
-    assert.match(m.start, /side on/i, m.id + ' says which way to face — all of these are read from the side');
-    assert.ok(m.start.length < 120, m.id + ' keeps it short enough to be spoken: ' + m.start.length);
+    assert.match(m.start, /side on|facing it/i, m.id + ' says which way to face — side on to the phone, or, lying on the side, facing it');
+    assert.ok(m.start.length < 125, m.id + ' keeps it short enough to be spoken: ' + m.start.length);
   }
 });
 

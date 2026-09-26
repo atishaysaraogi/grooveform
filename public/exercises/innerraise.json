@@ -1,0 +1,418 @@
+{
+  "v": 1,
+  "id": "innerraise",
+  "name": "Inner thigh raise",
+  "order": 9,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "side",
+    "adductors",
+    "inner thigh",
+    "reps",
+    "leg raise",
+    "four way"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "reps",
+  "position": "sidelying",
+  "movement": "the bottom leg lifted toward the top leg and lowered",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, facing where your front will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Lying on your side facing the phone, top foot planted in front, bottom leg straight and lifted.",
+    "start": "Lay the phone on its side on the floor. Lie on your side facing it, top foot flat in front, bottom leg straight.",
+    "position": "Lie on your side facing the phone, hips stacked, top knee bent with that foot flat on the floor in front of the bottom knee, bottom leg straight with the ankle flexed.",
+    "top": "The bottom leg lifted fifteen to twenty five degrees toward the top leg, knee straight, hips still stacked.",
+    "howto": [
+      "Lie on your side facing the phone, head on your arm, hips stacked one above the other.",
+      "Bend the top knee and plant that foot flat on the floor in front of the bottom knee.",
+      "Keep the bottom leg straight with the toes pulled toward you, and lift it toward the ceiling from the inner thigh. A hand's width or two is enough.",
+      "Hold for the count, then lower slowly without resting the leg on the floor between reps. The rep counts when it is back down."
+    ],
+    "cannot": "The hips rolling back and the leg swinging: it sees the lift and the knee from the front. Keep the movement slow and the trunk still yourself.",
+    "about": "Inner thigh raise — lying on your side facing the phone: the lift of the bottom leg, as the angle at the hip between shoulder and ankle, 150–168° at the top (a lift of 12–30°); and the knee, at least 165° so the leg stays straight. Hold two seconds at the top, lower slowly, and the rep counts when the leg is back down.",
+    "lost": "Lie on your side facing the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the groin or the lower back pinches. Lift only as high as the hips stay still.",
+    "easier": "A smaller lift; a shorter hold.",
+    "harder": "An ankle weight; a longer hold; slower lowering.",
+    "mistakes": "Swinging the leg; lifting too high; the knee bending; rolling back."
+  },
+  "muscles": {
+    "thigh": 0.6,
+    "glute": 0.3,
+    "abs": 0.3
+  },
+  "figure": {
+    "points": {
+      "view": "front",
+      "A": {
+        "h": [
+          200,
+          148
+        ],
+        "shL": [
+          220,
+          166
+        ],
+        "shR": [
+          220,
+          130
+        ],
+        "hipL": [
+          262,
+          159
+        ],
+        "hipR": [
+          262,
+          137
+        ],
+        "knL": [
+          290,
+          161
+        ],
+        "knR": [
+          286,
+          150
+        ],
+        "anL": [
+          315,
+          163
+        ],
+        "anR": [
+          304,
+          163
+        ],
+        "elL": [
+          180,
+          160
+        ],
+        "wrL": [
+          166,
+          158
+        ],
+        "elR": [
+          232,
+          128
+        ],
+        "wrR": [
+          246,
+          150
+        ]
+      },
+      "B": {
+        "h": [
+          200,
+          148
+        ],
+        "shL": [
+          220,
+          166
+        ],
+        "shR": [
+          220,
+          130
+        ],
+        "hipL": [
+          262,
+          159
+        ],
+        "hipR": [
+          262,
+          137
+        ],
+        "knL": [
+          289,
+          151
+        ],
+        "knR": [
+          286,
+          150
+        ],
+        "anL": [
+          313,
+          145
+        ],
+        "anR": [
+          304,
+          163
+        ],
+        "elL": [
+          180,
+          160
+        ],
+        "wrL": [
+          166,
+          158
+        ],
+        "elR": [
+          232,
+          128
+        ],
+        "wrR": [
+          246,
+          150
+        ]
+      },
+      "flip": false,
+      "side": "L",
+      "w": {
+        "thigh": 0.6,
+        "glute": 0.3,
+        "abs": 0.3
+      }
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "knee"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "lift",
+      "hip|knee": "lift",
+      "knee|ankle": "knee"
+    }
+  },
+  "measurements": [
+    {
+      "key": "lift",
+      "label": "shoulder, hip, ankle",
+      "hud": "LIFT",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "ankle",
+      "band": {
+        "lo": "liftMin",
+        "hi": "liftMax"
+      },
+      "scale": [
+        120,
+        180
+      ],
+      "settings": [
+        {
+          "key": "liftMin",
+          "label": "Hip angle at the top, lowest (highest lift)",
+          "min": 130,
+          "max": 170
+        },
+        {
+          "key": "liftMax",
+          "label": "Hip angle at the top, highest (smallest lift)",
+          "min": 150,
+          "max": 178
+        }
+      ],
+      "why": "The bottom leg against the trunk: 180 in line, 160 a lift of 20°. Also the progress measurement."
+    },
+    {
+      "key": "knee",
+      "label": "knee straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+    }
+  ],
+  "progress": {
+    "measure": "lift",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "knee": [
+        150,
+        180
+      ]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Lift the bottom leg",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeBend",
+      "measure": "knee",
+      "side": "below",
+      "setup": true,
+      "label": "Knee bending",
+      "text": "Keep the bottom leg straight",
+      "deep": "Straighten the knee — the leg is bending",
+      "tone": "plain"
+    },
+    {
+      "id": "liftHigh",
+      "measure": "lift",
+      "side": "below",
+      "label": "Too high",
+      "text": "Not so high — a hand's width or two",
+      "deep": "Lower it — lift only as far as the hips stay still",
+      "tone": "down"
+    },
+    {
+      "id": "liftLow",
+      "measure": "lift",
+      "side": "above",
+      "label": "Lift short",
+      "text": "Lift a little higher",
+      "deep": "Higher — bring the leg up toward the other",
+      "tone": "up"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "line",
+      "from": "shoulder",
+      "to": "hip",
+      "good": "lift"
+    },
+    {
+      "kind": "arc",
+      "measure": "lift",
+      "size": 0.8
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.7
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "liftMin": 150,
+    "liftMax": 168,
+    "raiseAt": 172,
+    "downAt": 176,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 8
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Hip angle that counts as lifted",
+      "min": 150,
+      "max": 178
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

@@ -1,0 +1,374 @@
+{
+  "v": 1,
+  "id": "slr",
+  "name": "Straight leg raise",
+  "order": 6,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "supine",
+    "quads",
+    "hip flexors",
+    "reps",
+    "leg raise",
+    "four way"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "reps",
+  "position": "lying",
+  "movement": "one straight leg lifted to the height of the other knee and lowered",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Lying on your back, one knee bent, the other leg straight and lifted.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, one knee bent, the other leg straight.",
+    "position": "Lie on your back, side on to the phone, one knee bent with the foot flat, the other leg straight with the toes pulled up.",
+    "top": "The straight leg lifted to the height of the other knee, about thirty to forty five degrees, knee locked, toes up.",
+    "howto": [
+      "Lie on your back with one knee bent and the foot flat. The other leg is the working leg: straight, toes pulled toward you.",
+      "Tighten the thigh so the knee is locked straight, then lift the whole leg to the height of the bent knee — no higher.",
+      "Hold at the top for the count with the knee straight and the toes up.",
+      "Lower slowly, keeping the knee straight, until the heel is back on the floor. The rep counts there."
+    ],
+    "cannot": "Whether the lower back is flat on the floor and whether the thigh muscle is truly tight: it sees the knee angle, the lift and the toes. Press the back down yourself.",
+    "about": "Straight leg raise — lying on your back side on: the knee angle between hip and ankle, at least 165° so the leg stays straight; the lift, as the angle at the hip between shoulder and knee, 130–155° at the top (a lift of 25–50°, the height of the other knee); and the foot's angle at the heel, 60–105°, toes pulled up. The knee and the toes are coached before the lift is asked for. Hold two seconds at the top, lower slowly, and the rep counts when the heel is down.",
+    "lost": "Lie down side on to the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the lower back or the front of the hip pinches. Keep the other knee bent to protect the back.",
+    "easier": "A smaller lift; a shorter hold; no weight.",
+    "harder": "A longer hold; an ankle weight; slower lowering.",
+    "mistakes": "The knee bending on the way up; lifting too high; toes pointing away; the back arching."
+  },
+  "muscles": {
+    "thigh": 1,
+    "abs": 0.5,
+    "calf": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 90,
+        "uarm": -90,
+        "farm": -90,
+        "thighF": -150,
+        "shinF": -30,
+        "footF": 90
+      },
+      "B": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -130,
+        "shin": -130,
+        "foot": 90,
+        "uarm": -90,
+        "farm": -90,
+        "thighF": -150,
+        "shinF": -30,
+        "footF": 90
+      }
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "knee"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "hip|knee": "lift",
+      "knee|ankle": "knee",
+      "ankle|toe": "foot",
+      "ankle|heel": "foot",
+      "heel|toe": "foot"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+    },
+    {
+      "key": "lift",
+      "label": "shoulder, hip, knee",
+      "hud": "LIFT",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "knee",
+      "band": {
+        "lo": "liftMin",
+        "hi": "liftMax"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "liftMin",
+          "label": "Hip angle at the top, lowest (highest lift)",
+          "min": 100,
+          "max": 160
+        },
+        {
+          "key": "liftMax",
+          "label": "Hip angle at the top, highest (smallest lift)",
+          "min": 120,
+          "max": 175
+        }
+      ],
+      "why": "The lift as the angle at the hip: 180 lying flat, 135 a lift of 45°. The height of the other knee is about 30–45°, so 130–155. Also the progress measurement."
+    },
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "pulled up",
+      "kind": "angle",
+      "a": "toe",
+      "b": "heel",
+      "c": "knee",
+      "band": {
+        "lo": "footMin",
+        "hi": "footMax"
+      },
+      "scale": [
+        40,
+        170
+      ],
+      "settings": [
+        {
+          "key": "footMin",
+          "label": "Foot angle, lowest",
+          "min": 30,
+          "max": 165
+        },
+        {
+          "key": "footMax",
+          "label": "Foot angle, highest",
+          "min": 35,
+          "max": 170
+        }
+      ],
+      "why": "The foot against the shin, at the heel: it grows as the toes point away. Toes pulled up keeps the quad working and the knee straight."
+    }
+  ],
+  "progress": {
+    "measure": "lift",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "knee": [
+        150,
+        180
+      ]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Lift the straight leg",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeBend",
+      "measure": "knee",
+      "side": "below",
+      "setup": true,
+      "label": "Knee bending",
+      "text": "Straighten your knee — tighten the thigh",
+      "deep": "Lock the knee straight before you lift",
+      "tone": "plain"
+    },
+    {
+      "id": "toesDown",
+      "measure": "foot",
+      "side": "above",
+      "setup": true,
+      "label": "Toes pointing away",
+      "text": "Pull your toes up toward you",
+      "deep": "Toes up — pull the foot back toward you",
+      "tone": "plain"
+    },
+    {
+      "id": "liftHigh",
+      "measure": "lift",
+      "side": "below",
+      "label": "Too high",
+      "text": "Not so high — level with your other knee",
+      "deep": "Lower it — no higher than your other knee",
+      "tone": "down"
+    },
+    {
+      "id": "liftLow",
+      "measure": "lift",
+      "side": "above",
+      "label": "Lift short",
+      "text": "Lift a little higher — to the height of your other knee",
+      "deep": "Higher — up to the height of your bent knee",
+      "tone": "up"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "lift",
+      "size": 0.8
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "foot",
+      "size": 0.6
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "liftMin": 130,
+    "liftMax": 155,
+    "footMin": 60,
+    "footMax": 105,
+    "raiseAt": 160,
+    "downAt": 170,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 10
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Hip angle that counts as lifted",
+      "min": 130,
+      "max": 175
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

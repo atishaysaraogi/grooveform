@@ -1,0 +1,384 @@
+{
+  "v": 1,
+  "id": "lunge",
+  "name": "Forward lunge",
+  "order": 10,
+  "status": "ready",
+  "category": "Legs",
+  "tags": [
+    "standing",
+    "quads",
+    "glutes",
+    "balance",
+    "reps"
+  ],
+  "equipment": [],
+  "type": "reps",
+  "position": "standing",
+  "movement": "a step forward, both knees to a right angle, and a push back to standing",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Standing side on, a long step forward, both knees to a right angle, and back.",
+    "start": "Stand the phone up on the floor. Stand side on to it, tall, feet together, and step forward into a lunge.",
+    "position": "Stand side on to the phone, tall, feet hip-width, hands on your hips.",
+    "top": "The front thigh level with the front knee over the ankle, the back knee just off the floor, the trunk upright.",
+    "howto": [
+      "Stand tall, hands on your hips. Take a long step forward with the leg nearest the phone.",
+      "Lower straight down until the front thigh is level — front knee at a right angle, stacked over the ankle, not drifting past the toes.",
+      "The back knee hovers just above the floor; the trunk stays upright with the chest up.",
+      "Push through the front heel back to standing. The rep counts there. Do a set on one leg, then the other."
+    ],
+    "cannot": "The back knee and the front knee caving inward: it judges the leg nearest the phone — its knee angle, its shin against vertical — and the trunk. Take a long enough step yourself.",
+    "about": "Forward lunge — standing side on, the leg nearest the phone stepping forward: the front knee angle between hip and ankle, 80–100° at the bottom; the front shin, as the knee's lean forward of the ankle, at most 20°, so the knee stays over the ankle; and the trunk within ±15° of vertical. The rep is under way once the front knee bends past 120° and counts when it is straight again past 160°.",
+    "lost": "Step into the camera, side on",
+    "lower": "Push back up",
+    "early": "Go all the way down next time",
+    "holdLabel": "Pause at the bottom for",
+    "safety": "Stop if the front knee hurts at the front; take a longer step and keep the shin nearer vertical. Hold a chair for balance if you need to.",
+    "easier": "A shorter drop; a hand on a chair; a pause at the top.",
+    "harder": "Dumbbells at the sides; a slower lowering; a longer pause at the bottom.",
+    "mistakes": "The front knee drifting past the toes; leaning the trunk forward; a short step; not getting the front thigh level."
+  },
+  "muscles": {
+    "thigh": 1,
+    "glute": 0.8,
+    "ham": 0.4,
+    "calf": 0.3,
+    "abs": 0.3
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 0,
+        "thigh": 0,
+        "shin": 0,
+        "uarm": 40,
+        "farm": -70,
+        "uarmF": 40,
+        "farmF": -70
+      },
+      "B": {
+        "torso": 3,
+        "thigh": 90,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 40,
+        "farm": -70,
+        "uarmF": 40,
+        "farmF": -70,
+        "thighF": -35,
+        "shinF": -110,
+        "footF": 60
+      },
+      "anchor": "ftF"
+    }
+  },
+  "facing": {
+    "from": "heel",
+    "to": "toe"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "reach"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "torso",
+      "hip|knee": "knee",
+      "knee|ankle": "shin",
+      "ankle|heel": "shin",
+      "ankle|toe": "shin",
+      "heel|toe": "shin"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "front knee angle",
+      "hud": "KNEE",
+      "note": "at the bottom",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "lo": "kneeMin",
+        "hi": "kneeMax"
+      },
+      "scale": [
+        40,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Front knee at the bottom, lowest",
+          "min": 50,
+          "max": 100
+        },
+        {
+          "key": "kneeMax",
+          "label": "Front knee at the bottom, highest",
+          "min": 80,
+          "max": 140
+        }
+      ],
+      "why": "A right angle at the front knee, ten degrees either way, with the thigh level. Also the progress measurement: the rep is under way past raiseAt and counts back past downAt."
+    },
+    {
+      "key": "shin",
+      "label": "knee ahead of ankle",
+      "hud": "SHIN",
+      "note": "forward",
+      "kind": "tilt",
+      "base": "ankle",
+      "top": "knee",
+      "band": {
+        "max": "shinMax"
+      },
+      "scale": [
+        -30,
+        50
+      ],
+      "settings": [
+        {
+          "key": "shinMax",
+          "label": "Front knee ahead of the ankle, at most",
+          "min": 5,
+          "max": 45
+        }
+      ],
+      "why": "The front shin off vertical, positive the way the body faces: the knee stacked over the ankle reads near zero; well past the toes reads 30 and more."
+    },
+    {
+      "key": "torso",
+      "label": "trunk off vertical",
+      "hud": "TRUNK",
+      "note": "upright",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "torsoLean"
+      },
+      "scale": [
+        -40,
+        40
+      ],
+      "settings": [
+        {
+          "key": "torsoLean",
+          "label": "Trunk allowed off vertical",
+          "min": 5,
+          "max": 40
+        }
+      ],
+      "why": "The hip-to-shoulder line off plumb, positive leaning forward over the front leg."
+    },
+    {
+      "key": "reach",
+      "label": "leg ahead of the hip",
+      "hud": "REACH",
+      "note": "front leg",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "ankle",
+      "why": "Which leg is in front: the ankle ahead of the hip reads positive. Not judged; it picks the front leg."
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "torso": [
+        -25,
+        25
+      ]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Step forward and lower",
+    "tone": "down"
+  },
+  "faults": [
+    {
+      "id": "kneeOver",
+      "measure": "shin",
+      "side": "above",
+      "label": "Knee past the ankle",
+      "text": "Knee back over your ankle — take a longer step",
+      "deep": "Longer step — the knee is well past your toes",
+      "tone": "walking out"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "torso",
+      "side": "above",
+      "label": "Leaning forward",
+      "text": "Chest up — stay tall",
+      "deep": "Sit up — you are folding over the front leg",
+      "tone": "plain"
+    },
+    {
+      "id": "leanBack",
+      "measure": "torso",
+      "side": "below",
+      "label": "Leaning back",
+      "text": "Don't lean back — trunk upright",
+      "tone": "plain"
+    },
+    {
+      "id": "kneeShallow",
+      "measure": "knee",
+      "side": "above",
+      "label": "Not low enough",
+      "text": "Lower until the front thigh is level",
+      "deep": "Drop lower — the back knee toward the floor",
+      "tone": "down"
+    },
+    {
+      "id": "kneeDeep",
+      "measure": "knee",
+      "side": "below",
+      "label": "Too deep",
+      "text": "Not so deep — thigh level is enough",
+      "tone": "up"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "plumb",
+      "at": "ankle",
+      "share": 0.25
+    },
+    {
+      "kind": "arc",
+      "measure": "shin",
+      "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 1
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.3
+    },
+    {
+      "kind": "arc",
+      "measure": "torso",
+      "size": 0.6
+    }
+  ],
+  "defaults": {
+    "kneeMin": 80,
+    "kneeMax": 100,
+    "shinMax": 20,
+    "torsoLean": 15,
+    "raiseAt": 120,
+    "downAt": 160,
+    "holdTargetSec": 1,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 0,
+    "restSec": 2,
+    "deepAt": 12
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Front knee angle that counts as lowered",
+      "min": 90,
+      "max": 160
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

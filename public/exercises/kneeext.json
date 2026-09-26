@@ -1,0 +1,407 @@
+{
+  "v": 1,
+  "id": "kneeext",
+  "name": "Dynamic quads",
+  "order": 12,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "seated",
+    "chair",
+    "quads",
+    "knee extension",
+    "reps",
+    "knee rehab"
+  ],
+  "equipment": [
+    "a sturdy chair"
+  ],
+  "type": "reps",
+  "position": "seated",
+  "movement": "one knee straightened fully from sitting, held, and lowered",
+  "sides": "alternate",
+  "load": "both",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to the chair.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Sitting on a chair side on, one knee straightened fully and held.",
+    "start": "Stand the phone up on the floor. Sit tall on the chair side on to it, feet flat, and straighten one knee.",
+    "position": "Sit tall on a sturdy chair, side on to the phone, back away from the backrest, feet flat, hands resting on the seat.",
+    "top": "One knee locked out fully straight, the thigh still resting on the seat, toes pulled up, trunk tall.",
+    "howto": [
+      "Sit tall on the chair, side on to the phone, thighs supported, feet flat.",
+      "Straighten the knee nearest the phone until it is locked out fully straight, toes pulled up toward you.",
+      "Hold for the count with the thigh still on the seat — the knee, not the hip, does the lifting — and the trunk tall, not leaning back.",
+      "Lower slowly to the floor. The rep counts there. Do a set on one leg, then the other."
+    ],
+    "cannot": "The kneecap tracking and the last few degrees of a stiff knee: it sees the knee angle, the thigh on the seat, the trunk and the toes. Lock out as far as the knee allows.",
+    "about": "Dynamic quads — sitting side on: the knee angle between hip and ankle, at least 165° at the top (fully straight); the thigh staying on the seat, as the knee's rise above the hip within ±12°; the trunk within ±15° of vertical, so the back does not lean to help; and the foot's angle at the heel, 60–105°, toes up. The rep is under way once the knee opens past 130° and counts when it is back under 105°. Hold five seconds at the top, lower slowly.",
+    "lost": "Sit side on to the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the knee hurts under the kneecap; straighten less far or hold for less. Keep the movement slow.",
+    "easier": "A shorter hold; straighten as far as is comfortable.",
+    "harder": "An ankle weight; a band around the ankle to the chair leg; a longer hold.",
+    "mistakes": "Not straightening fully; the thigh lifting off the seat; leaning back; swinging the leg up."
+  },
+  "muscles": {
+    "thigh": 1,
+    "calf": 0.2,
+    "abs": 0.2
+  },
+  "figure": {
+    "points": {
+      "A": {
+        "h": [279, 62],
+        "sh": [279, 84],
+        "hip": [279, 128],
+        "kn": [309, 128],
+        "an": [309, 158],
+        "ft": [323, 158],
+        "el": [283, 110],
+        "wr": [295, 130],
+        "knF": [305, 131],
+        "anF": [305, 161],
+        "ftF": [319, 161],
+        "elF": [279, 113],
+        "wrF": [291, 133]
+      },
+      "B": {
+        "h": [275, 65],
+        "sh": [275, 87],
+        "hip": [275, 131],
+        "kn": [305, 131],
+        "an": [335, 131],
+        "ft": [337, 117],
+        "el": [279, 113],
+        "wr": [291, 133],
+        "knF": [305, 131],
+        "anF": [305, 161],
+        "ftF": [319, 161],
+        "elF": [279, 113],
+        "wrF": [291, 133]
+      },
+      "flip": false,
+      "side": "both",
+      "props": [
+        {
+          "kind": "box",
+          "x": 273,
+          "y": 130,
+          "w": 30,
+          "h": 33
+        }
+      ]
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "knee"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "knee"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "torso",
+      "hip|knee": "thigh",
+      "knee|ankle": "knee",
+      "ankle|toe": "foot",
+      "ankle|heel": "foot",
+      "heel|toe": "foot"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee angle",
+      "hud": "KNEE",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [60, 180],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle at the top, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "Sitting it is 90; locked out it is 180. At least 165 at the top. Also the progress measurement."
+    },
+    {
+      "key": "thigh",
+      "label": "knee above hip",
+      "hud": "THIGH",
+      "note": "on the seat",
+      "kind": "rise",
+      "a": "hip",
+      "b": "knee",
+      "band": {
+        "sym": "thighLift"
+      },
+      "scale": [-30, 30],
+      "settings": [
+        {
+          "key": "thighLift",
+          "label": "Knee above the hip, at most",
+          "min": 3,
+          "max": 30
+        }
+      ],
+      "why": "The hip-to-knee line off level: the knee rising above the hip is the thigh lifting off the seat, the hip flexors doing the work instead of the knee."
+    },
+    {
+      "key": "torso",
+      "label": "trunk off vertical",
+      "hud": "TRUNK",
+      "note": "tall",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "torsoLean"
+      },
+      "scale": [-40, 40],
+      "settings": [
+        {
+          "key": "torsoLean",
+          "label": "Trunk allowed off vertical",
+          "min": 5,
+          "max": 40
+        }
+      ],
+      "why": "The hip-to-shoulder line off plumb, positive leaning forward: leaning back is the trunk helping the leg up."
+    },
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "pulled up",
+      "kind": "angle",
+      "a": "toe",
+      "b": "heel",
+      "c": "knee",
+      "optional": true,
+      "band": {
+        "lo": "footMin",
+        "hi": "footMax"
+      },
+      "scale": [40, 170],
+      "settings": [
+        {
+          "key": "footMin",
+          "label": "Foot angle, lowest",
+          "min": 30,
+          "max": 165
+        },
+        {
+          "key": "footMax",
+          "label": "Foot angle, highest",
+          "min": 35,
+          "max": 170
+        }
+      ],
+      "why": "The foot against the shin, at the heel: it grows as the toes point away. Optional: a foot the model cannot see is not held against anyone."
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "torso": [-25, 25]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Straighten your knee",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "leanBack",
+      "measure": "torso",
+      "side": "below",
+      "setup": true,
+      "label": "Leaning back",
+      "text": "Sit tall — don't lean back",
+      "deep": "Sit up — the trunk is leaning back to help",
+      "tone": "plain"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "torso",
+      "side": "above",
+      "setup": true,
+      "label": "Leaning forward",
+      "text": "Sit tall — chest up",
+      "tone": "plain"
+    },
+    {
+      "id": "thighLift",
+      "measure": "thigh",
+      "side": "above",
+      "label": "Thigh lifting",
+      "text": "Keep your thigh on the seat — straighten from the knee",
+      "deep": "Thigh down — the whole leg is lifting from the hip",
+      "tone": "down"
+    },
+    {
+      "id": "kneeShort",
+      "measure": "knee",
+      "side": "below",
+      "label": "Not fully straight",
+      "text": "Straighten your knee fully",
+      "deep": "All the way — lock the knee out straight",
+      "tone": "up"
+    },
+    {
+      "id": "toesDown",
+      "measure": "foot",
+      "side": "above",
+      "label": "Toes pointing away",
+      "text": "Pull your toes up",
+      "tone": "plain"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.3
+    },
+    {
+      "kind": "arc",
+      "measure": "torso",
+      "size": 0.6
+    },
+    {
+      "kind": "floor",
+      "at": "hip"
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 1
+    },
+    {
+      "kind": "arc",
+      "measure": "foot",
+      "size": 0.6
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "thighLift": 12,
+    "torsoLean": 15,
+    "footMin": 60,
+    "footMax": 105,
+    "raiseAt": 130,
+    "downAt": 105,
+    "holdTargetSec": 5,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 10
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Knee angle that counts as lifted",
+      "min": 100,
+      "max": 170
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

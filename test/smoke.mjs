@@ -206,17 +206,19 @@ try {
     await page.goto(base + '/');
     await page.waitForSelector('#picker .item');
     const rows = await page.$$eval('#picker .item', (l) => l.map((c) => ({ id: c.dataset.move, text: c.textContent.replace(/\s+/g, ' ').trim() })));
-    assert.equal(rows.length, 5, 'one row per exercise: ' + rows.map((c) => c.id).join(','));
+    assert.equal(rows.length, 13, 'one row per exercise: ' + rows.map((c) => c.id).join(','));
     const bridge = rows.find((c) => c.id === 'bridge');
     assert.match(bridge.text, /^Glute bridge/); assert.match(bridge.text, /glutes/i, 'the name and what it works, nothing more: ' + bridge.text);
     assert.doesNotMatch(bridge.text, /phone|reps/i, bridge.text);
     /* the mark is on the bar here and stays on the exercise's page */
     assert.equal(await page.isVisible('.brand'), true);
     /* a search narrows them, and clearing it brings them back */
-    await page.fill('#nav-q', 'lying');
-    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 3, null, { timeout: 3000 });
+    await page.fill('#nav-q', 'donkey');
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 1, null, { timeout: 3000 });
+    await page.fill('#nav-q', 'four way');
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 4, null, { timeout: 3000 });
     await page.fill('#nav-q', '');
-    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 5, null, { timeout: 3000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 13, null, { timeout: 3000 });
     /* how it works: five steps, each with its icon */
     await page.click('#btn-how');
     assert.equal(await page.isVisible('#how'), true);
@@ -263,8 +265,8 @@ try {
     assert.match(await page.textContent('#coaches'), /Heels/);
     assert.match(await page.textContent('#cannot'), /nothing is uploaded/i);
     assert.match(await page.textContent('#about-text'), /^Glute bridge/, 'the numbers are this exercise\'s, from its file');
-    /* the library is the folder of files: five loaded, none failed */
-    assert.deepEqual(await page.evaluate(() => window.__app.library.list.map((m) => m.id)), ['wallsit', 'plank', 'kneeraise', 'bridge', 'donkeykick']);
+    /* the library is the folder of files: thirteen loaded, none failed */
+    assert.deepEqual(await page.evaluate(() => window.__app.library.list.map((m) => m.id)), ['wallsit', 'plank', 'kneeraise', 'bridge', 'donkeykick', 'slr', 'sideraise', 'proneraise', 'innerraise', 'lunge', 'quadset', 'kneeext', 'stepup']);
     assert.deepEqual(await page.evaluate(() => window.__app.library.problems), []);
     /* back to the wall sit, the way the rest of the suite expects to find the page */
     await pick('wallsit');

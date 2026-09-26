@@ -1,0 +1,418 @@
+{
+  "v": 1,
+  "id": "stepup",
+  "name": "Step-up",
+  "order": 13,
+  "status": "ready",
+  "category": "Legs",
+  "tags": [
+    "standing",
+    "step",
+    "box",
+    "quads",
+    "glutes",
+    "reps",
+    "stairs"
+  ],
+  "equipment": [
+    "a step or sturdy box, 15–20 cm, or a stair"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "a step up onto a box with one leg, standing tall, and a controlled step down",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Side on to a step: one foot on it, drive up to standing tall, lower with control.",
+    "start": "Stand the phone up on the floor. Stand side on to it with the foot nearest the phone flat on the step.",
+    "position": "Stand tall, side on to the phone, with the whole of the foot nearest the phone flat on the step and the other foot on the floor.",
+    "top": "Standing tall on the step on one leg — knee and hip straight, chest up — the other foot lightly beside it.",
+    "howto": [
+      "Choose a step where the knee is bent to about a right angle when the foot is on it, no higher than the knee. A stair works.",
+      "Stand side on to the phone with the foot nearest it flat on the step. Chest up.",
+      "Push through that heel and stand up tall on the step — knee and hip fully straight — bringing the other foot up to tap the step. No jump from the back leg.",
+      "Lower the back foot to the floor slowly, with control. The rep counts there. Do a set on one leg, then the other."
+    ],
+    "cannot": "The knee caving inward and the pelvis dropping: it judges the stepping leg from the side — its knee and hip at the top, its shin at the start — and the trunk. Keep the knee over the second toe yourself.",
+    "about": "Step-up — standing side on with one foot on a step: the stepping knee, at least 165° at the top, and the hip, as the angle between shoulder and knee, at least 160°, so you stand fully tall rather than stay bent; the trunk within ±20° of vertical; and at the start the shin, as the knee's lean forward of the ankle, at most 30°. The rep is under way once the knee opens past 155° and counts when it is bent again under 135°.",
+    "lost": "Step into the camera, side on",
+    "lower": "Lower slowly",
+    "early": "Stand up fully next time",
+    "holdLabel": "Pause at the top for",
+    "safety": "Start with a low step and something to hold. Stop if the knee hurts at the front; use a lower step.",
+    "easier": "A lower step; a hand on a rail; a shorter pause at the top.",
+    "harder": "A higher step, no higher than the knee; dumbbells; a slower lowering.",
+    "mistakes": "Pushing off the back foot; leaning the trunk forward; not standing fully tall at the top; the knee collapsing inward; dropping down without control."
+  },
+  "muscles": {
+    "thigh": 1,
+    "glute": 0.9,
+    "ham": 0.4,
+    "calf": 0.4,
+    "abs": 0.2
+  },
+  "figure": {
+    "points": {
+      "A": {
+        "h": [297, 36],
+        "sh": [294, 57],
+        "hip": [288, 101],
+        "kn": [317, 109],
+        "an": [312, 138],
+        "ft": [326, 138],
+        "el": [307, 80],
+        "wr": [286, 92],
+        "knF": [288, 131],
+        "anF": [288, 161],
+        "ftF": [302, 161],
+        "elF": [307, 80],
+        "wrF": [286, 92]
+      },
+      "B": {
+        "h": [312, 12],
+        "sh": [312, 34],
+        "hip": [312, 78],
+        "kn": [312, 108],
+        "an": [312, 138],
+        "ft": [326, 138],
+        "el": [325, 57],
+        "wr": [304, 69],
+        "knF": [308, 111],
+        "anF": [308, 141],
+        "ftF": [322, 141],
+        "elF": [321, 60],
+        "wrF": [300, 72]
+      },
+      "flip": false,
+      "side": "both",
+      "props": [
+        {
+          "kind": "box",
+          "x": 300,
+          "y": 139,
+          "w": 34,
+          "h": 24
+        }
+      ]
+    }
+  },
+  "facing": {
+    "from": "heel",
+    "to": "toe"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "thigh"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "torso",
+      "hip|knee": "hip",
+      "knee|ankle": "knee",
+      "ankle|heel": "shin",
+      "ankle|toe": "shin",
+      "heel|toe": "shin"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee angle",
+      "hud": "KNEE",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [60, 180],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle at the top, at least",
+          "min": 140,
+          "max": 179
+        }
+      ],
+      "why": "About 90 with the foot on a knee-high step, 180 standing tall. Also the progress measurement."
+    },
+    {
+      "key": "hip",
+      "label": "shoulder, hip, knee",
+      "hud": "HIP",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "knee",
+      "band": {
+        "min": "hipMin"
+      },
+      "scale": [60, 180],
+      "settings": [
+        {
+          "key": "hipMin",
+          "label": "Hip angle at the top, at least",
+          "min": 130,
+          "max": 179
+        }
+      ],
+      "why": "Standing fully tall opens the hip to 180; staying bent forward at the top leaves it short."
+    },
+    {
+      "key": "torso",
+      "label": "trunk off vertical",
+      "hud": "TRUNK",
+      "note": "upright",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "torsoLean"
+      },
+      "scale": [-40, 40],
+      "settings": [
+        {
+          "key": "torsoLean",
+          "label": "Trunk allowed off vertical",
+          "min": 5,
+          "max": 40
+        }
+      ],
+      "why": "The hip-to-shoulder line off plumb, positive leaning forward. A little forward lean is natural at the start; folding over the step is momentum."
+    },
+    {
+      "key": "shin",
+      "label": "knee ahead of ankle",
+      "hud": "SHIN",
+      "note": "forward",
+      "kind": "tilt",
+      "base": "ankle",
+      "top": "knee",
+      "band": {
+        "max": "shinMax"
+      },
+      "scale": [-30, 60],
+      "settings": [
+        {
+          "key": "shinMax",
+          "label": "Knee ahead of the ankle, at most",
+          "min": 10,
+          "max": 50
+        }
+      ],
+      "why": "The shin off vertical: the knee travels forward on a step-up, but well past the toes the step is too high or the foot too far back."
+    },
+    {
+      "key": "thigh",
+      "label": "thigh from straight down",
+      "hud": "THIGH",
+      "note": "lift",
+      "kind": "down",
+      "from": "hip",
+      "to": "knee",
+      "why": "0 standing, 90 thigh level. Not judged: it picks the leg on the step, whose thigh is raised at the start."
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "torso": [-30, 35]
+    }
+  },
+  "prompt": {
+    "id": "raise",
+    "text": "Step up — stand tall",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeOver",
+      "measure": "shin",
+      "side": "above",
+      "setup": true,
+      "label": "Knee past the toes",
+      "text": "Knee back over your foot — whole foot on the step",
+      "deep": "The step is too high, or the foot too far back — knee over the foot",
+      "tone": "walking in"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "torso",
+      "side": "above",
+      "setup": true,
+      "label": "Leaning forward",
+      "text": "Chest up — no throwing yourself at the step",
+      "deep": "Stand up straighter — the trunk is folding over the step",
+      "tone": "plain"
+    },
+    {
+      "id": "leanBack",
+      "measure": "torso",
+      "side": "below",
+      "label": "Leaning back",
+      "text": "Don't lean back",
+      "tone": "plain"
+    },
+    {
+      "id": "kneeShort",
+      "measure": "knee",
+      "side": "below",
+      "label": "Knee not straight",
+      "text": "Stand up tall — straighten the knee",
+      "deep": "All the way up — lock the knee out on the step",
+      "tone": "up"
+    },
+    {
+      "id": "hipBent",
+      "measure": "hip",
+      "side": "below",
+      "label": "Hips not through",
+      "text": "Stand tall — hips forward",
+      "deep": "Push the hips through — you are still bent at the top",
+      "tone": "up"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "plumb",
+      "at": "ankle",
+      "share": 0.25
+    },
+    {
+      "kind": "arc",
+      "measure": "shin",
+      "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 1
+    },
+    {
+      "kind": "arc",
+      "measure": "hip",
+      "size": 0.7
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.3
+    },
+    {
+      "kind": "arc",
+      "measure": "torso",
+      "size": 0.6
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "hipMin": 160,
+    "torsoLean": 20,
+    "shinMax": 30,
+    "raiseAt": 155,
+    "downAt": 135,
+    "holdTargetSec": 1,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 12
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Knee angle that counts as up",
+      "min": 130,
+      "max": 175
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}
