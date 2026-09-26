@@ -30,6 +30,8 @@
     hint: 'Phone standing up on the floor, side on to you, whole body in frame.',
     start: 'Stand the phone up on the floor, then step into the frame, side on, back against the wall.',
     position: 'Stand side on to the phone with your back against the wall and your feet a step out from it.',
+    howto: ['Back flat to the wall, feet hip-width, a step out from it.', 'Slide down until your thighs are level and your knees are over your ankles, not past your toes.', 'Hold there, breathing. The clock runs only while the position is right.', 'Slide back up when the time is called.'],
+    cannot: 'Whether your lower back is pressed flat: it sees the line from hip to shoulder, not the curve between. Weight through the heels is yours to feel.',
     camera: 'tall',                 // a standing body needs the height, not the width
     /* the move, drawn: seated in the air against a wall, held */
     pose: { A: { torso: 0, thigh: 90, shin: 0, uarm: 8, farm: 8 }, wall: 'behind', hold: true },
@@ -127,6 +129,8 @@
     hint: 'Phone on its side on the floor, side on to you, forearms down, whole body in frame.',
     start: 'Lay the phone on its side on the floor, then get into your plank, side on, down onto your forearms.',
     position: 'Side on to the phone, down on your forearms and toes, elbows under your shoulders, body in one line.',
+    howto: ['Forearms down, elbows under your shoulders, hands flat or lightly fisted.', 'Toes tucked, legs straight, one line from shoulder to ankle.', 'Squeeze the glutes and pull the ribs in so the hips neither sag nor pike.', 'Hold, breathing; drop the knees when the time is called.'],
+    cannot: 'The neck and head, and whether the shoulder blades are spread: it judges the shoulder over the elbow and the hip on the line, nothing above the shoulder.',
     /* a plank is long and low, so the frame has to be too */
     camera: 'wide',
     pose: { A: { face: 'left', torso: 72, neck: -15, thigh: -80, shin: -80, foot: -60, uarm: -20, farm: 70 }, hold: true },
@@ -218,6 +222,8 @@
     hint: 'Phone standing up, side on to you, whole body in frame.',
     start: 'Stand the phone up on the floor, then stand side on, tall, and raise one knee.',
     position: 'Stand side on to the phone, tall, feet together, arms relaxed at your sides.',
+    howto: ['Stand tall, weight on one foot.', 'Raise the other knee until the thigh is level and the knee is at a right angle, foot relaxed under it.', 'Hold at the top for the count; keep the standing leg and the trunk still.', 'Lower slowly and put the foot down — the rep counts when you are standing again.'],
+    cannot: 'The standing side and the hips staying level: it follows the raised leg nearest the camera. Balance is yours.',
     camera: 'tall',                 // a standing body needs the height, not the width
     reps: true,
     holdLabel: 'Hold each rep for',
@@ -352,6 +358,8 @@
     hint: 'Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.',
     start: 'Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent.',
     position: 'Lie on your back, side on to the phone, knees bent, feet flat on the floor, arms by your sides.',
+    howto: ['Lie on your back, knees bent, feet flat and hip-width, heels a hand from your hips.', 'Press through the heels and lift the hips until knees, hips and shoulders make one line. No higher.', 'Squeeze at the top for the count, heels and toes down.', 'Lower slowly — the rep counts when the hips are back on the floor.'],
+    cannot: 'Whether the glutes or the lower back are doing the work: it sees the height and the line, not the muscle. If the back pinches, stop.',
     /* the start position is lying down with the knees bent: hips on the floor and
        the shin standing up off the heel, whatever the feet are doing yet */
     ready: (r, v) => !!(v.atStart && r.shin != null && r.shin >= 45 && r.shin <= 150),
@@ -509,6 +517,8 @@
     hint: 'Phone on its side on the floor, side on to you, on your hands and knees, whole body in frame.',
     start: 'Lay the phone on its side on the floor, then get on your hands and knees side on to it, and kick one leg up.',
     position: 'On your hands and knees, side on to the phone, hands under your shoulders, knees under your hips, back level.',
+    howto: ['Hands under the shoulders, knees under the hips, back level, neck long.', 'Keeping the knee bent at a right angle, lift the leg nearest the camera until the thigh is in line with the back.', 'Hold at the top for the count without arching the lower back to make height.', 'Lower slowly to the floor — the rep counts there. Sets alternate legs.'],
+    cannot: 'The hips rolling open toward the working side, and the far leg: it judges the arms, the back line and the lifted leg from the side. Keep the hips square yourself.',
     camera: 'wide',
     reps: true,
     holdLabel: 'Hold at the top for',

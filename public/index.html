@@ -1,150 +1,225 @@
 <!DOCTYPE html>
-<html lang="en" data-v="2026-09-26b">
+<html lang="en" data-v="2026-09-26c">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#ffffff">
 <title>OnTrack</title>
-<meta name="description" content="Side-on coach for held positions: wall sit and elbow plank, measured live, spoken cues, a sixty second countdown, and a recording you can download.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🪑</text></svg>">
+<meta name="description" content="OnTrack: a form coach in your phone's camera. Pick an exercise, prop the phone up, step into the frame, and listen for cues — reps counted, holds timed, a recording you can download.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232B1546'/><rect x='10' y='40' width='44' height='6' rx='3' fill='%23FFB830'/><rect x='10' y='29' width='44' height='6' rx='3' fill='%23B8F542'/><rect x='10' y='18' width='44' height='6' rx='3' fill='%23FF2E88'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="at-home">
 
-<header class="bar">
-  <h1 class="wordmark">OnTrack <span class="sub">form coach</span></h1>
-  <select id="move" class="pick" aria-label="Exercise">
+<!-- ============ the bar: the stripes, the mark, a search, how it works ============ -->
+<header class="topbar" id="topbar">
+  <a class="brand" href="#/" aria-label="OnTrack home"><span class="wordmark">OnTrack</span></a>
+  <button class="iconbtn back" id="nav-back" aria-label="Back" hidden>‹</button>
+  <span class="nav-title" id="nav-title"></span>
+  <input type="search" id="nav-q" class="search" placeholder="Search exercises" aria-label="Search exercises" autocomplete="off">
+  <button class="iconbtn" id="btn-how" aria-label="How it works" title="How it works"><span class="i-mark">i</span></button>
+  <a class="iconbtn" href="review.html" aria-label="Review recordings" title="Review recordings">◔</a>
+  <span class="chip" id="state" hidden>Ready</span>
+  <!-- the exercise, as the coach's own state; the pages set it -->
+  <select id="move" aria-label="Exercise" hidden>
     <option value="wallsit">Wall sit</option>
     <option value="plank">Elbow plank</option>
     <option value="kneeraise">Knee raise</option>
     <option value="bridge">Glute bridge</option>
     <option value="donkeykick">Donkey kick</option>
   </select>
-  <a class="chip" href="review.html">Review</a>
-  <span class="chip" id="state">Ready</span>
 </header>
 
-<main>
-  <!-- the exercises, as cards: what each is, which way the phone goes, what a set is, what works -->
-  <section class="picker" id="picker" aria-label="Exercises"></section>
+<!-- ============ how it works ============ -->
+<div class="modal" id="how" hidden>
+  <div class="modal-in" role="dialog" aria-modal="true" aria-labelledby="how-title">
+    <button class="iconbtn close" id="how-close" aria-label="Close">✕</button>
+    <h2 id="how-title">How it works</h2>
+    <ol class="how-steps">
+      <li><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="4" width="20" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="38" r="2" fill="currentColor"/><path d="M4 44h40" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>Set up your phone</b><span>Prop it a couple of metres away, the way round the exercise asks for. The page says which.</span></li>
+      <li><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="8" r="4" fill="currentColor"/><path d="M24 13v14m0 0-7 15m7-15 7 15M24 18l-9 6m9-6 9 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Walk into the camera</b><span>Side on, whole body in the frame. The coach waits until it can see you are in the starting position.</span></li>
+      <li><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 28v-4a16 16 0 0 1 32 0v4" fill="none" stroke="currentColor" stroke-width="3"/><rect x="6" y="26" width="9" height="14" rx="3" fill="currentColor"/><rect x="33" y="26" width="9" height="14" rx="3" fill="currentColor"/></svg><b>Listen for cues</b><span>One thing at a time, spoken and on the screen. A ding marks each one. Only corrections are red.</span></li>
+      <li><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="18" width="7" height="12" rx="2" fill="currentColor"/><rect x="37" y="18" width="7" height="12" rx="2" fill="currentColor"/><rect x="11" y="14" width="6" height="20" rx="2" fill="currentColor"/><rect x="31" y="14" width="6" height="20" rx="2" fill="currentColor"/><rect x="17" y="21" width="14" height="6" fill="currentColor"/></svg><b>Complete the exercise</b><span>Reps counted on the way back down, holds timed only while the position is right. The set ends by itself.</span></li>
+      <li><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 40h36M10 34l9-10 7 6 12-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="38" cy="16" r="3" fill="currentColor"/></svg><b>Review</b><span>What to watch for next time, how it felt, and a film of the set with the cues on it.</span></li>
+    </ol>
+    <button class="btn primary" id="how-ok">Got it</button>
+  </div>
+</div>
 
-  <!-- everything drawn here is what the recording captures: camera, skeleton, readings, cues -->
-  <div class="stage" id="stage">
-    <video id="cam" playsinline muted></video>
-    <canvas id="view"></canvas>
-    <div class="float"><button class="btn stop" id="finish-full">End this set</button><button class="btn" id="endall-full" hidden>Finish</button><button class="btn" id="page-btn">Show the page</button></div>
-    <div class="veil" id="veil">
-      <div class="veil-in">
-        <p class="big" id="veil-title">Wall sit</p>
-        <button class="btn primary" id="go">Start the camera</button>
-        <p class="tiny" id="veil-note"></p>
-        <p class="tiny" id="veil-text">The camera never leaves this device.</p>
+<main>
+  <!-- about the phone rather than the body: which way round it has to be, shown wherever the camera is on -->
+  <p class="note" id="orient" hidden></p>
+  <!-- ============ home: the exercises ============ -->
+  <section class="screen" id="screen-home">
+    <p class="lede">Pick an exercise. Prop up the phone. Turn the sound on. Move.</p>
+    <section class="picker" id="picker" aria-label="Exercises"></section>
+    <p class="tiny" id="no-match" hidden>Nothing by that name yet.</p>
+  </section>
+
+  <!-- ============ the exercise: what it is, how many, start ============ -->
+  <section class="screen" id="screen-ex" hidden>
+    <div class="ex-top">
+      <h1 class="ex-title" id="ex-title">Wall sit</h1>
+      <div class="fig-wrap"><canvas class="demo-fig muscle" id="ex-fig" role="img" aria-label="The exercise, animated"></canvas></div>
+      <div class="bubbles" id="bubbles" aria-label="How many"></div>
+      <button class="btn primary go" id="go">Start the camera</button>
+      <p class="tiny center" id="go-note">The camera starts the set. Nothing leaves this device.</p>
+    </div>
+    <div class="ex-more">
+      <section class="panel cream" id="setup">
+        <h2>Set up</h2>
+        <ol class="setup" aria-label="How to set up">
+          <li><b>Place the phone.</b> <span id="setup-place"></span></li>
+          <li><b>Get into position.</b> <span id="setup-position"></span></li>
+          <li><b>Then just move.</b> The set starts as soon as the camera does. The coach waits until it can see you are set, says one thing at a time, and counts for you.</li>
+        </ol>
+      </section>
+      <section class="panel" id="howto-panel">
+        <h2>How to do it</h2>
+        <ol class="setup" id="howto"></ol>
+      </section>
+      <section class="panel" id="coaches-panel">
+        <h2>What the camera coaches</h2>
+        <ul class="ticks" id="coaches"></ul>
+        <h2 class="gap">What it can’t see</h2>
+        <p class="muted" id="cannot"></p>
+      </section>
+      <section class="panel" id="last-panel" hidden>
+        <h2>Last time</h2>
+        <p class="muted" id="last-time"></p>
+      </section>
+      <section class="panel how" id="about">
+        <h2>The numbers</h2>
+        <p data-move="wallsit"><b>Wall sit</b> — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, plumb at 90° and allowed 85–95°, where past 95° your heels are ahead of your knees and under 85° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.</p>
+        <p data-move="plank"><b>Elbow plank</b> — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 5° behind to 15° in front; and how far your hip sits off the straight line from shoulder to ankle, allowed ±5°. Above the line your hips are piked and are told to come down, below it they are sagging and are told to lift.</p>
+        <p data-move="kneeraise"><b>Knee raise</b> — standing side on, tall, one knee up: the angle at that knee between hip and ankle, and the angle at its heel between the toe and the knee, the first allowed 80–100° and the second 60–100°. Hold ten seconds, lower slowly, and the rep counts when you are back to standing.</p>
+        <p data-move="bridge"><b>Glute bridge</b> — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.</p>
+        <p data-move="donkeykick"><b>Donkey kick</b> — on hands and knees, side on: the arms plumb from the floor, 85–105°, elbows straight (at least 165°); the back level, hip to shoulder within ±10° of the floor; the working knee at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 160° at the top and no more than 5° above the line. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. One leg per set, the sets alternating.</p>
+        <details class="advanced">
+          <summary>Every number, and the phone</summary>
+          <div id="settings">
+            <h2>This exercise</h2>
+            <p class="tiny">The numbers this exercise is judged by. The Review page tunes them against recordings.</p>
+            <div class="grid" id="band-settings"></div>
+            <div class="grid">
+              <label><span id="target-label">Hold the set for</span><input type="number" id="cfg-target" value="60" min="1" max="600" step="1"></label>
+              <label>Call the time at<input type="text" id="cfg-calls" value="45, 30, 10, 5" inputmode="numeric"></label>
+            </div>
+            <h2 class="gap">The coach and the phone</h2>
+            <div class="grid">
+              <label>Seconds between repeats<input type="number" id="cfg-cool" value="4" min="1" max="15" step="1"></label>
+              <label>Pose model
+                <select id="cfg-model"><option value="full">Full — steadier, the default here</option><option value="lite">Lite — faster on an old phone</option></select>
+              </label>
+              <label>The voice
+                <select id="cfg-voice"><option value="own">The coach's own — a natural voice, heard on the film too</option><option value="phone">The phone's — not on the film</option></select>
+              </label>
+              <label>Angles on the picture
+                <select id="cfg-angles"><option value="off">Off — skeleton and words only</option><option value="on">On — every angle, arc and guide line</option></select>
+              </label>
+              <label>Mirror the picture
+                <select id="cfg-mirror"><option value="off">Off</option><option value="on">On</option></select>
+              </label>
+              <label>Turn the picture
+                <select id="cfg-rotate">
+                  <option value="off">As the camera gives it</option>
+                  <option value="right">A quarter turn right</option>
+                  <option value="left">A quarter turn left</option>
+                </select>
+              </label>
+            </div>
+            <p class="tiny">Nearly every phone hands over the picture the way you are holding it, so leave the turn alone. If a standing exercise still comes up wide with the phone upright, try Flip camera first. The full pose model is the steadier read, and steadier readings are what stop a cue firing on nothing.</p>
+          </div>
+        </details>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============ live: the camera, and nothing else ============ -->
+  <section class="screen" id="screen-live" hidden>
+    <!-- everything drawn here is what the recording captures: camera, skeleton, readings, cues -->
+    <div class="stage" id="stage">
+      <video id="cam" playsinline muted></video>
+      <canvas id="view"></canvas>
+      <div class="float"><button class="btn stop" id="finish-full">End this set</button><button class="btn" id="endall-full" hidden>Finish</button><button class="btn" id="page-btn">Show the page</button></div>
+      <div class="veil" id="veil">
+        <div class="veil-in">
+          <p class="big" id="veil-title">Wall sit</p>
+          <p class="tiny" id="veil-note"></p>
+          <p class="tiny" id="veil-text">The camera never leaves this device.</p>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- how to set up, in this exercise's words; gone once a set is under way -->
-  <section class="panel" id="setup">
-    <h2>How to set up</h2>
-    <ol class="setup" aria-label="How to set up">
-      <li><b>Place the phone.</b> <span id="setup-place"></span></li>
-      <li><b>Get into position.</b> <span id="setup-position"></span></li>
-      <li><b>Then just move.</b> The set starts as soon as the camera does. The coach waits until it can see you are set, says one thing at a time, and counts for you.</li>
-    </ol>
-  </section>
-
-  <p class="note" id="orient" hidden></p>
-  <p class="cue" id="cue" aria-live="polite"></p>
-  <p class="faults" id="faults"></p>
-
-  <div class="row">
-    <button class="btn stop" id="startstop" disabled>End this set</button>
-    <button class="btn" id="endall" hidden>Finish</button>
-    <button class="btn" id="full-btn" hidden>Full screen</button>
-    <button class="btn" id="flip" disabled>Flip camera</button>
-    <button class="btn" id="mute" aria-pressed="false">Voice on</button>
-    <button class="btn" id="settings-btn" aria-expanded="false">Settings</button>
-  </div>
-
-  <!-- one card per thing this exercise measures, built from the move itself -->
-  <div class="reads" id="reads"></div>
-
-
-  <section class="panel" id="settings" hidden>
-    <h2>This exercise</h2>
-    <p class="tiny">The numbers this exercise is judged by, and what a set is. The Review page tunes them against recordings.</p>
-    <div class="grid" id="band-settings"></div>
-    <div class="grid">
-      <label><span id="target-label">Hold the set for</span><input type="number" id="cfg-target" value="60" min="1" max="600" step="1"></label>
-      <label>Call the time at<input type="text" id="cfg-calls" value="45, 30, 10, 5" inputmode="numeric"></label>
-    </div>
-    <h2 class="gap">The coach and the phone</h2>
-    <div class="grid">
-      <label>Seconds between repeats<input type="number" id="cfg-cool" value="4" min="1" max="15" step="1"></label>
-      <label>Pose model
-        <select id="cfg-model"><option value="full">Full — steadier, the default here</option><option value="lite">Lite — faster on an old phone</option></select>
-      </label>
-      <label>The voice
-        <select id="cfg-voice"><option value="own">The coach's own — a natural voice, heard on the film too</option><option value="phone">The phone's — not on the film</option></select>
-      </label>
-      <label>Angles on the picture
-        <select id="cfg-angles"><option value="off">Off — skeleton and words only</option><option value="on">On — every angle, arc and guide line</option></select>
-      </label>
-      <label>Mirror the picture
-        <select id="cfg-mirror"><option value="off">Off</option><option value="on">On</option></select>
-      </label>
-      <label>Turn the picture
-        <select id="cfg-rotate">
-          <option value="off">As the camera gives it</option>
-          <option value="right">A quarter turn right</option>
-          <option value="left">A quarter turn left</option>
-        </select>
-      </label>
-    </div>
-    <p class="tiny">Nearly every phone hands over the picture the way you are holding it, so leave this alone. If a standing exercise still comes up wide with the phone upright, try Flip camera first: the front and back cameras do not always behave the same. It is here for the few that give the camera's own frame whatever way the phone is held, which arrives as a body lying on its side; a quarter turn puts it back, and if it comes out upside down take the other one.</p>
-    <p class="tiny">These are holds, not fast movements, so the full model is worth its cost: it is the steadier read, and steadier readings are what stop a cue firing on nothing.</p>
-  </section>
-
-  <section class="panel" id="result" hidden>
-    <h2>That session — <span id="r-move">Wall sit</span></h2>
-    <div class="reads">
-      <div class="read"><div class="v"><span id="r-hold">0</span><i>s</i></div><div class="k">in position<span class="band" id="r-target">of 60</span></div></div>
-      <div class="read"><div class="v"><span id="r-best">0</span><i>s</i></div><div class="k">longest hold</div></div>
-      <div class="read" id="r-reps" hidden><div class="v"><span id="r-reps-v">0</span></div><div class="k">reps</div></div>
-      <div class="read"><div class="v"><span id="r-cues">0</span></div><div class="k">corrections</div></div>
-    </div>
+    <p class="cue" id="cue" aria-live="polite"></p>
+    <p class="faults" id="faults"></p>
     <div class="row">
-      <button class="btn primary" id="dl-video">Download the video</button>
-      <button class="btn" id="dl-log">Download the cue log</button>
-      <a class="btn link" href="review.html">Review a recording</a>
+      <button class="btn stop" id="startstop" disabled>End this set</button>
+      <button class="btn" id="endall" hidden>Finish</button>
+      <button class="btn" id="full-btn" hidden>Full screen</button>
+      <button class="btn" id="flip" disabled>Flip camera</button>
+      <button class="btn" id="mute" aria-pressed="false">Voice on</button>
     </div>
-    <p class="tiny" id="rec-note"></p>
-    <div class="row"><button class="btn" id="dl-voiced" hidden>Download with the cues voiced</button></div>
-    <p class="tiny" id="voiced-note"></p>
-    <ol class="log" id="log"></ol>
+    <!-- one card per thing this exercise measures, built from the move itself -->
+    <div class="reads" id="reads"></div>
   </section>
 
-  <section class="panel how" id="about">
-    <h2>About this exercise</h2>
-    <p data-move="wallsit"><b>Wall sit</b> — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, plumb at 90° and allowed 85–95°, where past 95° your heels are ahead of your knees and under 85° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.</p>
-    <p data-move="plank"><b>Elbow plank</b> — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 5° behind to 15° in front; and how far your hip sits off the straight line from shoulder to ankle, allowed ±5°. Above the line your hips are piked and are told to come down, below it they are sagging and are told to lift.</p>
-    <p data-move="kneeraise"><b>Knee raise</b> — standing side on, tall, one knee up: the angle at that knee between hip and ankle, and the angle at its heel between the toe and the knee, the first allowed 80–100° and the second 60–100°. Hold ten seconds, lower slowly, and the rep counts when you are back to standing. Ten reps. The hold and the number of reps are both settings. How far the thigh has to come up to count as raised is a setting, not a mark — it is what tells a raise from standing still, so that the two right angles are the only things being judged.</p>
-    <p data-move="bridge"><b>Glute bridge</b> — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are (over it the feet are out too far and are walked in, under it too close); the angle at the hip between knee and shoulder, at least 160° at the top, which is the lift; how far the hip rises above the knee, at most 3°, because the hips are not to go higher than the knees; and the foot's line off the floor, ±10°, because the heels and toes stay down — and that is checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly — a way down that takes under a second is remarked on with the count — and the rep counts when the hips are back down. Ten reps.</p>
-    <p data-move="donkeykick"><b>Donkey kick</b> — on hands and knees, side on, phone on its side: the arms plumb from the floor, 85–105°, with the elbows straight (at least 165°); the back level, hip to shoulder within ±10° of the floor; the working knee kept at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 160° at the top — the thigh in line with the back — and no more than 5° above that line, because past it the lower back is arching to make height. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. Ten reps, one leg per set, the sets alternating legs. The app follows whichever leg is lifted, so kick with the leg nearest the camera.</p>
-    <p><b>What gets said first</b> — the fault earliest in the chain of cause, not the one furthest out. For the wall sit that is feet, then knee, then back; for the plank, shoulders, then hips; for the bridge, the feet flat on the floor, then where they are, both before the lift is even asked for, then the hips; for the donkey kick, the hands and arms, then the back they carry, then the working leg. Where your feet or your elbows are decides what the rest of you can do, so a correction further along the chain asks for something the base will not give.</p>
-    <p><b>The set</b> — for the holds, sixty seconds counted down from the moment the position is right; for the knee raise, ten seconds a rep and ten reps. Coming out of it pauses the clock rather than running it down, so sixty seconds means sixty seconds of the exercise. The time is called at 45, 30, 10 and 5 seconds left.</p>
-    <p class="tiny">The camera cannot see your spine rounding between hip and shoulder; no pose model gives a mid-spine point, so every move judges that line by its ends and nothing more. Everything runs on this device. Neither the camera image nor the microphone is ever uploaded, and the recording you download is made here in the browser.</p>
+  <!-- ============ done: that session ============ -->
+  <section class="screen" id="screen-done" hidden>
+    <section class="panel" id="result">
+      <h2>That session — <span id="r-move">Wall sit</span></h2>
+      <div class="reads">
+        <div class="read"><div class="v"><span id="r-hold">0</span><i>s</i></div><div class="k">in position<span class="band" id="r-target">of 60</span></div></div>
+        <div class="read"><div class="v"><span id="r-best">0</span><i>s</i></div><div class="k">longest hold</div></div>
+        <div class="read" id="r-reps" hidden><div class="v"><span id="r-reps-v">0</span></div><div class="k">reps</div></div>
+        <div class="read"><div class="v"><span id="r-cues">0</span></div><div class="k">corrections</div></div>
+      </div>
+    </section>
+    <section class="panel cream" id="watch-panel">
+      <h2>Watch out for next time</h2>
+      <ul class="ticks" id="watch"></ul>
+    </section>
+    <section class="panel" id="feel-panel">
+      <h2>How did it feel?</h2>
+      <div class="feel" id="feel">
+        <div class="feel-row"><span class="feel-k">Effort</span><div class="seg" data-key="effort"><button class="btn" data-v="easy">Easy</button><button class="btn" data-v="right">Just right</button><button class="btn" data-v="hard">Hard</button></div></div>
+        <div class="feel-row"><span class="feel-k">Next time</span><div class="seg" data-key="more"><button class="btn" data-v="more">Could do more</button><button class="btn" data-v="same">About right</button><button class="btn" data-v="less">Less</button></div></div>
+        <div class="feel-row"><span class="feel-k">Pain</span><div class="seg" data-key="pain"><button class="btn" data-v="none">None</button><button class="btn" data-v="some">A little</button><button class="btn" data-v="stop">Yes — stopped</button></div></div>
+        <textarea id="feel-note" rows="2" placeholder="Anything else — where it was felt, what was hard"></textarea>
+        <div class="row"><button class="btn primary" id="feel-save">Save</button><span class="tiny" id="feel-saved"></span></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>The film</h2>
+      <div class="row">
+        <button class="btn primary" id="dl-video">Download the video</button>
+        <button class="btn" id="dl-log">Download the cue log</button>
+      </div>
+      <p class="tiny" id="rec-note"></p>
+      <div class="row"><button class="btn" id="dl-voiced" hidden>Download with the cues voiced</button></div>
+      <p class="tiny" id="voiced-note"></p>
+      <details><summary class="tiny">Every cue, with its time</summary><ol class="log" id="log"></ol></details>
+    </section>
+    <div class="row">
+      <button class="btn primary" id="again">Do it again</button>
+      <a class="btn link" href="#/">Another exercise</a>
+      <a class="btn link" href="review.html">Review the recording</a>
+    </div>
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-26b"></script>
-<script src="js/moves.js?v=2026-09-26b"></script>
-<script src="js/mp4.js?v=2026-09-26b"></script>
-<script src="js/overlay.js?v=2026-09-26b"></script>
-<script src="js/sound.js?v=2026-09-26b"></script>
-<script src="js/codec.js?v=2026-09-26b"></script>
-<script src="js/speech.js?v=2026-09-26b"></script>
-<script src="js/mixdown.js?v=2026-09-26b"></script>
-<script src="js/app.js?v=2026-09-26b"></script>
+<script src="js/core.js?v=2026-09-26c"></script>
+<script src="js/moves.js?v=2026-09-26c"></script>
+<script src="js/mp4.js?v=2026-09-26c"></script>
+<script src="js/overlay.js?v=2026-09-26c"></script>
+<script src="js/sound.js?v=2026-09-26c"></script>
+<script src="js/codec.js?v=2026-09-26c"></script>
+<script src="js/speech.js?v=2026-09-26c"></script>
+<script src="js/mixdown.js?v=2026-09-26c"></script>
+<script src="js/figure.js?v=2026-09-26c"></script>
+<script src="js/anatomy.js?v=2026-09-26c"></script>
+<script src="js/app.js?v=2026-09-26c"></script>
 </body>
 </html>

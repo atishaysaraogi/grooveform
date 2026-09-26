@@ -13,13 +13,25 @@ are all made on the device.
 
 ## Starting
 
-**The page.** The exercises are cards at the top — what each is, which way
-the phone goes, what a set is, what works — and picking one fills the set-up
-card on the picture: place the phone (which way, how far), get into position
-(in this exercise's words), then just move. The camera starts the set. While
-a set runs the cards give way to the picture; the settings are in two groups,
-this exercise's numbers and the coach and the phone; the About text is the
-picked exercise's. None of it touches what is measured or said.
+**The page.** OnTrack's own look, from its deck: white, grape ink, cream
+panels, cards in tangerine, lime and pink with a hard grape shadow, Righteous
+for titles and Nunito for the rest. A sticky bar with the three stripes holds
+the mark, a search over the exercises, and an info button whose popup is how
+it works in five steps with icons: set up your phone, walk into the camera,
+listen for cues, complete the exercise, review. The home screen is the list
+of exercises. An exercise's page fits a phone's screen: the title, the muscle
+figure animated over the top half, bubbles for reps (1, 5, 10, 15), sets (1,
+2, 3), the hold (or the hold at the top) and the weight or band, a tap moving
+each to its next choice and writing the setting the coach reads, and Start.
+Below it: how to set up, how to do it, what the camera coaches and what it
+cannot see, last time's notes, the numbers. Start opens the camera screen,
+which is the camera and nothing else; when the session is over its own
+screen shows the results, what to watch out for next time (the faults said
+most, in the coach's own words, reps dropped early, lowering too fast), and
+asks how it felt — effort, whether to do more next time, any pain, a note —
+which is saved on the device and shown under Last time on the exercise.
+Screens are routes (#/, #/ex/bridge, #/live, #/done), so the back button
+works. None of it touches what is measured or said.
 
 The front camera opens first, because it is the one you can see while you are
 setting the phone down. Starting the camera *is* starting the set: it says out

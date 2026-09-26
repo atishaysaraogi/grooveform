@@ -163,6 +163,8 @@ const browser = await chromium.launch({
 });
 const ctx = await browser.newContext({ viewport: { width: 900, height: 1200 }, permissions: ['camera'] });
 const page = await ctx.newPage();
+/* the brand's fonts come from Google; this sandbox cannot reach it, and a font is not the app */
+await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 /* SMOKE_SLOW=4 runs the page on a quarter of the processor, the way a busy CI
    runner or an old phone would */
 if (Number(process.env.SMOKE_SLOW) > 1) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SMOKE_SLOW) }); }
@@ -181,46 +183,80 @@ const heard = (re, ms) => page.waitForFunction((r) => window.__app.voice.spoken.
 /* one set to a session for most of the suite, so ending a set shows the results;
    the sets themselves are tried in a step of their own */
 const oneSet = () => page.evaluate(() => { const i = document.getElementById('cfg-setCount'); i.value = '1'; i.dispatchEvent(new Event('change')); });
+/* the flow: an exercise opens by its route, the camera by the button on its page, and
+   a session that is over shows its own screen */
+const pick = async (id) => {
+  await page.evaluate((i) => { location.hash = '#/ex/' + i; }, id);
+  await page.waitForFunction((i) => window.__app.move.id === i && !document.getElementById('screen-ex').hidden && document.getElementById('veil-title').textContent === window.__app.move.name, id, { timeout: 8000 });
+};
+const setCfg = (id, v) => page.evaluate(([i, val]) => { const e = document.getElementById(i); e.value = val; e.dispatchEvent(new Event('change')); }, [id, v]);
+const startSession = async () => {
+  await page.evaluate(() => { location.hash = '#/ex/' + window.__app.move.id; });
+  await page.waitForSelector('#go', { state: 'visible' });
+  await page.click('#go');
+  await page.waitForFunction(() => window.__app.session.inSet, null, { timeout: 20000 });
+};
+const sessionOver = () => page.waitForSelector('#screen-done:not([hidden])', { timeout: 15000 });
 /* a cue can wait on the opening words and the set-up wait, so the patience here is theirs plus the cue's */
 const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 14000 });
 
 try {
-  await step('the page comes up and offers the camera', async () => {
+  await step('the page comes up on the exercises: cards, a search, how it works', async () => {
     await page.goto(base + '/');
-    await page.waitForSelector('#go');
+    await page.waitForSelector('#picker .card');
+    const cards = await page.$$eval('#picker .card', (l) => l.map((c) => ({ id: c.dataset.move, text: c.textContent })));
+    assert.equal(cards.length, 5, 'one card per exercise: ' + cards.map((c) => c.id).join(','));
+    const bridge = cards.find((c) => c.id === 'bridge');
+    assert.match(bridge.text, /phone on its side/i); assert.match(bridge.text, /10 reps/i); assert.match(bridge.text, /glutes/i, 'what works: ' + bridge.text);
+    /* a search narrows them, and clearing it brings them back */
+    await page.fill('#nav-q', 'lying');
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .card')].filter((c) => !c.hidden).length === 3, null, { timeout: 3000 });
+    await page.fill('#nav-q', '');
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .card')].filter((c) => !c.hidden).length === 5, null, { timeout: 3000 });
+    /* how it works: five steps, each with its icon */
+    await page.click('#btn-how');
+    assert.equal(await page.isVisible('#how'), true);
+    assert.equal(await page.$$eval('#how .how-steps li svg', (l) => l.length), 5, 'five icons');
+    assert.match(await page.textContent('#how'), /Set up your phone/); assert.match(await page.textContent('#how'), /Review/);
+    await page.click('#how-ok');
+    assert.equal(await page.isVisible('#how'), false);
+  });
+
+  await step('an exercise page: the title, the figure, the bubbles, start — and the words below', async () => {
+    await page.click('#picker .card[data-move="bridge"]');
+    await page.waitForSelector('#screen-ex:not([hidden])');
+    await page.waitForFunction(() => document.getElementById('ex-title').textContent === 'Glute bridge', null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => document.getElementById('ex-fig').getAttribute('data-anat')), 'bridge', 'the figure is this exercise\'s');
+    const bubbles = await page.$$eval('#bubbles .bubble', (l) => l.map((b) => b.textContent.replace(/\s+/g, ' ').trim()));
+    assert.deepEqual(bubbles, ['Reps10', 'Sets3', 'Hold at top2 s', 'Weightnone'].map((x) => x), 'reps, sets, the hold at the top, the load: ' + JSON.stringify(bubbles));
+    /* a tap moves a bubble to its next choice, and writes the setting the coach reads */
+    await page.click('#bubbles .bubble[data-key="reps"]');
+    assert.equal(await page.inputValue('#cfg-repCount'), '15');
+    await page.click('#bubbles .bubble[data-key="reps"]');
+    assert.equal(await page.inputValue('#cfg-repCount'), '1', 'and round again');
+    await page.click('#bubbles .bubble[data-key="reps"]'); await page.click('#bubbles .bubble[data-key="reps"]');
+    assert.equal(await page.inputValue('#cfg-repCount'), '10');
+    await page.click('#bubbles .bubble[data-key="load"]');
+    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /light/);
+    /* the whole top fits a phone's screen: start is in view without scrolling */
+    const fit = await page.evaluate(() => { const g = document.getElementById('go').getBoundingClientRect(); return { bottom: g.bottom, h: window.innerHeight }; });
+    assert.ok(fit.bottom < fit.h, `start is on the first screen: ${Math.round(fit.bottom)} of ${fit.h}`);
+    /* the words below: set-up, how to, what is coached and what is not */
+    assert.match(await page.textContent('#setup-place'), /lay the phone on its side/i);
+    assert.match(await page.textContent('#setup-position'), /knees bent/i);
+    assert.ok((await page.$$eval('#howto li', (l) => l.length)) >= 3, 'how to do it, step by step');
+    assert.match(await page.textContent('#coaches'), /Heels/);
+    assert.match(await page.textContent('#cannot'), /nothing is uploaded/i);
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('#about p[data-move].on')].map((p) => p.dataset.move).join()), 'bridge', 'the numbers are this exercise\'s');
+    /* back to the wall sit, the way the rest of the suite expects to find the page */
+    await pick('wallsit');
     assert.equal(await page.textContent('#band-knee'), '85–110', 'the band asked for is the band shown');
     assert.equal(await page.textContent('#band-shin'), '85–95');
     assert.equal(await page.textContent('#band-back'), '±12');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
-    /* the angles are not on the picture unless asked for; the start button is
-       within the stage, where a tap can reach it */
     assert.equal(await page.evaluate(() => window.__app.cfg().angles), false, 'angles off the picture by default');
-    const reach = await page.evaluate(() => { const s = document.getElementById('stage').getBoundingClientRect(), g = document.getElementById('go').getBoundingClientRect(); return g.bottom <= s.bottom + 1 && g.top >= s.top - 1; });
-    assert.ok(reach, 'the start button is inside the stage');
     assert.equal(await page.inputValue('#cfg-setCount'), '3', 'three sets by default');
     await oneSet();
-  });
-
-  await step('the exercises are cards, and picking one says how to set up', async () => {
-    const cards = await page.$$eval('#picker .card', (l) => l.map((c) => ({ id: c.dataset.move, on: c.getAttribute('aria-pressed'), text: c.textContent })));
-    assert.equal(cards.length, 5, 'one card per exercise: ' + cards.map((c) => c.id).join(','));
-    assert.equal(cards.find((c) => c.id === 'wallsit').on, 'true', 'the picked one is marked');
-    assert.match(cards.find((c) => c.id === 'bridge').text, /phone on its side/i);
-    assert.match(cards.find((c) => c.id === 'bridge').text, /10 reps/i);
-    assert.match(cards.find((c) => c.id === 'bridge').text, /glutes/i, 'what works: ' + cards.find((c) => c.id === 'bridge').text);
-    /* the set-up card: the phone, the position, in this exercise's words */
-    assert.match(await page.textContent('#setup-place'), /stand the phone up/i);
-    assert.match(await page.textContent('#setup-position'), /back against the wall/i);
-    await page.click('#picker .card[data-move="bridge"]');
-    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Glute bridge', null, { timeout: 5000 });
-    assert.match(await page.textContent('#setup-place'), /lay the phone on its side/i);
-    assert.match(await page.textContent('#setup-position'), /knees bent/i);
-    assert.equal(await page.evaluate(() => document.querySelector('#picker .card[data-move="bridge"]').getAttribute('aria-pressed')), 'true');
-    assert.equal(await page.evaluate(() => [...document.querySelectorAll('#about p[data-move].on')].map((p) => p.dataset.move).join()), 'bridge', 'the about text is this exercise\'s');
-    /* and back, the way the rest of the suite expects to find the page */
-    await page.click('#picker .card[data-move="wallsit"]');
-    await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Wall sit', null, { timeout: 5000 });
-    assert.equal(await page.textContent('#band-knee'), '85–110');
   });
 
   await step('starting the camera starts the set and says where to put the phone', async () => {
@@ -397,7 +433,7 @@ try {
 
   await step('finishing the set writes a video with the cues on it, and a log', async () => {
     await page.click('#startstop');
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     const out = await page.evaluate(() => ({
       move: document.getElementById('r-move').textContent.replace(/ — .*$/, ''),
       best: document.getElementById('r-best').textContent,
@@ -442,7 +478,7 @@ try {
        the page takes the frames itself, on its own clock. Here the frames handed to
        the encoder over two seconds of a running set are counted, and have to be the
        clock's rate and no more. */
-    await page.click('#startstop');                  // a set of its own, so a film is being made
+    await startSession();                  // a set of its own, so a film is being made
     await wait(800);
     assert.equal(await page.evaluate(() => window.__app.rec && window.__app.rec.kind), 'codec', 'this browser can encode, so the page does');
     const n = await page.evaluate(() => new Promise((res) => {
@@ -454,7 +490,7 @@ try {
        canvas has been drawn since the last, and a busy encoder is left to catch up */
     assert.ok(n >= 30 && n <= 75, 'handed over ' + n + ' frames in two seconds; thirty a second is the film');
     await page.click('#startstop');
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
   });
 
   await step('the recording is as long as the set was, even when the model is slow', async () => {
@@ -472,12 +508,12 @@ try {
         return src(t);
       };
     });
-    await page.click('#startstop');                  // a fresh set, timed from here
+    await startSession();                  // a fresh set, timed from here
     const t0 = Date.now();
     await wait(6000);
     await page.click('#startstop');
     const wall = (Date.now() - t0) / 1000;
-    await page.waitForSelector('#result:not([hidden])', { timeout: 15000 });
+    await sessionOver();
     const film = await page.evaluate(() => new Promise((res) => {
       const blob = window.__app.blob;
       if (!blob) return res({ err: 'nothing was recorded' });
@@ -530,13 +566,13 @@ try {
 
   await step('switching to the plank changes what is measured and what is shown', async () => {
     await set({ move: 'plank', stack: 0, sag: 0 });
-    await page.selectOption('#move', 'plank');
-    await page.waitForSelector('#read-stack');
+    await pick('plank');
+    await page.waitForSelector('#read-stack', { state: 'attached' });
     await oneSet();
     assert.equal(await page.textContent('#band-stack'), '-5 to 15', 'the shoulder band');
     assert.equal(await page.textContent('#band-line'), '±5', 'the hip band');
     assert.equal(await page.$('#read-knee'), null, 'and the wall sit\'s readings are gone');
-    await page.click('#startstop');
+    await startSession();
     await page.waitForFunction(() => document.getElementById('v-line').textContent !== '—', null, { timeout: 10000 });
     assert.ok(Math.abs(Number(await page.textContent('#v-line'))) <= 1, 'a straight plank reads zero at the hip');
     assert.ok(Math.abs(Number(await page.textContent('#v-stack'))) <= 1, 'and a plumb arm reads zero');
@@ -570,13 +606,10 @@ try {
     await page.click('#page-btn');              // the plank runs full screen; the settings are on the page
     await page.waitForFunction(() => !document.body.classList.contains('full'), null, { timeout: 3000 });
     assert.equal(await page.isVisible('#full-btn'), true, 'and the way back to the picture is offered');
-    await page.click('#settings-btn');
-    await page.fill('#cfg-target', '6');
-    await page.dispatchEvent('#cfg-target', 'change');
-    await page.fill('#cfg-calls', '4, 2');
-    await page.dispatchEvent('#cfg-calls', 'change');
+    await setCfg('cfg-target', '6');
+    await setCfg('cfg-calls', '4, 2');
     await page.click('#startstop');            // finish the running set
-    await page.click('#startstop');            // and start a fresh one on the new target
+    await startSession();            // and start a fresh one on the new target
     await set({ stack: 5, sag: 1 });
     await saw('4 seconds left', 12000);
     await saw('2 seconds left', 12000);
@@ -584,7 +617,7 @@ try {
     assert.match(await chip(), /done/i);
     assert.equal(await page.textContent('#hold-v'), '0.0', 'nothing left to do');
     /* the target reached ends the set by itself, and the one set ends the session */
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     assert.equal(await page.textContent('#r-move'), 'Elbow plank — 1 set');
     assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held');
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
@@ -593,10 +626,9 @@ try {
   });
 
   await step('the settings change what is judged', async () => {
-    await page.fill('#cfg-hipLine', '2');
-    await page.dispatchEvent('#cfg-hipLine', 'change');
+    await setCfg('cfg-hipLine', '2');
     assert.equal(await page.textContent('#band-line'), '±2');
-    await page.click('#startstop');
+    await startSession();
     await set({ stack: 0, sag: 4 });
     await page.waitForFunction(() => /hip off/i.test(document.getElementById('state').textContent), null, { timeout: 8000 });
   });
@@ -654,7 +686,7 @@ try {
     assert.equal(await page.isVisible('#orient'), false);
     /* a quarter turn makes it the wrong way round, which is exactly the state some
        phones hand over on their own, and the app has to notice and say so */
-    await page.selectOption('#cfg-rotate', 'right');
+    await setCfg('cfg-rotate', 'right');
     await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
     assert.match(await page.textContent('#orient'), /turn the phone on its side/i);
     await heard('turn the phone on its side');
@@ -665,7 +697,7 @@ try {
        frame is turned before anything is read rather than after. */
     await wait(600);
     const turned = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
-    await page.selectOption('#cfg-rotate', 'off');
+    await setCfg('cfg-rotate', 'off');
     await page.waitForFunction(() => document.getElementById('orient').hidden, null, { timeout: 6000 });
     await wait(600);
     const straight = { arm: Number(await page.textContent('#v-stack')), hip: Number(await page.textContent('#v-line')) };
@@ -683,7 +715,7 @@ try {
        request must be the sensor's own shape whatever the exercise wants. */
     for (const id of ['wallsit', 'kneeraise', 'plank', 'bridge', 'donkeykick']) {
       await set({ move: id });
-      await page.selectOption('#move', id);
+      await pick(id);
       await wait(400);
       const req = await page.evaluate(() => window.__app.cameraRequest);
       assert.equal(req.video.width.ideal, 1280, id + ' asks for the sensor\'s width');
@@ -694,7 +726,7 @@ try {
       assert.equal(req.audio.echoCancellation, false, id + ' asks for the microphone as it is');
     }
     await set({ move: 'kneeraise' });
-    await page.selectOption('#move', 'kneeraise');
+    await pick('kneeraise');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
     /* the stand-in camera here cannot turn itself, so a standing exercise gets a wide
        frame, and the app says so in words rather than bending the picture */
@@ -707,7 +739,7 @@ try {
 
   await step('the knee raise counts reps rather than holding one position', async () => {
     await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 85 });
-    await page.waitForSelector('#read-reps');
+    await page.waitForSelector('#read-reps', { state: 'attached' });
     assert.equal(await page.textContent('#band-knee'), '80\u2013100', 'a right angle at the knee, ten either way');
     assert.equal(await page.textContent('#band-foot'), '60\u2013100', 'and the foot, taken at the heel');
     /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
@@ -717,17 +749,15 @@ try {
     assert.equal(await page.textContent('#hold-k'), 'left of 10 s');
     /* and it can be changed, a second at a time, which a step of five could not do */
     assert.equal(await page.getAttribute('#cfg-target', 'step'), '1');
-    await page.focus('#cfg-target');
-    await page.keyboard.press('ArrowUp');
-    await page.dispatchEvent('#cfg-target', 'change');
-    assert.equal(await page.inputValue('#cfg-target'), '11', 'the arrows move it by one');
+    await setCfg('cfg-target', '11');
+    assert.equal(await page.inputValue('#cfg-target'), '11', 'a second at a time');
     await page.waitForFunction(() => document.getElementById('hold-k').textContent === 'left of 11 s', null, { timeout: 5000 });
     /* two seconds a rep and three of them, so a set finishes inside a test */
-    await page.fill('#cfg-target', '2'); await page.dispatchEvent('#cfg-target', 'change');
-    await page.fill('#cfg-calls', '1'); await page.dispatchEvent('#cfg-calls', 'change');
-    await page.fill('#cfg-repCount', '3'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await setCfg('cfg-target', '2');
+    await setCfg('cfg-calls', '1');
+    await setCfg('cfg-repCount', '3');
     await oneSet();
-    await page.click('#startstop');
+    await startSession();
     /* the card is rebuilt when the exercise changes, so wait for the count rather
        than reading whatever happens to be in the DOM at this instant */
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
@@ -773,7 +803,7 @@ try {
     await page.waitForFunction(() => /done/i.test(document.getElementById('state').textContent), null, { timeout: 10000 });
     assert.equal(await page.textContent('#rep-v'), '3');
     /* the reps done end the set by themselves */
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     assert.equal(await page.textContent('#r-move'), 'Knee raise — 1 set');
     assert.equal(await page.isVisible('#r-reps'), true, 'the set is reported in reps');
     assert.equal(await page.textContent('#r-reps-v'), '3/3');
@@ -781,9 +811,9 @@ try {
 
   await step('the glute bridge: a wide frame, four readings, the feet coached before the lift', async () => {
     await set({ move: 'bridge', bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
-    await page.selectOption('#move', 'bridge');
+    await pick('bridge');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Glute bridge', null, { timeout: 5000 });
-    await page.waitForSelector('#read-over');
+    await page.waitForSelector('#read-over', { state: 'attached' });
     assert.equal(await page.textContent('#band-shin'), '85\u2013110', 'the shin at the heel');
     assert.equal(await page.textContent('#band-hip'), '\u2265 160', 'the line at the top');
     assert.equal(await page.textContent('#band-over'), '\u2264 3', 'the hips no higher than the knees');
@@ -793,9 +823,9 @@ try {
     /* a wide frame is what it wants, and the stand-in gives one, so no notice */
     await wait(400);
     assert.equal(await page.isHidden('#orient'), true, 'lying down suits a phone on its side');
-    await page.fill('#cfg-repCount', '2'); await page.dispatchEvent('#cfg-repCount', 'change');
+    await setCfg('cfg-repCount', '2');
     await oneSet();
-    await page.click('#startstop');
+    await startSession();
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
     await page.waitForFunction(() => document.getElementById('v-hip').textContent !== '\u2014', null, { timeout: 10000 });
     /* the phone is the way this one wants it and a set is running, so the picture
@@ -832,17 +862,17 @@ try {
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
     assert.equal(await page.textContent('#finish-full'), 'End the last set');
     await page.click('#finish-full');                // the button on the picture ends the set
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     assert.equal(await page.evaluate(() => document.body.classList.contains('full')), false, 'and the page is a page again');
     assert.equal(await page.textContent('#r-move'), 'Glute bridge — 1 set');
     assert.equal(await page.textContent('#r-reps-v'), '1/2');
   });
 
   await step('sets: a rep done ends the set, nothing is said until the next set is asked for, and the sets add up', async () => {
-    await page.fill('#cfg-repCount', '1'); await page.dispatchEvent('#cfg-repCount', 'change');
-    await page.fill('#cfg-setCount', '2'); await page.dispatchEvent('#cfg-setCount', 'change');
+    await setCfg('cfg-repCount', '1');
+    await setCfg('cfg-setCount', '2');
     await set({ bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
-    await page.click('#startstop');                  // a session of two sets
+    await startSession();                  // a session of two sets
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
     await saw('lift your hips');
     /* one rep */
@@ -869,7 +899,7 @@ try {
     await saw('lift your hips');
     assert.equal(await page.textContent('#finish-full'), 'End the last set');
     await page.click('#finish-full');
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     assert.equal(await page.textContent('#r-move'), 'Glute bridge — 2 sets');
     assert.equal(await page.textContent('#r-reps-v'), '1/1 · 0/1', 'both sets in the results');
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
@@ -877,24 +907,24 @@ try {
     await oneSet();
     /* back to the knee raise, which the reload step below expects to find */
     await set({ move: 'kneeraise' });
-    await page.selectOption('#move', 'kneeraise');
+    await pick('kneeraise');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
   await step('the donkey kick: hands and back coached before the kick, the kick judged at the top, the sets alternate legs', async () => {
     await set({ move: 'donkeykick', dBack: 0, dArm: 90, dElbow: 180, dLift: 90, dOver: null, dKnee: 90 });
-    await page.selectOption('#move', 'donkeykick');
+    await pick('donkeykick');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Donkey kick', null, { timeout: 5000 });
-    await page.waitForSelector('#read-lift');
+    await page.waitForSelector('#read-lift', { state: 'attached' });
     assert.equal(await page.textContent('#band-knee'), '80\u2013100');
     assert.equal(await page.textContent('#band-lift'), '\u2265 165');
     assert.equal(await page.textContent('#band-over'), '\u2264 5');
     assert.equal(await page.textContent('#band-arm'), '85\u2013105');
     assert.equal(await page.textContent('#band-elbow'), '\u2265 165');
     assert.equal(await page.textContent('#band-back'), '\u00b110');
-    await page.fill('#cfg-repCount', '1'); await page.dispatchEvent('#cfg-repCount', 'change');
-    await page.fill('#cfg-setCount', '2'); await page.dispatchEvent('#cfg-setCount', 'change');
-    await page.click('#startstop');
+    await setCfg('cfg-repCount', '1');
+    await setCfg('cfg-setCount', '2');
+    await startSession();
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
     await page.waitForFunction(() => document.getElementById('v-lift').textContent !== '\u2014', null, { timeout: 10000 });
     assert.ok(Math.abs(Number(await page.textContent('#v-lift')) - 90) <= 1, 'kneeling reads a right angle at the hip');
@@ -918,13 +948,13 @@ try {
     await page.click('#finish-full');
     await heard('set 2 of 2 . the other leg');
     await page.click('#finish-full');
-    await page.waitForSelector('#result:not([hidden])', { timeout: 10000 });
+    await sessionOver();
     assert.equal(await page.textContent('#r-move'), 'Donkey kick \u2014 2 sets');
     assert.equal(await page.textContent('#r-reps-v'), '1/1 \u00b7 0/1');
     await oneSet();
     /* back to the knee raise, which the reload step below expects to find */
     await set({ move: 'kneeraise' });
-    await page.selectOption('#move', 'kneeraise');
+    await pick('kneeraise');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
@@ -1038,17 +1068,17 @@ try {
     /* this browser build cannot encode AAC, so the file is silent and the note says so; a phone's can */
     assert.match(d.note, /the voice on \d+ of \d+ cues and every tone|silent \u2014 this browser cannot encode sound/, d.note);
     await page.goto(base + '/');
-    await page.waitForSelector('#go');
+    await page.waitForSelector('#picker .card');
   });
 
   await step('the exercise and its bands are remembered across a reload', async () => {
     await page.reload();
-    await page.waitForSelector('#go');
+    await page.waitForSelector('#picker .card');
     assert.equal(await page.inputValue('#move'), 'kneeraise', 'it comes back on the last exercise used');
     assert.equal(await page.inputValue('#cfg-repCount'), '3', 'with the rep count that was set');
     /* and the plank's own band, changed two exercises ago, is still its own */
-    await page.selectOption('#move', 'plank');
-    await page.waitForSelector('#read-line');
+    await pick('plank');
+    await page.waitForSelector('#read-line', { state: 'attached' });
     assert.equal(await page.textContent('#band-line'), '±2', 'each exercise keeps its own settings');
   });
 

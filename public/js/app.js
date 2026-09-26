@@ -133,43 +133,178 @@
     move = Moves[saved.move] || Moves.wallsit;
     $('move').value = move.id;
     for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
-    buildSettings(); buildReads(); syncBands(); buildPicker(); showMove();
+    buildSettings(); buildReads(); syncBands(); buildPicker(); showMove(); route();
   }
 
   /* ---------- the page around the coach ----------
-     The exercises as cards — what each is, which way the phone goes, what a set
-     is, what works — and, once one is picked, how to set up: where the phone
-     goes and what position to take, in words, before the camera is asked for.
-     None of this touches what is measured or said; that is the moves' own. */
+     Screens by route: the home list (#/), an exercise (#/ex/<id>), the camera
+     (#/live), and that session (#/done). None of this touches what is measured
+     or said; that is the moves' and the coach's own. */
   const placement = (m) => m.camera === 'wide'
     ? 'Lay the phone on its side on the floor, two or three metres away, side on to where you will be.'
     : 'Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.';
   const setWords = (m) => {
     const d = Object.assign({}, Core.COMMON, m.defaults);
-    return m.reps ? `${d.repCount} reps × ${d.setCount} sets, ${d.holdTargetSec} s at the top` : `hold ${d.holdTargetSec} s × ${d.setCount} sets`;
+    return m.reps ? `${d.repCount} reps × ${d.setCount} sets` : `hold ${d.holdTargetSec} s × ${d.setCount}`;
   };
-  const muscleWords = (m) => Object.entries(m.muscles || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLE[k] || k).join(', ');
   const MUSCLE = { thigh: 'thighs', calf: 'calves', glute: 'glutes', abs: 'abs', oblique: 'obliques', shoulder: 'shoulders', back: 'back', ham: 'hamstrings', chest: 'chest', arm: 'arms', forearm: 'forearms', neck: 'neck' };
+  const muscleWords = (m) => Object.entries(m.muscles || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLE[k] || k).join(', ');
+  const SCREENS = ['home', 'ex', 'live', 'done'];
+  let screen = 'home', starting = false;   // starting: the camera is being asked for, so the live route holds
+  function show(name) {
+    screen = name;
+    for (const k of SCREENS) { opt('screen-' + k).hidden = k !== name; document.body.classList.toggle('at-' + k, k === name); }
+    opt('nav-back').hidden = name === 'home';
+    opt('nav-title').textContent = name === 'done' ? 'That session' : name === 'live' ? move.name : '';
+    opt('state').hidden = name !== 'live';
+    if (name === 'ex' && window.OnTrackAnatomy) mountFigure();
+    else if (window.OnTrackAnatomy) OnTrackAnatomy.stopAll();
+    window.scrollTo(0, 0);
+  }
+  function route() {
+    const h = location.hash || '#/';
+    let m;
+    if ((m = h.match(/^#\/ex\/([a-z]+)/)) && Moves[m[1]]) { if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
+    else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = '#/ex/' + move.id; return; } show('live'); }
+    else if (h === '#/done') { if (!setsDone.length) { location.hash = '#/ex/' + move.id; return; } show('done'); }
+    else show('home');
+  }
+  window.addEventListener('hashchange', route);
+  opt('nav-back').onclick = () => { location.hash = screen === 'ex' ? '#/' : '#/ex/' + move.id; };
+
+  /* home: the cards, and a search over them */
   function buildPicker() {
     const host = opt('picker'); if (!host.appendChild) return;
     host.innerHTML = '';
     for (const m of Moves.list) {
-      const card = el('button', 'card', `<h3>${esc(m.name)}</h3><p class="what">${esc(m.position || m.hint || '')}</p>` +
-        `<div class="badges"><span class="badge accent">${m.camera === 'wide' ? 'phone on its side' : 'phone stood up'}</span><span class="badge">${esc(setWords(m))}</span></div>` +
+      const card = el('a', 'card', `<h3>${esc(m.name)}</h3><p class="what">${esc(m.position || m.hint || '')}</p>` +
+        `<div class="badges"><span class="badge">${m.camera === 'wide' ? 'phone on its side' : 'phone stood up'}</span><span class="badge">${esc(setWords(m))}</span></div>` +
         (m.muscles ? `<p class="muscles"><b>Works</b> ${esc(muscleWords(m))}</p>` : ''));
-      card.type = 'button'; card.dataset.move = m.id;
-      card.onclick = () => { if (move.id === m.id) { $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } $('move').value = m.id; $('move').dispatchEvent(new Event('change')); };
+      card.href = '#/ex/' + m.id; card.dataset.move = m.id;
+      card.dataset.q = `${m.name} ${m.position || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
       host.appendChild(card);
+    }
+  }
+  function searchCards() {
+    const q = String(opt('nav-q').value || '').trim().toLowerCase();
+    let n = 0;
+    document.querySelectorAll('#picker .card').forEach((c) => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) n += 1; });
+    opt('no-match').hidden = n > 0;
+  }
+  opt('nav-q').oninput = searchCards;
+
+  /* how it works */
+  const how = (on) => { opt('how').hidden = !on; };
+  opt('btn-how').onclick = () => how(true);
+  opt('how-close').onclick = () => how(false);
+  opt('how-ok').onclick = () => how(false);
+  opt('how').onclick = (e) => { if (e.target === opt('how')) how(false); };
+
+  /* the exercise page: the figure with its muscles, the bubbles, the words */
+  function mountFigure() {
+    const A = OnTrackAnatomy, c = opt('ex-fig'); if (!c.setAttribute) return;
+    if (!['wallsit', 'plank'].includes(move.id) && window.Figure && !A.figure(move.id)) {
+      const f = Figure.figureOf(move);
+      if (f) A.register(move.id, Object.assign({ view: 'side', A: f.A, B: f.B || f.A, hold: !!f.hold, side: (move.figure && move.figure.side) || 'both',
+        flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), w: move.muscles || {} }, f.wall != null ? { wall: f.wall } : {}));
+    }
+    c.setAttribute('data-anat', move.id);
+    A.mountAll(opt('screen-ex'));
+  }
+  /* the bubbles: tap one and it moves to the next choice. Each writes the setting
+     the coach reads, so nothing about the judging changes underneath. */
+  const LOADS = ['none', 'light', 'medium', 'heavy'];
+  function bubbleDefs() {
+    const d = [];
+    if (move.reps) d.push({ key: 'reps', label: 'Reps', input: 'cfg-repCount', opts: [1, 5, 10, 15] });
+    d.push({ key: 'sets', label: 'Sets', input: 'cfg-setCount', opts: [1, 2, 3] });
+    d.push({ key: 'hold', label: move.reps ? 'Hold at top' : 'Hold', input: 'cfg-target', opts: move.reps ? [1, 2, 3, 5] : [30, 45, 60, 90], unit: ' s' });
+    d.push({ key: 'load', label: move.load === 'band' ? 'Band' : 'Weight', opts: LOADS });
+    return d;
+  }
+  const loadOf = () => (saved.bands[move.id] && saved.bands[move.id].load) || 'none';
+  function buildBubbles() {
+    const host = opt('bubbles'); if (!host.appendChild) return;
+    host.innerHTML = '';
+    for (const b of bubbleDefs()) {
+      const cur = b.key === 'load' ? loadOf() : ($(b.input) ? $(b.input).value : '');
+      const btn = el('button', 'bubble', `<span class="k">${b.label}</span><span class="v">${esc(String(cur))}${b.unit || ''}</span>`);
+      btn.type = 'button'; btn.dataset.key = b.key; btn.setAttribute('aria-label', `${b.label}: ${cur}${b.unit || ''}. Tap for the next choice.`);
+      btn.onclick = () => {
+        const i = b.opts.findIndex((o) => String(o) === String(cur));
+        const next = b.opts[(i + 1) % b.opts.length];
+        if (b.key === 'load') { saved.bands[move.id] = saved.bands[move.id] || {}; saved.bands[move.id].load = next; store.set(saved); }
+        else { $(b.input).value = next; saveSettings(); }
+        buildBubbles();
+      };
+      host.appendChild(btn);
     }
   }
   /* the picked exercise, everywhere the page names it */
   function showMove() {
-    document.querySelectorAll('#picker .card').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.move === move.id)));
     document.querySelectorAll('#about p[data-move]').forEach((pp) => pp.classList.toggle('on', pp.dataset.move === move.id));
+    opt('ex-title').textContent = move.name;
     opt('setup-place').textContent = placement(move);
     opt('setup-position').textContent = move.position || move.hint || '';
+    opt('howto').innerHTML = (move.howto || []).map((t) => `<li>${esc(t)}</li>`).join('');
+    const coached = move.faults.filter((id) => id !== 'lost' && !(move.prompts || []).includes(id)).map((id) => (move.cues[id] && (move.cues[id].label || move.cues[id].text)) || id);
+    opt('coaches').innerHTML = coached.map((t) => `<li>${esc(t)}</li>`).join('') + (move.reps ? '<li>Each rep counted on the way back down, the hold at the top timed</li>' : '<li>The hold timed only while the position is right</li>');
+    opt('cannot').textContent = (move.cannot || '') + ' Everything runs on this device; nothing is uploaded.';
+    const last = lastSession(move.id);
+    opt('last-panel').hidden = !last;
+    if (last) opt('last-time').textContent = lastWords(last);
     $('veil-title').textContent = move.name;
+    buildBubbles();
+    if (screen === 'ex' && window.OnTrackAnatomy) mountFigure();
   }
+  function selectMove(id) { $('move').value = id; $('move').dispatchEvent(new Event('change')); }
+
+  /* ---------- that session: what to watch for, how it felt ---------- */
+  const HISTORY = 'ontrack.history';
+  const history = () => { try { return JSON.parse(localStorage.getItem(HISTORY) || '[]'); } catch { return []; } };
+  const lastSession = (id) => history().filter((h) => h.move === id).slice(-1)[0] || null;
+  function lastWords(h) {
+    const when = new Date(h.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const did = h.reps ? `${h.sets.map((x) => x.reps).join(' + ')} reps` : `${h.sets.reduce((a, x) => a + x.holdSec, 0).toFixed(0)} s in position`;
+    const feel = h.feel || {};
+    const bits = [];
+    if (feel.effort) bits.push({ easy: 'felt easy', right: 'felt about right', hard: 'felt hard' }[feel.effort]);
+    if (feel.more === 'more') bits.push('could have done more'); if (feel.more === 'less') bits.push('wanted less');
+    if (feel.pain === 'some') bits.push('a little pain'); if (feel.pain === 'stop') bits.push('pain — stopped');
+    if (h.load && h.load !== 'none') bits.push(`${h.load} load`);
+    return `${when}: ${did} in ${h.sets.length} set${h.sets.length === 1 ? '' : 's'}${bits.length ? ' — ' + bits.join(', ') : ''}.${feel.note ? ' “' + feel.note + '”' : ''}` +
+      (feel.more === 'more' && feel.pain !== 'stop' ? ' Try one more bubble up.' : feel.pain === 'stop' ? ' Go easier, and stop again if it hurts.' : '');
+  }
+  /* the faults that came up most, with the coach's own words for each */
+  function watchList(sets) {
+    const counts = {};
+    for (const s2 of sets) for (const [id, n] of Object.entries(s2.cues || {})) counts[id] = (counts[id] || 0) + n;
+    const early = sets.reduce((a, s2) => a + s2.log.filter((c) => c.id === 'early').length, 0);
+    const fast = sets.reduce((a, s2) => a + s2.log.filter((c) => /slower on the way down/.test(c.text)).length, 0);
+    const items = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4)
+      .map(([id, n]) => { const c = move.cues[id] || {}; return `<li><b>${esc(c.label || id)}</b> — said ${n} time${n === 1 ? '' : 's'}. ${esc(c.text || '')}</li>`; });
+    if (early) items.push(`<li><b>Held at the top</b> — ${early} rep${early === 1 ? '' : 's'} came down before the hold was done and did not count.</li>`);
+    if (fast) items.push(`<li><b>The way down</b> — ${fast} rep${fast === 1 ? '' : 's'} lowered too fast. Take a slow count on the way down.</li>`);
+    return items.length ? items.join('') : '<li>Nothing needed saying. Same again, or one bubble up.</li>';
+  }
+  const feel = { effort: null, more: null, pain: null };
+  document.querySelectorAll('#feel .seg').forEach((seg) => {
+    seg.querySelectorAll('.btn').forEach((b) => { b.onclick = () => { feel[seg.dataset.key] = b.dataset.v; seg.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; });
+  });
+  function resetFeel() {
+    for (const k of Object.keys(feel)) feel[k] = null;
+    document.querySelectorAll('#feel .btn').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+    opt('feel-note').value = ''; opt('feel-saved').textContent = '';
+  }
+  opt('feel-save').onclick = () => {
+    if (!setsDone.length) return;
+    const h = history();
+    h.push({ at: Date.now(), move: move.id, reps: !!move.reps, load: loadOf(), sets: setsDone.map((s2) => ({ reps: s2.reps, repTarget: s2.repTarget, holdSec: s2.holdSec, bestSec: s2.bestSec, cues: s2.cues })),
+      feel: { effort: feel.effort, more: feel.more, pain: feel.pain, note: String(opt('feel-note').value || '').trim().slice(0, 300) } });
+    try { localStorage.setItem(HISTORY, JSON.stringify(h.slice(-200))); opt('feel-saved').textContent = 'Saved — it shows under Last time on the exercise.'; }
+    catch { opt('feel-saved').textContent = 'Could not save on this device.'; }
+  };
+  opt('again').onclick = () => { location.hash = '#/ex/' + move.id; };
   function saveSettings() {
     saved.move = move.id;
     for (const k of COMMON_KEYS) saved.common[k] = $('cfg-' + k).value;
@@ -866,7 +1001,7 @@
       $('veil-title').textContent = 'Could not start';
       $('veil-text').textContent = String(e && e.message || e).slice(0, 160) +
         ' — allow the camera for this page, and check you are on https.';
-      $('go').disabled = false; note(''); return;
+      $('go').disabled = false; note(''); starting = false; location.hash = '#/ex/' + move.id; return;
     }
     $('veil').hidden = true; note('');
     $('flip').disabled = false;
@@ -874,13 +1009,14 @@
     /* Starting the camera IS starting the set. Asking for a second tap is asking
        someone to walk back to a phone they have just put on the floor. */
     startSet();
+    $('go').disabled = false; starting = false;
   }
 
   /* A session is a number of sets. The first set starts the film and the wake
      lock; each set after it is a fresh coach on the same film. */
   function startSet() {
     const fresh = !inSet;
-    if (fresh) { setNo = 1; setsDone = []; setsMeta = []; $('result').hidden = true; $('log').innerHTML = ''; }
+    if (fresh) { setNo = 1; setsDone = []; setsMeta = []; $('log').innerHTML = ''; }
     else setNo += 1;
     between = false;
     $('cue').textContent = ''; opt('faults').textContent = '';
@@ -928,7 +1064,7 @@
   }
 
   /* The session is over: the film stops, the sets are added up, the results show. */
-  async function endSession() {
+  async function endSession(quietly) {
     if (!inSet) return;
     if (!between) setsDone.push(coach.summary());
     inSet = false; between = false; letSleep(); applyFull();
@@ -950,12 +1086,15 @@
     $('rec-note').textContent = blob
       ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? (rec.voiced ? 'with the cues spoken and what the microphone heard' : 'with what the microphone heard — the phone\'s own voice is not on it') : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
       : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
-    $('result').hidden = false;
+    opt('watch').innerHTML = watchList(sets);
+    resetFeel();
     buttons();
+    /* the session's own screen — unless it was ended by picking another exercise,
+       in which case that exercise's page is where the person already is */
+    if (!quietly) { show('done'); location.hash = '#/done'; }
     const reps = sets.reduce((a, s) => a + s.reps, 0);
     voice.say(move.reps ? `All done. ${n} set${n === 1 ? '' : 's'}, ${reps} reps.`
       : `All done. ${n} set${n === 1 ? '' : 's'}, ${Math.round(sum('holdSec'))} seconds in position.`);
-    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -963,6 +1102,7 @@
   $('go').onclick = () => {
     /* before any await: this is the only moment the browser counts as a gesture */
     voice.prime(); voice.load();
+    starting = true; show('live'); location.hash = '#/live'; sizeCanvas(true);
     const a = initAudio(); if (a && a.ac.state === 'suspended') a.ac.resume();
     begin();
   };
@@ -978,7 +1118,7 @@
     /* finish whatever was under way, then start again from this exercise's own
        coach — otherwise the readouts keep being painted by the last one, with its
        bands and its clock, until something else happens to replace it */
-    if (inSet) await endSession();
+    if (inSet) await endSession(true);
     coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
     banner = null; state = null; t0 = performance.now();
     syncBands();
@@ -995,9 +1135,6 @@
     voice.on = !voice.on; e.target.setAttribute('aria-pressed', String(!voice.on));
     e.target.textContent = voice.on ? 'Voice on' : 'Voice off';
     if (!voice.on) { voice.stopOwn(); if ('speechSynthesis' in window) speechSynthesis.cancel(); }
-  };
-  $('settings-btn').onclick = (e) => {
-    const p = $('settings'); p.hidden = !p.hidden; e.target.setAttribute('aria-expanded', String(!p.hidden));
   };
   for (const k of COMMON_KEYS.concat(PER_MOVE)) if (k !== 'model') $('cfg-' + k).onchange = saveSettings;
   $('cfg-rotate').onchange = () => { saveSettings(); sizeCanvas(true); framingNote = undefined; };
