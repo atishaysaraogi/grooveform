@@ -617,9 +617,11 @@ try {
   await step('a good plank holds, and its own countdown calls the time and ends', async () => {
     /* six seconds rather than sixty, because the target and the calls are settings —
        which is the other thing this proves */
-    await page.click('#page-btn');              // the plank runs full screen; the settings are on the page
+    await page.click('#page-btn');              // Settings on the picture: the page comes back, the sheet open on it
     await page.waitForFunction(() => !document.body.classList.contains('full'), null, { timeout: 3000 });
     assert.equal(await page.isVisible('#full-btn'), true, 'and the way back to the picture is offered');
+    assert.equal(await page.isVisible('#endall'), true, 'and finishing early');
+    await page.click('#sheet-close');
     await setCfg('cfg-target', '6');
     await setCfg('cfg-calls', '4, 2');
     await page.click('#startstop');            // finish the running set
@@ -634,6 +636,14 @@ try {
     await sessionOver();
     assert.equal(await page.textContent('#r-move'), 'Elbow plank — 1 set');
     assert.ok(Number(await page.textContent('#r-hold')) >= 6, 'the full target was held');
+    /* the session over, the camera screen is done with: the camera is off, the loop
+       stopped, and nothing more is said — not "I can't see you" to a results page */
+    assert.equal(await page.evaluate(() => window.__app.live), false, 'the loop has stopped');
+    assert.equal(await page.evaluate(() => document.getElementById('cam').srcObject), null, 'the camera is off');
+    const quiet = (await spoken()).length;
+    await set({ vis: 0.1 }); await wait(2500);
+    assert.equal((await spoken()).length, quiet, 'and nothing is said to a page that is not the camera\'s');
+    await set({ vis: 0.95 });
     const rows = await page.$$eval('#log li', (ls) => ls.map((l) => l.textContent));
     assert.ok(rows.some((t) => /4 seconds left/.test(t)) && rows.some((t) => /done/.test(t)),
       'and the calls are in the log: ' + JSON.stringify(rows));
@@ -658,6 +668,7 @@ try {
   await step('the canvas is the frame the camera gave, and the box on screen is that shape too', async () => {
     await page.click('#page-btn');              // as a page: full screen, the box is the screen
     await page.waitForFunction(() => !document.body.classList.contains('full'), null, { timeout: 3000 });
+    await page.click('#sheet-close');
     const shot = await page.evaluate(() => {
       const c = document.getElementById('view'), v = document.getElementById('cam');
       const b = document.getElementById('stage').getBoundingClientRect();
@@ -727,6 +738,17 @@ try {
        picture by itself; asked for 720×1280 it crops a strip out of the sensor and
        turns that instead, which lands as a wide band with the legs gone. So the
        request must be the sensor's own shape whatever the exercise wants. */
+    /* leaving the camera screen for an exercise's page — the plank's set is still
+       running from the step before — ends the session where it is and stops the
+       camera, the coach and the voice with it */
+    const said = (await spoken()).length;
+    await set({ move: 'wallsit' });
+    await pick('wallsit');
+    await page.waitForFunction(() => !window.__app.live && !window.__app.session.inSet, null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => document.getElementById('cam').srcObject), null, 'the camera is off once the camera screen is left');
+    await set({ vis: 0.1 }); await wait(2500);
+    assert.equal((await spoken()).length, said, 'and nothing more is said');
+    await set({ vis: 0.95 });
     for (const id of ['wallsit', 'kneeraise', 'plank', 'bridge', 'donkeykick']) {
       await set({ move: id });
       await pick(id);
@@ -744,11 +766,15 @@ try {
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
     /* the stand-in camera here cannot turn itself, so a standing exercise gets a wide
        frame, and the app says so in words rather than bending the picture */
+    await startSession();
     await page.waitForSelector('#orient:not([hidden])', { timeout: 6000 });
     assert.match(await page.textContent('#orient'), /stand the phone up.*wide 1280\u00d7720/i);
     /* and the wrong way round, the page stays a page, notice and all */
     await wait(300);
     assert.equal(await page.evaluate(() => document.body.classList.contains('full')), false, 'not full screen until the phone is turned');
+    /* back to the exercise's page, which ends this session */
+    await page.evaluate(() => { location.hash = '#/ex/kneeraise'; });
+    await page.waitForFunction(() => !window.__app.live && !window.__app.session.inSet, null, { timeout: 8000 });
   });
 
   await step('the knee raise counts reps rather than holding one position', async () => {
@@ -897,7 +923,7 @@ try {
     await page.waitForFunction(() => window.__app.session.between, null, { timeout: 8000 });
     assert.equal(await page.evaluate(() => window.__app.session.setNo), 1);
     assert.equal(await page.textContent('#finish-full'), 'Next set', 'the picture offers the next set');
-    assert.equal(await page.isVisible('#endall-full'), true, 'and finishing early');
+    assert.equal(await page.isVisible('#page-btn'), true, 'and Settings, with finishing early behind it');
     assert.equal(await page.evaluate(() => document.body.classList.contains('full')), true, 'still full screen');
     /* the quiet: a fault held for three seconds gets no cue and no words */
     const before = (await spoken()).length;

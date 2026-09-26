@@ -171,6 +171,9 @@ body.full .float { display: flex; }
 
 /* ---- controls ---- */
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row.two { display: grid; grid-template-columns: 1fr 1fr; }
+.row.two .btn { min-width: 0; padding-inline: 8px; }
+.sheet-rows { display: grid; gap: 8px; margin-bottom: 12px; }
 .btn {
   flex: 1 1 auto; min-height: 46px; padding: 0 16px; border-radius: 12px; cursor: pointer;
   background: var(--surface); color: var(--grape); border: 2px solid var(--grape);
@@ -211,7 +214,7 @@ textarea { width: 100%; resize: vertical; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg .btn { flex: 1 1 auto; min-height: 40px; font-size: .9rem; }
 
-@media (max-width: 420px) { .read .v { font-size: 1.6rem; } .row > .btn { flex-basis: 100%; } .seg .btn { flex-basis: auto; } }
+@media (max-width: 420px) { .read .v { font-size: 1.6rem; } .row:not(.two) > .btn { flex-basis: 100%; } .seg .btn { flex-basis: auto; } }
 
 /* ---- the Review page keeps its dark workbench ---- */
 body.review {

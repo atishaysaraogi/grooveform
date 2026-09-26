@@ -145,7 +145,7 @@
     <div class="stage" id="stage">
       <video id="cam" playsinline muted></video>
       <canvas id="view"></canvas>
-      <div class="float"><button class="btn stop" id="finish-full">End this set</button><button class="btn" id="endall-full" hidden>Finish</button><button class="btn" id="page-btn">Show the page</button></div>
+      <div class="float"><button class="btn stop" id="finish-full">End this set</button><button class="btn" id="page-btn">Settings</button></div>
       <div class="veil" id="veil">
         <div class="veil-in">
           <p class="big" id="veil-title">Wall sit</p>
@@ -156,15 +156,26 @@
     </div>
     <p class="cue" id="cue" aria-live="polite"></p>
     <p class="faults" id="faults"></p>
-    <div class="row">
+    <!-- two buttons and no more: the set, and a sheet with the rest behind it -->
+    <div class="row two">
       <button class="btn stop" id="startstop" disabled>End this set</button>
-      <button class="btn" id="endall" hidden>Finish</button>
-      <button class="btn" id="full-btn" hidden>Full screen</button>
-      <button class="btn" id="flip" disabled>Flip camera</button>
-      <button class="btn" id="mute" aria-pressed="false">Voice on</button>
+      <button class="btn" id="live-settings">Settings</button>
     </div>
     <!-- one card per thing this exercise measures, built from the move itself -->
     <div class="reads" id="reads"></div>
+    <div class="modal" id="sheet" hidden>
+      <div class="modal-in" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <button class="iconbtn close" id="sheet-close" aria-label="Close">✕</button>
+        <h2 id="sheet-title">Settings</h2>
+        <div class="sheet-rows">
+          <button class="btn" id="mute" aria-pressed="false">Voice on</button>
+          <button class="btn" id="flip" disabled>Flip camera</button>
+          <button class="btn" id="full-btn" hidden>Back to full screen</button>
+          <button class="btn stop" id="endall" hidden>Finish the session now</button>
+        </div>
+        <p class="tiny">Every number this exercise is judged by is on its page, under “Every number, and the phone”.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ done: that session ============ -->

@@ -167,6 +167,10 @@
   function route() {
     const h = location.hash || '#/';
     let m;
+    /* off the camera screen by any road — back, a link, the address — and the
+       camera, the coach and the voice stop with it: nothing is said to a page
+       that is not the camera's */
+    if (h !== '#/live' && (running || inSet)) leaveLive();
     if ((m = h.match(/^#\/ex\/([a-z]+)/)) && Moves[m[1]]) { if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
     else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = '#/ex/' + move.id; return; } show('live'); }
     else if (h === '#/done') { if (!setsDone.length) { location.hash = '#/ex/' + move.id; return; } show('done'); }
@@ -466,6 +470,8 @@
       if (rec && rec.live) rec.voiced = true;
     },
     stopOwn() { if (this.current) { try { this.current.stop(); } catch { } this.current = null; } },
+    /* nothing more from either voice: what is playing stops, what was on its way is dropped */
+    hush() { this.seq += 1; this.stopOwn(); if (this.ok) { try { speechSynthesis.cancel(); } catch { } } },
   };
   if (voice.ok) { voice.ready(); speechSynthesis.onvoiceschanged = () => voice.ready(); }
 
@@ -632,6 +638,27 @@
     stage.style.maxWidth = `calc(var(--stage-h) * ${t.w} / ${t.h})`;
   }
   function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; } video.srcObject = null; }
+  /* The camera screen is over: the loop, the camera, the voice and the screen
+     lock all stop, at once. Nothing is read, drawn or said after this until Start
+     is pressed again. The film, if one is running, is the session's business
+     (endSession) and is stopped there first. */
+  function stopLive() {
+    running = false; unschedule(); stopCamera();
+    voice.hush();
+    inFlight = false; latestLm = null;
+    letSleep(); pageMode = false; setFull(false); opt('full-btn').hidden = true;
+    $('veil').hidden = false; $('veil-note').textContent = '';
+    /* the notice about which way the phone is held is about a running camera */
+    framingNote = null; framingMsg = null; $('orient').hidden = true; $('orient').textContent = '';
+    sheet(false);
+    document.body.classList.remove('running');
+    $('flip').disabled = true;
+  }
+  /* the person left the camera screen: the session ends where it is, quietly, and everything stops */
+  async function leaveLive() {
+    if (inSet) await endSession(true);
+    if (running) stopLive();
+  }
 
   /* ---------- drawing ---------- */
   let painted = 0;                        // how many times the canvas has been drawn, so a film takes no frame twice
@@ -1073,10 +1100,17 @@
   function buttons() {
     const last = setNo >= cfg().setCount;
     $('startstop').disabled = false;
-    if (!inSet) { $('startstop').textContent = 'Start another session'; $('startstop').className = 'btn primary'; opt('endall').hidden = true; opt('finish-full').textContent = 'Start'; opt('endall-full').hidden = true; }
-    else if (between) { $('startstop').textContent = 'Next set'; $('startstop').className = 'btn primary'; opt('endall').hidden = false; opt('finish-full').textContent = 'Next set'; opt('endall-full').hidden = false; }
-    else { $('startstop').textContent = last ? 'End the last set' : 'End this set'; $('startstop').className = 'btn stop'; opt('endall').hidden = true; opt('finish-full').textContent = last ? 'End the last set' : 'End this set'; opt('endall-full').hidden = true; }
+    const word = !inSet ? 'Start' : between ? 'Next set' : last ? 'End the last set' : 'End this set';
+    $('startstop').textContent = word; opt('finish-full').textContent = word;
+    $('startstop').className = inSet && !between ? 'btn stop' : 'btn primary';
+    /* finishing early is behind Settings, on both screens */
+    opt('endall').hidden = !inSet;
   }
+  /* the sheet: the voice, the other camera, full screen, finishing early */
+  function sheet(on) { opt('sheet').hidden = !on; }
+  opt('live-settings').onclick = () => sheet(true);
+  opt('sheet-close').onclick = () => sheet(false);
+  opt('sheet').onclick = (e) => { if (e.target === opt('sheet')) sheet(false); };
   /* The set is over — the target reached, or ended by hand. Nothing is said from
      here until the next set begins: the count or the done call was the last word.
      After the last set the session finishes by itself. */
@@ -1087,7 +1121,9 @@
     /* the last word stays on screen; the faults do not */
     between = true;
     opt('faults').textContent = '';
-    if ('speechSynthesis' in window && !s.reachedTarget) speechSynthesis.cancel();
+    /* ended by hand: whatever was being said stops mid-word. Ended by the count
+       or the clock: that was the last word, and it is let finish. */
+    if (!s.reachedTarget) voice.hush();
     if (setNo >= cfg().setCount) { endSession(); return; }
     buttons();
   }
@@ -1099,8 +1135,12 @@
     inSet = false; between = false; letSleep(); applyFull();
     document.body.classList.remove('running');
     await refilm;
-    const blob = rec ? await rec.stop() : null;
-    if (rec) rec.blob = blob;
+    /* this session's film, held by name: a new session begun while this one's
+       film is still being closed must not have its own film stopped */
+    const film = rec;
+    const blob = film ? await film.stop() : null;
+    if (film) film.blob = blob;
+    stopLive();
     const sets = setsDone, n = sets.length;
     const sum = (k) => +sets.reduce((a, s) => a + s[k], 0).toFixed(1);
     $('r-move').textContent = `${move.name} — ${n} set${n === 1 ? '' : 's'}`;
@@ -1120,7 +1160,8 @@
     buttons();
     /* the session's own screen — unless it was ended by picking another exercise,
        in which case that exercise's page is where the person already is */
-    if (!quietly) { show('done'); location.hash = '#/done'; }
+    if (quietly) return;   // the person has gone elsewhere: nothing more is said
+    show('done'); location.hash = '#/done';
     const reps = sets.reduce((a, s) => a + s.reps, 0);
     voice.say(move.reps ? `All done. ${n} set${n === 1 ? '' : 's'}, ${reps} reps.`
       : `All done. ${n} set${n === 1 ? '' : 's'}, ${Math.round(sum('holdSec'))} seconds in position.`);
@@ -1135,12 +1176,14 @@
     const a = initAudio(); if (a && a.ac.state === 'suspended') a.ac.resume();
     begin();
   };
-  $('startstop').onclick = () => (!inSet || between ? startSet() : finishSet());
-  $('finish-full').onclick = () => (!inSet || between ? startSet() : finishSet());
-  opt('endall').onclick = () => endSession();
-  opt('endall-full').onclick = () => endSession();
-  $('page-btn').onclick = () => { pageMode = true; applyFull(); };
-  $('full-btn').onclick = () => { pageMode = false; applyFull(); };
+  /* no camera running means no set to start here: the exercise's page has the Start */
+  const setButton = () => (!running ? (location.hash = '#/ex/' + move.id) : !inSet || between ? startSet() : finishSet());
+  $('startstop').onclick = setButton;
+  $('finish-full').onclick = setButton;
+  opt('endall').onclick = () => { sheet(false); endSession(); };
+  /* Settings on the picture: the page comes back, with the sheet open on it */
+  $('page-btn').onclick = () => { pageMode = true; applyFull(); sheet(true); };
+  $('full-btn').onclick = () => { sheet(false); pageMode = false; applyFull(); };
   $('move').onchange = async () => {
     move = Moves[$('move').value] || Moves.wallsit;
     buildSettings(); buildReads(); saveSettings(); showMove();
@@ -1258,5 +1301,5 @@
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; }, cfg, fire, drawFrame, paintUi, isCorrection };
+    get worker() { return !!worker; }, get live() { return running; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; }, cfg, fire, drawFrame, paintUi, isCorrection };
 })();
