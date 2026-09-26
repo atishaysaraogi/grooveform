@@ -473,11 +473,7 @@
     if (!speech) speech = (window.Speech ? Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js') : Promise.reject(new Error('no voice'))).catch(() => null);
     return speech;
   }
-  const rmsAround = (pcm, sr, cues) => cues.slice(0, 3).map((c) => {
-    const a = Math.round((c.t / 1000) * sr), b = Math.min(pcm.length, a + sr); let sum = 0;
-    for (let i = a; i < b; i++) sum += pcm[i] * pcm[i];
-    return Math.sqrt(sum / Math.max(1, b - a));
-  });
+  const rmsAround = (pcm, sr, cues) => cues.slice(0, 3).map((c) => Mixdown.rmsAt(pcm, sr, c.t / 1000, 1));
   async function renderDemo() {
     const note = (t) => { $('demo-note').textContent = t; };
     if (!trace || !result || trace.source !== 'video' || !trace.file || !video.videoWidth) { note('Load a video first: a trace alone has no picture to draw on.'); return; }
@@ -496,32 +492,9 @@
       /* the sound: rendered offline, in one go */
       note('Making the voice\u2026');
       const client = await loadSpeech();
-      const oac = new OfflineAudioContext(1, Math.ceil((dur + 1) * sr), sr);
-      const tones = oac.createGain(); tones.gain.value = Sound.OUT_GAIN; tones.connect(oac.destination);
-      const speechGain = oac.createGain(); speechGain.connect(oac.destination);
-      const own = oac.createGain(); own.connect(oac.destination);
-      let original = false;
-      try {
-        const buf = await oac.decodeAudioData(await trace.file.arrayBuffer());
-        const src = oac.createBufferSource(); src.buffer = buf; src.connect(own); src.start(0); original = true;
-      } catch { original = false; }
-      let voiced = 0;
-      for (let i = 0; i < cues.length; i++) {
-        const c = cues[i], at = c.t / 1000, next = cues[i + 1] ? cues[i + 1].t / 1000 : null;
-        Sound.tone(oac, tones, Sound.toneFor(c.id), at);
-        const pcm = client && client.ready ? await client.synth(c.text) : null;
-        if (!pcm) continue;
-        const b = oac.createBuffer(1, pcm.data.length, pcm.rate); b.copyToChannel(pcm.data, 0);
-        const src = oac.createBufferSource(); src.buffer = b; src.connect(speechGain); src.start(at);
-        /* a cue said while the last is still being said cuts it off, as it does live */
-        const end = next != null && next < at + b.duration ? next : at + b.duration;
-        if (end < at + b.duration) src.stop(end);
-        own.gain.setTargetAtTime(0.1, at, 0.015); own.gain.setTargetAtTime(1, end + 0.1, 0.05);
-        voiced += 1;
-        note(`Making the voice\u2026 ${i + 1} of ${cues.length}`);
-      }
-      const rendered = await oac.startRendering();
-      const pcmAll = rendered.getChannelData(0).subarray(0, Math.ceil(dur * sr));
+      const mix = await Mixdown.render({ cues, durationSec: dur, sampleRate: sr, original: await trace.file.arrayBuffer(), client,
+        onProgress: (n, of) => note(`Making the voice\u2026 ${n} of ${of}`) });
+      const pcmAll = mix.pcm, voiced = mix.voiced, original = mix.original;
 
       /* the picture: every frame drawn fresh at the film's rate */
       const pick = await Codec.pickCodec(W, H, fps, false);

@@ -44,6 +44,7 @@
      ended with the next not yet begun — the camera and the film run on through
      that, the coaching does not */
   let setNo = 0, setsDone = [], between = false;
+  let setsMeta = [];                      // per set: when it began (wall clock) and its opening words, for voicing the film after
   let audio = null;                       // WebAudio graph: speakers + a track for the recording
   let t0 = 0;
 
@@ -790,7 +791,7 @@
         error: (e) => { film.why = film.why || e; },
       });
       enc.configure(pick.config);
-      film.kind = 'codec'; film.mime = 'video/mp4'; start = performance.now();
+      film.kind = 'codec'; film.mime = 'video/mp4'; start = performance.now(); film.startAt = start;
       pump = setInterval(snap, 1000 / REC_FPS);
       sound = startSound(start, film);
     })();
@@ -809,6 +810,9 @@
         if (!samples.length) { film.why = film.why || new Error('the encoder gave nothing back'); return null; }
         try {
           const file = Mp4.write({ width: w, height: h, codec: pick.kind, description: desc, codecString: pick.codec, samples, created: new Date(), audio: audioTrack });
+          /* the picture is kept, so the same film can be written again with another sound track */
+          film.video = { width: w, height: h, codec: pick.kind, description: desc, codecString: pick.codec, samples };
+          film.durationSec = (samples[samples.length - 1].ts / 1e6) + 1 / REC_FPS;
           return new Blob([file], { type: 'video/mp4' });
         } catch (e) { film.why = e; return null; }
       }
@@ -876,7 +880,7 @@
      lock; each set after it is a fresh coach on the same film. */
   function startSet() {
     const fresh = !inSet;
-    if (fresh) { setNo = 1; setsDone = []; $('result').hidden = true; $('log').innerHTML = ''; }
+    if (fresh) { setNo = 1; setsDone = []; setsMeta = []; $('result').hidden = true; $('log').innerHTML = ''; }
     else setNo += 1;
     between = false;
     $('cue').textContent = ''; opt('faults').textContent = '';
@@ -889,6 +893,7 @@
     const opening = fresh ? move.start
       : `Set ${setNo} of ${cfg().setCount}${move.alternate ? ' \u2014 the other leg' : ''}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`;
     fire({ id: 'start', text: opening, t: 0 });
+    setsMeta.push({ t0Abs: t0, opening });
     /* nothing else is said over the opening words */
     coach.quiet(voice.durationOf(opening) + 400);
     if (fresh) { rec = startRecording(); inSet = true; stayAwake(); }
@@ -941,6 +946,7 @@
     $('r-cues').textContent = sets.reduce((a, s) => a + Object.values(s.cues).reduce((x, y) => x + y, 0), 0);
     $('log').innerHTML = sets.map((s, i) => `<li class="set">Set ${i + 1}</li>` + (s.log.map((c) => `<li><b>${(c.t / 1000).toFixed(1)}s</b> — ${esc(c.text)}</li>`).join('') || '<li>Nothing needed saying.</li>')).join('');
     $('dl-video').disabled = !blob;
+    voicedOffer();
     $('rec-note').textContent = blob
       ? `${(blob.size / 1e6).toFixed(1)} MB · ${blob.type.split(';')[0]} · ${rec.kind === 'codec' ? (rec.sound ? (rec.voiced ? 'with the cues spoken and what the microphone heard' : 'with what the microphone heard — the phone\'s own voice is not on it') : 'silent — this browser cannot encode sound') : 'the cues are on it as tones'}, and every cue written on the picture.`
       : `No video came out of this set${rec && rec.why ? ': ' + (rec.why.message || rec.why) : ''}.`;
@@ -1005,6 +1011,51 @@
     if (!rec || !rec.blob) return;
     save(rec.blob, `${move.id}-${stamp()}.${rec.blob.type.includes('mp4') ? 'mp4' : 'webm'}`);
   };
+  /* ---------- the film with the cues voiced ----------
+     The phone's own voice can never be on a film, and the microphone hears it by
+     luck at best. So the film can be written again after the set with every cue
+     the coach said — the same words at the same moments, from the log — spoken
+     by the coach's own voice, over what the microphone heard, turned down while
+     the voice speaks. The picture is the film's own. */
+  let voiced = null;
+  function voicedOffer() {
+    const can = !!(rec && rec.blob && rec.video && rec.kind === 'codec');
+    opt('dl-voiced').hidden = !can;
+    opt('voiced-note').textContent = !can ? '' : rec.voiced
+      ? 'The coach\u2019s voice is already on the video above. This writes it again from the log, if that one did not come out.'
+      : 'The phone\u2019s voice is not on a film. This writes the video again with every cue spoken by the coach\u2019s own voice, at the moments they were said.';
+  }
+  async function voicedFilm() {
+    const note = (t) => { opt('voiced-note').textContent = t; };
+    if (!rec || !rec.blob || !rec.video) return;
+    const btn = $('dl-voiced'); btn.disabled = true; voiced = null;
+    try {
+      /* every cue of every set, on the film's clock: the opening words the page said, then the coach's */
+      const cues = [];
+      setsDone.forEach((s, i) => {
+        const meta = setsMeta[i]; if (!meta) return;
+        /* the opening words begin a few milliseconds before the film's first frame: they go at its start */
+        const off = Math.max(0, meta.t0Abs - (rec.startAt || meta.t0Abs));
+        cues.push({ id: 'start', text: meta.opening, t: off });
+        for (const c of s.log) cues.push({ id: c.id, text: c.text, t: off + c.t });
+      });
+      note('Making the voice\u2026');
+      const client = await voice.load();
+      const sr = 44100;
+      const mix = await Mixdown.render({ cues, durationSec: rec.durationSec, sampleRate: sr, original: await rec.blob.arrayBuffer(), client,
+        tones: !rec.sound, onProgress: (n, of) => note(`Making the voice\u2026 ${n} of ${of}`) });
+      note('Writing the file\u2026');
+      let audio = null;
+      try { audio = await Codec.encodeAudio(mix.pcm, sr); } catch { audio = null; }
+      const file = Mp4.write(Object.assign({ created: new Date(), audio }, rec.video));
+      const blob = new Blob([file], { type: 'video/mp4' });
+      voiced = { blob, frames: rec.video.samples.length, sound: !!audio, voiced: mix.voiced, cues: mix.cues, original: mix.original, rms: cues.slice(0, 3).map((c) => Mixdown.rmsAt(mix.pcm, sr, c.t / 1000, 1.5)) };
+      save(blob, `${move.id}-${stamp()}-voiced.mp4`);
+      note(`${(blob.size / 1e6).toFixed(1)} MB \u00b7 ${audio ? `${mix.voiced} of ${mix.cues} cues spoken by the coach\u2019s voice` : 'silent \u2014 this browser cannot encode sound'}${mix.original ? ', over what the microphone heard' : ''}.`);
+    } catch (e) { note('Could not write it: ' + (e && e.message || e)); voiced = { why: String(e && e.message || e) }; }
+    finally { btn.disabled = false; }
+  }
+  opt('dl-voiced').onclick = voicedFilm;
   $('dl-log').onclick = () => {
     const sets = setsDone.length ? setsDone : (coach ? [coach.summary()] : []);
     const c = cfg();
@@ -1041,5 +1092,5 @@
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, cfg, fire, drawFrame, paintUi, isCorrection };
+    get worker() { return !!worker; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; }, cfg, fire, drawFrame, paintUi, isCorrection };
 })();

@@ -349,6 +349,17 @@ recorder had stamped as if they fit in nine tenths of a second, with a sound tra
 that stopped after one. The frames were right and the recorder's clock was not,
 and there is nothing a page can do about a recorder's clock except keep its own.
 
+**Download with the cues voiced.** The phone's own voice can never be on a
+film, and a microphone hears it by luck at best. So after a session the
+results offer the film written again with every cue of every set — the
+opening words and the coach's — spoken by the coach's own voice at the
+moments they were said, from the log, over what the microphone heard (turned
+down while the voice speaks) and with the tones where the film had none. The
+picture is the film's own, frame for frame; only the sound track is new
+(`js/mixdown.js`, shared with the Review page's demo film). It is the way to
+coach with the phone's natural voice and still hand over a film with the cues
+on it.
+
 **The film has sound, and the cues are on it.** The film hears the page's
 audio graph: the coach's own voice, the tones, and the microphone. The voice is
 on the film because the page makes it (see *Out loud*): a phone's own speech

@@ -414,6 +414,23 @@ try {
     assert.match(out.note, /with the cues spoken and what the microphone heard|with what the microphone heard|silent — this browser cannot encode sound/, out.note);
   });
 
+  await step('the film can be written again with every cue spoken by the coach\'s voice, from the log', async () => {
+    /* the phone's own voice is never on a film; this puts the coach's on it after the fact */
+    assert.equal(await page.evaluate(() => document.getElementById('dl-voiced').hidden), false, 'offered once there is a film');
+    await page.evaluate(() => document.getElementById('dl-voiced').click());
+    await page.waitForFunction(() => window.__app.voiced, null, { timeout: 90000 });
+    const v = await page.evaluate(async () => {
+      const v = window.__app.voiced; if (v.why) return v;
+      const info = window.Mp4.inspect(new Uint8Array(await v.blob.arrayBuffer()));
+      return { frames: v.frames, cues: v.cues, voiced: v.voiced, rms: v.rms, sound: v.sound, original: v.original, samples: info.samples, duration: info.duration, filmFrames: window.__app.rec.video.samples.length, note: document.getElementById('voiced-note').textContent };
+    });
+    assert.ok(!v.why, 'written: ' + v.why);
+    assert.equal(v.samples, v.filmFrames, 'the same picture, frame for frame');
+    assert.ok(v.cues >= 4 && v.voiced === v.cues, `every cue of the set voiced: ${v.voiced} of ${v.cues}`);
+    assert.ok(v.rms[0] > 0.02, 'the opening words are on the sound: ' + JSON.stringify(v.rms));
+    assert.match(v.note, /cues spoken by the coach|silent \u2014 this browser cannot encode sound/, v.note);
+  });
+
   await step('the page encodes the film itself, thirty frames a second from the clock and from nowhere else', async () => {
     /* Two real sets on a phone came back wrong from the browser's recorder: one
        with 2415 frames in twelve seconds, most two milliseconds apart, then no
