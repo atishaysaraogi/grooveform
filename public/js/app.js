@@ -222,7 +222,7 @@
     get own() { return this.kind === 'own' && !!(this.engine && this.engine.ready); },
     load() {
       if (this.loading || typeof Speech === 'undefined') return this.loading;
-      this.loading = Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js').then((e) => { this.engine = e; this.warm(); return e; })
+      this.loading = Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js', 'voice/').then((e) => { this.engine = e; this.warm(); return e; })
         .catch((e) => { this.engine = null; this.why = e; return null; });
       return this.loading;
     },

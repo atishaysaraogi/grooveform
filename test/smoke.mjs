@@ -250,7 +250,10 @@ try {
        turned down on the bus while it plays */
     await page.waitForFunction(() => window.__app.voice.engine && window.__app.voice.engine.ready, null, { timeout: 30000 });
     assert.equal(await page.evaluate(() => window.__app.cfg().voice), 'own', 'the coach\'s own voice, by default');
-    assert.equal(await page.evaluate(() => window.__app.voice.engine.kind), 'worker', 'made in a thread of its own, so the page never waits on it');
+    assert.equal(await page.evaluate(() => window.__app.voice.engine.kind), 'pack', 'the natural voice: clips, with the engine behind them');
+    await page.waitForFunction(() => window.__app.voice.engine.fromPack > 0, null, { timeout: 15000 });
+    const src = await page.evaluate(() => ({ pack: window.__app.voice.engine.fromPack, engine: window.__app.voice.engine.fromEngine }));
+    assert.ok(src.pack > 0, 'the opening words came from the pack: ' + JSON.stringify(src));
     const r = await page.evaluate(async () => {
       const a = window.__app.audio; if (a.ac.state !== 'running') await a.ac.resume();
       const tap = a.ac.createScriptProcessor(2048, 1, 1), sink = a.ac.createGain(); sink.gain.value = 0;

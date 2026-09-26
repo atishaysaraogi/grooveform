@@ -70,6 +70,34 @@
     return [...out];
   }
 
+  /* ---- the natural voice: recorded clips, one per thing the coach can say ----
+     A neural voice is far better than eSpeak, and far too big to run on a phone;
+     but what the coach can say is a finite list, so every phrase is made once,
+     by a build script, and shipped as a small clip (public/voice). A text is
+     looked up by its key; a text not in the pack is tried as parts (a sentence
+     at a time, a dash-joined remark at a time) and the parts played in a row;
+     what is in neither is left to eSpeak. */
+  const key = (text) => String(text == null ? '' : text).replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '').trim();
+  const parts = (text) => String(text == null ? '' : text).split(/\s+\u2014\s+|(?<=[.!?])\s+|,\s+/).map(key).filter(Boolean);
+  /* what a voice pack holds: every move's words, and the numbers the coach reads out */
+  function packTexts(Moves, Core) {
+    const out = new Set();
+    const add = (t) => { const k = key(t); if (k) out.add(k); };
+    const shared = Core.SHARED_CUES;
+    for (const c of Object.values(shared)) { add(c.text); if (c.deep) add(c.deep); }
+    for (const m of Moves.list) {
+      for (const c of Object.values(m.cues || {})) { add(c.text); if (c.deep) add(c.deep); }
+      add(m.start);
+    }
+    for (let n = 1; n <= 60; n++) { add(String(n)); add(`${n} reps \u2014 done`); add(`${n} seconds left`); }
+    for (let n = 1; n <= 180; n++) { add(`${n} seconds \u2014 done`); add(`${n} seconds in position`); }
+    for (let m = 1; m <= 10; m++) for (let n = 1; n <= m; n++) add(`Set ${n} of ${m}`);
+    for (const t of ['done', 'the other leg', 'When you are ready', 'Into position when you are ready', 'All done', '1 set', 'The screen went off \u2014 that part of the set was not seen']) add(t);
+    for (let n = 2; n <= 10; n++) add(`${n} sets`);
+    for (let n = 0; n <= 100; n++) add(`${n} reps`);
+    return [...out].sort();
+  }
+
   /* ---- the engine itself: synchronous, and the same in a worker, on the page, or in node ---- */
   const OPTS = { speed: 160, pitch: 42, amplitude: 100, wordgap: 1, voice: 'en/en-us' };
   const RENEW_AT = 40;   // calls per instance; one dies at about eighty
@@ -156,6 +184,40 @@
     make(text) { return new Promise((res) => setTimeout(() => res(this.engine.synth(text)), 0)); }
   }
 
+  /* the clips in front of the engine: a text from the pack when it is there, whole
+     or in parts, and from the engine when it is not */
+  class PackClient extends Client {
+    constructor(manifest, base, fallback) {
+      super(); this.kind = 'pack'; this.manifest = manifest; this.base = base; this.fallback = fallback;
+      this.clips = manifest.clips || {}; this.rate = manifest.rate || 22050; this.decoder = null; this.fromPack = 0; this.fromEngine = 0;
+    }
+    async clip(k) {
+      const file = this.clips[k]; if (!file) return null;
+      const r = await fetch(this.base + file); if (!r.ok) throw new Error(`${file}: ${r.status}`);
+      const bytes = await r.arrayBuffer();
+      if (!this.decoder) this.decoder = new OfflineAudioContext(1, 1, this.rate);
+      const buf = await this.decoder.decodeAudioData(bytes);
+      return { rate: buf.sampleRate, data: buf.getChannelData(0).slice(0) };
+    }
+    async make(text) {
+      const k = key(text);
+      const keys = this.clips[k] ? [k] : (() => { const ps = parts(text); return ps.length > 1 && ps.every((p2) => this.clips[p2]) ? ps : null; })();
+      if (keys) {
+        try {
+          const pcms = await Promise.all(keys.map((x) => this.clip(x)));
+          const gap = Math.round(0.14 * pcms[0].rate);
+          const n = pcms.reduce((a, p2) => a + p2.data.length, 0) + gap * (pcms.length - 1);
+          const data = new Float32Array(n); let off = 0;
+          pcms.forEach((p2, i) => { data.set(p2.data, off); off += p2.data.length + (i < pcms.length - 1 ? gap : 0); });
+          this.fromPack += 1;
+          return { rate: pcms[0].rate, data: normalise(data, 0.9) };
+        } catch (e) { this.why = e; }
+      }
+      const fb = await this.fallback; this.fromEngine += 1;
+      return fb && fb.ready ? fb.synth(text) : null;
+    }
+  }
+
   /* ---- loading, in a browser: the worker first, the page's thread if not ---- */
   const q = (ver) => (ver ? `?v=${encodeURIComponent(ver)}` : '');
   function script(url) {
@@ -192,14 +254,25 @@
         const c = new InlineClient(e); c.ready = true; return c;
       });
   }
-  /* base: the directory of the engine's files; workerUrl: the worker script; ver: the cache stamp */
-  function load(base, ver, workerUrl) {
+  /* base: the directory of the engine's files; workerUrl: the worker script; ver: the cache stamp;
+     packUrl: the directory of the voice pack, whose index is fetched first — the clips
+     answer at once while the engine loads behind them for whatever they lack */
+  function load(base, ver, workerUrl, packUrl) {
     if (typeof document === 'undefined') return Promise.reject(new Error('no document'));
+    const engine = loadEngine(base, ver, workerUrl);
+    if (!packUrl) return engine;
+    const pabs = new URL(packUrl, document.baseURI).href;
+    return json(`${pabs}index.json${q(ver)}`).then((manifest) => {
+      if (!manifest || !manifest.clips) throw new Error('no voice pack');
+      const c = new PackClient(manifest, pabs, engine.catch(() => null)); c.ready = true; return c;
+    }).catch(() => engine);
+  }
+  function loadEngine(base, ver, workerUrl) {
     const abs = new URL(base, document.baseURI).href;
     const inline = () => viaPage(abs, ver);
     if (!workerUrl || typeof Worker === 'undefined') return inline();
     return viaWorker(abs, ver, workerUrl + q(ver)).catch((e) => inline().then((c) => { c.why = e; c.fellBack = true; return c; }));
   }
 
-  return { wavToPcm, normalise, texts, Engine, Client, WorkerClient, InlineClient, load, OPTS, RENEW_AT };
+  return { wavToPcm, normalise, texts, key, parts, packTexts, Engine, Client, WorkerClient, InlineClient, PackClient, load, OPTS, RENEW_AT };
 });

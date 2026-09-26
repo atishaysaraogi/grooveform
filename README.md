@@ -82,18 +82,24 @@ numbers — and checks the converse too, that an angle at a joint is the same
 either way, which is why the turn has to happen before the reading and not after.
 
 **Out loud.** Every cue is spoken as well as written, by one of two voices.
-The coach's own voice is the default: eSpeak compiled to JavaScript
+The coach's own voice is the default, and it is a natural one: everything the
+coach can say is a finite list — each move's words, the counts, the time calls,
+the set announcements, the ends — so every phrase is made once, by a build
+script (`scripts/voice-pack.py`, a Piper neural voice through sherpa-onnx, at
+build time only), and shipped as a small clip in `public/voice`, a few
+kilobytes each and about 5 MB in all, fetched as needed. A text is looked up
+whole, or as parts played in a row ("Set 2 of 3" then "When you are ready");
+a phrase in neither falls back to eSpeak compiled to JavaScript
 (`js/vendor/mespeak`, see its NOTICE), which the page loads on the tap that
 starts the camera and runs in a thread of its own (`js/speech-worker.js`, on
 the page's thread where a worker cannot be had), so a cue is made as sound and
 played through the page's own audio graph — the speaker, and the film. The
 move's cues are all made ahead of the set so none is late the first time it is
 needed; a text once made is kept. One instance of the engine dies at about its
-eightieth call, so it is renewed every forty. The voice is plainer than the
-phone's. The
+eightieth call, so it is renewed every forty. The
 phone's own voice (the browser's speech engine) is the other choice, in the
-settings: more natural, but it speaks straight to the speaker and hands the
-page nothing, so it can never be on the film — and it is the fallback while the
+settings: it speaks straight to the speaker and hands the page nothing, so it
+can never be on the film — and it is the fallback while the
 engine loads or where it cannot. Three things make a browser swallow that
 speech quietly, and all three are handled rather than left to chance: Safari
 only begins speaking from inside a user gesture, so the engine is woken

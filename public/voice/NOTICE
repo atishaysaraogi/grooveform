@@ -1,0 +1,8 @@
+The coach's natural voice
+-------------------------
+The clips in this directory are the coach's phrases spoken by the Piper voice
+en_US-lessac-medium (a VITS model trained on the Lessac Blizzard 2013 data,
+licence at https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html),
+run through sherpa-onnx at build time by scripts/voice-pack.py. index.json maps
+each phrase to its clip. Nothing here runs a model on the phone: the clips are
+played as they are, and any phrase without one falls back to eSpeak.

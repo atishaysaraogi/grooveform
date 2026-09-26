@@ -470,7 +470,7 @@
      track, into the same MP4 the coach writes. */
   let speech = null, demo = null;
   function loadSpeech() {
-    if (!speech) speech = (window.Speech ? Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js') : Promise.reject(new Error('no voice'))).catch(() => null);
+    if (!speech) speech = (window.Speech ? Speech.load('js/vendor/mespeak/', Core.VER, 'js/speech-worker.js', 'voice/') : Promise.reject(new Error('no voice'))).catch(() => null);
     return speech;
   }
   const rmsAround = (pcm, sr, cues) => cues.slice(0, 3).map((c) => Mixdown.rmsAt(pcm, sr, c.t / 1000, 1));
