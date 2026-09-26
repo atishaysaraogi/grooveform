@@ -130,6 +130,9 @@
 
   function loadSettings() {
     saved = Object.assign({ move: 'wallsit', common: {}, bands: {} }, store.get());
+    /* the bubbles start every exercise at 10 reps and 3 sets; a count kept from
+       before there were bubbles is let go once, the bands and the rest stay */
+    if (!saved.bubbles) { for (const k of Object.keys(saved.bands)) { delete saved.bands[k].repCount; delete saved.bands[k].setCount; } saved.bubbles = 1; }
     move = Moves[saved.move] || Moves.wallsit;
     $('move').value = move.id;
     for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
@@ -155,7 +158,7 @@
     screen = name;
     for (const k of SCREENS) { opt('screen-' + k).hidden = k !== name; document.body.classList.toggle('at-' + k, k === name); }
     opt('nav-back').hidden = name === 'home';
-    opt('nav-title').textContent = name === 'done' ? 'That session' : name === 'live' ? move.name : '';
+    opt('nav-title').textContent = name === 'done' ? 'That session' : '';
     opt('state').hidden = name !== 'live';
     if (name === 'ex' && window.OnTrackAnatomy) mountFigure();
     else if (window.OnTrackAnatomy) OnTrackAnatomy.stopAll();
@@ -172,23 +175,23 @@
   window.addEventListener('hashchange', route);
   opt('nav-back').onclick = () => { location.hash = screen === 'ex' ? '#/' : '#/ex/' + move.id; };
 
-  /* home: the cards, and a search over them */
+  /* home: the list — each exercise's name and what it works — and a search over it.
+     The search also knows the position and where the phone goes, though the row
+     does not show them, so "lying" or "floor" finds the floor exercises. */
   function buildPicker() {
     const host = opt('picker'); if (!host.appendChild) return;
     host.innerHTML = '';
     for (const m of Moves.list) {
-      const card = el('a', 'card', `<h3>${esc(m.name)}</h3><p class="what">${esc(m.position || m.hint || '')}</p>` +
-        `<div class="badges"><span class="badge">${m.camera === 'wide' ? 'phone on its side' : 'phone stood up'}</span><span class="badge">${esc(setWords(m))}</span></div>` +
-        (m.muscles ? `<p class="muscles"><b>Works</b> ${esc(muscleWords(m))}</p>` : ''));
-      card.href = '#/ex/' + m.id; card.dataset.move = m.id;
-      card.dataset.q = `${m.name} ${m.position || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
-      host.appendChild(card);
+      const row = el('a', 'item', `<span class="txt"><span class="name">${esc(m.name)}</span>` + (m.muscles ? `<span class="muscles">${esc(muscleWords(m))}</span>` : '') + '</span>');
+      row.href = '#/ex/' + m.id; row.dataset.move = m.id;
+      row.dataset.q = `${m.name} ${m.position || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
+      host.appendChild(row);
     }
   }
   function searchCards() {
     const q = String(opt('nav-q').value || '').trim().toLowerCase();
     let n = 0;
-    document.querySelectorAll('#picker .card').forEach((c) => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) n += 1; });
+    document.querySelectorAll('#picker .item').forEach((c) => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) n += 1; });
     opt('no-match').hidden = n > 0;
   }
   opt('nav-q').oninput = searchCards;
@@ -213,33 +216,58 @@
   }
   /* the bubbles: tap one and it moves to the next choice. Each writes the setting
      the coach reads, so nothing about the judging changes underneath. */
-  const LOADS = ['none', 'light', 'medium', 'heavy'];
+  /* A band is light, medium or heavy. A weight is in kilograms — 1, 2, 5, 10 —
+     or whatever number is typed when the bubble is on "custom"; the number is
+     what is kept, so a custom weight reads "7.5 kg" on the bubble and in the
+     history. */
+  const BANDS = ['none', 'light', 'medium', 'heavy'], KG = [0, 1, 2, 5, 10];
+  const isBand = () => move.load === 'band';
+  const mine = () => (saved.bands[move.id] = saved.bands[move.id] || {});
+  const loadOf = () => { const l = saved.bands[move.id] && saved.bands[move.id].load; return isBand() ? (l || 'none') : (Number(l) || 0); };
+  const loadWords = (l) => (typeof l === 'number' ? (l ? `${l} kg` : 'none') : String(l || 'none'));
+  let customOpen = false;
   function bubbleDefs() {
     const d = [];
     if (move.reps) d.push({ key: 'reps', label: 'Reps', input: 'cfg-repCount', opts: [1, 5, 10, 15] });
     d.push({ key: 'sets', label: 'Sets', input: 'cfg-setCount', opts: [1, 2, 3] });
     d.push({ key: 'hold', label: move.reps ? 'Hold at top' : 'Hold', input: 'cfg-target', opts: move.reps ? [1, 2, 3, 5] : [30, 45, 60, 90], unit: ' s' });
-    d.push({ key: 'load', label: move.load === 'band' ? 'Band' : 'Weight', opts: LOADS });
+    d.push(isBand() ? { key: 'load', label: 'Band', opts: BANDS } : { key: 'load', label: 'Weight', opts: KG.concat('custom') });
     return d;
   }
-  const loadOf = () => (saved.bands[move.id] && saved.bands[move.id].load) || 'none';
+  function setLoad(v) { mine().load = v; store.set(saved); }
   function buildBubbles() {
     const host = opt('bubbles'); if (!host.appendChild) return;
     host.innerHTML = '';
     for (const b of bubbleDefs()) {
-      const cur = b.key === 'load' ? loadOf() : ($(b.input) ? $(b.input).value : '');
-      const btn = el('button', 'bubble', `<span class="k">${b.label}</span><span class="v">${esc(String(cur))}${b.unit || ''}</span>`);
-      btn.type = 'button'; btn.dataset.key = b.key; btn.setAttribute('aria-label', `${b.label}: ${cur}${b.unit || ''}. Tap for the next choice.`);
+      const raw = b.key === 'load' ? loadOf() : ($(b.input) ? $(b.input).value : '');
+      const cur = b.key === 'load' && customOpen && !isBand() ? 'custom' : raw;
+      const shown = b.key === 'load' ? (cur === 'custom' ? 'custom' : loadWords(cur)) : `${cur}${b.unit || ''}`;
+      const btn = el('button', 'bubble', `<span class="k">${b.label}</span><span class="v">${esc(shown)}</span>`);
+      btn.type = 'button'; btn.dataset.key = b.key; btn.setAttribute('aria-label', `${b.label}: ${shown}. Tap for the next choice.`);
       btn.onclick = () => {
+        /* a value off the list (typed under the numbers, or a custom weight) goes to the first choice next */
         const i = b.opts.findIndex((o) => String(o) === String(cur));
         const next = b.opts[(i + 1) % b.opts.length];
-        if (b.key === 'load') { saved.bands[move.id] = saved.bands[move.id] || {}; saved.bands[move.id].load = next; store.set(saved); }
-        else { $(b.input).value = next; saveSettings(); }
+        if (b.key === 'load') {
+          customOpen = next === 'custom';
+          if (customOpen) { const kg = Number(mine().customKg) || 0; setLoad(kg); }
+          else setLoad(next);
+        } else { $(b.input).value = next; saveSettings(); }
         buildBubbles();
       };
       host.appendChild(btn);
     }
+    const custom = opt('custom-load');
+    if (custom.setAttribute) {
+      custom.hidden = !(customOpen && !isBand());
+      if (!custom.hidden) { const inp = opt('custom-kg'); inp.value = mine().customKg || ''; setTimeout(() => inp.focus(), 0); }
+    }
   }
+  opt('custom-kg').oninput = () => {
+    const kg = Math.max(0, Math.min(200, Number(opt('custom-kg').value) || 0));
+    mine().customKg = kg || undefined; setLoad(kg);
+    const v = document.querySelector('#bubbles .bubble[data-key="load"] .v'); if (v) v.textContent = kg ? `${kg} kg` : 'custom';
+  };
   /* the picked exercise, everywhere the page names it */
   function showMove() {
     document.querySelectorAll('#about p[data-move]').forEach((pp) => pp.classList.toggle('on', pp.dataset.move === move.id));
@@ -254,6 +282,7 @@
     opt('last-panel').hidden = !last;
     if (last) opt('last-time').textContent = lastWords(last);
     $('veil-title').textContent = move.name;
+    customOpen = false;
     buildBubbles();
     if (screen === 'ex' && window.OnTrackAnatomy) mountFigure();
   }
@@ -271,7 +300,7 @@
     if (feel.effort) bits.push({ easy: 'felt easy', right: 'felt about right', hard: 'felt hard' }[feel.effort]);
     if (feel.more === 'more') bits.push('could have done more'); if (feel.more === 'less') bits.push('wanted less');
     if (feel.pain === 'some') bits.push('a little pain'); if (feel.pain === 'stop') bits.push('pain — stopped');
-    if (h.load && h.load !== 'none') bits.push(`${h.load} load`);
+    if (typeof h.load === 'number' && h.load) bits.push(`${h.load} kg`); else if (h.load && h.load !== 'none') bits.push(`${h.load} band`);
     return `${when}: ${did} in ${h.sets.length} set${h.sets.length === 1 ? '' : 's'}${bits.length ? ' — ' + bits.join(', ') : ''}.${feel.note ? ' “' + feel.note + '”' : ''}` +
       (feel.more === 'more' && feel.pain !== 'stop' ? ' Try one more bubble up.' : feel.pain === 'stop' ? ' Go easier, and stop again if it hurts.' : '');
   }

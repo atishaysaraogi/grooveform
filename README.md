@@ -16,13 +16,16 @@ are all made on the device.
 **The page.** OnTrack's own look, from its deck: white, grape ink, cream
 panels, cards in tangerine, lime and pink with a hard grape shadow, Righteous
 for titles and Nunito for the rest. A sticky bar with the three stripes holds
-the mark, a search over the exercises, and an info button whose popup is how
-it works in five steps with icons: set up your phone, walk into the camera,
-listen for cues, complete the exercise, review. The home screen is the list
-of exercises. An exercise's page fits a phone's screen: the title, the muscle
-figure animated over the top half, bubbles for reps (1, 5, 10, 15), sets (1,
-2, 3), the hold (or the hold at the top) and the weight or band, a tap moving
-each to its next choice and writing the setting the coach reads, and Start.
+the mark on every page, a search over the exercises on the home page, and an
+info button whose popup is how it works in five steps with icons: set up your
+phone, walk into the camera, listen for cues, complete the exercise, review.
+The home screen is the list of exercises, each its name and what it works.
+An exercise's page fits a phone's screen: the title, the muscle figure
+animated over the top half, bubbles for reps (1, 5, 10, 15, starting at 10),
+sets (1, 2, 3, starting at 3), the hold (or the hold at the top) and the
+weight (1, 2, 5, 10 kg, or a number typed in under "custom") or the band
+(light, medium, heavy), a tap moving each to its next choice and writing the
+setting the coach reads, and Start.
 Below it: how to set up, how to do it, what the camera coaches and what it
 cannot see, last time's notes, the numbers. Start opens the camera screen,
 which is the camera and nothing else; when the session is over its own

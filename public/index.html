@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-v="2026-09-26c">
+<html lang="en" data-v="2026-09-26d">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,8 +16,8 @@
 
 <!-- ============ the bar: the stripes, the mark, a search, how it works ============ -->
 <header class="topbar" id="topbar">
-  <a class="brand" href="#/" aria-label="OnTrack home"><span class="wordmark">OnTrack</span></a>
   <button class="iconbtn back" id="nav-back" aria-label="Back" hidden>‹</button>
+  <a class="brand" href="#/" aria-label="OnTrack home"><span class="wordmark">OnTrack</span></a>
   <span class="nav-title" id="nav-title"></span>
   <input type="search" id="nav-q" class="search" placeholder="Search exercises" aria-label="Search exercises" autocomplete="off">
   <button class="iconbtn" id="btn-how" aria-label="How it works" title="How it works"><span class="i-mark">i</span></button>
@@ -55,7 +55,7 @@
   <!-- ============ home: the exercises ============ -->
   <section class="screen" id="screen-home">
     <p class="lede">Pick an exercise. Prop up the phone. Turn the sound on. Move.</p>
-    <section class="picker" id="picker" aria-label="Exercises"></section>
+    <nav class="list" id="picker" aria-label="Exercises"></nav>
     <p class="tiny" id="no-match" hidden>Nothing by that name yet.</p>
   </section>
 
@@ -65,6 +65,7 @@
       <h1 class="ex-title" id="ex-title">Wall sit</h1>
       <div class="fig-wrap"><canvas class="demo-fig muscle" id="ex-fig" role="img" aria-label="The exercise, animated"></canvas></div>
       <div class="bubbles" id="bubbles" aria-label="How many"></div>
+      <label class="custom-load" id="custom-load" hidden>Weight, kg <input type="number" id="custom-kg" min="0.5" max="200" step="0.5" inputmode="decimal" placeholder="7.5"></label>
       <button class="btn primary go" id="go">Start the camera</button>
       <p class="tiny center" id="go-note">The camera starts the set. Nothing leaves this device.</p>
     </div>
@@ -210,16 +211,16 @@
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-26c"></script>
-<script src="js/moves.js?v=2026-09-26c"></script>
-<script src="js/mp4.js?v=2026-09-26c"></script>
-<script src="js/overlay.js?v=2026-09-26c"></script>
-<script src="js/sound.js?v=2026-09-26c"></script>
-<script src="js/codec.js?v=2026-09-26c"></script>
-<script src="js/speech.js?v=2026-09-26c"></script>
-<script src="js/mixdown.js?v=2026-09-26c"></script>
-<script src="js/figure.js?v=2026-09-26c"></script>
-<script src="js/anatomy.js?v=2026-09-26c"></script>
-<script src="js/app.js?v=2026-09-26c"></script>
+<script src="js/core.js?v=2026-09-26d"></script>
+<script src="js/moves.js?v=2026-09-26d"></script>
+<script src="js/mp4.js?v=2026-09-26d"></script>
+<script src="js/overlay.js?v=2026-09-26d"></script>
+<script src="js/sound.js?v=2026-09-26d"></script>
+<script src="js/codec.js?v=2026-09-26d"></script>
+<script src="js/speech.js?v=2026-09-26d"></script>
+<script src="js/mixdown.js?v=2026-09-26d"></script>
+<script src="js/figure.js?v=2026-09-26d"></script>
+<script src="js/anatomy.js?v=2026-09-26d"></script>
+<script src="js/app.js?v=2026-09-26d"></script>
 </body>
 </html>

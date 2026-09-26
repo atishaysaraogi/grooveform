@@ -50,8 +50,8 @@ h2.gap { margin-top: 14px; }
 }
 .iconbtn.back { font-size: 1.6rem; line-height: 1; padding-bottom: 3px; }
 .i-mark { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 900; }
-body:not(.at-home) .search, body:not(.at-home) .brand { display: none; }
-body.at-home .nav-title, body.at-home .back { display: none; }
+body:not(.at-home) .search { display: none; }
+body.at-home .nav-title, body.at-home .back, body.at-ex .nav-title { display: none; }
 body.at-live .topbar { display: none; }
 
 .chip {
@@ -77,24 +77,21 @@ body.at-live .topbar { display: none; }
 .how-steps li:nth-child(3n+2) svg { background: var(--lime); }
 .how-steps li:nth-child(3n+3) svg { background: var(--pink); color: #fff; }
 
-/* ---- the exercises, as cards: tangerine, lime, pink, in that order ---- */
-.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 14px; padding: 4px 6px 8px 0; }
-.card {
-  background: var(--cream); border: 2px solid var(--grape); border-radius: var(--r); padding: 14px 14px 12px; box-shadow: var(--shadow);
-  text-align: left; color: var(--grape); font: inherit; cursor: pointer; display: grid; gap: 6px; align-content: start; text-decoration: none;
-  transition: transform .08s;
+/* ---- the exercises, as a list: the name, what it works, a coloured mark ---- */
+.list { display: block; margin: 8px 0 0; border-top: 2px solid var(--grape); }
+.item {
+  display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 12px; padding: 14px 4px 14px 2px;
+  border-bottom: 2px solid var(--line); color: var(--grape); text-decoration: none; cursor: pointer;
 }
-.card:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 var(--grape); }
-.card:nth-child(3n+1) { background: var(--tangerine); }
-.card:nth-child(3n+2) { background: var(--lime); }
-.card:nth-child(3n+3) { background: var(--pink); }
-.card[hidden] { display: none; }
-.card h3 { font: 400 1.2rem/1.15 var(--font-display); }
-.card .what { margin: 0; font-size: .84rem; font-weight: 600; }
-.badges { display: flex; flex-wrap: wrap; gap: 5px; }
-.badge { font-size: .66rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 6px; background: rgba(255,255,255,.7); color: var(--grape); }
-.card .muscles { margin: 0; font-size: .78rem; font-weight: 600; }
-.card .muscles b { font-weight: 900; }
+.item:active { background: var(--cream); }
+.item[hidden] { display: none; }
+.item::before { content: ''; width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--grape); background: var(--tangerine); }
+.item:nth-child(3n+2)::before { background: var(--lime); }
+.item:nth-child(3n+3)::before { background: var(--pink); }
+.item .txt { min-width: 0; }
+.item .name { font: 400 1.2rem/1.15 var(--font-display); display: block; }
+.item .muscles { margin: 2px 0 0; font-size: .82rem; font-weight: 600; color: var(--muted); display: block; }
+.item::after { content: '›'; font: 900 1.5rem/1 var(--font-body); color: var(--grape); padding-right: 4px; }
 
 /* ---- the exercise page: title, the figure, the bubbles, start — one screen ---- */
 .ex-top { min-height: calc(100svh - 84px); display: grid; grid-template-rows: auto 1fr auto auto auto; gap: 10px; align-content: start; }
@@ -109,6 +106,9 @@ body.at-live .topbar { display: none; }
 .bubble .k { font-weight: 700; color: var(--muted); }
 .bubble:active { transform: translateY(1px); }
 .bubble.na { display: none; }
+.custom-load { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--grape); }
+.custom-load input { width: 6.5em; min-height: 40px; padding: 6px 10px; border-radius: 12px; border: 2px solid var(--grape); font: 800 1rem var(--font-body); color: var(--ink); background: var(--surface); }
+.custom-load[hidden] { display: none; }
 .btn.go { min-height: 54px; font-size: 1.1rem; }
 .ex-more { display: grid; gap: 14px; }
 .ticks { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: .92rem; }

@@ -201,18 +201,21 @@ const sessionOver = () => page.waitForSelector('#screen-done:not([hidden])', { t
 const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 14000 });
 
 try {
-  await step('the page comes up on the exercises: cards, a search, how it works', async () => {
+  await step('the page comes up on the exercises: a list, a search, how it works', async () => {
     await page.goto(base + '/');
-    await page.waitForSelector('#picker .card');
-    const cards = await page.$$eval('#picker .card', (l) => l.map((c) => ({ id: c.dataset.move, text: c.textContent })));
-    assert.equal(cards.length, 5, 'one card per exercise: ' + cards.map((c) => c.id).join(','));
-    const bridge = cards.find((c) => c.id === 'bridge');
-    assert.match(bridge.text, /phone on its side/i); assert.match(bridge.text, /10 reps/i); assert.match(bridge.text, /glutes/i, 'what works: ' + bridge.text);
+    await page.waitForSelector('#picker .item');
+    const rows = await page.$$eval('#picker .item', (l) => l.map((c) => ({ id: c.dataset.move, text: c.textContent.replace(/\s+/g, ' ').trim() })));
+    assert.equal(rows.length, 5, 'one row per exercise: ' + rows.map((c) => c.id).join(','));
+    const bridge = rows.find((c) => c.id === 'bridge');
+    assert.match(bridge.text, /^Glute bridge/); assert.match(bridge.text, /glutes/i, 'the name and what it works, nothing more: ' + bridge.text);
+    assert.doesNotMatch(bridge.text, /phone|reps/i, bridge.text);
+    /* the mark is on the bar here and stays on the exercise's page */
+    assert.equal(await page.isVisible('.brand'), true);
     /* a search narrows them, and clearing it brings them back */
     await page.fill('#nav-q', 'lying');
-    await page.waitForFunction(() => [...document.querySelectorAll('#picker .card')].filter((c) => !c.hidden).length === 3, null, { timeout: 3000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 3, null, { timeout: 3000 });
     await page.fill('#nav-q', '');
-    await page.waitForFunction(() => [...document.querySelectorAll('#picker .card')].filter((c) => !c.hidden).length === 5, null, { timeout: 3000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 5, null, { timeout: 3000 });
     /* how it works: five steps, each with its icon */
     await page.click('#btn-how');
     assert.equal(await page.isVisible('#how'), true);
@@ -223,10 +226,11 @@ try {
   });
 
   await step('an exercise page: the title, the figure, the bubbles, start — and the words below', async () => {
-    await page.click('#picker .card[data-move="bridge"]');
+    await page.click('#picker .item[data-move="bridge"]');
     await page.waitForSelector('#screen-ex:not([hidden])');
     await page.waitForFunction(() => document.getElementById('ex-title').textContent === 'Glute bridge', null, { timeout: 5000 });
     assert.equal(await page.evaluate(() => document.getElementById('ex-fig').getAttribute('data-anat')), 'bridge', 'the figure is this exercise\'s');
+    assert.equal(await page.isVisible('.brand'), true, 'the mark stays on the bar');
     const bubbles = await page.$$eval('#bubbles .bubble', (l) => l.map((b) => b.textContent.replace(/\s+/g, ' ').trim()));
     assert.deepEqual(bubbles, ['Reps10', 'Sets3', 'Hold at top2 s', 'Weightnone'].map((x) => x), 'reps, sets, the hold at the top, the load: ' + JSON.stringify(bubbles));
     /* a tap moves a bubble to its next choice, and writes the setting the coach reads */
@@ -236,8 +240,18 @@ try {
     assert.equal(await page.inputValue('#cfg-repCount'), '1', 'and round again');
     await page.click('#bubbles .bubble[data-key="reps"]'); await page.click('#bubbles .bubble[data-key="reps"]');
     assert.equal(await page.inputValue('#cfg-repCount'), '10');
+    /* the weight goes 1, 2, 5, 10 kg, then a custom number typed in, then none */
     await page.click('#bubbles .bubble[data-key="load"]');
-    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /light/);
+    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /1 kg/);
+    for (let i = 0; i < 4; i++) await page.click('#bubbles .bubble[data-key="load"]');
+    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /custom/);
+    assert.equal(await page.isVisible('#custom-load'), true, 'the number box opens');
+    await page.fill('#custom-kg', '7.5');
+    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /7\.5 kg/);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wallsit')).bands.bridge.load), 7.5, 'and is what is kept');
+    await page.click('#bubbles .bubble[data-key="load"]');
+    assert.match(await page.textContent('#bubbles .bubble[data-key="load"]'), /none/);
+    assert.equal(await page.isVisible('#custom-load'), false);
     /* the whole top fits a phone's screen: start is in view without scrolling */
     const fit = await page.evaluate(() => { const g = document.getElementById('go').getBoundingClientRect(); return { bottom: g.bottom, h: window.innerHeight }; });
     assert.ok(fit.bottom < fit.h, `start is on the first screen: ${Math.round(fit.bottom)} of ${fit.h}`);
@@ -1068,12 +1082,12 @@ try {
     /* this browser build cannot encode AAC, so the file is silent and the note says so; a phone's can */
     assert.match(d.note, /the voice on \d+ of \d+ cues and every tone|silent \u2014 this browser cannot encode sound/, d.note);
     await page.goto(base + '/');
-    await page.waitForSelector('#picker .card');
+    await page.waitForSelector('#picker .item');
   });
 
   await step('the exercise and its bands are remembered across a reload', async () => {
     await page.reload();
-    await page.waitForSelector('#picker .card');
+    await page.waitForSelector('#picker .item');
     assert.equal(await page.inputValue('#move'), 'kneeraise', 'it comes back on the last exercise used');
     assert.equal(await page.inputValue('#cfg-repCount'), '3', 'with the rep count that was set');
     /* and the plank's own band, changed two exercises ago, is still its own */
