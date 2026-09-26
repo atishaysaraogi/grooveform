@@ -235,10 +235,12 @@ Moves.ready.then(function () {
   /* the exercise page: the figure with its muscles, the bubbles, the words */
   function mountFigure() {
     const A = OnTrackAnatomy, c = opt('ex-fig'); if (!c.setAttribute) return;
-    if (!['wallsit', 'plank'].includes(move.id) && window.Figure && !A.figure(move.id)) {
+    /* the figure is the file's, registered afresh each time so an edited draft shows its edit */
+    if (window.Figure) {
       const f = Figure.figureOf(move);
       if (f) A.register(move.id, Object.assign({ view: 'side', A: f.A, B: f.B || f.A, hold: !!f.hold, side: (move.figure && move.figure.side) || 'both',
-        flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), w: move.muscles || {} }, f.wall != null ? { wall: f.wall } : {}));
+        flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), w: move.muscles || {} },
+      f.wall != null ? { wall: f.wall } : {}, move.figure && move.figure.props ? { props: move.figure.props } : {}));
     }
     c.setAttribute('data-anat', move.id);
     A.mountAll(opt('screen-ex'));

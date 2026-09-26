@@ -5,8 +5,15 @@
   "order": 1,
   "status": "ready",
   "category": "Legs",
-  "tags": ["standing", "wall", "hold", "quads"],
-  "equipment": ["a wall"],
+  "tags": [
+    "standing",
+    "wall",
+    "hold",
+    "quads"
+  ],
+  "equipment": [
+    "a wall"
+  ],
   "type": "hold",
   "position": "standing",
   "movement": "a seated hold against a wall",
@@ -38,60 +45,300 @@
     "harder": "A longer hold; a weight held to the chest.",
     "mistakes": "Feet too close to the wall, so the knees go past the toes; sitting too high; leaning forward off the wall."
   },
-  "muscles": { "thigh": 1, "calf": 0.45, "glute": 0.55, "abs": 0.3 },
-  "figure": { "pose": { "A": { "torso": 0, "thigh": 90, "shin": 0, "uarm": 8, "farm": 8 }, "wall": "behind", "hold": true } },
-  "facing": { "from": "hip", "to": "knee" },
-  "side": { "pick": "clearest" },
+  "muscles": {
+    "thigh": 1,
+    "calf": 0.45,
+    "glute": 0.55,
+    "abs": 0.3
+  },
+  "figure": {
+    "points": {
+      "A": {
+        "h": [334, 50],
+        "sh": [334, 74],
+        "hip": [336, 116],
+        "kn": [292, 114],
+        "an": [292, 160],
+        "ft": [276, 161],
+        "el": [328, 98],
+        "wr": [322, 120],
+        "knF": [297, 119],
+        "anF": [297, 160],
+        "ftF": [282, 161],
+        "elF": [333, 100],
+        "wrF": [328, 122]
+      },
+      "B": {
+        "h": [334, 53],
+        "sh": [334, 77],
+        "hip": [336, 119],
+        "kn": [290, 118],
+        "an": [290, 160],
+        "ft": [274, 161],
+        "el": [328, 101],
+        "wr": [322, 123],
+        "knF": [295, 123],
+        "anF": [295, 160],
+        "ftF": [280, 161],
+        "elF": [333, 103],
+        "wrF": [328, 125]
+      },
+      "hold": true,
+      "flip": true,
+      "side": "both",
+      "wall": 340
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "knee"
+  },
+  "side": {
+    "pick": "clearest"
+  },
   "landmarks": {
-    "joints": ["shoulder", "hip", "knee", "ankle", "heel"],
-    "needed": ["shoulder", "hip", "knee", "ankle"],
-    "bones": [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
-    "dots": ["shoulder", "hip", "knee", "ankle", "heel"],
-    "limb": { "shoulder|hip": "back", "knee|ankle": "shin", "ankle|heel": "shin", "ankle|toe": "shin", "heel|toe": "shin" }
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel"
+    ],
+    "limb": {
+      "shoulder|hip": "back",
+      "knee|ankle": "shin",
+      "ankle|heel": "shin",
+      "ankle|toe": "shin",
+      "heel|toe": "shin"
+    }
   },
   "measurements": [
-    { "key": "knee", "label": "knee angle", "hud": "KNEE", "note": "target",
-      "kind": "angle", "a": "hip", "b": "knee", "c": "ankle",
-      "band": { "lo": "kneeMin", "hi": "kneeMax" }, "scale": [50, 150],
+    {
+      "key": "knee",
+      "label": "knee angle",
+      "hud": "KNEE",
+      "note": "target",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "lo": "kneeMin",
+        "hi": "kneeMax"
+      },
+      "scale": [50, 150],
       "settings": [
-        { "key": "kneeMin", "label": "Knee angle, lowest", "min": 40, "max": 150 },
-        { "key": "kneeMax", "label": "Knee angle, highest", "min": 40, "max": 170 }
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, lowest",
+          "min": 40,
+          "max": 150
+        },
+        {
+          "key": "kneeMax",
+          "label": "Knee angle, highest",
+          "min": 40,
+          "max": 170
+        }
       ],
-      "why": "The one that is judged: below the band the legs are too bent, above it too straight." },
-    { "key": "shin", "label": "shin off floor", "hud": "SHIN", "note": "floor",
-      "kind": "floor", "at": "knee", "to": ["heel", "ankle"], "optional": true,
-      "band": { "lo": "shinMin", "hi": "shinMax" }, "scale": [50, 130],
+      "why": "The one that is judged: below the band the legs are too bent, above it too straight."
+    },
+    {
+      "key": "shin",
+      "label": "shin off floor",
+      "hud": "SHIN",
+      "note": "floor",
+      "kind": "floor",
+      "at": "knee",
+      "to": [
+        "heel",
+        "ankle"
+      ],
+      "optional": true,
+      "band": {
+        "lo": "shinMin",
+        "hi": "shinMax"
+      },
+      "scale": [50, 130],
       "settings": [
-        { "key": "shinMin", "label": "Shin off floor, lowest", "min": 40, "max": 90 },
-        { "key": "shinMax", "label": "Shin off floor, highest", "min": 90, "max": 140 }
+        {
+          "key": "shinMin",
+          "label": "Shin off floor, lowest",
+          "min": 40,
+          "max": 90
+        },
+        {
+          "key": "shinMax",
+          "label": "Shin off floor, highest",
+          "min": 90,
+          "max": 140
+        }
       ],
-      "why": "The shin against the floor, taken to the heel, or to the ankle when the heel is not trusted. Over 90 the heel is ahead of the knee (feet too far out), under it behind (feet too far in)." },
-    { "key": "back", "of": "tilt", "label": "back off vertical", "hud": "BACK", "note": "vertical",
-      "kind": "tilt", "base": "hip", "top": "shoulder",
-      "band": { "sym": "backTilt" }, "scale": [-40, 40],
-      "settings": [{ "key": "backTilt", "label": "Back allowed off vertical", "min": 3, "max": 40 }],
-      "why": "The hip-to-shoulder line off plumb, positive leaning the way the knees point." }
+      "why": "The shin against the floor, taken to the heel, or to the ankle when the heel is not trusted. Over 90 the heel is ahead of the knee (feet too far out), under it behind (feet too far in)."
+    },
+    {
+      "key": "back",
+      "of": "tilt",
+      "label": "back off vertical",
+      "hud": "BACK",
+      "note": "vertical",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "backTilt"
+      },
+      "scale": [
+        -40,
+        40
+      ],
+      "settings": [
+        {
+          "key": "backTilt",
+          "label": "Back allowed off vertical",
+          "min": 3,
+          "max": 40
+        }
+      ],
+      "why": "The hip-to-shoulder line off plumb, positive leaning the way the knees point."
+    }
   ],
   "faults": [
-    { "id": "feetback", "measure": "shin", "side": "above", "label": "Feet ahead of knees", "text": "Bring your feet back", "deep": "Bring your feet back — your heels are well ahead of your knees", "tone": "walking in" },
-    { "id": "feetfwd", "measure": "shin", "side": "below", "label": "Feet behind knees", "text": "Bring your feet forward", "deep": "Walk your feet further out — your heels are behind your knees", "tone": "walking out" },
-    { "id": "high", "measure": "knee", "side": "above", "label": "Too high", "text": "Lower down", "deep": "Slide further down the wall", "tone": "down" },
-    { "id": "low", "measure": "knee", "side": "below", "label": "Too deep", "text": "Come up a little", "deep": "Come up — that is too deep", "tone": "up" },
-    { "id": "forward", "measure": "back", "side": "above", "label": "Leaning forward", "text": "Press your back flat to the wall", "deep": "Back flat — your shoulders are ahead of your hips", "tone": "plain" },
-    { "id": "back", "measure": "back", "side": "below", "label": "Hips ahead of shoulders", "text": "Bring your hips under your shoulders", "tone": "plain" }
+    {
+      "id": "feetback",
+      "measure": "shin",
+      "side": "above",
+      "label": "Feet ahead of knees",
+      "text": "Bring your feet back",
+      "deep": "Bring your feet back — your heels are well ahead of your knees",
+      "tone": "walking in"
+    },
+    {
+      "id": "feetfwd",
+      "measure": "shin",
+      "side": "below",
+      "label": "Feet behind knees",
+      "text": "Bring your feet forward",
+      "deep": "Walk your feet further out — your heels are behind your knees",
+      "tone": "walking out"
+    },
+    {
+      "id": "high",
+      "measure": "knee",
+      "side": "above",
+      "label": "Too high",
+      "text": "Lower down",
+      "deep": "Slide further down the wall",
+      "tone": "down"
+    },
+    {
+      "id": "low",
+      "measure": "knee",
+      "side": "below",
+      "label": "Too deep",
+      "text": "Come up a little",
+      "deep": "Come up — that is too deep",
+      "tone": "up"
+    },
+    {
+      "id": "forward",
+      "measure": "back",
+      "side": "above",
+      "label": "Leaning forward",
+      "text": "Press your back flat to the wall",
+      "deep": "Back flat — your shoulders are ahead of your hips",
+      "tone": "plain"
+    },
+    {
+      "id": "back",
+      "measure": "back",
+      "side": "below",
+      "label": "Hips ahead of shoulders",
+      "text": "Bring your hips under your shoulders",
+      "tone": "plain"
+    }
   ],
   "draw": [
-    { "kind": "plumb", "at": "hip", "share": 0.3 },
-    { "kind": "floor", "at": "shin:to" },
-    { "kind": "arc", "measure": "shin", "size": 0.8 },
-    { "kind": "arc", "measure": "knee", "size": 1 }
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.3
+    },
+    {
+      "kind": "floor",
+      "at": "shin:to"
+    },
+    {
+      "kind": "arc",
+      "measure": "shin",
+      "size": 0.8
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 1
+    }
   ],
   "defaults": {
-    "kneeMin": 85, "kneeMax": 110,
-    "shinMin": 85, "shinMax": 95,
+    "kneeMin": 85,
+    "kneeMax": 110,
+    "shinMin": 85,
+    "shinMax": 95,
     "backTilt": 12,
     "setCount": 3,
-    "holdTargetSec": 60, "callAtSec": [45, 30, 10, 5]
+    "holdTargetSec": 60,
+    "callAtSec": [
+      45,
+      30,
+      10,
+      5
+    ]
   },
-  "settings": [{ "key": "setCount", "label": "Sets", "min": 1, "max": 10 }]
+  "settings": [
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
 }

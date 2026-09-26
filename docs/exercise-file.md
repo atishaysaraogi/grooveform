@@ -120,6 +120,28 @@ Degrees: `torso` from vertical (+ leaning the way the body faces); `thigh`,
 
 Points are what the Animation tab drags (a 400×175 space, floor at y 163);
 `props` are the equipment the figure module can draw (box, bar, disc, band).
+Every exercise page draws the figure from its file, nothing else, so an
+edited file is what shows.
+
+### Editing an existing exercise's animation
+
+1. Open `review.html` (the ◔ button) and pick the exercise in the dropdown.
+2. Build tab → *Edit a copy of the one selected above*. It is a draft now.
+3. Animation tab. The draft's figure is loaded. Press *A — start* or *B — end*
+   and drag the joints; shift-drag moves the whole figure; the dimmer handles
+   are the far limbs. Set *Holds still*, *Faces*, *Working side*, the wall,
+   and the muscle sliders. The preview beside it plays the result.
+4. Build tab → *The figure* → *Given as: points* → *Take the figure from the
+   Animation tab*. The problems list should stay clear.
+5. *Try it live* opens the exercise's page in the coach with the new figure
+   animating over the top half.
+6. *Download the file* and replace `public/exercises/<id>.json` with it, then
+   commit and push. Then *Drop the draft* on either page, so the browser uses
+   the library's copy again.
+
+For a figure given as angles, step 3 can instead be the *The figure* section
+of the Build tab: change the numbers for A and B and the preview on the
+exercise page follows.
 
 ## Landmarks
 

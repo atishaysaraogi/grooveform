@@ -27,21 +27,26 @@ test('the knee raise: the standing foot stays where it is while the other comes 
 });
 
 test('the wall sit: seated in the air, the wall behind, and it holds still', () => {
-  const r = Figure.fromAngles(Moves.wallsit.pose);
+  /* the wall sit as angles: the file carries hand-set points now, but the angle form with a wall is still what a new file starts from */
+  const WALLSIT_POSE = { A: { torso: 0, thigh: 90, shin: 0, uarm: 8, farm: 8 }, wall: 'behind', hold: true };
+  const r = Figure.fromAngles(WALLSIT_POSE);
   assert.ok(Math.abs(r.A.kn[1] - r.A.hip[1]) < 3, 'thighs level');
   assert.ok(r.wall != null && r.wall < r.A.hip[0], 'the wall is behind a body facing right: ' + r.wall);
   assert.ok(r.wall < Math.min(r.A.sh[0], r.A.hip[0], r.A.ft[0]), 'and clear of every point');
   assert.equal(r.hold, true);
-  const s = Figure.svg(Moves.wallsit);
+  const s = Figure.svg({ id: 'wallsit', name: 'Wall sit', pose: WALLSIT_POSE });
   assert.ok(!/animate/.test(s), 'a hold does not move');
   assert.match(s, /hold still/);
   assert.match(s, /x1="\d+" y1="30" x2="\d+" y2="162" stroke-width="4"/, 'the wall is drawn');
 });
 
 test('the plank faces left and lies low; the bridge comes as points and moves', () => {
-  const p = Figure.fromAngles(Moves.plank.pose);
+  /* the plank as angles, facing left (its file carries hand-set points, which say the same) */
+  const p = Figure.fromAngles({ A: { face: 'left', torso: 72, neck: -15, thigh: -80, shin: -80, foot: -60, uarm: -20, farm: 70 }, hold: true });
   assert.ok(p.A.h[0] < p.A.hip[0], 'head to the left of the hips');
   assert.ok(Figure.box(p).h < 100, 'a lying figure gets a low box');
+  const pf = Figure.figureOf(Moves.plank);
+  assert.ok(pf && pf.A.h[0] < pf.A.hip[0] && pf.hold, 'and the file\'s figure faces left and holds');
   const b = Figure.figureOf(Moves.bridge);
   assert.ok(b && b.A.hip && b.B.hip);
   assert.ok(b.B.hip[1] < b.A.hip[1], 'hips up in the second keyframe');

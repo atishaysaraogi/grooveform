@@ -5,8 +5,15 @@
   "order": 2,
   "status": "ready",
   "category": "Core",
-  "tags": ["floor", "prone", "hold", "core"],
-  "equipment": ["a mat"],
+  "tags": [
+    "floor",
+    "prone",
+    "hold",
+    "core"
+  ],
+  "equipment": [
+    "a mat"
+  ],
   "type": "hold",
   "position": "prone",
   "movement": "a straight-body hold on the forearms",
@@ -38,50 +45,264 @@
     "harder": "A longer hold; feet raised on a step.",
     "mistakes": "Hips sagging; hips piked up; shoulders drifting behind the elbows."
   },
-  "muscles": { "abs": 1, "oblique": 0.8, "shoulder": 0.55, "thigh": 0.45, "back": 0.3 },
-  "figure": { "pose": { "A": { "face": "left", "torso": 72, "neck": -15, "thigh": -80, "shin": -80, "foot": -60, "uarm": -20, "farm": 70 }, "hold": true } },
-  "facing": { "from": "hip", "to": "shoulder" },
-  "side": { "pick": "clearest" },
+  "muscles": {
+    "abs": 1,
+    "oblique": 0.8,
+    "shoulder": 0.55,
+    "thigh": 0.45,
+    "back": 0.3
+  },
+  "figure": {
+    "points": {
+      "A": {
+        "h": [248, 112],
+        "sh": [266, 120],
+        "hip": [310, 131],
+        "kn": [338, 142],
+        "an": [364, 152],
+        "ft": [368, 162],
+        "el": [266, 158],
+        "wr": [244, 161],
+        "knF": [336, 146],
+        "anF": [362, 156],
+        "ftF": [366, 162],
+        "elF": [268, 160],
+        "wrF": [248, 162]
+      },
+      "B": {
+        "h": [248, 110],
+        "sh": [266, 118],
+        "hip": [310, 126],
+        "kn": [338, 139],
+        "an": [364, 151],
+        "ft": [368, 162],
+        "el": [266, 158],
+        "wr": [244, 161],
+        "knF": [336, 143],
+        "anF": [362, 155],
+        "ftF": [366, 162],
+        "elF": [268, 160],
+        "wrF": [248, 162]
+      },
+      "hold": true,
+      "flip": false,
+      "side": "both"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
   "landmarks": {
-    "joints": ["shoulder", "elbow", "hip", "knee", "ankle"],
-    "needed": ["shoulder", "elbow", "hip", "ankle"],
-    "bones": [["shoulder", "elbow"], ["elbow", "wrist"], ["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
-    "dots": ["shoulder", "elbow", "wrist", "hip", "knee", "ankle"],
-    "limb": { "shoulder|elbow": "stack", "elbow|wrist": "stack", "shoulder|hip": "line", "hip|knee": "line", "knee|ankle": "line" }
+    "joints": [
+      "shoulder",
+      "elbow",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "needed": [
+      "shoulder",
+      "elbow",
+      "hip",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "limb": {
+      "shoulder|elbow": "stack",
+      "elbow|wrist": "stack",
+      "shoulder|hip": "line",
+      "hip|knee": "line",
+      "knee|ankle": "line"
+    }
   },
   "measurements": [
-    { "key": "stack", "label": "arm off vertical", "hud": "ARM", "note": "forward",
-      "kind": "tilt", "base": "elbow", "top": "shoulder",
-      "band": { "lo": "stackMin", "hi": "stackMax" }, "scale": [-35, 45],
-      "settings": [
-        { "key": "stackMin", "label": "Shoulder behind elbow, most", "min": -30, "max": 0 },
-        { "key": "stackMax", "label": "Shoulder in front of elbow, most", "min": 0, "max": 40 }
+    {
+      "key": "stack",
+      "label": "arm off vertical",
+      "hud": "ARM",
+      "note": "forward",
+      "kind": "tilt",
+      "base": "elbow",
+      "top": "shoulder",
+      "band": {
+        "lo": "stackMin",
+        "hi": "stackMax"
+      },
+      "scale": [
+        -35,
+        45
       ],
-      "why": "The upper arm's lean off vertical, positive toward the head. The shoulder belongs over the elbow or a little in front; behind it the joint takes the load at its weakest, so the band is not symmetric." },
-    { "key": "line", "of": "hipOff", "label": "hip off the line", "hud": "HIP", "note": "straight",
-      "kind": "bend", "a": "shoulder", "b": "hip", "c": "ankle",
-      "band": { "sym": "hipLine" }, "scale": [-30, 30],
-      "settings": [{ "key": "hipLine", "label": "Hip allowed off the line", "min": 2, "max": 25 }],
-      "why": "How far the hip sits off the shoulder-to-ankle line, as degrees of bend: positive piked up, negative sagging." }
+      "settings": [
+        {
+          "key": "stackMin",
+          "label": "Shoulder behind elbow, most",
+          "min": -30,
+          "max": 0
+        },
+        {
+          "key": "stackMax",
+          "label": "Shoulder in front of elbow, most",
+          "min": 0,
+          "max": 40
+        }
+      ],
+      "why": "The upper arm's lean off vertical, positive toward the head. The shoulder belongs over the elbow or a little in front; behind it the joint takes the load at its weakest, so the band is not symmetric."
+    },
+    {
+      "key": "line",
+      "of": "hipOff",
+      "label": "hip off the line",
+      "hud": "HIP",
+      "note": "straight",
+      "kind": "bend",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "ankle",
+      "band": {
+        "sym": "hipLine"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "hipLine",
+          "label": "Hip allowed off the line",
+          "min": 2,
+          "max": 25
+        }
+      ],
+      "why": "How far the hip sits off the shoulder-to-ankle line, as degrees of bend: positive piked up, negative sagging."
+    }
   ],
   "faults": [
-    { "id": "stackback", "measure": "stack", "side": "below", "label": "Shoulders behind elbows", "text": "Bring your shoulders over your elbows", "deep": "Shoulders forward — they are well behind your elbows", "tone": "walking out" },
-    { "id": "stackfwd", "measure": "stack", "side": "above", "label": "Shoulders ahead of elbows", "text": "Bring your shoulders back over your elbows", "deep": "Shoulders back — they are well ahead of your elbows", "tone": "walking in" },
-    { "id": "hipup", "measure": "line", "side": "above", "label": "Hips piked", "text": "Lower your hips", "deep": "Lower your hips — shoulders to heels in one line", "tone": "down" },
-    { "id": "hipdown", "measure": "line", "side": "below", "label": "Hips sagging", "text": "Lift your hips", "deep": "Lift your hips — shoulders to heels in one line", "tone": "up" }
+    {
+      "id": "stackback",
+      "measure": "stack",
+      "side": "below",
+      "label": "Shoulders behind elbows",
+      "text": "Bring your shoulders over your elbows",
+      "deep": "Shoulders forward — they are well behind your elbows",
+      "tone": "walking out"
+    },
+    {
+      "id": "stackfwd",
+      "measure": "stack",
+      "side": "above",
+      "label": "Shoulders ahead of elbows",
+      "text": "Bring your shoulders back over your elbows",
+      "deep": "Shoulders back — they are well ahead of your elbows",
+      "tone": "walking in"
+    },
+    {
+      "id": "hipup",
+      "measure": "line",
+      "side": "above",
+      "label": "Hips piked",
+      "text": "Lower your hips",
+      "deep": "Lower your hips — shoulders to heels in one line",
+      "tone": "down"
+    },
+    {
+      "id": "hipdown",
+      "measure": "line",
+      "side": "below",
+      "label": "Hips sagging",
+      "text": "Lift your hips",
+      "deep": "Lift your hips — shoulders to heels in one line",
+      "tone": "up"
+    }
   ],
   "draw": [
-    { "kind": "line", "from": "shoulder", "to": "ankle", "good": "line" },
-    { "kind": "readout", "measure": "line", "at": "hip", "side": "sign" },
-    { "kind": "plumb", "at": "elbow", "share": 0.22 },
-    { "kind": "arc", "measure": "stack", "size": 0.9 }
+    {
+      "kind": "line",
+      "from": "shoulder",
+      "to": "ankle",
+      "good": "line"
+    },
+    {
+      "kind": "readout",
+      "measure": "line",
+      "at": "hip",
+      "side": "sign"
+    },
+    {
+      "kind": "plumb",
+      "at": "elbow",
+      "share": 0.22
+    },
+    {
+      "kind": "arc",
+      "measure": "stack",
+      "size": 0.9
+    }
   ],
   "defaults": {
-    "stackMin": -5, "stackMax": 15,
+    "stackMin": -5,
+    "stackMax": 15,
     "hipLine": 5,
     "deepAt": 8,
     "setCount": 3,
-    "holdTargetSec": 60, "callAtSec": [45, 30, 10, 5]
+    "holdTargetSec": 60,
+    "callAtSec": [
+      45,
+      30,
+      10,
+      5
+    ]
   },
-  "settings": [{ "key": "setCount", "label": "Sets", "min": 1, "max": 10 }]
+  "settings": [
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
 }
