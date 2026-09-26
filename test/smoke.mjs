@@ -12,6 +12,7 @@ import { server } from '../scripts/serve.js';
 /* through require, so a globally installed playwright on NODE_PATH is found — ESM ignores it */
 const { chromium } = createRequire(import.meta.url)('playwright');
 const Mp4 = createRequire(import.meta.url)('../public/js/mp4.js');
+const Spec_check = (json) => createRequire(import.meta.url)('../public/js/spec.js').check(json).filter((p) => p.level === 'error');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -261,7 +262,10 @@ try {
     assert.ok((await page.$$eval('#howto li', (l) => l.length)) >= 3, 'how to do it, step by step');
     assert.match(await page.textContent('#coaches'), /Heels/);
     assert.match(await page.textContent('#cannot'), /nothing is uploaded/i);
-    assert.equal(await page.evaluate(() => [...document.querySelectorAll('#about p[data-move].on')].map((p) => p.dataset.move).join()), 'bridge', 'the numbers are this exercise\'s');
+    assert.match(await page.textContent('#about-text'), /^Glute bridge/, 'the numbers are this exercise\'s, from its file');
+    /* the library is the folder of files: five loaded, none failed */
+    assert.deepEqual(await page.evaluate(() => window.__app.library.list.map((m) => m.id)), ['wallsit', 'plank', 'kneeraise', 'bridge', 'donkeykick']);
+    assert.deepEqual(await page.evaluate(() => window.__app.library.problems), []);
     /* back to the wall sit, the way the rest of the suite expects to find the page */
     await pick('wallsit');
     assert.equal(await page.textContent('#band-knee'), '85–110', 'the band asked for is the band shown');
@@ -1107,6 +1111,55 @@ try {
     assert.match(d.note, /frames/, d.note);
     /* this browser build cannot encode AAC, so the file is silent and the note says so; a phone's can */
     assert.match(d.note, /the voice on \d+ of \d+ cues and every tone|silent \u2014 this browser cannot encode sound/, d.note);
+    await page.goto(base + '/');
+    await page.waitForSelector('#picker .item');
+  });
+
+  await step('the builder: a copy of an exercise becomes a draft that the coach runs, and the file downloads whole', async () => {
+    await page.goto(base + '/review.html?tab=build&move=bridge');
+    await page.waitForSelector('#pane-build:not([hidden])');
+    await page.click('#build-copy');
+    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    assert.deepEqual(await page.$$eval('#problems li.error', (l) => l.length), 0, 'the library\'s own file has no errors');
+    /* the form writes the file: the opening words change, and the draft stands in for the bridge */
+    await page.evaluate(() => {
+      const i = [...document.querySelectorAll('#build-form textarea')].find((x) => /I will wait while you get set up/.test(x.value));
+      i.value = 'Draft opening words. Lie down side on.'; i.dispatchEvent(new Event('change'));
+    });
+    await page.waitForFunction(() => Moves.bridge && Moves.bridge.draft && Moves.bridge.start === 'Draft opening words. Lie down side on.', null, { timeout: 5000 });
+    assert.match(await page.$eval('#move', (s) => s.options[s.selectedIndex].textContent), /Glute bridge \(draft\)/, 'the page works on the draft');
+    const json = JSON.parse(await page.inputValue('#build-json'));
+    assert.equal(json.words.start, 'Draft opening words. Lie down side on.', 'and the file shows it');
+    assert.deepEqual(Spec_check(json), [], 'the file downloads with no errors');
+    /* a wrong file says what is wrong */
+    await page.evaluate(() => { const i = [...document.querySelectorAll('#build-form input')].find((x) => x.value === 'Heels lifting'); i.value = 'A label that is far too long for the picture'; i.dispatchEvent(new Event('change')); });
+    await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 1, null, { timeout: 5000 });
+    assert.match(await page.textContent('#problems li.error'), /26 characters/);
+    assert.equal(await page.evaluate(() => document.getElementById('try-live').disabled), true, 'and cannot be tried until it is fixed');
+    await page.evaluate(() => { const i = [...document.querySelectorAll('#build-form input')].find((x) => /far too long/.test(x.value)); i.value = 'Heels lifting'; i.dispatchEvent(new Event('change')); });
+    await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 0, null, { timeout: 5000 });
+    /* the coach's page picks the draft up: it is the bridge there now, and its opening words are the draft's */
+    await page.goto(base + '/#/ex/bridge');
+    await page.waitForSelector('#screen-ex:not([hidden])');
+    await page.waitForFunction(() => window.__app && window.__app.move.draft, null, { timeout: 5000 });
+    assert.match(await page.textContent('#ex-title'), /\(draft\)/);
+    assert.equal(await page.isVisible('#draft-note'), true);
+    await set({ move: 'bridge', bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
+    await oneSet();
+    await startSession();
+    await saw('Draft opening words');
+    await heard('Draft opening words');
+    /* dropped: the library's own bridge is back, on its page */
+    await page.evaluate(() => { location.hash = '#/ex/bridge'; });
+    await page.waitForFunction(() => !window.__app.live, null, { timeout: 8000 });
+    await page.click('#draft-drop');
+    await page.waitForFunction(() => window.__app.move.id === 'bridge' && !window.__app.move.draft, null, { timeout: 5000 });
+    assert.match(await page.evaluate(() => window.__app.move.start), /I will wait while you get set up/);
+    assert.equal(await page.evaluate(() => localStorage.getItem('ontrack.draft')), null, 'and forgotten');
+    /* back to the knee raise, which the reload step below expects to find */
+    await set({ move: 'kneeraise' });
+    await pick('kneeraise');
+    await setCfg('cfg-repCount', '3');
     await page.goto(base + '/');
     await page.waitForSelector('#picker .item');
   });

@@ -4,7 +4,9 @@
   "private": true,
   "description": "Side-on wall sit coach: knee angle 85-110 degrees, back flat to the wall, spoken cues, downloadable recording. Runs entirely in the browser.",
   "scripts": {
+    "pretest": "node scripts/library.js index",
     "test": "node --test \"test/*.test.js\"",
+    "library": "node scripts/library.js",
     "smoke": "node test/smoke.mjs",
     "dev": "node scripts/serve.js"
   },

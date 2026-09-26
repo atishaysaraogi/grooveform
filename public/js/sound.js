@@ -22,8 +22,18 @@
     done: [[784, 0.1], [988, 0.1], [1319, 0.22]],
     lost: [[350, 0.08]],
   };
-  /* every call shares one tone, so `call30` and `call5` do not each need an entry */
-  const toneFor = (id) => TONES[id] || (/^call\d/.test(id) ? TONES.call : TONES.lost);
+  /* the tones by name, for an exercise's file to pick from for each fault */
+  const NAMED = {
+    tick: TONES.lost, plain: [[300, 0.16]], up: UP, down: DOWN,
+    'walking in': [[520, 0.09], [392, 0.09], [330, 0.13]], 'walking out': [[330, 0.09], [392, 0.09], [520, 0.13]],
+    hold: TONES.hold, done: TONES.done, call: TONES.call,
+  };
+  /* the tone for a cue: the one its file names, else the one its id has always
+     had; every call shares one tone, so `call30` and `call5` do not each need an entry */
+  const toneFor = (id, cues) => {
+    const named = cues && cues[id] && cues[id].tone && NAMED[cues[id].tone];
+    return named || TONES[id] || (/^call\d/.test(id) ? TONES.call : TONES.lost);
+  };
   const GAP = 0.02, ATTACK = 0.012, RELEASE = 0.03;
   const OUT_GAIN = 0.18;   // the tones' level against a voice at full
 
@@ -57,5 +67,5 @@
     return out;
   }
 
-  return { TONES, toneFor, tone, samples, OUT_GAIN, GAP };
+  return { TONES, NAMED, toneFor, tone, samples, OUT_GAIN, GAP };
 });

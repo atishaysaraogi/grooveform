@@ -1,0 +1,122 @@
+{
+  "v": 1,
+  "id": "bridge",
+  "name": "Glute bridge",
+  "order": 4,
+  "status": "ready",
+  "category": "Glutes and hips",
+  "tags": ["floor", "lying", "glutes", "reps"],
+  "equipment": ["a mat"],
+  "type": "reps",
+  "position": "lying",
+  "movement": "hips lifted to a line and lowered",
+  "sides": "both",
+  "load": "weight",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.",
+    "start": "Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent.",
+    "position": "Lie on your back, side on to the phone, knees bent, feet flat on the floor, arms by your sides.",
+    "top": "Hips lifted until knees, hips and shoulders make one line, no higher, heels and toes down.",
+    "howto": [
+      "Lie on your back, knees bent, feet flat and hip-width, heels a hand from your hips.",
+      "Press through the heels and lift the hips until knees, hips and shoulders make one line. No higher.",
+      "Squeeze at the top for the count, heels and toes down.",
+      "Lower slowly — the rep counts when the hips are back on the floor."
+    ],
+    "cannot": "Whether the glutes or the lower back are doing the work: it sees the height and the line, not the muscle. If the back pinches, stop.",
+    "about": "Glute bridge — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.",
+    "lost": "Lie down side on to the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the lower back pinches. The lift comes from the glutes, not from arching the back.",
+    "easier": "A smaller lift; a shorter hold at the top.",
+    "harder": "A weight across the hips; a longer hold; one leg at a time.",
+    "mistakes": "Pushing the hips past the knees; heels lifting; feet too far out."
+  },
+  "muscles": { "glute": 1, "ham": 0.5, "abs": 0.3 },
+  "figure": { "points": {
+    "A": { "h": [380, 144], "sh": [362, 150], "hip": [289, 145], "kn": [255, 98], "an": [254, 150], "ft": [230, 157], "el": [325, 155], "wr": [288, 158],
+           "knF": [254, 101], "anF": [252, 149], "ftF": [230, 158], "elF": [323, 144], "wrF": [295, 149] },
+    "B": { "h": [386, 144], "sh": [368, 150], "hip": [304, 122], "kn": [254, 95], "an": [251, 152], "ft": [226, 161], "el": [329, 153], "wr": [294, 156],
+           "knF": [262, 102], "anF": [252, 145], "ftF": [232, 150], "elF": [375, 123], "wrF": [380, 136] },
+    "flip": true
+  } },
+  "facing": { "from": "hip", "to": "knee" },
+  "side": { "pick": "clearest" },
+  "landmarks": {
+    "joints": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
+    "needed": ["shoulder", "hip", "knee", "heel", "toe"],
+    "bones": [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
+    "dots": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
+    "limb": { "shoulder|hip": "hip", "hip|knee": "hip", "knee|ankle": "shin", "ankle|heel": "foot", "ankle|toe": "foot", "heel|toe": "foot" }
+  },
+  "measurements": [
+    { "key": "shin", "label": "toe, heel, knee", "hud": "SHIN", "note": "target",
+      "kind": "angle", "a": "toe", "b": "heel", "c": "knee",
+      "band": { "lo": "shinMin", "hi": "shinMax" }, "scale": [40, 170],
+      "settings": [
+        { "key": "shinMin", "label": "Shin angle, lowest", "min": 30, "max": 165 },
+        { "key": "shinMax", "label": "Shin angle, highest", "min": 35, "max": 170 }
+      ],
+      "why": "Where the feet are: over the band the knee leans toward the head (feet too far out), under it the knee is out over the toes (feet too close). Not judged while a heel or toe is off the floor." },
+    { "key": "hip", "label": "knee, hip, shoulder", "hud": "HIP", "note": "at the top",
+      "kind": "angle", "a": "knee", "b": "hip", "c": "shoulder",
+      "band": { "min": "hipMin" }, "scale": [90, 180],
+      "settings": [{ "key": "hipMin", "label": "Hip angle at the top, at least", "min": 120, "max": 179 }],
+      "why": "The top of the rep: straight is 180, and the line is asked for to within twenty degrees. Also the progress measurement: the lift is called at raiseAt, the return at downAt." },
+    { "key": "over", "label": "hip above knee", "hud": "RISE", "note": "at most",
+      "kind": "rise", "a": "knee", "b": "hip",
+      "band": { "max": "overMax" }, "scale": [-40, 40],
+      "settings": [{ "key": "overMax", "label": "Hip above the knee, at most", "min": 0, "max": 20 }],
+      "why": "The rise of the knee-to-hip line: level is 0. The hips are not to go higher than the knees; the three degrees are for the pose model's wobble." },
+    { "key": "foot", "label": "foot off the floor", "hud": "FEET", "note": "flat",
+      "kind": "rise", "a": "toe", "b": "heel",
+      "band": { "sym": "footFlat" }, "scale": [-40, 40],
+      "settings": [{ "key": "footFlat", "label": "Foot off the floor, at most", "min": 2, "max": 30 }],
+      "why": "The foot line, heel against toe: heels lifting tilt it one way, toes lifting the other. Checked first, because the feet decide what the hips can do." }
+  ],
+  "progress": { "measure": "hip", "raiseAt": "raiseAt", "downAt": "downAt", "direction": "up" },
+  "ready": { "atStart": true, "ranges": { "shin": [45, 150] } },
+  "prompt": { "id": "raise", "text": "Lift your hips" },
+  "faults": [
+    { "id": "heelsUp", "measure": "foot", "side": "above", "setup": true, "label": "Heels lifting", "text": "Keep your heels down", "deep": "Heels down — they are coming off the floor" },
+    { "id": "toesUp", "measure": "foot", "side": "below", "setup": true, "label": "Toes lifting", "text": "Keep your toes down", "deep": "Toes down — they are coming off the floor" },
+    { "id": "feetFar", "measure": "shin", "side": "above", "setup": true, "requires": ["foot"], "label": "Feet too far out", "text": "Walk your feet in", "deep": "Walk your feet in toward you — they are well out" },
+    { "id": "feetClose", "measure": "shin", "side": "below", "setup": true, "requires": ["foot"], "label": "Feet too close", "text": "Walk your feet out a little", "deep": "Walk your feet out — your knees are out over your toes" },
+    { "id": "hipHigh", "measure": "over", "side": "above", "label": "Hips above knees", "text": "Not so high — hips no higher than your knees", "deep": "Lower your hips — they are well above your knees" },
+    { "id": "hipLow", "measure": "hip", "side": "below", "label": "Hips short of the line", "text": "Lift your hips higher", "deep": "Higher — knees, hips and shoulders in one line" }
+  ],
+  "draw": [
+    { "kind": "line", "from": "knee", "to": "shoulder", "good": "hip" },
+    { "kind": "arc", "measure": "hip", "size": 0.8 },
+    { "kind": "arc", "measure": "shin", "size": 0.7 },
+    { "kind": "floor", "at": "knee", "dir": -1 },
+    { "kind": "readout", "measure": "over", "at": "hip", "side": 1 }
+  ],
+  "defaults": {
+    "shinMin": 85, "shinMax": 110,
+    "hipMin": 160,
+    "overMax": 3,
+    "footFlat": 10,
+    "raiseAt": 150, "downAt": 140,
+    "holdTargetSec": 2, "callAtSec": [],
+    "repCount": 10, "setCount": 3,
+    "lowerSec": 1, "restSec": 2,
+    "deepAt": 10
+  },
+  "settings": [
+    { "key": "repCount", "label": "Reps in a set", "min": 1, "max": 50 },
+    { "key": "raiseAt", "label": "Hip angle that counts as lifted", "min": 120, "max": 175 },
+    { "key": "lowerSec", "label": "Lowering takes at least, seconds", "min": 0, "max": 10 },
+    { "key": "restSec", "label": "Quiet after a rep, seconds", "min": 0, "max": 10 },
+    { "key": "setCount", "label": "Sets", "min": 1, "max": 10 }
+  ]
+}

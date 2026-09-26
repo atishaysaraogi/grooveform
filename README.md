@@ -7,9 +7,11 @@ hold, and hands you a recording of the set with the cues on it.
 
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
-Three exercises so far: **wall sit**, **elbow plank** and **standing knee
-raise**. Nothing is uploaded — the pose model, the coaching and the video file
-are all made on the device.
+Five exercises so far — **wall sit**, **elbow plank**, **knee raise**,
+**glute bridge** and **donkey kick** — each one a file in
+`public/exercises/`, and a Build page that writes the next. Nothing is
+uploaded — the pose model, the coaching and the video file are all made on
+the device.
 
 ## Starting
 
@@ -42,8 +44,11 @@ loud where to put the phone and to step into the frame, and it is already
 recording by the time you are in position. Asking for a second tap would be
 asking someone to walk back to a phone they have just put on the floor.
 
-The picture and the set button sit together at the top of the page, so nothing
-has to be scrolled to from the floor.
+The camera screen is the picture and two buttons: End this set, and Settings,
+behind which are the voice, the other camera, full screen and finishing early.
+Leaving that screen by any road — back, a link, the results — ends the
+session where it is and stops the camera, the coach and the voice with it, so
+nothing is said to a page that is not the camera's.
 
 **Which way round the phone goes.** A wall sit is a standing body and fits a
 frame either way up. A plank is long and low: in a tall frame it either loses
@@ -434,7 +439,7 @@ you watched.
 
 ## Review: recordings judged after the fact, and the numbers tuned
 
-`review.html` (the Review link in the header) is the tuning bench, carrying the
+`review.html` (the ◔ button in the bar) is the tuning bench and the builder, carrying the
 OnTrack Studio's method over to this app's moves.
 
 **Recordings.** Load a video of a set — the app's own download or any phone
@@ -506,8 +511,11 @@ uploads it as it stands.
 public/
   index.html
   styles.css
+  exercises/       the library: one JSON file per exercise, and index.json listing the folder
   js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
-  js/moves.js      the exercises: what each measures, allows and says, and in what order
+  js/spec.js       an exercise's file read into the move the coach runs, and checked
+  js/moves.js      the library loaded: the folder in node, the index and the files in the browser, a draft laid over
+  js/builder.js    the Build tab: the file on a form, checked as it is written
   js/app.js        camera, drawing, voice, recording
   js/overlay.js    the drawing over the picture: skeleton, counters, words, cue, mark — the coach's and the Review page's
   js/sound.js      the tones, and the rule for which cue gets which
@@ -525,30 +533,59 @@ test/
   donkeykick.test.js the donkey kick: hands, arms, back, the bent knee and the lift to the line
   mp4.test.js       the file the page writes, timed by the clock
   speech.test.js    the coach's own voice: a cue as sound, the WAV read, the set's cues listed
+  library.test.js   every file in the folder whole and indexed, and the file's language doing what it says
   framing.test.js   which way the phone goes, and fitting a frame to a canvas
   smoke.mjs        the browser, with the pose model stood in for
 ```
 
 ## Adding a move
 
-`docs/exercise-template.xlsx` is the brief a new move is written from: one
-sheet each for the exercise (the phone, the set, the opening words, the
-starting position and its rule, what a rep is), the measurements (landmarks,
-bands, how each is drawn), the faults (words, order, which side of the band,
-set-up or not, the tone), the fixed words and timing rules, the muscles, the
-figure's keyframes, and a checklist for switching it on. The glute bridge is
-filled in as the example. `scripts/exercise-template.py` builds it.
+An exercise is one JSON file in `public/exercises/`, named after its id, and
+the file is everything: what the phone does, the words, the muscles and the
+figure, the landmarks, every measurement with its band and its settings, the
+movement and the start rule, the faults in the order they are corrected, what
+is drawn, and every number. `docs/exercise-file.md` is the reference, field by
+field, with a section on what new kinds of exercise need and where it goes.
+Drop a file into the folder and it is on the site: `npm test` (and the Pages
+workflow, which runs the tests before it publishes) rewrites `index.json`
+from the folder, and the dev server lists the folder itself.
+`node scripts/library.js check` reads every file and says what is wrong;
+`list` shows the library as the app orders it.
 
-A move is data plus two functions. `read` turns landmarks into named angles;
-`judge` turns those into a verdict and a set of faults with how far out each one
-is. A move that counts reps also says whether the body is at the start and
-whether it is in the position, and the shared coach runs the rest. Everything
-after that — the clock, the countdown, the persistence and cooldown and the
-one-at-a-time rule — is in `core.js` and is the same for every move, so a set of
-reps and a single long hold share one implementation of the clock rather than
-having two that can drift apart. The readouts, the settings inputs, the heads-up display and the skeleton's
-colours are all built from the move's own description of itself, so adding an
-exercise means describing it, not rewriting the app.
+`public/js/spec.js` reads a file into the move the coach runs: the
+measurements (an angle at a joint, a tilt off vertical, a line against the
+floor, the bend of a three-point line, the rise of one point over another,
+a lift from straight down, a distance as a share of a bone, a sum of others)
+become `read`; the bands, the faults with their `requires` and `unless`, the
+progress thresholds and the start rule become `judge`; the drawing list
+becomes `draw`. The five exercises that were written by hand were written
+again as files, and the same tests held every number they act on to the
+same bodies before and after.
+
+**The Build page** (`review.html`, the Build tab) writes the file on a form:
+every field, grouped as the file is, checked on every change, with the
+problems listed. A new exercise starts from a blank one, from a copy of a
+library exercise, or from a file. When the file is whole it stands in the
+library on that browser — the Recordings tab judges videos with it and hands
+the tuned numbers back into it, the Animation tab draws its figure and hands
+the points back, and *Try it live* opens it in the coach, where it is listed
+with a draft badge and runs like any other. Download the file, drop it into
+the folder, push.
+
+`docs/exercise-template.xlsx` is the same brief as a spreadsheet, for working
+an exercise out away from the page; `scripts/exercise-template.py` builds it.
+
+A new exercise's words need a clip each for the natural voice: run
+`scripts/voice-pack.py` once and the clips are made; until then the fallback
+voice says them.
+
+Everything after the file — the clock, the countdown, the persistence and
+cooldown and the one-at-a-time rule, the set-up wait, "I can't see you" — is
+in `core.js` and is the same for every move, so a set of reps and a single
+long hold share one implementation of the clock rather than having two that
+can drift apart. The readouts, the settings inputs, the heads-up display and
+the skeleton's colours are all built from the move's own description of
+itself.
 
 Settings are remembered in the browser per exercise, and the store carries a
 version: when a default band changes, a store written under the old one is

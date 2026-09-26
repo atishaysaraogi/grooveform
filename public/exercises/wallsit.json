@@ -1,0 +1,97 @@
+{
+  "v": 1,
+  "id": "wallsit",
+  "name": "Wall sit",
+  "order": 1,
+  "status": "ready",
+  "category": "Legs",
+  "tags": ["standing", "wall", "hold", "quads"],
+  "equipment": ["a wall"],
+  "type": "hold",
+  "position": "standing",
+  "movement": "a seated hold against a wall",
+  "sides": "both",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Phone standing up on the floor, side on to you, whole body in frame.",
+    "start": "Stand the phone up on the floor, then step into the frame, side on, back against the wall.",
+    "position": "Stand side on to the phone with your back against the wall and your feet a step out from it.",
+    "top": "Seated in the air: thighs level, knees over the ankles, back flat to the wall.",
+    "howto": [
+      "Back flat to the wall, feet hip-width, a step out from it.",
+      "Slide down until your thighs are level and your knees are over your ankles, not past your toes.",
+      "Hold there, breathing. The clock runs only while the position is right.",
+      "Slide back up when the time is called."
+    ],
+    "cannot": "Whether your lower back is pressed flat: it sees the line from hip to shoulder, not the curve between. Weight through the heels is yours to feel.",
+    "about": "Wall sit — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, plumb at 90° and allowed 85–95°, where past 95° your heels are ahead of your knees and under 85° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.",
+    "lost": "Step into the camera, side on",
+    "safety": "Stop if the knees hurt at the front. Slide up rather than standing straight up.",
+    "easier": "Sit higher: a knee angle nearer 110°. A shorter hold.",
+    "harder": "A longer hold; a weight held to the chest.",
+    "mistakes": "Feet too close to the wall, so the knees go past the toes; sitting too high; leaning forward off the wall."
+  },
+  "muscles": { "thigh": 1, "calf": 0.45, "glute": 0.55, "abs": 0.3 },
+  "figure": { "pose": { "A": { "torso": 0, "thigh": 90, "shin": 0, "uarm": 8, "farm": 8 }, "wall": "behind", "hold": true } },
+  "facing": { "from": "hip", "to": "knee" },
+  "side": { "pick": "clearest" },
+  "landmarks": {
+    "joints": ["shoulder", "hip", "knee", "ankle", "heel"],
+    "needed": ["shoulder", "hip", "knee", "ankle"],
+    "bones": [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
+    "dots": ["shoulder", "hip", "knee", "ankle", "heel"],
+    "limb": { "shoulder|hip": "back", "knee|ankle": "shin", "ankle|heel": "shin", "ankle|toe": "shin", "heel|toe": "shin" }
+  },
+  "measurements": [
+    { "key": "knee", "label": "knee angle", "hud": "KNEE", "note": "target",
+      "kind": "angle", "a": "hip", "b": "knee", "c": "ankle",
+      "band": { "lo": "kneeMin", "hi": "kneeMax" }, "scale": [50, 150],
+      "settings": [
+        { "key": "kneeMin", "label": "Knee angle, lowest", "min": 40, "max": 150 },
+        { "key": "kneeMax", "label": "Knee angle, highest", "min": 40, "max": 170 }
+      ],
+      "why": "The one that is judged: below the band the legs are too bent, above it too straight." },
+    { "key": "shin", "label": "shin off floor", "hud": "SHIN", "note": "floor",
+      "kind": "floor", "at": "knee", "to": ["heel", "ankle"], "optional": true,
+      "band": { "lo": "shinMin", "hi": "shinMax" }, "scale": [50, 130],
+      "settings": [
+        { "key": "shinMin", "label": "Shin off floor, lowest", "min": 40, "max": 90 },
+        { "key": "shinMax", "label": "Shin off floor, highest", "min": 90, "max": 140 }
+      ],
+      "why": "The shin against the floor, taken to the heel, or to the ankle when the heel is not trusted. Over 90 the heel is ahead of the knee (feet too far out), under it behind (feet too far in)." },
+    { "key": "back", "of": "tilt", "label": "back off vertical", "hud": "BACK", "note": "vertical",
+      "kind": "tilt", "base": "hip", "top": "shoulder",
+      "band": { "sym": "backTilt" }, "scale": [-40, 40],
+      "settings": [{ "key": "backTilt", "label": "Back allowed off vertical", "min": 3, "max": 40 }],
+      "why": "The hip-to-shoulder line off plumb, positive leaning the way the knees point." }
+  ],
+  "faults": [
+    { "id": "feetback", "measure": "shin", "side": "above", "label": "Feet ahead of knees", "text": "Bring your feet back", "deep": "Bring your feet back — your heels are well ahead of your knees", "tone": "walking in" },
+    { "id": "feetfwd", "measure": "shin", "side": "below", "label": "Feet behind knees", "text": "Bring your feet forward", "deep": "Walk your feet further out — your heels are behind your knees", "tone": "walking out" },
+    { "id": "high", "measure": "knee", "side": "above", "label": "Too high", "text": "Lower down", "deep": "Slide further down the wall", "tone": "down" },
+    { "id": "low", "measure": "knee", "side": "below", "label": "Too deep", "text": "Come up a little", "deep": "Come up — that is too deep", "tone": "up" },
+    { "id": "forward", "measure": "back", "side": "above", "label": "Leaning forward", "text": "Press your back flat to the wall", "deep": "Back flat — your shoulders are ahead of your hips", "tone": "plain" },
+    { "id": "back", "measure": "back", "side": "below", "label": "Hips ahead of shoulders", "text": "Bring your hips under your shoulders", "tone": "plain" }
+  ],
+  "draw": [
+    { "kind": "plumb", "at": "hip", "share": 0.3 },
+    { "kind": "floor", "at": "shin:to" },
+    { "kind": "arc", "measure": "shin", "size": 0.8 },
+    { "kind": "arc", "measure": "knee", "size": 1 }
+  ],
+  "defaults": {
+    "kneeMin": 85, "kneeMax": 110,
+    "shinMin": 85, "shinMax": 95,
+    "backTilt": 12,
+    "setCount": 3,
+    "holdTargetSec": 60, "callAtSec": [45, 30, 10, 5]
+  },
+  "settings": [{ "key": "setCount", "label": "Sets", "min": 1, "max": 10 }]
+}

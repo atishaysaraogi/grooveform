@@ -1,23 +1,18 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-26d">
+<html lang="en" data-v="2026-09-26e">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>OnTrack — Review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-26d">
+<title>OnTrack — Build &amp; review</title>
+<link rel="stylesheet" href="styles.css?v=2026-09-26e">
 </head>
 <body class="review">
 <header class="bar">
-  <h1 class="wordmark">OnTrack <span class="sub">review</span></h1>
-  <select id="move" class="pick" aria-label="Exercise">
-    <option value="wallsit">Wall sit</option>
-    <option value="plank">Elbow plank</option>
-    <option value="kneeraise">Knee raise</option>
-    <option value="bridge">Glute bridge</option>
-    <option value="donkeykick">Donkey kick</option>
-  </select>
+  <h1 class="wordmark">OnTrack <span class="sub">build &amp; review</span></h1>
+  <select id="move" class="pick" aria-label="Exercise"></select>
   <nav class="tabs" role="tablist">
+    <button class="tab" id="tab-build" role="tab" aria-selected="false">Build</button>
     <button class="tab" id="tab-review" role="tab" aria-selected="true">Recordings</button>
     <button class="tab" id="tab-anim" role="tab" aria-selected="false">Animation</button>
   </nav>
@@ -25,6 +20,31 @@
 </header>
 
 <main>
+  <!-- ============ build: an exercise's file, written on a page ============ -->
+  <section id="pane-build" hidden>
+    <p class="muted">An exercise is one file (<code>public/exercises/&lt;id&gt;.json</code>): what it measures, what counts as right, what it says and in what order, how it is drawn, the words around it. Build one here from nothing, from a copy of a library exercise, or from a file; every change is checked. When it is whole it stands in the library on this browser, so the Recordings tab judges videos with it, the Animation tab draws it, and Try it live runs it in the coach. Download the file and drop it into the folder: the app reads the folder.</p>
+    <div class="row">
+      <button class="btn primary" id="build-new">New exercise</button>
+      <button class="btn" id="build-copy">Edit a copy of the one selected above</button>
+      <label class="btn file"><input type="file" id="build-file" accept=".json,application/json">Load a file</label>
+      <button class="btn" id="build-download">Download the file</button>
+      <button class="btn primary" id="try-live" disabled>Try it live</button>
+      <button class="btn" id="build-drop">Drop the draft</button>
+    </div>
+    <p class="note" id="build-note"></p>
+    <section class="panel">
+      <h2>Problems</h2>
+      <ul class="problems" id="problems"></ul>
+    </section>
+    <div id="build-form" class="build-form"></div>
+    <section class="panel">
+      <h2>The file</h2>
+      <p class="tiny">The whole file as it stands. It can be edited here too; Apply reads it back into the form.</p>
+      <textarea id="build-json" rows="14" spellcheck="false" aria-label="The exercise file as JSON"></textarea>
+      <div class="row"><button class="btn" id="build-apply-json">Apply the JSON</button></div>
+    </section>
+  </section>
+
   <!-- ============ recordings: judge a video after the fact, tune the numbers against it ============ -->
   <section id="pane-review">
     <p class="muted">Load a recording of a set. The pose model reads it once, frame by frame; after that every band edge can be moved and the whole recording is judged again on the spot. Tag recordings as clean or as showing one fault, and the numbers are held to the rule: quiet on every clean take, firing on every take of the fault.</p>
@@ -49,6 +69,7 @@
           <button class="btn primary" id="apply">Use these numbers in the coach on this device</button>
           <button class="btn" id="reset">Back to the defaults</button>
           <button class="btn" id="download-numbers">Download the numbers</button>
+          <button class="btn" id="tuned-to-draft" hidden>Put these numbers into the draft</button>
         </div>
         <p class="tiny" id="apply-note"></p>
         <h2>A demo film</h2>
@@ -127,17 +148,19 @@
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-26d"></script>
-<script src="js/moves.js?v=2026-09-26d"></script>
-<script src="js/trace.js?v=2026-09-26d"></script>
-<script src="js/overlay.js?v=2026-09-26d"></script>
-<script src="js/sound.js?v=2026-09-26d"></script>
-<script src="js/codec.js?v=2026-09-26d"></script>
-<script src="js/mp4.js?v=2026-09-26d"></script>
-<script src="js/speech.js?v=2026-09-26d"></script>
-<script src="js/mixdown.js?v=2026-09-26d"></script>
-<script src="js/figure.js?v=2026-09-26d"></script>
-<script src="js/anatomy.js?v=2026-09-26d"></script>
-<script src="js/review.js?v=2026-09-26d"></script>
+<script src="js/core.js?v=2026-09-26e"></script>
+<script src="js/spec.js?v=2026-09-26e"></script>
+<script src="js/moves.js?v=2026-09-26e"></script>
+<script src="js/trace.js?v=2026-09-26e"></script>
+<script src="js/overlay.js?v=2026-09-26e"></script>
+<script src="js/sound.js?v=2026-09-26e"></script>
+<script src="js/codec.js?v=2026-09-26e"></script>
+<script src="js/mp4.js?v=2026-09-26e"></script>
+<script src="js/speech.js?v=2026-09-26e"></script>
+<script src="js/mixdown.js?v=2026-09-26e"></script>
+<script src="js/figure.js?v=2026-09-26e"></script>
+<script src="js/anatomy.js?v=2026-09-26e"></script>
+<script src="js/review.js?v=2026-09-26e"></script>
+<script src="js/builder.js?v=2026-09-26e"></script>
 </body>
 </html>

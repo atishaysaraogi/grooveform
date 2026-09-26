@@ -1,0 +1,87 @@
+{
+  "v": 1,
+  "id": "plank",
+  "name": "Elbow plank",
+  "order": 2,
+  "status": "ready",
+  "category": "Core",
+  "tags": ["floor", "prone", "hold", "core"],
+  "equipment": ["a mat"],
+  "type": "hold",
+  "position": "prone",
+  "movement": "a straight-body hold on the forearms",
+  "sides": "both",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Phone on its side on the floor, side on to you, forearms down, whole body in frame.",
+    "start": "Lay the phone on its side on the floor, then get into your plank, side on, down onto your forearms.",
+    "position": "Side on to the phone, down on your forearms and toes, elbows under your shoulders, body in one line.",
+    "top": "One straight line from shoulder to ankle, shoulders over the elbows.",
+    "howto": [
+      "Forearms down, elbows under your shoulders, hands flat or lightly fisted.",
+      "Toes tucked, legs straight, one line from shoulder to ankle.",
+      "Squeeze the glutes and pull the ribs in so the hips neither sag nor pike.",
+      "Hold, breathing; drop the knees when the time is called."
+    ],
+    "cannot": "The neck and head, and whether the shoulder blades are spread: it judges the shoulder over the elbow and the hip on the line, nothing above the shoulder.",
+    "about": "Elbow plank — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 5° behind to 15° in front; and how far your hip sits off the straight line from shoulder to ankle, allowed ±5°. Above the line your hips are piked and are told to come down, below it they are sagging and are told to lift.",
+    "lost": "Step into the camera, side on",
+    "safety": "Drop to the knees rather than let the lower back sag. Stop if the lower back hurts.",
+    "easier": "From the knees; a shorter hold.",
+    "harder": "A longer hold; feet raised on a step.",
+    "mistakes": "Hips sagging; hips piked up; shoulders drifting behind the elbows."
+  },
+  "muscles": { "abs": 1, "oblique": 0.8, "shoulder": 0.55, "thigh": 0.45, "back": 0.3 },
+  "figure": { "pose": { "A": { "face": "left", "torso": 72, "neck": -15, "thigh": -80, "shin": -80, "foot": -60, "uarm": -20, "farm": 70 }, "hold": true } },
+  "facing": { "from": "hip", "to": "shoulder" },
+  "side": { "pick": "clearest" },
+  "landmarks": {
+    "joints": ["shoulder", "elbow", "hip", "knee", "ankle"],
+    "needed": ["shoulder", "elbow", "hip", "ankle"],
+    "bones": [["shoulder", "elbow"], ["elbow", "wrist"], ["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
+    "dots": ["shoulder", "elbow", "wrist", "hip", "knee", "ankle"],
+    "limb": { "shoulder|elbow": "stack", "elbow|wrist": "stack", "shoulder|hip": "line", "hip|knee": "line", "knee|ankle": "line" }
+  },
+  "measurements": [
+    { "key": "stack", "label": "arm off vertical", "hud": "ARM", "note": "forward",
+      "kind": "tilt", "base": "elbow", "top": "shoulder",
+      "band": { "lo": "stackMin", "hi": "stackMax" }, "scale": [-35, 45],
+      "settings": [
+        { "key": "stackMin", "label": "Shoulder behind elbow, most", "min": -30, "max": 0 },
+        { "key": "stackMax", "label": "Shoulder in front of elbow, most", "min": 0, "max": 40 }
+      ],
+      "why": "The upper arm's lean off vertical, positive toward the head. The shoulder belongs over the elbow or a little in front; behind it the joint takes the load at its weakest, so the band is not symmetric." },
+    { "key": "line", "of": "hipOff", "label": "hip off the line", "hud": "HIP", "note": "straight",
+      "kind": "bend", "a": "shoulder", "b": "hip", "c": "ankle",
+      "band": { "sym": "hipLine" }, "scale": [-30, 30],
+      "settings": [{ "key": "hipLine", "label": "Hip allowed off the line", "min": 2, "max": 25 }],
+      "why": "How far the hip sits off the shoulder-to-ankle line, as degrees of bend: positive piked up, negative sagging." }
+  ],
+  "faults": [
+    { "id": "stackback", "measure": "stack", "side": "below", "label": "Shoulders behind elbows", "text": "Bring your shoulders over your elbows", "deep": "Shoulders forward — they are well behind your elbows", "tone": "walking out" },
+    { "id": "stackfwd", "measure": "stack", "side": "above", "label": "Shoulders ahead of elbows", "text": "Bring your shoulders back over your elbows", "deep": "Shoulders back — they are well ahead of your elbows", "tone": "walking in" },
+    { "id": "hipup", "measure": "line", "side": "above", "label": "Hips piked", "text": "Lower your hips", "deep": "Lower your hips — shoulders to heels in one line", "tone": "down" },
+    { "id": "hipdown", "measure": "line", "side": "below", "label": "Hips sagging", "text": "Lift your hips", "deep": "Lift your hips — shoulders to heels in one line", "tone": "up" }
+  ],
+  "draw": [
+    { "kind": "line", "from": "shoulder", "to": "ankle", "good": "line" },
+    { "kind": "readout", "measure": "line", "at": "hip", "side": "sign" },
+    { "kind": "plumb", "at": "elbow", "share": 0.22 },
+    { "kind": "arc", "measure": "stack", "size": 0.9 }
+  ],
+  "defaults": {
+    "stackMin": -5, "stackMax": 15,
+    "hipLine": 5,
+    "deepAt": 8,
+    "setCount": 3,
+    "holdTargetSec": 60, "callAtSec": [45, 30, 10, 5]
+  },
+  "settings": [{ "key": "setCount", "label": "Sets", "min": 1, "max": 10 }]
+}

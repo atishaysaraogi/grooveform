@@ -13,8 +13,21 @@
    the heads-up display and the skeleton's colours are all built from the move's
    own description of itself, so a new move is a new entry in moves.js.
    --------------------------------------------------------------------------- */
-(function () {
+Moves.ready.then(function () {
   'use strict';
+
+  /* a draft from the builder, kept in this browser, is laid over the library for
+     a trial run; it goes when it is dropped there or here */
+  const DRAFT = 'ontrack.draft';
+  try { const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if (d) Moves.draft(d); } catch (e) { try { localStorage.removeItem(DRAFT); } catch { } }
+  if (!Moves.list.length) {
+    const lede = document.querySelector('.lede');
+    if (lede) lede.textContent = 'No exercises could be loaded' + (Moves.problems.length ? ': ' + Moves.problems.map((p) => p.file + ' — ' + p.error).join('; ') : '.');
+    return;
+  }
+  /* the exercise, as the coach's own state; the pages set it */
+  const sel = document.getElementById('move');
+  sel.innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
 
   const MP = '0.10.21';
   const MODELS = {
@@ -30,7 +43,7 @@
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
   const video = $('cam'), canvas = $('view'), ctx = canvas.getContext('2d');
 
-  let move = Moves.wallsit;
+  let move = Moves.list[0];
   let vision = null, landmarker = null, loadedModel = null;
   /* the model in its own thread: the frame most recently read, and whether one is
      out being read now */
@@ -133,7 +146,7 @@
     /* the bubbles start every exercise at 10 reps and 3 sets; a count kept from
        before there were bubbles is let go once, the bands and the rest stay */
     if (!saved.bubbles) { for (const k of Object.keys(saved.bands)) { delete saved.bands[k].repCount; delete saved.bands[k].setCount; } saved.bubbles = 1; }
-    move = Moves[saved.move] || Moves.wallsit;
+    move = Moves[saved.move] || Moves.list[0];
     $('move').value = move.id;
     for (const k of COMMON_KEYS) if (saved.common[k] != null) $('cfg-' + k).value = saved.common[k];
     buildSettings(); buildReads(); syncBands(); buildPicker(); showMove(); route();
@@ -143,9 +156,9 @@
      Screens by route: the home list (#/), an exercise (#/ex/<id>), the camera
      (#/live), and that session (#/done). None of this touches what is measured
      or said; that is the moves' and the coach's own. */
-  const placement = (m) => m.camera === 'wide'
+  const placement = (m) => (m.phone && m.phone.placement) || (m.camera === 'wide'
     ? 'Lay the phone on its side on the floor, two or three metres away, side on to where you will be.'
-    : 'Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.';
+    : 'Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.');
   const setWords = (m) => {
     const d = Object.assign({}, Core.COMMON, m.defaults);
     return m.reps ? `${d.repCount} reps × ${d.setCount} sets` : `hold ${d.holdTargetSec} s × ${d.setCount}`;
@@ -171,7 +184,7 @@
        camera, the coach and the voice stop with it: nothing is said to a page
        that is not the camera's */
     if (h !== '#/live' && (running || inSet)) leaveLive();
-    if ((m = h.match(/^#\/ex\/([a-z]+)/)) && Moves[m[1]]) { if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
+    if ((m = h.match(/^#\/ex\/([a-z0-9]+)/)) && Moves[m[1]]) { if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
     else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = '#/ex/' + move.id; return; } show('live'); }
     else if (h === '#/done') { if (!setsDone.length) { location.hash = '#/ex/' + move.id; return; } show('done'); }
     else show('home');
@@ -186,12 +199,24 @@
     const host = opt('picker'); if (!host.appendChild) return;
     host.innerHTML = '';
     for (const m of Moves.list) {
-      const row = el('a', 'item', `<span class="txt"><span class="name">${esc(m.name)}</span>` + (m.muscles ? `<span class="muscles">${esc(muscleWords(m))}</span>` : '') + '</span>');
+      const badge = m.draft ? ' <span class="badge">draft</span>' : m.status && m.status !== 'ready' ? ` <span class="badge">${esc(m.status)}</span>` : '';
+      const row = el('a', 'item', `<span class="txt"><span class="name">${esc(m.name)}${badge}</span>` + (m.muscles ? `<span class="muscles">${esc(muscleWords(m))}</span>` : '') + '</span>');
       row.href = '#/ex/' + m.id; row.dataset.move = m.id;
-      row.dataset.q = `${m.name} ${m.position || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
+      row.dataset.q = `${m.name} ${m.position || ''} ${(m.tags || []).join(' ')} ${m.category || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
       host.appendChild(row);
     }
+    const note = opt('lib-note');
+    if (note.setAttribute) { note.hidden = !Moves.problems.length; note.textContent = Moves.problems.length ? 'Not loaded: ' + Moves.problems.map((p) => `${p.file} (${p.error})`).join('; ') : ''; }
   }
+  /* the draft dropped: the library move it stood in for comes back */
+  opt('draft-drop').onclick = () => {
+    try { localStorage.removeItem(DRAFT); } catch { }
+    const id = move.id;
+    Moves.draft(null);
+    sel.innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
+    buildPicker();
+    if (Moves[id]) selectMove(id); else { selectMove(Moves.list[0].id); location.hash = '#/'; }
+  };
   function searchCards() {
     const q = String(opt('nav-q').value || '').trim().toLowerCase();
     let n = 0;
@@ -225,9 +250,11 @@
      what is kept, so a custom weight reads "7.5 kg" on the bubble and in the
      history. */
   const BANDS = ['none', 'light', 'medium', 'heavy'], KG = [0, 1, 2, 5, 10];
-  const isBand = () => move.load === 'band';
+  const hasWeight = () => move.load === 'weight' || move.load === 'both';
+  const hasBand = () => move.load === 'band' || move.load === 'both';
   const mine = () => (saved.bands[move.id] = saved.bands[move.id] || {});
-  const loadOf = () => { const l = saved.bands[move.id] && saved.bands[move.id].load; return isBand() ? (l || 'none') : (Number(l) || 0); };
+  const loadOf = () => (hasWeight() ? Number(saved.bands[move.id] && saved.bands[move.id].load) || 0 : 0);
+  const bandOf = () => (hasBand() ? (saved.bands[move.id] && saved.bands[move.id].band) || 'none' : 'none');
   const loadWords = (l) => (typeof l === 'number' ? (l ? `${l} kg` : 'none') : String(l || 'none'));
   let customOpen = false;
   function bubbleDefs() {
@@ -235,7 +262,8 @@
     if (move.reps) d.push({ key: 'reps', label: 'Reps', input: 'cfg-repCount', opts: [1, 5, 10, 15] });
     d.push({ key: 'sets', label: 'Sets', input: 'cfg-setCount', opts: [1, 2, 3] });
     d.push({ key: 'hold', label: move.reps ? 'Hold at top' : 'Hold', input: 'cfg-target', opts: move.reps ? [1, 2, 3, 5] : [30, 45, 60, 90], unit: ' s' });
-    d.push(isBand() ? { key: 'load', label: 'Band', opts: BANDS } : { key: 'load', label: 'Weight', opts: KG.concat('custom') });
+    if (hasWeight()) d.push({ key: 'load', label: 'Weight', opts: KG.concat('custom') });
+    if (hasBand()) d.push({ key: 'band', label: 'Band', opts: BANDS });
     return d;
   }
   function setLoad(v) { mine().load = v; store.set(saved); }
@@ -243,9 +271,9 @@
     const host = opt('bubbles'); if (!host.appendChild) return;
     host.innerHTML = '';
     for (const b of bubbleDefs()) {
-      const raw = b.key === 'load' ? loadOf() : ($(b.input) ? $(b.input).value : '');
-      const cur = b.key === 'load' && customOpen && !isBand() ? 'custom' : raw;
-      const shown = b.key === 'load' ? (cur === 'custom' ? 'custom' : loadWords(cur)) : `${cur}${b.unit || ''}`;
+      const raw = b.key === 'load' ? loadOf() : b.key === 'band' ? bandOf() : ($(b.input) ? $(b.input).value : '');
+      const cur = b.key === 'load' && customOpen ? 'custom' : raw;
+      const shown = b.key === 'load' ? (cur === 'custom' ? 'custom' : loadWords(cur)) : b.key === 'band' ? String(cur) : `${cur}${b.unit || ''}`;
       const btn = el('button', 'bubble', `<span class="k">${b.label}</span><span class="v">${esc(shown)}</span>`);
       btn.type = 'button'; btn.dataset.key = b.key; btn.setAttribute('aria-label', `${b.label}: ${shown}. Tap for the next choice.`);
       btn.onclick = () => {
@@ -256,14 +284,15 @@
           customOpen = next === 'custom';
           if (customOpen) { const kg = Number(mine().customKg) || 0; setLoad(kg); }
           else setLoad(next);
-        } else { $(b.input).value = next; saveSettings(); }
+        } else if (b.key === 'band') { mine().band = next; store.set(saved); }
+        else { $(b.input).value = next; saveSettings(); }
         buildBubbles();
       };
       host.appendChild(btn);
     }
     const custom = opt('custom-load');
     if (custom.setAttribute) {
-      custom.hidden = !(customOpen && !isBand());
+      custom.hidden = !(customOpen && hasWeight());
       if (!custom.hidden) { const inp = opt('custom-kg'); inp.value = mine().customKg || ''; setTimeout(() => inp.focus(), 0); }
     }
   }
@@ -274,8 +303,12 @@
   };
   /* the picked exercise, everywhere the page names it */
   function showMove() {
-    document.querySelectorAll('#about p[data-move]').forEach((pp) => pp.classList.toggle('on', pp.dataset.move === move.id));
-    opt('ex-title').textContent = move.name;
+    opt('about-text').textContent = move.about || '';
+    opt('about').hidden = false;
+    opt('ex-title').textContent = move.name + (move.draft ? ' (draft)' : '');
+    opt('draft-note').hidden = !move.draft;
+    opt('ex-more-words').innerHTML = [['Safety', move.safety], ['Easier', move.easier], ['Harder', move.harder], ['Common mistakes', move.mistakes]]
+      .filter(([, t]) => t).map(([k, t]) => `<p><b>${k}.</b> ${esc(t)}</p>`).join('');
     opt('setup-place').textContent = placement(move);
     opt('setup-position').textContent = move.position || move.hint || '';
     opt('howto').innerHTML = (move.howto || []).map((t) => `<li>${esc(t)}</li>`).join('');
@@ -304,7 +337,8 @@
     if (feel.effort) bits.push({ easy: 'felt easy', right: 'felt about right', hard: 'felt hard' }[feel.effort]);
     if (feel.more === 'more') bits.push('could have done more'); if (feel.more === 'less') bits.push('wanted less');
     if (feel.pain === 'some') bits.push('a little pain'); if (feel.pain === 'stop') bits.push('pain — stopped');
-    if (typeof h.load === 'number' && h.load) bits.push(`${h.load} kg`); else if (h.load && h.load !== 'none') bits.push(`${h.load} band`);
+    if (typeof h.load === 'number' && h.load) bits.push(`${h.load} kg`); else if (typeof h.load === 'string' && h.load !== 'none') bits.push(`${h.load} band`);
+    if (h.band && h.band !== 'none') bits.push(`${h.band} band`);
     return `${when}: ${did} in ${h.sets.length} set${h.sets.length === 1 ? '' : 's'}${bits.length ? ' — ' + bits.join(', ') : ''}.${feel.note ? ' “' + feel.note + '”' : ''}` +
       (feel.more === 'more' && feel.pain !== 'stop' ? ' Try one more bubble up.' : feel.pain === 'stop' ? ' Go easier, and stop again if it hurts.' : '');
   }
@@ -332,7 +366,7 @@
   opt('feel-save').onclick = () => {
     if (!setsDone.length) return;
     const h = history();
-    h.push({ at: Date.now(), move: move.id, reps: !!move.reps, load: loadOf(), sets: setsDone.map((s2) => ({ reps: s2.reps, repTarget: s2.repTarget, holdSec: s2.holdSec, bestSec: s2.bestSec, cues: s2.cues })),
+    h.push({ at: Date.now(), move: move.id, reps: !!move.reps, load: loadOf(), band: bandOf(), sets: setsDone.map((s2) => ({ reps: s2.reps, repTarget: s2.repTarget, holdSec: s2.holdSec, bestSec: s2.bestSec, cues: s2.cues })),
       feel: { effort: feel.effort, more: feel.more, pain: feel.pain, note: String(opt('feel-note').value || '').trim().slice(0, 300) } });
     try { localStorage.setItem(HISTORY, JSON.stringify(h.slice(-200))); opt('feel-saved').textContent = 'Saved — it shows under Last time on the exercise.'; }
     catch { opt('feel-saved').textContent = 'Could not save on this device.'; }
@@ -790,7 +824,7 @@
   function fire(cue) {
     const bad = isCorrection(cue);
     banner = { text: cue.text, colour: bad ? C.bad : C.ink, at: performance.now() };
-    voice.say(cue.text); tone(toneFor(cue.id));
+    voice.say(cue.text); tone(toneFor(cue.id, coach && coach.cues));
     const e = $('cue'); e.textContent = cue.text;
     e.className = 'cue' + (bad ? ' bad' : '');
   }
@@ -1185,7 +1219,7 @@
   $('page-btn').onclick = () => { pageMode = true; applyFull(); sheet(true); };
   $('full-btn').onclick = () => { sheet(false); pageMode = false; applyFull(); };
   $('move').onchange = async () => {
-    move = Moves[$('move').value] || Moves.wallsit;
+    move = Moves[$('move').value] || Moves.list[0];
     buildSettings(); buildReads(); saveSettings(); showMove();
     /* finish whatever was under way, then start again from this exercise's own
        coach — otherwise the readouts keep being painted by the last one, with its
@@ -1299,7 +1333,7 @@
     $('veil-text').textContent = 'This needs a browser with camera access, served over https.';
     $('go').disabled = true;
   }
-  window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; },
+  window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; }, get library() { return Moves; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
     get worker() { return !!worker; }, get live() { return running; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; }, cfg, fire, drawFrame, paintUi, isCorrection };
-})();
+});

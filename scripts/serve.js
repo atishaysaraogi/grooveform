@@ -15,6 +15,14 @@ const TYPES = {
 
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
+  /* the exercise library's index, from the folder as it is right now */
+  if (url === '/exercises/index.json') {
+    const dir = path.join(ROOT, 'exercises');
+    const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.json$/.test(f) && f !== 'index.json').sort() : [];
+    res.writeHead(200, { 'content-type': TYPES['.json'], 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ v: 1, files, live: true }));
+    return;
+  }
   let file = path.join(ROOT, url === '/' ? 'index.html' : url);
   /* never serve outside public/ */
   if (!file.startsWith(ROOT)) { res.writeHead(403).end('no'); return; }

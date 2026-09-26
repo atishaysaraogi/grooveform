@@ -1,0 +1,136 @@
+{
+  "v": 1,
+  "id": "donkeykick",
+  "name": "Donkey kick",
+  "order": 5,
+  "status": "ready",
+  "category": "Glutes and hips",
+  "tags": ["floor", "hands and knees", "glutes", "reps", "one leg"],
+  "equipment": ["a mat"],
+  "type": "reps",
+  "position": "quadruped",
+  "movement": "one bent leg lifted until the thigh is in line with the back",
+  "sides": "alternate",
+  "load": "both",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Phone on its side on the floor, side on to you, on your hands and knees, whole body in frame.",
+    "start": "Lay the phone on its side on the floor, then get on your hands and knees side on to it, and kick one leg up.",
+    "position": "On your hands and knees, side on to the phone, hands under your shoulders, knees under your hips, back level.",
+    "top": "The working thigh in line with the back, knee still bent at a right angle, back level.",
+    "howto": [
+      "Hands under the shoulders, knees under the hips, back level, neck long.",
+      "Keeping the knee bent at a right angle, lift the leg nearest the camera until the thigh is in line with the back.",
+      "Hold at the top for the count without arching the lower back to make height.",
+      "Lower slowly to the floor — the rep counts there. Sets alternate legs."
+    ],
+    "cannot": "The hips rolling open toward the working side, and the far leg: it judges the arms, the back line and the lifted leg from the side. Keep the hips square yourself.",
+    "about": "Donkey kick — on hands and knees, side on: the arms plumb from the floor, 85–105°, elbows straight (at least 165°); the back level, hip to shoulder within ±10° of the floor; the working knee at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 160° at the top and no more than 5° above the line. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. One leg per set, the sets alternating.",
+    "lost": "Get onto your hands and knees, side on to the camera",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Height comes from the hip, never from arching the lower back. Stop if the back or the wrists hurt.",
+    "easier": "A smaller lift; a shorter hold; forearms down instead of hands.",
+    "harder": "A band around the thighs; an ankle weight; a longer hold at the top.",
+    "mistakes": "Arching the back to lift higher; the knee straightening; the shoulders drifting behind the wrists."
+  },
+  "muscles": { "glute": 1, "ham": 0.5, "back": 0.3, "abs": 0.3 },
+  "figure": { "pose": {
+    "A": { "face": "left", "torso": -88, "neck": -25, "thigh": 0, "shin": -90, "foot": 180, "uarm": 0, "farm": 0 },
+    "B": { "face": "left", "torso": -88, "neck": -25, "thigh": -90, "shin": 180, "foot": 60, "uarm": 0, "farm": 0, "thighF": 0, "shinF": -90, "footF": 180 }
+  } },
+  "facing": { "from": "hip", "to": "shoulder" },
+  "side": { "pick": "highest", "joint": "knee" },
+  "landmarks": {
+    "joints": ["shoulder", "elbow", "wrist", "hip", "knee", "ankle"],
+    "needed": ["shoulder", "elbow", "wrist", "hip", "knee", "ankle"],
+    "bones": [["shoulder", "elbow"], ["elbow", "wrist"], ["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"]],
+    "dots": ["shoulder", "elbow", "wrist", "hip", "knee", "ankle"],
+    "limb": { "shoulder|elbow": "arm", "elbow|wrist": "arm", "shoulder|hip": "back", "hip|knee": "lift", "knee|ankle": "knee" }
+  },
+  "measurements": [
+    { "key": "knee", "label": "knee angle", "hud": "KNEE", "note": "bent",
+      "kind": "angle", "a": "hip", "b": "knee", "c": "ankle",
+      "band": { "lo": "kneeMin", "hi": "kneeMax" }, "scale": [40, 180],
+      "settings": [
+        { "key": "kneeMin", "label": "Knee angle, lowest", "min": 40, "max": 175 },
+        { "key": "kneeMax", "label": "Knee angle, highest", "min": 45, "max": 180 }
+      ],
+      "why": "The working knee stays at a right angle." },
+    { "key": "lift", "label": "knee, hip, shoulder", "hud": "LIFT", "note": "at the top",
+      "kind": "angle", "a": "knee", "b": "hip", "c": "shoulder",
+      "band": { "min": "liftMin" }, "scale": [60, 180],
+      "settings": [{ "key": "liftMin", "label": "Lift at the top, at least", "min": 120, "max": 179 }],
+      "why": "The lift: about 90 kneeling, 180 with the thigh in line with the back. Also the progress measurement." },
+    { "key": "over", "label": "thigh above the back", "hud": "OVER", "note": "at most",
+      "kind": "sum", "terms": [{ "kind": "rise", "a": "hip", "b": "knee" }, { "kind": "rise", "a": "hip", "b": "shoulder" }],
+      "band": { "max": "overMax" }, "scale": [-40, 40],
+      "settings": [{ "key": "overMax", "label": "Thigh above the back, at most", "min": 0, "max": 30 }],
+      "why": "The thigh's rise over the back's line: the knee above the hip plus the shoulder above the hip is zero when the three are in a line, positive when the knee is past it — the lower back arching to make height." },
+    { "key": "arm", "label": "arm from the floor", "hud": "ARM", "note": "target",
+      "kind": "tilt", "base": "wrist", "top": "shoulder", "offset": 90,
+      "band": { "lo": "armMin", "hi": "armMax" }, "scale": [50, 130],
+      "settings": [
+        { "key": "armMin", "label": "Arm angle, lowest", "min": 50, "max": 90 },
+        { "key": "armMax", "label": "Arm angle, highest", "min": 90, "max": 130 }
+      ],
+      "why": "The wrist-to-shoulder line from the floor: 90 plumb, over 90 the shoulders are ahead of the wrists (toward the head), under it behind them." },
+    { "key": "elbow", "label": "elbow", "hud": "ELBOW", "note": "straight",
+      "kind": "angle", "a": "shoulder", "b": "elbow", "c": "wrist",
+      "band": { "min": "elbowMin" }, "scale": [90, 180],
+      "settings": [{ "key": "elbowMin", "label": "Elbow angle, at least", "min": 120, "max": 179 }],
+      "why": "Straight arms." },
+    { "key": "back", "label": "back off level", "hud": "BACK", "note": "level",
+      "kind": "rise", "a": "hip", "b": "shoulder",
+      "band": { "sym": "backLevel" }, "scale": [-40, 40],
+      "settings": [{ "key": "backLevel", "label": "Back off level, at most", "min": 3, "max": 30 }],
+      "why": "The hip-to-shoulder line off level: positive the shoulders above the hips (sagging), negative rounding." }
+  ],
+  "progress": { "measure": "lift", "raiseAt": "raiseAt", "downAt": "downAt", "direction": "up" },
+  "prompt": { "id": "raise", "text": "Kick up" },
+  "faults": [
+    { "id": "armBack", "measure": "arm", "side": "below", "setup": true, "label": "Shoulders behind wrists", "text": "Shoulders forward over your wrists", "deep": "Shoulders forward — you are sitting back on your heels" },
+    { "id": "armFwd", "measure": "arm", "side": "above", "setup": true, "label": "Shoulders ahead of wrists", "text": "Shoulders back over your wrists", "deep": "Shoulders back — they are well ahead of your wrists" },
+    { "id": "elbowBent", "measure": "elbow", "side": "below", "setup": true, "label": "Elbows bent", "text": "Straighten your arms", "deep": "Straighten your arms — the elbows are well bent" },
+    { "id": "backSag", "measure": "back", "side": "above", "setup": true, "label": "Back sagging", "text": "Lift your belly — your back is sagging", "deep": "Belly up — your back is sagging toward the floor" },
+    { "id": "backRound", "measure": "back", "side": "below", "setup": true, "label": "Back rounding", "text": "Flatten your back", "deep": "Flatten your back — it is rounding up" },
+    { "id": "kneeOpen", "measure": "knee", "side": "above", "label": "Knee straightening", "text": "Keep the knee bent — sole to the ceiling", "deep": "Bend the knee to a right angle — the leg is straightening" },
+    { "id": "kneeShut", "measure": "knee", "side": "below", "label": "Knee too closed", "text": "Open the knee a little", "deep": "Open the knee out to a right angle" },
+    { "id": "liftHigh", "measure": "over", "side": "above", "label": "Thigh above back", "text": "Not so high — thigh in line with your back", "deep": "Lower it — the thigh is past your back and the back is arching" },
+    { "id": "liftLow", "measure": "lift", "side": "below", "unless": ["liftHigh"], "label": "Thigh short of the line", "text": "Lift higher — thigh level with your back", "deep": "Higher — knee, hip and shoulder in one line" }
+  ],
+  "draw": [
+    { "kind": "line", "from": "shoulder", "to": "hip", "good": "back" },
+    { "kind": "arc", "measure": "lift", "size": 0.8, "goodOf": ["lift", "over"] },
+    { "kind": "arc", "measure": "knee", "size": 0.7 },
+    { "kind": "plumb", "at": "wrist", "share": 0.3 },
+    { "kind": "arc", "measure": "arm", "size": 0.6 }
+  ],
+  "defaults": {
+    "kneeMin": 80, "kneeMax": 100,
+    "liftMin": 165,
+    "overMax": 5,
+    "armMin": 85, "armMax": 105,
+    "elbowMin": 165,
+    "backLevel": 10,
+    "raiseAt": 120, "downAt": 105,
+    "holdTargetSec": 2, "callAtSec": [],
+    "repCount": 10, "setCount": 3,
+    "lowerSec": 1, "restSec": 2,
+    "deepAt": 10
+  },
+  "settings": [
+    { "key": "repCount", "label": "Reps in a set", "min": 1, "max": 50 },
+    { "key": "raiseAt", "label": "Hip angle that counts as a kick", "min": 100, "max": 160 },
+    { "key": "lowerSec", "label": "Lowering takes at least, seconds", "min": 0, "max": 10 },
+    { "key": "restSec", "label": "Quiet after a rep, seconds", "min": 0, "max": 10 },
+    { "key": "setCount", "label": "Sets", "min": 1, "max": 10 }
+  ]
+}

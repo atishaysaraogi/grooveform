@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-v="2026-09-26d">
+<html lang="en" data-v="2026-09-26e">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -21,16 +21,10 @@
   <span class="nav-title" id="nav-title"></span>
   <input type="search" id="nav-q" class="search" placeholder="Search exercises" aria-label="Search exercises" autocomplete="off">
   <button class="iconbtn" id="btn-how" aria-label="How it works" title="How it works"><span class="i-mark">i</span></button>
-  <a class="iconbtn" href="review.html" aria-label="Review recordings" title="Review recordings">◔</a>
+  <a class="iconbtn" href="review.html" aria-label="Build and review" title="Build an exercise, review recordings">◔</a>
   <span class="chip" id="state" hidden>Ready</span>
   <!-- the exercise, as the coach's own state; the pages set it -->
-  <select id="move" aria-label="Exercise" hidden>
-    <option value="wallsit">Wall sit</option>
-    <option value="plank">Elbow plank</option>
-    <option value="kneeraise">Knee raise</option>
-    <option value="bridge">Glute bridge</option>
-    <option value="donkeykick">Donkey kick</option>
-  </select>
+  <select id="move" aria-label="Exercise" hidden></select>
 </header>
 
 <!-- ============ how it works ============ -->
@@ -57,12 +51,14 @@
     <p class="lede">Pick an exercise. Prop up the phone. Turn the sound on. Move.</p>
     <nav class="list" id="picker" aria-label="Exercises"></nav>
     <p class="tiny" id="no-match" hidden>Nothing by that name yet.</p>
+    <p class="tiny" id="lib-note" hidden></p>
   </section>
 
   <!-- ============ the exercise: what it is, how many, start ============ -->
   <section class="screen" id="screen-ex" hidden>
     <div class="ex-top">
       <h1 class="ex-title" id="ex-title">Wall sit</h1>
+      <p class="tiny" id="draft-note" hidden>A draft from the builder, here for a trial run. <button class="linkbtn" id="draft-drop" type="button">Drop the draft</button></p>
       <div class="fig-wrap"><canvas class="demo-fig muscle" id="ex-fig" role="img" aria-label="The exercise, animated"></canvas></div>
       <div class="bubbles" id="bubbles" aria-label="How many"></div>
       <label class="custom-load" id="custom-load" hidden>Weight, kg <input type="number" id="custom-kg" min="0.5" max="200" step="0.5" inputmode="decimal" placeholder="7.5"></label>
@@ -94,11 +90,8 @@
       </section>
       <section class="panel how" id="about">
         <h2>The numbers</h2>
-        <p data-move="wallsit"><b>Wall sit</b> — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, plumb at 90° and allowed 85–95°, where past 95° your heels are ahead of your knees and under 85° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.</p>
-        <p data-move="plank"><b>Elbow plank</b> — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 5° behind to 15° in front; and how far your hip sits off the straight line from shoulder to ankle, allowed ±5°. Above the line your hips are piked and are told to come down, below it they are sagging and are told to lift.</p>
-        <p data-move="kneeraise"><b>Knee raise</b> — standing side on, tall, one knee up: the angle at that knee between hip and ankle, and the angle at its heel between the toe and the knee, the first allowed 80–100° and the second 60–100°. Hold ten seconds, lower slowly, and the rep counts when you are back to standing.</p>
-        <p data-move="bridge"><b>Glute bridge</b> — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.</p>
-        <p data-move="donkeykick"><b>Donkey kick</b> — on hands and knees, side on: the arms plumb from the floor, 85–105°, elbows straight (at least 165°); the back level, hip to shoulder within ±10° of the floor; the working knee at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 160° at the top and no more than 5° above the line. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. One leg per set, the sets alternating.</p>
+        <p id="about-text"></p>
+        <div id="ex-more-words"></div>
         <details class="advanced">
           <summary>Every number, and the phone</summary>
           <div id="settings">
@@ -217,21 +210,22 @@
     <div class="row">
       <button class="btn primary" id="again">Do it again</button>
       <a class="btn link" href="#/">Another exercise</a>
-      <a class="btn link" href="review.html">Review the recording</a>
+      <a class="btn link" href="review.html?tab=review">Review the recording</a>
     </div>
   </section>
 </main>
 
-<script src="js/core.js?v=2026-09-26d"></script>
-<script src="js/moves.js?v=2026-09-26d"></script>
-<script src="js/mp4.js?v=2026-09-26d"></script>
-<script src="js/overlay.js?v=2026-09-26d"></script>
-<script src="js/sound.js?v=2026-09-26d"></script>
-<script src="js/codec.js?v=2026-09-26d"></script>
-<script src="js/speech.js?v=2026-09-26d"></script>
-<script src="js/mixdown.js?v=2026-09-26d"></script>
-<script src="js/figure.js?v=2026-09-26d"></script>
-<script src="js/anatomy.js?v=2026-09-26d"></script>
-<script src="js/app.js?v=2026-09-26d"></script>
+<script src="js/core.js?v=2026-09-26e"></script>
+<script src="js/spec.js?v=2026-09-26e"></script>
+<script src="js/moves.js?v=2026-09-26e"></script>
+<script src="js/mp4.js?v=2026-09-26e"></script>
+<script src="js/overlay.js?v=2026-09-26e"></script>
+<script src="js/sound.js?v=2026-09-26e"></script>
+<script src="js/codec.js?v=2026-09-26e"></script>
+<script src="js/speech.js?v=2026-09-26e"></script>
+<script src="js/mixdown.js?v=2026-09-26e"></script>
+<script src="js/figure.js?v=2026-09-26e"></script>
+<script src="js/anatomy.js?v=2026-09-26e"></script>
+<script src="js/app.js?v=2026-09-26e"></script>
 </body>
 </html>

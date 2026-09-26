@@ -172,9 +172,9 @@ test('faults are corrected in the order of the chain: feet, then knee, then back
 
 test('an untrusted heel hands the shin over to the ankle rather than guessing', () => {
   const r = readOf({ shin: 92, heelVis: 0.1 });
-  assert.equal(r.shinFoot, 'ankle', 'the reading says which point it came from');
+  assert.equal(r.of.shin.to, 'ankle', 'the reading says which point it came from');
   assert.ok(Math.abs(r.shin - 92) < 0.01, 'and the ankle is on the same line, so it reads the same');
-  assert.equal(readOf({ shin: 92 }).shinFoot, 'heel', 'a trusted heel is used');
+  assert.equal(readOf({ shin: 92 }).of.shin.to, 'heel', 'a trusted heel is used');
 });
 
 test('the back is judged against vertical, to twelve degrees either way', () => {

@@ -13,22 +13,30 @@
    either keyframe with the joints as handles to drag, the muscles' effort as
    sliders, and the animated preview beside it. Saved as the JSON a move carries.
    --------------------------------------------------------------------------- */
-(function () {
+Moves.ready.then(function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
+  /* the builder's draft, kept in this browser, stands in the library here too */
+  try { const d = JSON.parse(localStorage.getItem('ontrack.draft') || 'null'); if (d) Moves.draft(d); } catch { }
+  $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}${m.draft ? ' (draft)' : ''}</option>`).join('');
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', line: '#263040', accent: '#5aa9ff' };
   const A = window.OnTrackAnatomy;
 
-  let move = Moves.bridge, tuned = {}, trace = null, result = null, takes = [];
+  let move = Moves.bridge || Moves.list[0], tuned = {}, trace = null, result = null, takes = [];
   const video = $('clip'), overlay = $('overlay'), lanes = $('lanes');
 
   /* ---------- the move and its numbers ---------- */
-  function pickMove(id) {
-    move = Moves[id] || Moves.bridge; $('move').value = move.id;
-    tuned = {};
-    buildSliders(); buildTags(); rerun(); animLoad();
+  function refreshMoves() { $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}${m.draft ? ' (draft)' : ''}</option>`).join(''); if (move) $('move').value = move.id; }
+  /* `keep` holds the tuned numbers and the trace where they are: the builder
+     re-laying its draft over the library is not a change of exercise */
+  function pickMove(id, keep) {
+    const same = keep && move && move.id === id;
+    move = Moves[id] || Moves.bridge || Moves.list[0]; $('move').value = move.id;
+    if (!same) tuned = {};
+    $('tuned-to-draft').hidden = !move.draft;
+    buildSliders(); buildTags(); rerun(); if (!same) animLoad();
   }
   function buildSliders() {
     const host = $('sliders'); host.innerHTML = '';
@@ -453,10 +461,11 @@
 
   /* ---------- tabs and wiring ---------- */
   function showTab(which) {
-    $('pane-review').hidden = which !== 'review'; $('pane-anim').hidden = which !== 'anim';
-    $('tab-review').setAttribute('aria-selected', String(which === 'review')); $('tab-anim').setAttribute('aria-selected', String(which === 'anim'));
-    if (which === 'anim') animChanged(); else { sizeOverlay(); drawLanes(); drawOverlay(); }
+    for (const t of ['build', 'review', 'anim']) { $('pane-' + t).hidden = which !== t; $('tab-' + t).setAttribute('aria-selected', String(which === t)); }
+    if (which === 'anim') animChanged(); else if (which === 'review') { sizeOverlay(); drawLanes(); drawOverlay(); }
+    try { history.replaceState(null, '', location.pathname + '?tab=' + which + (move ? '&move=' + move.id : '')); } catch { }
   }
+  $('tab-build').onclick = () => showTab('build');
   $('tab-review').onclick = () => showTab('review');
   $('tab-anim').onclick = () => showTab('anim');
   $('move').onchange = () => pickMove($('move').value);
@@ -545,8 +554,10 @@
   window.__review = {
     get demo() { return demo; },
     get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
-    get fig() { return figureJson(); }, pickMove, setTuned, showTab,
+    get fig() { return figureJson(); }, get move() { return move; }, pickMove, refreshMoves, setTuned, showTab,
     loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; judge(); },
   };
-  pickMove((new URLSearchParams(location.search).get('move')) || 'bridge');
-})();
+  const q = new URLSearchParams(location.search);
+  pickMove(q.get('move') || 'bridge');
+  if (q.get('tab')) showTab(q.get('tab'));
+});

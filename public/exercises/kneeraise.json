@@ -1,0 +1,109 @@
+{
+  "v": 1,
+  "id": "kneeraise",
+  "name": "Knee raise",
+  "order": 3,
+  "status": "ready",
+  "category": "Hips and balance",
+  "tags": ["standing", "balance", "hip flexors", "reps"],
+  "equipment": [],
+  "type": "reps",
+  "position": "standing",
+  "movement": "one knee lifted to a right angle and held",
+  "sides": "both",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.",
+    "distance": "two or three metres",
+    "height": "on the floor"
+  },
+  "words": {
+    "hint": "Phone standing up, side on to you, whole body in frame.",
+    "start": "Stand the phone up on the floor, then stand side on, tall, and raise one knee.",
+    "position": "Stand side on to the phone, tall, feet together, arms relaxed at your sides.",
+    "top": "One knee up with the thigh level and the knee at a right angle, foot relaxed under it.",
+    "howto": [
+      "Stand tall, weight on one foot.",
+      "Raise the other knee until the thigh is level and the knee is at a right angle, foot relaxed under it.",
+      "Hold at the top for the count; keep the standing leg and the trunk still.",
+      "Lower slowly and put the foot down — the rep counts when you are standing again."
+    ],
+    "cannot": "The standing side and the hips staying level: it follows the raised leg nearest the camera. Balance is yours.",
+    "about": "Knee raise — standing side on, tall, one knee up: the angle at that knee between hip and ankle, and the angle at its heel between the toe and the knee, the first allowed 80–100° and the second 60–100°. Hold ten seconds, lower slowly, and the rep counts when you are back to standing.",
+    "lost": "Step into the camera, side on",
+    "lower": "Lower slowly",
+    "early": "Hold it to the end of the count next time",
+    "holdLabel": "Hold each rep for",
+    "safety": "Hold something for balance if you need to; the camera does not mind a hand on a chair.",
+    "easier": "A shorter hold; a hand on a wall.",
+    "harder": "A longer hold; an ankle weight; eyes closed.",
+    "mistakes": "Leaning back to lift the knee; the foot pointing down; the knee not coming up to level."
+  },
+  "muscles": { "thigh": 0.8, "abs": 0.5, "calf": 0.3 },
+  "figure": { "pose": {
+    "A": { "torso": 0, "thigh": 0, "shin": 0, "uarm": 8, "farm": 8 },
+    "B": { "torso": 0, "thigh": 90, "shin": 0, "foot": 0, "uarm": 8, "farm": 8, "thighF": 0, "shinF": 0, "footF": 0 }
+  } },
+  "facing": { "from": "heel", "to": "toe" },
+  "side": { "pick": "measure", "measure": "thigh" },
+  "landmarks": {
+    "joints": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
+    "needed": ["hip", "knee", "ankle", "heel", "toe"],
+    "bones": [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
+    "dots": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
+    "limb": { "hip|knee": "knee", "knee|ankle": "knee", "ankle|toe": "foot", "ankle|heel": "foot", "heel|toe": "foot" }
+  },
+  "measurements": [
+    { "key": "knee", "label": "knee angle", "hud": "KNEE", "note": "target",
+      "kind": "angle", "a": "hip", "b": "knee", "c": "ankle",
+      "band": { "lo": "kneeMin", "hi": "kneeMax" }, "scale": [40, 180],
+      "settings": [
+        { "key": "kneeMin", "label": "Knee angle, lowest", "min": 40, "max": 175 },
+        { "key": "kneeMax", "label": "Knee angle, highest", "min": 45, "max": 180 }
+      ],
+      "why": "A right angle at the raised knee, ten degrees either way." },
+    { "key": "foot", "label": "toe, heel, knee", "hud": "FOOT", "note": "target",
+      "kind": "angle", "a": "toe", "b": "heel", "c": "knee",
+      "band": { "lo": "footMin", "hi": "footMax" }, "scale": [40, 170],
+      "settings": [
+        { "key": "footMin", "label": "Foot angle, lowest", "min": 30, "max": 165 },
+        { "key": "footMax", "label": "Foot angle, highest", "min": 35, "max": 170 }
+      ],
+      "why": "The foot's own line against the shin's, taken at the heel. It grows as the toes point away and shrinks as they come up. The band is not centred on a right angle and is not meant to be." },
+    { "key": "thigh", "label": "thigh from straight down", "hud": "THIGH", "note": "lift",
+      "kind": "down", "from": "hip", "to": "knee",
+      "why": "0 standing, 90 thigh level. Not judged: it tells the phases apart and picks the leg being raised." }
+  ],
+  "progress": { "measure": "thigh", "raiseAt": "raiseAt", "downAt": "downAt", "direction": "up" },
+  "prompt": { "id": "raise", "text": "Raise one knee" },
+  "faults": [
+    { "id": "kneeOpen", "measure": "knee", "side": "above", "label": "Knee too open", "text": "Bend your knee more", "deep": "Bend your knee to a right angle" },
+    { "id": "kneeShut", "measure": "knee", "side": "below", "label": "Knee too closed", "text": "Open your knee a little", "deep": "Open your knee out to a right angle" },
+    { "id": "toesDown", "measure": "foot", "side": "above", "label": "Foot pointing away", "text": "Pull your toes up", "deep": "Pull your toes up — your foot is pointing away" },
+    { "id": "toesUp", "measure": "foot", "side": "below", "label": "Toes pulled up", "text": "Ease your toes down", "deep": "Ease your toes down — your toes are pulled too far up" }
+  ],
+  "draw": [
+    { "kind": "plumb", "at": "hip", "share": -0.16 },
+    { "kind": "arc", "measure": "thigh", "size": 0.55, "tone": "none" },
+    { "kind": "arc", "measure": "knee", "size": 1 },
+    { "kind": "arc", "measure": "foot", "size": 0.7 }
+  ],
+  "defaults": {
+    "kneeMin": 80, "kneeMax": 100,
+    "footMin": 60, "footMax": 100,
+    "raiseAt": 45, "downAt": 20,
+    "holdTargetSec": 10, "callAtSec": [5],
+    "repCount": 10, "setCount": 3,
+    "lowerSec": 1, "restSec": 2,
+    "deepAt": 8
+  },
+  "settings": [
+    { "key": "repCount", "label": "Reps in a set", "min": 1, "max": 50 },
+    { "key": "raiseAt", "label": "Thigh angle that counts as raised", "min": 20, "max": 89 },
+    { "key": "lowerSec", "label": "Lowering takes at least, seconds", "min": 0, "max": 10 },
+    { "key": "restSec", "label": "Quiet after a rep, seconds", "min": 0, "max": 10 },
+    { "key": "setCount", "label": "Sets", "min": 1, "max": 10 }
+  ]
+}

@@ -90,6 +90,8 @@ body.at-live .topbar { display: none; }
 .item:nth-child(3n+3)::before { background: var(--pink); }
 .item .txt { min-width: 0; }
 .item .name { font: 400 1.2rem/1.15 var(--font-display); display: block; }
+.item .name .badge { vertical-align: middle; margin-left: 6px; background: var(--tangerine); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--pink); font: inherit; font-weight: 900; text-decoration: underline; cursor: pointer; }
 .item .muscles { margin: 2px 0 0; font-size: .82rem; font-weight: 600; color: var(--muted); display: block; }
 .item::after { content: '›'; font: 900 1.5rem/1 var(--font-body); color: var(--grape); padding-right: 4px; }
 
@@ -204,8 +206,7 @@ textarea { width: 100%; resize: vertical; }
 .setup { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--muted); font-size: .92rem; }
 .setup li::marker { color: var(--grape); font-weight: 900; }
 .setup b { color: var(--ink); }
-.how p[data-move] { display: none; }
-.how p[data-move].on { display: block; }
+.how #ex-more-words p { margin-top: 8px; }
 
 /* ---- how it felt ---- */
 .feel { display: grid; gap: 10px; }
@@ -273,3 +274,25 @@ body.review .panel h2 .tiny { font-weight: 500; margin-left: 8px; }
 .reps .rep-before b { color: var(--warn); }
 .reps .clean { color: var(--good); font-weight: 700; margin-top: 4px; }
 .reps .said { color: var(--ink); }
+
+/* ---- the builder ---- */
+.build-form { display: grid; gap: 14px; margin: 14px 0; }
+.build-sec h2 { margin-bottom: 6px; }
+.build-form .grid label.wide { grid-column: 1 / -1; }
+.build-form .grid label, .build-form .grid label > span, .build-form .grid input, .build-form .grid select { min-width: 0; }
+.build-form .grid label > span { overflow-wrap: anywhere; line-height: 1.25; }
+.build-form .grid textarea { width: 100%; min-height: 60px; font: 700 .95rem var(--font-body); }
+.build-form .grid.tight { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.build-form label.check { display: flex; align-items: center; gap: 8px; align-self: end; min-height: 40px; }
+.build-form label.check input { width: 18px; height: 18px; }
+.rowbox { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 8px 0; }
+.rowhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: .9rem; }
+.rowhead .muted { flex: 1 1 auto; }
+.rowtools { margin-left: auto; display: inline-flex; gap: 4px; }
+.problems { margin: 0; padding-left: 20px; font-size: .88rem; display: grid; gap: 3px; }
+.problems .error { color: var(--bad); }
+.problems .warn { color: var(--warn); }
+.problems .ok { color: var(--good); }
+.problems b { font-weight: 700; margin-right: 4px; }
+body.review textarea { width: 100%; background: #0b0f16; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 500 .85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
