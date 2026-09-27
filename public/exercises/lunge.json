@@ -19,15 +19,15 @@
   "sides": "alternate",
   "load": "weight",
   "phone": {
-    "orientation": "tall",
+    "orientation": "wide",
     "view": "side",
-    "placement": "Stand the phone up on the floor, leaning on something, two or three metres away, side on to where you will be.",
-    "distance": "two or three metres",
+    "placement": "Lay the phone on its side on the floor, three metres or more away, side on to where you will lunge: the step forward and the lowered body are long and low, and a wide picture keeps both feet in.",
+    "distance": "three metres or more",
     "height": "on the floor"
   },
   "words": {
     "hint": "Standing side on, a long step forward, both knees to a right angle, and back.",
-    "start": "Stand the phone up on the floor. Stand side on to it, tall, feet together, and step forward into a lunge.",
+    "start": "Lay the phone on its side on the floor. Stand side on to it, tall, feet together, and step forward into a lunge.",
     "position": "Stand side on to the phone, tall, feet hip-width, hands on your hips.",
     "top": "The front thigh level with the front knee over the ankle, the back knee just off the floor, the trunk upright.",
     "howto": [

@@ -106,9 +106,21 @@ Moves.ready.then(function () {
   const settingsOf = (m) => m.bands.reduce((a, b) => a.concat(b.set), []).concat(m.extra || []);
 
   /* those inputs belong to the move, so they are built when the move changes */
+  /* A number kept in the browser belongs to the file it was kept under. When
+     an exercise's file changes its numbers — an edge renamed, a threshold given
+     a new meaning — what was kept for it is let go rather than laid over the
+     new file: the straight leg raise's lift once ran 130–155 and now runs
+     30–45, and a phone that kept the old edges could never count a rep. */
+  const stampOf = (m) => JSON.stringify(m.defaults);
+  function ownSettings(m) {
+    const mine = saved.bands[m.id];
+    if (mine && mine.stamp && mine.stamp !== stampOf(m)) { saved.bands[m.id] = { stamp: stampOf(m) }; store.set(saved); }
+    else if (mine && !mine.stamp) { mine.stamp = stampOf(m); }
+    return saved.bands[m.id] || {};
+  }
   function buildSettings() {
     const host = $('band-settings'); host.innerHTML = '';
-    const mine = saved.bands[move.id] || {};
+    const mine = ownSettings(move);
     const fallback = Object.assign({}, Core.COMMON, move.defaults);
     $('cfg-target').value = mine.target != null ? mine.target : fallback.holdTargetSec;
     $('cfg-calls').value = mine.calls != null ? mine.calls : fallback.callAtSec.join(', ');
@@ -377,7 +389,7 @@ Moves.ready.then(function () {
   function saveSettings() {
     saved.move = move.id;
     for (const k of COMMON_KEYS) saved.common[k] = $('cfg-' + k).value;
-    const mine = saved.bands[move.id] = {};
+    const mine = saved.bands[move.id] = { stamp: stampOf(move) };
     for (const s of settingsOf(move)) mine[s.key] = $('cfg-' + s.key).value;
     for (const k of PER_MOVE) mine[k] = $('cfg-' + k).value;
     store.set(saved); syncBands();

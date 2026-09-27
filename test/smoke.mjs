@@ -1171,6 +1171,13 @@ try {
     await page.waitForSelector('#picker .item');
     assert.equal(await page.inputValue('#move'), 'kneeraise', 'it comes back on the last exercise used');
     assert.equal(await page.inputValue('#cfg-repCount'), '3', 'with the rep count that was set');
+    /* a number kept under an exercise's earlier file is let go when the file's numbers change:
+       the kept rep count carries the file's stamp, and a stamp that no longer matches drops it */
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wallsit')); s.bands.kneeraise.stamp = 'an earlier file'; localStorage.setItem('wallsit', JSON.stringify(s)); });
+    await page.reload();
+    await page.waitForSelector('#picker .item');
+    assert.equal(await page.inputValue('#cfg-repCount'), '10', 'the file\'s own number again, not the one kept under the old file');
+    await setCfg('cfg-repCount', '3');
     /* and the plank's own band, changed two exercises ago, is still its own */
     await pick('plank');
     await page.waitForSelector('#read-line', { state: 'attached' });

@@ -78,6 +78,7 @@ tightening.
 
 | standard | source | in the file |
 |---|---|---|
+| The phone lies on its side: a long step and a lowered body are wide and low, and a tall frame loses a foot | the app's own framing rule (see the plank) | `phone.orientation: wide`, three metres or more away |
 | Front knee bent to about 90°, thigh parallel to the floor | Cleveland Clinic; Airrosti; Exakt Health | front knee angle 80–100° at the bottom; `kneeShallow` and `kneeDeep` |
 | Front knee stacked over the ankle, not drifting past the toes | Cleveland Clinic; Anytime Fitness; Exakt Health | the front shin's lean forward of vertical at most 20° (`kneeOver`), said first because it comes from the step length |
 | Torso upright, shoulders back, no leaning over the front leg | Cleveland Clinic; Airrosti | trunk within ±15° of vertical: `leanFwd`, `leanBack` |

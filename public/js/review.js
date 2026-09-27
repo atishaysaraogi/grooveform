@@ -67,7 +67,7 @@ Moves.ready.then(function () {
     try { saved = JSON.parse(localStorage.getItem('wallsit') || '{}') || {}; } catch { saved = {}; }
     if (saved.v !== Core.SETTINGS_V) saved = { v: Core.SETTINGS_V, move: move.id, common: {}, bands: {} };
     saved.bands = saved.bands || {};
-    const mine = Object.assign({}, saved.bands[move.id] || {});
+    const mine = Object.assign({}, saved.bands[move.id] || {}, { stamp: JSON.stringify(move.defaults) });
     const d = Trace.defaults(move);
     for (const s of Trace.settingsOf(move)) mine[s.key] = String(tuned[s.key] != null ? tuned[s.key] : d[s.key]);
     saved.bands[move.id] = mine;
