@@ -445,6 +445,18 @@ you watched.
 `review.html` (the ◔ button in the bar) is the tuning bench and the builder, carrying the
 OnTrack Studio's method over to this app's moves.
 
+**Every point the model sees** (a review aid, to be taken out once the
+exercises are settled): on the live page's Settings sheet, "Show every point
+the model sees", and on the Recordings tab a checkbox above the numbers. All
+thirty-three of the model's points are drawn over the picture, each in the
+colour of the model's certainty in it — green sure, amber under the trust bar
+(`vis`, 50%), red not trusted — joined by the model's own skeleton, the joints
+named with their percentage, the points the exercise is measuring ringed, and
+a table at the left edge with the eighteen joints left against right and which
+side is being read. It shows what the model had when a frame was "lost", and
+which limbs it only sometimes sees (side on, the far leg behind the near one).
+On the live page it goes into the film as well.
+
 **Recordings.** Load a video of a set — the app's own download or any phone
 clip. The pose model reads it once, frame by frame (fifteen a second by
 default), into a *trace*: the landmarks with their times. From then on the

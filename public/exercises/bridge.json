@@ -38,7 +38,7 @@
       "Lower slowly — the rep counts when the hips are back on the floor."
     ],
     "cannot": "Whether the glutes or the lower back are doing the work: it sees the height and the line, not the muscle. If the back pinches, stop.",
-    "about": "Glute bridge — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.",
+    "about": "Glute bridge — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° once the model's own slant of about 9° is taken off (the heel landmark sits above the sole) — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.",
     "lost": "Lie down side on to the camera, whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -57,112 +57,34 @@
     "points": {
       "view": "side",
       "A": {
-        "h": [
-          380,
-          144
-        ],
-        "sh": [
-          362,
-          150
-        ],
-        "hip": [
-          289,
-          145
-        ],
-        "kn": [
-          255,
-          98
-        ],
-        "an": [
-          254,
-          150
-        ],
-        "ft": [
-          230,
-          157
-        ],
-        "el": [
-          325,
-          155
-        ],
-        "wr": [
-          288,
-          158
-        ],
-        "knF": [
-          254,
-          101
-        ],
-        "anF": [
-          252,
-          149
-        ],
-        "ftF": [
-          230,
-          158
-        ],
-        "elF": [
-          323,
-          144
-        ],
-        "wrF": [
-          295,
-          149
-        ]
+        "h": [380, 144],
+        "sh": [362, 150],
+        "hip": [289, 145],
+        "kn": [255, 98],
+        "an": [254, 150],
+        "ft": [230, 157],
+        "el": [325, 155],
+        "wr": [288, 158],
+        "knF": [254, 101],
+        "anF": [252, 149],
+        "ftF": [230, 158],
+        "elF": [323, 144],
+        "wrF": [295, 149]
       },
       "B": {
-        "h": [
-          380,
-          144
-        ],
-        "sh": [
-          362,
-          150
-        ],
-        "hip": [
-          296,
-          122
-        ],
-        "kn": [
-          255,
-          98
-        ],
-        "an": [
-          254,
-          150
-        ],
-        "ft": [
-          230,
-          157
-        ],
-        "el": [
-          325,
-          155
-        ],
-        "wr": [
-          288,
-          158
-        ],
-        "knF": [
-          254,
-          101
-        ],
-        "anF": [
-          252,
-          149
-        ],
-        "ftF": [
-          230,
-          158
-        ],
-        "elF": [
-          325,
-          155
-        ],
-        "wrF": [
-          287,
-          158
-        ]
+        "h": [380, 144],
+        "sh": [362, 150],
+        "hip": [296, 122],
+        "kn": [255, 98],
+        "an": [254, 150],
+        "ft": [230, 157],
+        "el": [325, 155],
+        "wr": [288, 158],
+        "knF": [254, 101],
+        "anF": [252, 149],
+        "ftF": [230, 158],
+        "elF": [325, 155],
+        "wrF": [287, 158]
       },
       "hold": false,
       "side": "both",
@@ -254,10 +176,7 @@
         "lo": "shinMin",
         "hi": "shinMax"
       },
-      "scale": [
-        40,
-        170
-      ],
+      "scale": [40, 170],
       "settings": [
         {
           "key": "shinMin",
@@ -286,10 +205,7 @@
       "band": {
         "min": "hipMin"
       },
-      "scale": [
-        90,
-        180
-      ],
+      "scale": [90, 180],
       "settings": [
         {
           "key": "hipMin",
@@ -311,10 +227,7 @@
       "band": {
         "max": "overMax"
       },
-      "scale": [
-        -40,
-        40
-      ],
+      "scale": [-40, 40],
       "settings": [
         {
           "key": "overMax",
@@ -336,19 +249,23 @@
       "band": {
         "sym": "footFlat"
       },
-      "scale": [
-        -40,
-        40
-      ],
+      "scale": [-40, 40],
       "settings": [
         {
           "key": "footFlat",
           "label": "Foot off the floor, at most",
           "min": 2,
           "max": 30
+        },
+        {
+          "key": "footBias",
+          "label": "Heel landmark above the sole, degrees (the model's slant)",
+          "min": 0,
+          "max": 20
         }
       ],
-      "why": "The foot line, heel against toe: heels lifting tilt it one way, toes lifting the other. Checked first, because the feet decide what the hips can do."
+      "why": "The foot line, heel against toe: heels lifting tilt it one way, toes lifting the other. Checked first, because the feet decide what the hips can do. The pose model puts its heel landmark at the back of the heel bone, a few centimetres above the sole, and its toe landmark on the floor, so a flat foot reads about nine degrees heel-up; footBias takes that off. A recorded set read +8 to +10 flat and −3 with the toes visibly up, which is how the nine was found.",
+      "bias": "footBias"
     }
   ],
   "progress": {
@@ -360,10 +277,7 @@
   "ready": {
     "atStart": true,
     "ranges": {
-      "shin": [
-        45,
-        150
-      ]
+      "shin": [45, 150]
     }
   },
   "prompt": {
@@ -473,7 +387,8 @@
     "setCount": 3,
     "lowerSec": 1,
     "restSec": 2,
-    "deepAt": 10
+    "deepAt": 10,
+    "footBias": 9
   },
   "settings": [
     {

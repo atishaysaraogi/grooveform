@@ -16,6 +16,12 @@ Two things run through all of them:
 - **Order of correction** is the chain of cause: whatever the rest of the
   body stands on is said first. Set-up faults are coached at the start,
   before the movement is asked for.
+- **Where the model puts its points** is not always on the skin. Its heel
+  sits on the heel bone, a few centimetres above the sole, so a flat foot
+  reads about nine degrees heel-up; the glute bridge takes that off with a
+  `bias` setting (`footBias`, found from a recorded set) rather than by
+  widening the band. When a recorded take reads a steady slant in a
+  position that is plainly right, that is the fix to reach for.
 
 ## Four-way straight leg raises
 
@@ -43,6 +49,22 @@ physiotherapist uses by eye. Its one condition is that the resting leg stays
 straight and down, which is itself a standard of the exercise and is coached.
 The frame is usable with the shoulders out of shot: `needed` lists hips and
 below only.
+
+**What stops the clock.** The position is the knee and the lift
+(`inPosition`); the toes and the resting leg are coached but a rep is counted
+without them, since a straight leg lifted to the height is the exercise and
+pointed toes are a note on it. A return has to hold for `returnMs` before it
+ends a rep: side on, the model swaps the two legs for a frame or two now and
+then, and one such frame ended a rep in the recorded take.
+
+**The far leg when both are down.** Side on, the resting leg lies behind the
+lifted one; with both legs down the far knee is hidden and the model stops
+trusting it (a recorded take read it at 23–43% for the six seconds of lying
+still, and the frame was lost — the coach never left its set-up wait). The
+file now reads the lift as 0 when the far knee is unseen (`unseen`), since a
+leg hidden beside its twin is lying on it, and does not require that knee for
+the frame to stand. Once the leg lifts, the two part and the far knee is seen
+again (55–95% in the same take), which is when the lift is measured.
 
 What it cannot see: the lower back flattening, the thigh muscle actually
 tightening.

@@ -232,6 +232,8 @@
       if (m.kind === 'sum') g.appendChild(field('terms, as JSON', JSON.stringify(m.terms || []), (v) => { try { m.terms = JSON.parse(v); } catch { } }, { wide: true, title: '[{ "measure": "back" }, { "kind": "rise", "a": "hip", "b": "knee", "times": -1 }]' }));
       g.appendChild(field('offset (added)', m.offset, (v) => { if (v == null) delete m.offset; else m.offset = v; }, { type: 'number' }));
       g.appendChild(field('times (multiplied)', m.times, (v) => { if (v == null) delete m.times; else m.times = v; }, { type: 'number' }));
+      g.appendChild(field('bias (taken off: a number, or a setting\'s key)', m.bias, (v) => { if (v == null || v === '') delete m.bias; else m.bias = isNaN(Number(v)) ? v : Number(v); }, { title: 'a known slant in the landmarks — the bridge\'s foot reads 9° heel-up when flat, so "footBias" with footBias 9 in the defaults' }));
+      g.appendChild(field('unseen — the reading when a landmark it needs is hidden', m.unseen, (v) => { if (v == null) delete m.unseen; else m.unseen = v; }, { type: 'number', title: 'a limb hidden behind its twin is lying on it: the straight leg raise\'s lift reads 0 when the far knee is not seen' }));
       g.appendChild(field('optional — not read is not a fault', m.optional, (v) => { if (v) m.optional = true; else delete m.optional; }, { type: 'check' }));
       const kind = Spec.bandKind(m.band) || 'none';
       g.appendChild(field('band', kind, (v) => { setBand(m, v); }, { options: [['none', 'none — not judged'], ['range', 'between two edges'], ['sym', 'within ± one number'], ['min', 'at least'], ['max', 'at most']], structural: true }));

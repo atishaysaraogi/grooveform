@@ -21,7 +21,8 @@
      down     how far the line from→to is lifted from straight down (0 hanging, 90 level)
      distance the distance a→b, as a share of the distance c→d when `per` is given
      sum      the sum of other measurements (`terms`, each with an optional `times`)
-   Any of them may carry `offset` (added) and `times` (multiplied first). A
+   Any of them may carry `offset` (added), `times` (multiplied first) and `bias`
+   (a number or a setting's name, taken off: a known slant in the landmarks). A
    landmark may be named plainly (the side being measured), with a side,
    `L.knee` / `R.knee` (a front view), or as `other.knee` — the side not being
    measured, such as the resting leg. `to` may be a list — the first one the
@@ -86,7 +87,8 @@
   }
   function measure(m, ctx) {
     const { P, both, cfg, facing, Core, values, side } = ctx;
-    const pt = (k) => resolve(m[k], P, both, cfg, side);
+    const pts = [];
+    const pt = (k) => { const got = resolve(m[k], P, both, cfg, side); pts.push(got.p); return got; };
     let x = null, used = {};
     switch (m.kind) {
       case 'angle': { const a = pt('a'), b = pt('b'), c = pt('c'); used = { a: a.name, b: b.name, c: c.name };
@@ -119,8 +121,17 @@
         break; }
       default: x = null;
     }
-    /* `times` multiplies, `offset` adds; `scale` is the meter's two ends and not this */
-    if (x != null) x = x * (m.times == null ? 1 : m.times) + (m.offset || 0);
+    /* `unseen`: the reading when a landmark this needs is hidden or not trusted — a
+       limb the camera cannot see beside its twin is lying on it (the straight leg
+       raise's far knee, behind the near one when both legs are down, reads a lift of 0) */
+    if (m.unseen != null && (x == null || pts.some((p) => !p || p.v == null || p.v < cfg.vis))) return { x: m.unseen, used };
+    /* `times` multiplies, `offset` adds, `bias` (a number, or the name of a setting) is
+       taken off — a known slant in the landmarks, kept where it can be tuned; `scale`
+       is the meter's two ends and not this */
+    if (x != null) {
+      const bias = m.bias == null ? 0 : typeof m.bias === 'string' ? (cfg[m.bias] || 0) : m.bias;
+      x = x * (m.times == null ? 1 : m.times) + (m.offset || 0) - bias;
+    }
     return { x, used };
   }
 
@@ -285,7 +296,7 @@
         else if (g.kind === 'line') { const a = at(g.from), b = at(g.to); if (a && b) d.guide(a, b, ok); }
         else if (g.kind === 'readout') { const p = at(g.at || (m && (m.b || m.a))); if (p && x != null) d.readout(p, x, ok, g.side === 'sign' ? (x >= 0 ? 1 : -1) : (g.side == null ? 1 : g.side)); }
         else if (g.kind === 'arc' && m && x != null) {
-          const raw = (x - (m.offset || 0)) / (m.times == null ? 1 : m.times), size = g.size == null ? 1 : g.size, u = r.of[m.key] || {};
+          const raw = x, size = g.size == null ? 1 : g.size, u = r.of[m.key] || {};
           if (m.kind === 'angle') { const a = at(u.a), b = at(u.b), c = at(u.c); if (a && b && c) d.angleAt(b, a, c, raw, ok, size); }
           else if (m.kind === 'tilt') { const a = at(u.base), b = at(u.top); if (a && b) d.angleTo(a, b, 0, raw, ok, size); }
           else if (m.kind === 'floor') { const a = at(u.at), b = at(u.to); if (a && b) d.angleTo(a, b, r.facing, raw, ok, size); }
@@ -359,6 +370,8 @@
       if (!KINDS.includes(m.kind)) { err(at + '.kind', 'one of ' + KINDS.join(', ')); return; }
       for (const k of NEED[m.kind]) if (!lmOk(m[k])) err(`${at}.${k}`, 'a landmark: ' + LANDMARKS.join(', '));
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
+      if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
+      if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
       if (m.band) {
         const b = m.band, kind = bandKind(b);
         const refs = kind === 'sym' ? [b.sym] : kind === 'min' ? [b.min] : kind === 'max' ? [b.max] : [b.lo, b.hi];

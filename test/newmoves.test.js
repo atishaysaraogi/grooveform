@@ -37,7 +37,7 @@ function body(o) {
   /* `tilt` turns the whole body about the hip, as a phone not laid level would */
   const t = (o.tilt || 0) * D, turn = (p) => (!t ? p : { x: hip.x + (p.x - hip.x) * Math.cos(t) - (p.y - hip.y) * Math.sin(t), y: hip.y + (p.x - hip.x) * Math.sin(t) + (p.y - hip.y) * Math.cos(t) });
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
-  for (const s of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[s])) { const p = sides[s][name]; if (p) { const q = turn(p); lm[i] = { x: q.x / aspect, y: q.y, z: 0, visibility: hide.has(name) ? 0.1 : 0.95 }; } }
+  for (const s of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[s])) { const p = sides[s][name]; if (p) { const q = turn(p); lm[i] = { x: q.x / aspect, y: q.y, z: 0, visibility: hide.has(name) || hide.has(s + '.' + name) ? 0.1 : 0.95 }; } }
   return lm;
 }
 const run = (m, o, over) => {
@@ -88,6 +88,14 @@ test('straight leg raise: both legs straight, the lift measured against the rest
   /* and the phone not level: the whole body turned ten degrees reads the same lift */
   ({ r, v } = run(M, lifted(40, { tilt: 10 })));
   assert.ok(Math.abs(r.lift - 40) < 1, 'the lift against the other leg does not move with the phone: ' + r.lift);
+  /* both legs down, the far knee hidden behind the near one (the far side is L): still the start, not a lost frame */
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { hide: ['L.knee'] })));
+  assert.ok(r.ok, 'the frame stands without the far knee');
+  assert.equal(r.lift, 0, 'a leg the camera cannot see beside its twin is lying on it: ' + r.lift);
+  assert.equal(v.atStart, true); assert.ok(M.ready(r, v), 'and it is the start');
+  /* a lift with the far knee hidden is not a lift: the reference has to be seen */
+  ({ r, v } = run(M, lifted(40, { hide: ['L.knee'] })));
+  assert.equal(r.lift, 0); assert.equal(v.raised, false);
 });
 
 /* on the side facing the camera, head to the right: the same angles read as a side view of a body lying on its front-ish; the lift is the leg against the trunk */

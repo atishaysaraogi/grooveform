@@ -9,9 +9,12 @@ const M = require('../public/js/moves.js').bridge;
 
 const D = Math.PI / 180;
 const ASPECT = 16 / 9;                        // lying down, so the phone is on its side
-const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, o);
+/* the rig lays heel and toe on one floor line, so the model's slant that the file takes off is zero here */
+const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, { footBias: 0 }, o);
 const read = (lm, o) => M.read(lm, ASPECT, cfg(o));
 const judge = (r, o) => M.judge(r, cfg(o));
+/* and a coach on the rig is told the same */
+const Coach = (o) => new Core.Coach(M, Object.assign({ footBias: 0 }, o));
 
 /* A body on its back, side on, built backwards from the angles it should read.
      shin   the angle at the heel between the toe and the knee (90 = shin plumb)
@@ -144,6 +147,21 @@ test('the foot stays flat: heels lifting and toes lifting are told apart', () =>
   assert.match(M.cues.toesUp.text, /toes down/i);
 });
 
+test('the model\'s heel sits above the sole, so a flat foot reads heel-up: the file takes that slant off', () => {
+  /* with the file's own numbers (footBias 9) the rig's flat foot reads nine degrees toe-up
+     and a heel raised by nine reads level — what a real flat foot reads, as recorded */
+  const own = (o) => Object.assign({}, Core.COMMON, M.defaults, o);
+  const at = (foot, o) => M.read(body(Object.assign({}, TOP, { foot })), ASPECT, own(o)).foot;
+  assert.ok(Math.abs(at(0) + 9) < 0.01, 'flat on the rig reads -9 once the slant is taken off: ' + at(0));
+  assert.ok(Math.abs(at(9)) < 0.01, 'the model\'s flat foot reads level: ' + at(9));
+  assert.ok(Math.abs(at(9, { footBias: 0 }) - 9) < 0.01, 'and the bias is a setting');
+  const j = (foot) => M.judge(M.read(body(Object.assign({}, TOP, { foot })), ASPECT, own()), own());
+  assert.ok(j(20).faults.heelsUp > 0, 'twenty on the model is eleven of real heel lift');
+  assert.ok(j(-2).faults.toesUp > 0, 'minus two on the model, as recorded with the toes visibly up, is toes up');
+  assert.equal(j(9).faults.heelsUp, undefined); assert.equal(j(9).faults.toesUp, undefined);
+  assert.ok(M.bands.find((b) => b.key === 'foot').set.some((s) => s.key === 'footBias'), 'tunable from the settings, beside the foot band');
+});
+
 test('the position is all four together, with the hips actually lifted', () => {
   const at = (o) => judge(readOf(Object.assign({}, TOP, o)));
   assert.equal(at({}).inPosition, true);
@@ -180,7 +198,7 @@ const texts = (p) => JSON.stringify(p.said.map((x) => x.text));
 const settle = (c, t0) => play(c, REST, 2300, t0).t;
 
 test('nothing is said until the person has been at the start for two seconds', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   /* getting down: not at the start, feet wrong, hips half up — and nothing said */
   const down = play(c, { shin: 125, dip: 20, hipAng: 150, foot: 14 }, 3000, 0);
   assert.deepEqual(down.said, [], texts(down));
@@ -192,7 +210,7 @@ test('nothing is said until the person has been at the start for two seconds', (
   assert.ok(first && first.id === 'feetFar' && first.t - down.t >= 2000, 'the feet, after the wait: ' + texts(rest) + ' at ' + (first && first.t - down.t));
   assert.equal(rest.last.ready, true);
   /* leaving the start before the two seconds are up starts the wait again */
-  const c2 = new Core.Coach(M);
+  const c2 = Coach();
   let t = play(c2, REST, 1500, 0).t;
   t = play(c2, HALFWAY, 300, t).t;
   const again = play(c2, REST, 1500, t);
@@ -201,7 +219,7 @@ test('nothing is said until the person has been at the start for two seconds', (
 });
 
 test('a rep: lift, hold at the top, lower slowly, and it counts when the hips are down', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   let t = settle(c, 0);
   const rest = play(c, REST, 1200, t); t = rest.t;
   assert.equal(c.reps, 0);
@@ -221,7 +239,7 @@ test('a rep: lift, hold at the top, lower slowly, and it counts when the hips ar
 });
 
 test('dropped from the top, the rep is counted and the count says so', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
   ({ t } = play(c, TOP, 3500, t));
@@ -231,7 +249,7 @@ test('dropped from the top, the rep is counted and the count says so', () => {
 });
 
 test('feet placed wrong are corrected at the start, before the lift is asked for', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   const far = play(c, Object.assign({}, REST, { shin: 125 }), 3800, 0);
   const first = far.said.find((x) => x.id !== 'lost');
   assert.ok(first && first.id === 'feetFar', 'the feet came first: ' + texts(far));
@@ -240,21 +258,21 @@ test('feet placed wrong are corrected at the start, before the lift is asked for
   const fixed = play(c, REST, 3000, far.t);
   assert.ok(fixed.said.some((x) => x.id === 'raise'), texts(fixed));
   /* and a foot off the floor at the start comes before where the feet are */
-  const both = new Core.Coach(M);
+  const both = Coach();
   const lifted = play(both, Object.assign({}, REST, { shin: 125, foot: -16 }), 3800, 0);
   const said = lifted.said.find((x) => x.id !== 'lost');
   assert.equal(said && said.id, 'toesUp', 'toes down first: ' + texts(lifted));
 });
 
 test('at the top, the hips past the knees are said before the line being short, and the feet before both', () => {
-  const both = new Core.Coach(M);
+  const both = Coach();
   let t = settle(both, 0);
   ({ t } = play(both, REST, 1000, t));
   const up = play(both, { shin: 95, dip: -10, hipAng: 150, foot: 0 }, 2500, t);
   const ids = up.said.map((x) => x.id);
   assert.ok(ids.includes('hipHigh'), texts(up));
   assert.ok(!ids.includes('hipLow') || ids.indexOf('hipHigh') < ids.indexOf('hipLow'), 'too high first');
-  const feet = new Core.Coach(M);
+  const feet = Coach();
   t = settle(feet, 0);
   ({ t } = play(feet, REST, 1000, t));
   const lift = play(feet, { shin: 95, dip: -10, hipAng: 150, foot: 16 }, 2500, t);
@@ -262,8 +280,29 @@ test('at the top, the hips past the knees are said before the line being short, 
   assert.equal(first && first.id, 'heelsUp', 'heels before hips: ' + texts(lift));
 });
 
+test('a frame or two read as the start does not end a rep: the return has to hold', () => {
+  const c = Coach();
+  let t = settle(c, 0);
+  ({ t } = play(c, REST, 1000, t));
+  ({ t } = play(c, TOP, 1500, t));                       // up, holding, not yet the two seconds
+  let g = play(c, REST, 200, t); t = g.t;                // the model blinks: three frames at the start
+  assert.equal(g.last.phase, 'up', 'still the same rep');
+  assert.ok(!g.said.some((x) => x.id === 'early'), texts(g));
+  ({ t } = play(c, TOP, 2500, t));
+  assert.equal(c.phase, 'lower', 'the hold went on and finished: ' + c.phase);
+  const down = play(c, REST, 1000, t);
+  assert.equal(c.reps, 1, 'and the real return counts it');
+  /* the real return is believed after returnMs, not before */
+  const c2 = Coach();
+  let u = settle(c2, 0);
+  ({ t: u } = play(c2, REST, 1000, u)); ({ t: u } = play(c2, TOP, 1500, u));
+  const early = play(c2, REST, 1000, u);
+  const e = early.said.find((x) => x.id === 'early');
+  assert.ok(e && e.t - u >= 400 && e.t - u < 700, 'said once the return has held: ' + (e && e.t - u));
+});
+
 test('ten reps finish the set; the number is a setting', () => {
-  const c = new Core.Coach(M, { repCount: 3 });
+  const c = Coach({ repCount: 3 });
   let t = settle(c, 0);
   for (let i = 0; i < 3; i++) {
     ({ t } = play(c, REST, 800, t));
@@ -279,12 +318,12 @@ test('ten reps finish the set; the number is a setting', () => {
 });
 
 test('after a rep is counted there is a quiet two seconds before the next is asked for', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
   ({ t } = play(c, TOP, 3500, t));
   ({ t } = play(c, HALFWAY, 1300, t));
-  const down = play(c, REST, 2600, t);
+  const down = play(c, REST, 3000, t);
   const count = down.said.find((x) => x.id === 'count1');
   const next = down.said.find((x) => x.id === 'raise');
   assert.ok(count, texts(down));
@@ -292,14 +331,14 @@ test('after a rep is counted there is a quiet two seconds before the next is ask
   assert.ok(next.t - count.t >= 2000, `and not for two seconds: ${next.t - count.t} ms after the count`);
   assert.ok(down.said.slice(0, -1).every((x) => x.id !== 'raise' || x.t - count.t >= 2000));
   /* a set-up fault waits for the quiet too */
-  const c2 = new Core.Coach(M);
+  const c2 = Coach();
   let u = settle(c2, 0);
   ({ t: u } = play(c2, REST, 1000, u)); ({ t: u } = play(c2, TOP, 3500, u)); ({ t: u } = play(c2, HALFWAY, 1300, u));
-  const far = play(c2, Object.assign({}, REST, { shin: 125 }), 2600, u);
+  const far = play(c2, Object.assign({}, REST, { shin: 125 }), 3000, u);
   const cnt = far.said.find((x) => x.id === 'count1'), feet = far.said.find((x) => x.id === 'feetFar');
   assert.ok(feet && feet.t - cnt.t >= 2000, 'feet corrected only after the quiet: ' + texts(far));
   /* and it is a setting: none at zero */
-  const c3 = new Core.Coach(M, { restSec: 0 });
+  const c3 = Coach({ restSec: 0 });
   let w = settle(c3, 0);
   ({ t: w } = play(c3, REST, 1000, w)); ({ t: w } = play(c3, TOP, 3500, w)); ({ t: w } = play(c3, HALFWAY, 1300, w));
   const quick = play(c3, REST, 2600, w);
@@ -308,7 +347,7 @@ test('after a rep is counted there is a quiet two seconds before the next is ask
 });
 
 test('the bridge starts lying down with the knees bent: straight legs on the floor are not the start', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   let t = 0, out = null;
   /* on the back with the legs out straight: the hips are down but the shin lies along the floor */
   for (; t < 3000; t += 33) out = c.step(read(body({ shin: 20, dip: 50, hipAng: 130 }), c.cfg), t);
@@ -319,18 +358,19 @@ test('the bridge starts lying down with the knees bent: straight legs on the flo
 });
 
 test('every fault present is on view in words, whether or not it is the one being said', () => {
-  const c = new Core.Coach(M);
+  const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
   /* at the top with three things wrong: the voice says one, the words show all three */
   const out = c.step(read(body({ shin: 120, dip: -10, hipAng: 150, foot: 16 }), c.cfg), t);
   assert.deepEqual(out.active, ['heelsUp', 'hipHigh', 'hipLow'], 'in the move\'s order — and no word on the shin while a heel is up');
   for (const id of out.active) assert.ok(M.cues[id].label, id + ' has short words');
-  /* at rest only the set-up faults are on view; the hips being down is not a fault there */
-  const rest = c.step(read(body(Object.assign({}, REST, { shin: 70 })), c.cfg), t + 33);
+  /* at rest only the set-up faults are on view; the hips being down is not a fault there
+     (the return takes a moment to be believed, so the rest is played for half a second) */
+  const rest = play(c, Object.assign({}, REST, { shin: 70 }), 500, t + 33).last;
   assert.deepEqual(rest.active, ['feetClose']);
   /* and a prompt is not a fault */
-  const clean = c.step(read(body(REST), c.cfg), t + 66);
+  const clean = c.step(read(body(REST), c.cfg), t + 566);
   assert.deepEqual(clean.active, []);
 });
 

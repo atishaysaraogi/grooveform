@@ -17,6 +17,8 @@
      now           the clock the banner's `at` is on
      rec           whether a film is being taken (the REC mark)
      cues          the coach's cue table, for the fault words
+     points        the model's raw landmarks this frame (all 33, or null), drawn with their
+                   certainty when cfg.showPoints is on — a review aid
    --------------------------------------------------------------------------- */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory(require('./core.js'));
@@ -224,6 +226,80 @@
     }
   }
 
+  /* ---- every point the model returns, with how sure it is: a review aid ----
+     Drawn only when asked for (cfg.showPoints), over whatever the exercise draws:
+     all thirty-three points, named where they are joints, each in the colour of
+     the model's certainty in it (green sure, amber under the trust bar's reach,
+     red not trusted), joined by the model's own skeleton; the points the exercise
+     is measuring are ringed. The table at the left edge is the same numbers for
+     the eighteen joints, left against right, so it can be seen what the model had
+     when a frame was "lost" and which limbs it only sometimes sees. A tool for
+     settling the exercises, to be taken out afterwards. */
+  const POINT_NAMES = ['nose', 'L eye in', 'L eye', 'L eye out', 'R eye in', 'R eye', 'R eye out', 'L ear', 'R ear', 'L mouth', 'R mouth',
+    'L shoulder', 'R shoulder', 'L elbow', 'R elbow', 'L wrist', 'R wrist', 'L pinky', 'R pinky', 'L index', 'R index', 'L thumb', 'R thumb',
+    'L hip', 'R hip', 'L knee', 'R knee', 'L ankle', 'R ankle', 'L heel', 'R heel', 'L toe', 'R toe'];
+  const POINT_LINES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28],
+    [27, 29], [29, 31], [27, 31], [28, 30], [30, 32], [28, 32], [15, 17], [15, 19], [15, 21], [17, 19], [16, 18], [16, 20], [16, 22], [18, 20],
+    [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10]];
+  const JOINT_ROWS = ['ear', 'shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle', 'heel', 'toe'];
+  const LABELLED = new Set([7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+  const sureOf = (p) => (!p ? 0 : p.visibility != null ? p.visibility : p.v != null ? p.v : 0);
+  const sureColour = (c, bar) => (c >= 0.8 ? C.good : c >= bar ? C.warn : C.bad);
+  function drawPoints(ctx, lm, A, fit, cfg, move, r) {
+    if (!lm || !lm.length) return;
+    const at = (p) => [fit.x + (p.x / A) * fit.w, fit.y + p.y * fit.h];
+    const s = Math.max(2, fit.w / 320), fs = Math.max(11, fit.w * 0.022), bar = cfg.vis == null ? 0.5 : cfg.vis;
+    const mirrored = !!cfg.mirror;
+    ctx.save();
+    ctx.setLineDash([]); ctx.lineCap = 'round'; ctx.shadowBlur = 0;
+    for (const [a, b] of POINT_LINES) {
+      const p = lm[a], q = lm[b]; if (!p || !q) continue;
+      const c = Math.min(sureOf(p), sureOf(q));
+      ctx.globalAlpha = 0.25 + 0.55 * c; ctx.lineWidth = s * 1.1; ctx.strokeStyle = sureColour(c, bar);
+      ctx.beginPath(); ctx.moveTo(...at(p)); ctx.lineTo(...at(q)); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    /* the exercise's own points, on the side it is measuring, are ringed */
+    const own = new Set();
+    if (r && r.ok && r.side && Core.SIDE[r.side]) for (const k of (move && move.joints) || []) { const i = Core.SIDE[r.side][k]; if (i != null) own.add(i); }
+    lm.forEach((p, i) => {
+      if (!p) return;
+      const [x, y] = at(p), c = sureOf(p), big = i === 0 || i >= 7, right = i > 0 && i % 2 === 0;
+      ctx.fillStyle = sureColour(c, bar); ctx.globalAlpha = 0.35 + 0.65 * c;
+      ctx.beginPath(); ctx.arc(x, y, s * (big ? 2.6 : 1.6), 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (own.has(i)) { ctx.lineWidth = s * 0.9; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, s * 4.4, 0, Math.PI * 2); ctx.stroke(); }
+      if (LABELLED.has(i)) label(ctx, `${POINT_NAMES[i]} ${Math.round(c * 100)}`, x, y + (right ? 1 : -1) * fs * 1.1, fs, sureColour(c, bar), mirrored);
+    });
+    ctx.restore();
+  }
+  /* the table at the left edge: the eighteen joints, left against right, and which side is being measured */
+  function drawPointTable(ctx, lm, W, H, cfg, r) {
+    const L = lm || [];
+    const fs = Math.max(11, Math.min(W, H) * 0.028), lh = fs * 1.25, bar = cfg.vis == null ? 0.5 : cfg.vis;
+    const rows = JOINT_ROWS.map((k) => [k, sureOf(L[Core.SIDE.L[k]]), sureOf(L[Core.SIDE.R[k]])]);
+    const seen = L.filter((p) => sureOf(p) >= bar).length;
+    /* at the right edge, mid-height: clear of the readouts on the left, the clock above and the mark below */
+    const w = fs * 11.5, h = lh * (rows.length + 2.8), x = W - w - fs * 0.6, y = H / 2 - h / 2, colL = x + w - fs * 3.6, colR = x + w - fs * 0.5;
+    const pct = (c) => (L.length ? String(Math.round(c * 100)) : '\u2013');
+    ctx.save();
+    ctx.globalAlpha = 0.72; ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+    ctx.font = `700 ${fs}px ${FONT}`; ctx.textBaseline = 'top';
+    ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.fillText(L.length ? `${seen}/33 sure` : 'no one found', x + fs * 0.5, y + lh * 0.3);
+    ctx.textAlign = 'right'; ctx.fillText('L', colL, y + lh * 0.3); ctx.fillText('R', colR, y + lh * 0.3);
+    rows.forEach(([k, l, rr], i) => {
+      const yy = y + lh * (i + 1.5);
+      ctx.textAlign = 'left'; ctx.fillStyle = C.ink; ctx.fillText(k, x + fs * 0.5, yy);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = sureColour(l, bar); ctx.fillText(pct(l), colL, yy);
+      ctx.fillStyle = sureColour(rr, bar); ctx.fillText(pct(rr), colR, yy);
+    });
+    const foot = r && r.ok && r.side ? `measuring ${r.side === 'L' ? 'left' : 'right'}` : L.length ? 'frame lost' : '';
+    ctx.font = `600 ${fs * 0.85}px ${FONT}`; ctx.textAlign = 'left'; ctx.fillStyle = r && r.ok ? C.ink : C.bad;
+    ctx.fillText(foot, x + fs * 0.5, y + lh * (rows.length + 1.7));
+    ctx.restore();
+  }
+
   /* the whole frame: the picture, all of it and none of it stretched (a squashed
      body reads squashed angles), the body over it, the HUD over that */
   function draw(ctx, st) {
@@ -243,7 +319,9 @@
       } else ctx.drawImage(source.image, fit.x, fit.y, fit.w, fit.h);
     }
     if (st.reading && st.reading.ok && st.verdict) drawBody(ctx, st.move, st.cfg, st.reading, st.verdict, A, fit);
+    if (st.cfg.showPoints) drawPoints(ctx, st.points || null, A, fit, st.cfg, st.move, st.reading);
     ctx.restore();
+    if (st.cfg.showPoints) drawPointTable(ctx, st.points || null, W, H, st.cfg, st.reading);
     if (st.out) drawHud(ctx, st);
     return fit;
   }
@@ -267,5 +345,5 @@
     return /^(count\d+|done)$/.test(id) && !!cue.text && cue.text.includes(Core.SHARED_CUES.fast.text);
   }
 
-  return { C, FONT, BANNER_MS, bandText, faultWords, draw, drawBody, drawHud, bannerAt, isCorrection, label, sweep };
+  return { C, FONT, BANNER_MS, bandText, faultWords, draw, drawBody, drawHud, bannerAt, isCorrection, label, sweep , POINT_NAMES, POINT_LINES };
 });

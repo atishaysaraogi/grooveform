@@ -291,6 +291,13 @@ Moves.ready.then(function () {
   function sizeOverlay() {
     const r = video.getBoundingClientRect(); overlay.width = Math.round(r.width); overlay.height = Math.round(r.height);
   }
+  /* the model's raw landmarks nearest a moment, for the review aid that draws them all */
+  function frameAt(tMs) {
+    if (!trace) return null;
+    let best = null; for (const f of trace.frames) { if (!best || Math.abs(f.t - tMs) < Math.abs(best.t - tMs)) best = f; }
+    return best;
+  }
+  const allPoints = () => !!($('all-points') && $('all-points').checked);
   function rowAt(tMs) {
     if (!result) return null;
     let best = null; for (const r of result.rows) { if (!best || Math.abs(r.t - tMs) < Math.abs(best.t - tMs)) best = r; }
@@ -304,13 +311,15 @@ Moves.ready.then(function () {
     const t = atMs != null ? atMs : video.currentTime * 1000;
     const r = rowAt(t);
     if (!r || !trace) return;
+    const f = frameAt(t);
     Overlay.draw(ctx, {
       W: overlay.width, H: overlay.height, source: null, aspect: trace.aspect,
-      move, cfg: Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: true, setCount: 1 }),
-      reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1,
+      move, cfg: Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: true, setCount: 1, showPoints: allPoints() }),
+      reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1, points: f ? f.lm : null,
       banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues,
     });
   }
+  if ($('all-points')) $('all-points').addEventListener('change', () => drawOverlay());
   video.addEventListener('timeupdate', () => { drawOverlay(); drawLanes(); });
   video.addEventListener('seeked', () => { drawOverlay(); drawLanes(); });
   window.addEventListener('resize', () => { sizeOverlay(); drawOverlay(); drawLanes(); });
@@ -519,7 +528,7 @@ Moves.ready.then(function () {
         error: (e) => { why = why || e; },
       });
       enc.configure(pick.config);
-      const cfg = Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: false, setCount: 1 });
+      const cfg = Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: false, setCount: 1, showPoints: allPoints() });
       let n = 0;
       for (let t = 0; t < dur; t += 1 / fps, n++) {
         await seekTo(Math.min(t, dur - 0.001));
@@ -527,6 +536,7 @@ Moves.ready.then(function () {
         if (overlayOn) {
           Overlay.draw(ctx, { W, H, source: { image: video, w: video.videoWidth, h: video.videoHeight, quarter: 0, mirror: false },
             move, cfg, reading: row && row.reading, verdict: row && row.verdict, out: row && row.out, setNo: 1,
+            points: (frameAt(t * 1000) || {}).lm || null,
             banner: Overlay.bannerAt(cues, t * 1000, isCorrection), now: t * 1000, rec: false, cues: move.cues });
         } else ctx.drawImage(video, 0, 0, W, H);
         while (enc.encodeQueueSize > 4) await new Promise((r) => setTimeout(r, 5));

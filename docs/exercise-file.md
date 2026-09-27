@@ -184,7 +184,7 @@ Each is a named number read every frame and smoothed.
 { "key": "shin", "of": "shinAngle",           // key: the band's name; of (optional): the reading's name when it differs
   "label": "toe, heel, knee", "hud": "SHIN", "note": "target",   // the live page's card, the picture's corner
   "kind": "angle", "a": "toe", "b": "heel", "c": "knee",
-  "offset": 0, "times": 1, "optional": false,
+  "offset": 0, "times": 1, "bias": 0, "unseen": null, "optional": false,
   "band": { "lo": "shinMin", "hi": "shinMax" }, "scale": [40, 170],
   "settings": [{ "key": "shinMin", "label": "Shin angle, lowest", "min": 30, "max": 165 }, ...],
   "why": "a note" }
@@ -203,9 +203,19 @@ Each is a named number read every frame and smoothed.
 
 `to` may be a list (`["heel", "ankle"]`): the first the model trusts is
 used, and the drawing can name it as `shin:to`. `offset` is added and
-`times` multiplied first (the donkey kick's arm is a tilt plus 90).
+`times` multiplied first (the donkey kick's arm is a tilt plus 90). `bias`
+is taken off last and is for a known slant in the model's landmarks: a
+number, or the key of a setting so it can be tuned (the bridge's foot line
+reads about nine degrees heel-up when the foot is flat, because the model
+puts its heel landmark on the heel bone above the sole; `"bias":
+"footBias"` with `footBias: 9` in `defaults` makes flat read level).
 `optional` means a reading the model cannot make is not a fault and does not
-fail the frame (the wall sit's shin, when the heel is hidden).
+fail the frame (the wall sit's shin, when the heel is hidden). `unseen` is a
+number the measurement reads instead when a landmark it needs is hidden or
+below the trust bar: the straight leg raise's lift reads 0 when the far knee
+is hidden behind the near one, because a leg the camera cannot see beside its
+twin is lying on it — and that landmark is then left out of `needed`, so the
+frame is not lost.
 
 A **band** makes the measurement judged, gives it a lane on the Review page,
 a card on the live page and a line on the HUD: `{lo, hi}` between two edges,
@@ -228,8 +238,13 @@ The progress measurement says how far into the rep the person is. Going
 `up`, the rep is under way once it reaches `raiseAt` and counts once it is
 back down to `downAt`; going `down` (a squat's knee angle) the other way
 round. The hold at the top runs while the measurement is past `raiseAt` and
-every measurement in `inPosition` (default: every banded one) is good. The
-prompt asks for the movement and is never red.
+every measurement in `inPosition` (default: every banded one) is good. A
+banded measurement left out of `inPosition` is still called as a fault but
+does not stop the clock: the straight leg raise's position is the knee and
+the lift, so a rep with the toes pointed is counted and told about, rather
+than never counted (a recorded take held six clean seconds at the top with
+the toes pointed and got nothing for it). The prompt asks for the movement
+and is never red.
 
 `ready` is the start position: nothing is coached until it has been held for
 the set-up wait (`readyMs`). By default a rep move's start is being below
@@ -296,6 +311,7 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 | `cooldownMs` | 4000 | the same cue not again inside this |
 | `gapMs` | 1500 | no two cues inside this |
 | `settleMs` | 700 | in position this long before the clock starts |
+| `returnMs` | 400 | back at the start this long before a rep is over: a frame or two of the model swapping the legs is not a return |
 | `lostEverySec` | 15 | "I can't see you" every this |
 | `smooth` | 0.35 | smoothing on the readings (1 = none) |
 | `vis` | 0.5 | a landmark below this is not trusted |
@@ -325,6 +341,10 @@ its page (a band's edges are offered by the measurement):
   that make the position.
 - **Symmetry** (both sides together): a `sum` of two readings with one
   `times: -1`.
+- **A limb that hides behind its twin** (the far leg, side on, when both are
+  down): `unseen` on the measurement, and the landmark left out of `needed`.
+- **A landmark the model places off the body** (the heel above the sole, the
+  hip a little forward): `bias` on the measurement, as a setting.
 - **A base that decides the rest** (feet before hips): `setup` faults,
   `requires`, and the order of the list.
 - **Equipment in the picture**: `figure.points.props`, drawn behind the figure.

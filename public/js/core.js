@@ -32,6 +32,7 @@
     cooldownMs: 4000,     // how long before the same cue may be said again
     gapMs: 1500,          // the least silence between any two cues
     settleMs: 700,        // how long in position before the hold clock starts
+    returnMs: 400,        // how long back at the start before a rep is over: a frame or two of the model swapping the legs is not a return
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
     readyMs: 2000,        // how long the start position is held before the coaching begins
@@ -224,7 +225,7 @@
       this.holdMs = 0; this.bestMs = 0; this.runMs = 0; this.totalMs = 0;
       this.called = {};                 // which time calls have already been made
       this.lastSpoke = 0;               // when anything was last said, whatever it was
-      this.reps = 0; this.phase = 'down'; this.repHoldMs = 0;   // only a move with reps uses these
+      this.reps = 0; this.phase = 'down'; this.repHoldMs = 0; this.downSince = 0;   // only a move with reps uses these
       this.lowerAt = 0;                 // when the lowering began, for a move that wants it slow
       this.countedAt = 0;               // when the last rep was counted, for the quiet after it
       this.ready = false; this.readySince = 0;   // the set-up wait, until the start position is held
@@ -273,7 +274,7 @@
         if (!this.lostSince) this.lostSince = t;
         this.readySince = 0;
         /* out of sight, the clocks stop and every fault's timer is let go */
-        this.inSince = 0; this.runMs = 0; this.holdDue = 0; this.wasIn = false; this.since = {};
+        this.inSince = 0; this.runMs = 0; this.holdDue = 0; this.wasIn = false; this.since = {}; this.downSince = 0;
         let cue = null;
         if (t - this.lostSince >= cfg.persistMs && (!this.lastLost || t - this.lastLost >= (cfg.lostEverySec || 15) * 1000)) {
           cue = this.offer('lost', t, this.cues.lost.text);
@@ -391,7 +392,12 @@
     stepReps(r, t, v, dt) {
       const cfg = this.cfg, C = this.cues;
       const targetMs = cfg.holdTargetSec * 1000, total = cfg.repCount;
-      const raised = !!(v.ok && v.raised), atStart = !!(v.ok && v.atStart);
+      const raised = !!(v.ok && v.raised);
+      /* the return has to hold for a moment: side on, the model now and then swaps the
+         two legs for a frame or two, and one such frame read as the start would end a
+         rep in the middle of its hold (a recorded take lost its first rep this way) */
+      if (v.ok && v.atStart) { if (!this.downSince) this.downSince = t; } else this.downSince = 0;
+      const atStart = !!this.downSince && t - this.downSince >= (cfg.returnMs || 0);
 
       let holding = false;
       if (v.inPosition && this.phase === 'up') {
@@ -419,7 +425,7 @@
         /* "lower slowly" is judged, not just said: a move that names how long the
            lowering should take is told when it took less. The remark rides on the
            count rather than queueing behind it, so it lands on the rep it is about. */
-        const fast = cfg.lowerSec > 0 && this.lowerAt && t - this.lowerAt < cfg.lowerSec * 1000;
+        const fast = cfg.lowerSec > 0 && this.lowerAt && this.downSince - this.lowerAt < cfg.lowerSec * 1000;   // from the top to the moment the return began
         if (fast) this.fastReps = (this.fastReps || 0) + 1;
         this.countedAt = t;
         const tail = fast ? ` \u2014 ${C.fast.text}` : '';
@@ -527,7 +533,7 @@
      tuned numbers into the same store, so both have to agree on it */
   const SETTINGS_V = 7;
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-26e';
+  const VER = '2026-09-27a';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

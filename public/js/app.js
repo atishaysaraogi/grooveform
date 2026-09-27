@@ -48,6 +48,9 @@ Moves.ready.then(function () {
   /* the model in its own thread: the frame most recently read, and whether one is
      out being read now */
   let worker = null, latestLm = null, inFlight = false, seq = 0;
+  /* a review aid: every point the model returns, with its certainty, drawn over the
+     picture (and so into the film) — kept on this device until turned off */
+  let showPoints = false; try { showPoints = localStorage.getItem('ontrack.points') === '1'; } catch { }
   let stream = null, camFacing = 'user';   // the front camera: it is the one you can see while you set the phone down
   let running = false, raf = 0, lastTs = 0;
   let coach = null, smoother = null, state = null;
@@ -114,8 +117,9 @@ Moves.ready.then(function () {
   const stampOf = (m) => JSON.stringify(m.defaults);
   function ownSettings(m) {
     const mine = saved.bands[m.id];
-    if (mine && mine.stamp && mine.stamp !== stampOf(m)) { saved.bands[m.id] = { stamp: stampOf(m) }; store.set(saved); }
-    else if (mine && !mine.stamp) { mine.stamp = stampOf(m); }
+    /* no stamp means the numbers were kept before files carried one, under
+       whatever the exercise measured then — those go the same way */
+    if (mine && mine.stamp !== stampOf(m)) { saved.bands[m.id] = { stamp: stampOf(m) }; store.set(saved); }
     return saved.bands[m.id] || {};
   }
   function buildSettings() {
@@ -712,14 +716,15 @@ Moves.ready.then(function () {
   let painted = 0;                        // how many times the canvas has been drawn, so a film takes no frame twice
   /* the whole picture, drawn by overlay.js — the same drawing the Review page
      renders a film with after the fact, so the two can never differ */
-  function drawFrame(reading, verdict, out) {
+  function drawFrame(reading, verdict, out, points) {
     painted++;
     const q = quarterTurn(), t = turned(q), c = cfg();
+    if (showPoints) c.showPoints = true;
     Overlay.draw(ctx, {
       W: canvas.width, H: canvas.height,
       source: { image: video, w: t.w, h: t.h, quarter: q, mirror: c.mirror },
       move, cfg: c, reading, verdict, out, setNo, banner, now: performance.now(),
-      rec: !!(rec && rec.live), cues: coach ? coach.cues : {},
+      rec: !!(rec && rec.live), cues: coach ? coach.cues : {}, points: points || null,
     });
   }
 
@@ -760,7 +765,8 @@ Moves.ready.then(function () {
        is, so that is the space an angle has to be worked out in — the canvas may be
        a different shape entirely */
     const q = quarterTurn(), t = turned(q);
-    const reading = smoother.apply(move.read(Core.rotateLandmarks(lm, q), t.w / t.h, coach.cfg));
+    const turnedLm = Core.rotateLandmarks(lm, q);
+    const reading = smoother.apply(move.read(turnedLm, t.w / t.h, coach.cfg));
     let out;
     if (between) {
       /* the set is over and the next has not begun: the picture and the skeleton go
@@ -770,7 +776,7 @@ Moves.ready.then(function () {
       out = coach.step(reading, now - t0);
       if (out.cue) fire(out.cue);
     }
-    drawFrame(reading, out.verdict, out);
+    drawFrame(reading, out.verdict, out, turnedLm);
     paintUi(reading, out.verdict, out);
     state = out;
     /* the target reached ends the set by itself */
@@ -1250,6 +1256,10 @@ Moves.ready.then(function () {
     camFacing = camFacing === 'user' ? 'environment' : 'user';
     unschedule(); try { await startCamera(); } catch { } if (running) schedule();
   };
+  const pointsBtn = $('points');
+  const showPointsUi = () => { pointsBtn.textContent = showPoints ? 'Hide the model\u2019s points' : 'Show every point the model sees'; pointsBtn.setAttribute('aria-pressed', String(showPoints)); };
+  showPointsUi();
+  pointsBtn.onclick = () => { showPoints = !showPoints; try { localStorage.setItem('ontrack.points', showPoints ? '1' : '0'); } catch { } showPointsUi(); };
   if (!voice.ok && typeof Speech === 'undefined') { $('mute').textContent = 'No voice here'; $('mute').disabled = true; }
   $('mute').onclick = (e) => {
     voice.on = !voice.on; e.target.setAttribute('aria-pressed', String(!voice.on));

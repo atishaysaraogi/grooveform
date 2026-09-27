@@ -61,3 +61,30 @@ test('the words on the picture and the rule for red are the same for the coach a
   assert.equal(Overlay.bannerAt(cues, 3900, isC), null, 'gone after its time');
   assert.equal(Overlay.bannerAt(cues, 4100, isC).colour, Overlay.C.bad, 'a fault in red');
 });
+
+test('the review aid draws every point the model returns, with its certainty, and a table of the joints', () => {
+  /* a canvas that only remembers what was asked of it */
+  const calls = [];
+  const ctx = new Proxy({}, { get: (_, k) => (k === 'measureText' ? () => ({ width: 10 }) : (...a) => { calls.push([k, a]); }), set: () => true });
+  const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.3 + i * 0.01, y: 0.5, z: 0, visibility: i % 3 === 0 ? 0.2 : 0.9 });
+  const M = Moves.slr;
+  const st = { W: 640, H: 360, source: null, aspect: 16 / 9, move: M, cfg: { mirror: false, vis: 0.5, showPoints: true }, reading: { ok: true, side: 'R' }, verdict: null, out: null, points: lm, cues: {} };
+  Overlay.draw(ctx, st);
+  const arcs = calls.filter((c) => c[0] === 'arc').length;
+  const texts = calls.filter((c) => c[0] === 'fillText').map((c) => c[1][0]);
+  const ringed = M.joints.filter((k) => Core.SIDE.R[k] != null).length;   // the joints the exercise names on the side it reads
+  assert.equal(arcs, 33 + ringed, 'a dot for each of the 33 points and a ring on each joint being measured');
+  assert.ok(texts.some((t) => /^R knee \d+$/.test(t)), 'the joints are named with their certainty: ' + texts.slice(0, 6).join(' | '));
+  assert.ok(texts.includes('L') && texts.includes('R') && texts.includes('knee') && texts.includes('toe'), 'the table has the joints left against right');
+  assert.ok(texts.some((t) => /\/33 sure$/.test(t)), 'and how many the model is sure of');
+  assert.ok(texts.includes('measuring right'), 'and which side the exercise is reading');
+  assert.equal(Overlay.POINT_NAMES.length, 33);
+  /* off by default: nothing of it is drawn */
+  calls.length = 0;
+  Overlay.draw(ctx, Object.assign({}, st, { cfg: { mirror: false, vis: 0.5 } }));
+  assert.equal(calls.filter((c) => c[0] === 'arc').length, 0);
+  /* nobody in the frame: the table still says so */
+  calls.length = 0;
+  Overlay.draw(ctx, Object.assign({}, st, { points: null, reading: null }));
+  assert.ok(calls.some((c) => c[0] === 'fillText' && c[1][0] === 'no one found'));
+});
