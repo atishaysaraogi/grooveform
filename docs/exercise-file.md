@@ -157,7 +157,11 @@ exercise page follows.
 
 Landmarks: `ear shoulder elbow wrist hip knee ankle heel toe`. Plain names
 are taken from the side being measured; `L.knee` / `R.knee` name a side (a
-front view).
+front view); `other.knee` names the side *not* being measured — the resting
+leg, which is how the straight leg raise measures its lift against the leg
+on the floor rather than the floor itself, and needs no shoulders in the
+picture. A `needed` list of hips and below is enough for a frame; the
+shoulders only have to be seen if a measurement uses them.
 
 `facing` says which way the body faces: from the first landmark toward the
 second (`sign(to.x − from.x)`). Tilt, floor and bend readings are signed by

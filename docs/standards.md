@@ -27,11 +27,22 @@ lift done lying on the back (hip flexion), on the side (abduction), face down
 
 | standard | source | in the file |
 |---|---|---|
-| Other knee bent, foot flat, to protect the back | NHS South Tees; Hinge Health | start words; the straighter leg is the one measured |
-| Toes pulled back toward you, knee pressed straight before the lift | NHS South Tees ("pull the foot back… press the back of the knee down") | `kneeBend` and `toesDown` are set-up faults: knee ≥ 165°, foot angle at the heel 60–105° |
-| Lift the whole leg with the knee straight | NHS South Tees; Hinge Health | `kneeBend` stays on through the rep |
-| Height: "no more than 6 inches" (NHS) to "the height of the other knee" (most physio handouts, about 30–45°) | NHS South Tees; Hinge Health; Wikipedia (about 12 inches) | the lift as the hip angle between shoulder and knee, 130–155° at the top, i.e. a lift of 25–50°; too high and too low are both faults. The NHS figure is the conservative early-rehab version; lower `liftMax` toward 165 for that |
+| Both legs straight on the floor, toes pulled back, knee pressed straight before the lift | NHS South Tees ("pull the foot back… press the back of the knee down"); Hinge Health | `kneeBend` and `toesDown` are set-up faults: knee ≥ 165°, foot angle at the heel 60–105°. The NHS handout bends the other knee; this file keeps both legs straight, as asked, and the resting leg then serves as the floor line |
+| Lift the whole leg with the knee straight | NHS South Tees; Hinge Health | `kneeBend` stays on through the rep; the resting knee bending or lifting is `restBend` (≥ 160°) |
+| Height 30–45°: the height of a bent knee in most physio handouts; the NHS "no more than 6 inches" is the conservative early-rehab version | Hinge Health; NHS South Tees | the lift as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top, too high and too low both called; the rep is under way at 15° and counts back under 8° |
 | Hold a couple of seconds, lower slowly | NHS South Tees | hold 2 s at the top, "lower slowly" judged at 1 s |
+
+**Why the lift is measured against the other leg, not the floor or the
+shoulders.** Three ways were open: the angle at the hip between shoulder and
+knee (needs the shoulders in the picture, and reads the trunk's own angle
+too); the thigh's rise above the horizontal (needs the phone laid level: a
+phone tilted 5° reads every lift 5° out); or the angle between the lifted
+leg and the resting leg. The third needs only the hips and legs, does not
+move when the phone is off level, and is exactly the reference a
+physiotherapist uses by eye. Its one condition is that the resting leg stays
+straight and down, which is itself a standard of the exercise and is coached.
+The frame is usable with the shoulders out of shot: `needed` lists hips and
+below only.
 
 What it cannot see: the lower back flattening, the thigh muscle actually
 tightening.

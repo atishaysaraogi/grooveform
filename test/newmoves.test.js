@@ -33,8 +33,11 @@ function body(o) {
   const near = leg(o.thigh || 0, o.shin == null ? (o.thigh || 0) : o.shin, o.foot || 0);
   const far = leg(o.thighF == null ? (o.thigh || 0) : o.thighF, o.shinF == null ? (o.thighF == null ? (o.shin == null ? (o.thigh || 0) : o.shin) : o.thighF) : o.shinF, o.footF == null ? (o.foot || 0) : o.footF);
   const sides = { R: Object.assign({ shoulder, ear, elbow, wrist, hip }, near), L: Object.assign({ shoulder, ear, elbow, wrist, hip }, far) };
+  const hide = new Set(o.hide || []);
+  /* `tilt` turns the whole body about the hip, as a phone not laid level would */
+  const t = (o.tilt || 0) * D, turn = (p) => (!t ? p : { x: hip.x + (p.x - hip.x) * Math.cos(t) - (p.y - hip.y) * Math.sin(t), y: hip.y + (p.x - hip.x) * Math.sin(t) + (p.y - hip.y) * Math.cos(t) });
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
-  for (const s of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[s])) { const p = sides[s][name]; if (p) lm[i] = { x: p.x / aspect, y: p.y, z: 0, visibility: 0.95 }; }
+  for (const s of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[s])) { const p = sides[s][name]; if (p) { const q = turn(p); lm[i] = { x: q.x / aspect, y: q.y, z: 0, visibility: hide.has(name) ? 0.1 : 0.95 }; } }
   return lm;
 }
 const run = (m, o, over) => {
@@ -45,34 +48,43 @@ const run = (m, o, over) => {
 const firstFault = (m, v) => m.faults.find((id) => v.faults[id] != null) || null;
 
 /* lying on the back, head to the right: torso 90; a leg along the floor is -90 */
-const SUPINE = { torso: 90, thigh: -90, shin: -90, foot: 90, thighF: -150, shinF: -30, footF: 90, uarm: -90, farm: -90, hipAt: [1.0, 0.7] };
+const SUPINE = { torso: 90, thigh: -90, shin: -90, foot: 90, thighF: -90, shinF: -90, footF: 90, uarm: -90, farm: -90, hipAt: [1.0, 0.7] };
+/* the foot turns with a lifted leg: toes toward the shin is 90 less the lift */
+const lifted = (deg, over) => Object.assign({}, SUPINE, { thigh: -90 - deg, shin: -90 - deg, foot: 90 - deg }, over);
 
-test('straight leg raise: lying is the start, the height of the other knee is the top, the knee and the toes are coached first', () => {
+test('straight leg raise: both legs straight, the lift measured against the resting leg, hips and below enough', () => {
   const M = Moves.slr;
   let { r, v } = run(M, SUPINE);
-  assert.ok(r.ok && r.side === 'R', 'the straight leg is the one measured, whichever side: ' + r.side);
-  assert.ok(Math.abs(r.knee - 180) < 1 && Math.abs(r.lift - 180) < 1, `lying flat: knee ${r.knee}, lift ${r.lift}`);
+  assert.ok(r.ok, 'read');
+  assert.ok(Math.abs(r.knee - 180) < 1 && Math.abs(r.lift) < 1 && Math.abs(r.rest - 180) < 1, `both flat: knee ${r.knee}, lift ${r.lift}, rest ${r.rest}`);
   assert.equal(v.atStart, true); assert.equal(v.raised, false);
   assert.ok(M.ready(r, v), 'and it is the start position');
-  /* lifted 40 degrees: in position */
-  /* the toes stay pulled toward the shin as the leg comes up, so the foot turns with it: 90 less the lift */
-  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -130, shin: -130, foot: 50 })));
-  assert.ok(Math.abs(r.lift - 140) < 1, 'a lift of forty reads 140 at the hip: ' + r.lift);
+  /* forty degrees: in position; the lifted leg is the one measured, whichever side */
+  ({ r, v } = run(M, lifted(40)));
+  assert.equal(r.side, 'R', 'the higher knee');
+  assert.ok(Math.abs(r.lift - 40) < 1, 'a lift of forty reads forty against the other leg: ' + r.lift);
   assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(firstFault(M, v), null);
-  /* too high: 60 */
-  ({ v } = run(M, Object.assign({}, SUPINE, { thigh: -150, shin: -150, foot: 30 })));
-  assert.equal(firstFault(M, v), 'liftHigh');
-  /* fifteen is not yet a rep; twenty two is under way, and short of the other knee */
-  ({ v } = run(M, Object.assign({}, SUPINE, { thigh: -105, shin: -105, foot: 75 })));
-  assert.equal(v.raised, false, 'fifteen is not yet under way');
-  ({ v } = run(M, Object.assign({}, SUPINE, { thigh: -112, shin: -112, foot: 68 })));
-  assert.equal(v.raised, true, 'twenty two is under way'); assert.equal(firstFault(M, v), 'liftLow');
+  assert.ok(Math.abs(r.foot - 90) < 1, 'toes up reads the same lifted: ' + r.foot);
+  /* the edges: thirty and forty five are in, twenty and fifty five are not */
+  assert.equal(firstFault(M, run(M, lifted(30)).v), null); assert.equal(firstFault(M, run(M, lifted(45)).v), null);
+  assert.equal(firstFault(M, run(M, lifted(20)).v), 'liftLow'); assert.equal(firstFault(M, run(M, lifted(55)).v), 'liftHigh');
+  assert.equal(run(M, lifted(10)).v.raised, false, 'ten is not yet under way'); assert.equal(run(M, lifted(20)).v.raised, true);
   /* the knee bent on the way up, and the toes pointing: the knee comes first */
-  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -130, shin: -105, foot: 175 })));
+  ({ r, v } = run(M, lifted(40, { shin: -105, foot: 175 })));
   assert.ok(r.knee < 160, 'a bent knee: ' + r.knee);
   assert.equal(firstFault(M, v), 'kneeBend');
   assert.ok(v.faults.toesDown != null, 'and the toes are on view too');
-  assert.deepEqual(M.setup, ['kneeBend', 'toesDown'], 'both coached before the lift');
+  assert.deepEqual(M.setup, ['kneeBend', 'toesDown', 'restBend'], 'all three coached before the lift');
+  /* the resting leg bending or lifting is called */
+  ({ r, v } = run(M, lifted(40, { thighF: -120, shinF: -60 })));
+  assert.ok(r.rest < 160, 'the other knee bent: ' + r.rest);
+  assert.equal(firstFault(M, v), 'restBend');
+  /* the top half of the body out of the picture: hips and legs are enough */
+  ({ r, v } = run(M, lifted(40, { hide: ['shoulder', 'ear', 'elbow', 'wrist'] })));
+  assert.ok(r.ok && v.inPosition && Math.abs(r.lift - 40) < 1, 'read and judged without the shoulders: ' + JSON.stringify({ ok: r.ok, lift: r.lift }));
+  /* and the phone not level: the whole body turned ten degrees reads the same lift */
+  ({ r, v } = run(M, lifted(40, { tilt: 10 })));
+  assert.ok(Math.abs(r.lift - 40) < 1, 'the lift against the other leg does not move with the phone: ' + r.lift);
 });
 
 /* on the side facing the camera, head to the right: the same angles read as a side view of a body lying on its front-ish; the lift is the leg against the trunk */
@@ -149,13 +161,14 @@ test('forward lunge: the front leg is the one measured, a right angle over the a
 
 test('static quads: pulling the toes up starts the contraction, letting go ends it, a bent knee is the fault', () => {
   const M = Moves.quadset;
-  const RELAXED = Object.assign({}, SUPINE, { foot: 115 });   // a foot fallen away from the head by 25 degrees
+  const RELAXED = Object.assign({}, SUPINE, { foot: 115, footF: 115 });   // both feet fallen away from the head by 25 degrees
   let { r, v } = run(M, RELAXED);
   assert.ok(r.ok && v.atStart && !v.raised && M.ready(r, v), 'relaxed is the start: foot ' + r.foot);
-  ({ r, v } = run(M, Object.assign({}, SUPINE, { foot: 95 })));
+  ({ r, v } = run(M, Object.assign({}, RELAXED, { foot: 95 })));
+  assert.equal(r.side, 'R', 'the leg whose toes came up is the one measured');
   assert.ok(r.foot < 98, 'toes pulled up: ' + r.foot);
   assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(firstFault(M, v), null);
-  ({ r, v } = run(M, Object.assign({}, SUPINE, { foot: 95, shin: -75 })));
+  ({ r, v } = run(M, Object.assign({}, RELAXED, { foot: 95, shin: -75 })));
   assert.ok(r.knee < 170, 'a knee not pressed down: ' + r.knee);
   assert.equal(firstFault(M, v), 'kneeBend');
 });

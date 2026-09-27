@@ -22,8 +22,9 @@
      distance the distance a→b, as a share of the distance c→d when `per` is given
      sum      the sum of other measurements (`terms`, each with an optional `times`)
    Any of them may carry `offset` (added) and `times` (multiplied first). A
-   landmark may be named plainly (the side being measured) or with a side,
-   `L.knee` / `R.knee` (a front view). `to` may be a list — the first one the
+   landmark may be named plainly (the side being measured), with a side,
+   `L.knee` / `R.knee` (a front view), or as `other.knee` — the side not being
+   measured, such as the resting leg. `to` may be a list — the first one the
    model is sure of is used.
 
    A measurement with a `band` is judged: `good[key]` is whether it is inside,
@@ -61,25 +62,31 @@
   const EDGE = 1e-9;
 
   /* ---------- the geometry, per kind ---------- */
-  /* a landmark name → the point: 'knee' from the side being measured, 'L.knee' from that side */
-  function pointOf(name, P, both) {
+  /* a landmark name → the point: 'knee' from the side being measured, 'L.knee' from
+     that side, 'other.knee' from the side not being measured (the resting leg) */
+  const OTHER = { L: 'R', R: 'L' };
+  function pointOf(name, P, both, side) {
     if (!name) return null;
     const dot = name.indexOf('.');
-    if (dot > 0 && both) { const side = name.slice(0, dot).toUpperCase(); const S = both[side]; return S ? S[name.slice(dot + 1)] || null : null; }
+    if (dot > 0 && both) {
+      const pre = name.slice(0, dot), key = name.slice(dot + 1);
+      const S = pre === 'other' ? (side ? both[OTHER[side]] : null) : both[pre.toUpperCase()];
+      return S ? S[key] || null : null;
+    }
     return P[name] || null;
   }
   /* `to` may be a list of names: the first the model is sure of */
-  function resolve(name, P, both, cfg) {
+  function resolve(name, P, both, cfg, side) {
     if (Array.isArray(name)) {
-      for (const n of name) { const p = pointOf(n, P, both); if (p && p.v >= cfg.vis) return { p, name: n }; }
+      for (const n of name) { const p = pointOf(n, P, both, side); if (p && p.v >= cfg.vis) return { p, name: n }; }
       const last = name[name.length - 1];
-      return { p: pointOf(last, P, both), name: last };
+      return { p: pointOf(last, P, both, side), name: last };
     }
-    return { p: pointOf(name, P, both), name };
+    return { p: pointOf(name, P, both, side), name };
   }
   function measure(m, ctx) {
-    const { P, both, cfg, facing, Core, values } = ctx;
-    const pt = (k) => resolve(m[k], P, both, cfg);
+    const { P, both, cfg, facing, Core, values, side } = ctx;
+    const pt = (k) => resolve(m[k], P, both, cfg, side);
     let x = null, used = {};
     switch (m.kind) {
       case 'angle': { const a = pt('a'), b = pt('b'), c = pt('c'); used = { a: a.name, b: b.name, c: c.name };
@@ -97,7 +104,7 @@
       case 'distance': { const a = pt('a'), b = pt('b'); used = { a: a.name, b: b.name };
         if (a.p && b.p) {
           x = Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y);
-          if (m.per) { const c = resolve(m.per[0], P, both, cfg), d = resolve(m.per[1], P, both, cfg); const ref = c.p && d.p ? Math.hypot(c.p.x - d.p.x, c.p.y - d.p.y) : 0; x = ref ? x / ref : null; }
+          if (m.per) { const c = resolve(m.per[0], P, both, cfg, side), d = resolve(m.per[1], P, both, cfg, side); const ref = c.p && d.p ? Math.hypot(c.p.x - d.p.x, c.p.y - d.p.y) : 0; x = ref ? x / ref : null; }
         }
         break; }
       case 'sum': {
@@ -165,10 +172,10 @@
     if (reps) { cues.lower = { text: words.lower || 'Lower slowly' }; cues.early = { text: words.early || 'Hold it at the top next time' }; }
     if (words.hold) cues.hold = { text: words.hold };
 
-    const facingOf = (P, both, cfg) => {
+    const facingOf = (P, both, cfg, side) => {
       const d = f.facing;
       if (!d) return 1;
-      const a = resolve(d.from, P, both, cfg).p, b = resolve(d.to, P, both, cfg).p;
+      const a = resolve(d.from, P, both, cfg, side).p, b = resolve(d.to, P, both, cfg, side).p;
       return a && b ? (Math.sign(b.x - a.x) || 1) : 1;
     };
 
@@ -178,9 +185,9 @@
       if (!lmk || lmk.length < 33) return null;
       const both = { L: Core.sidePoints(lmk, aspect, 'L'), R: Core.sidePoints(lmk, aspect, 'R') };
       if (!both.L || !both.R) return null;
-      const seen = (P) => needed.every((k) => { const p = pointOf(k, P, both); return p && p.v >= cfg.vis; });
-      const vis = (P) => joints.reduce((a, k) => { const p = pointOf(k, P, both); return a + (p ? p.v : 0); }, 0) / Math.max(1, joints.length);
-      const opts = ['L', 'R'].map((s) => ({ side: s, P: both[s], ok: seen(both[s]), vis: vis(both[s]) }));
+      const seen = (P, sd) => needed.every((k) => { const p = pointOf(k, P, both, sd); return p && p.v >= cfg.vis; });
+      const vis = (P, sd) => joints.reduce((a, k) => { const p = pointOf(k, P, both, sd); return a + (p ? p.v : 0); }, 0) / Math.max(1, joints.length);
+      const opts = ['L', 'R'].map((s) => ({ side: s, P: both[s], ok: seen(both[s], s), vis: vis(both[s], s) }));
       let chosen;
       if (pick === 'left' || pick === 'right') chosen = [opts[pick === 'left' ? 0 : 1]];
       else chosen = opts;
@@ -190,10 +197,10 @@
         return { ok: false, side: best.side, vis: best.vis, why: 'Some of you is out of shot or hidden', both };
       }
       let best;
-      if (pick === 'highest' && f.side.joint) best = usable.slice().sort((a, b) => ((-pointOf(f.side.joint, b.P, both).y) - (-pointOf(f.side.joint, a.P, both).y)) || (b.vis - a.vis))[0];
+      if (pick === 'highest' && f.side.joint) best = usable.slice().sort((a, b) => ((-pointOf(f.side.joint, b.P, both, b.side).y) - (-pointOf(f.side.joint, a.P, both, a.side).y)) || (b.vis - a.vis))[0];
       else if (pick === 'measure' && byKey[f.side.measure]) {
         const m = byKey[f.side.measure];
-        const val = (o) => measure(m, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg), Core, values: {} }).x || 0;   // null reads as 0, as a leg not seen lifted
+        const val = (o) => measure(m, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg, o.side), Core, values: {}, side: o.side }).x || 0;   // null reads as 0, as a leg not seen lifted
         best = usable.slice().sort((a, b) => (val(b) - val(a)) || (b.vis - a.vis))[0];
       } else best = usable.slice().sort((a, b) => b.vis - a.vis)[0];
       return { ok: true, side: best.side, vis: best.vis, points: best.P, both };
@@ -204,10 +211,10 @@
       if (!s) return null;
       if (!s.ok) return { ok: false, side: s.side, vis: s.vis, why: s.why };
       const P = s.points, both = s.both;
-      const facing = facingOf(P, both, cfg);
-      const r = { ok: true, side: s.side, vis: s.vis, points: P, facing, angles: ms.map(nameOf), of: {} };
+      const facing = facingOf(P, both, cfg, s.side);
+      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, angles: ms.map(nameOf), of: {} };
       const values = {};   // by key, for a sum's terms
-      const ctx = { P, both, cfg, facing, Core, values };
+      const ctx = { P, both, cfg, facing, Core, values, side: s.side };
       for (const m of ms) { const got = measure(m, ctx); r[nameOf(m)] = got.x; values[m.key] = got.x; r.of[m.key] = got.used; }
       return r;
     }
@@ -229,8 +236,10 @@
         if (x.requires && !x.requires.every((k) => good[k])) continue;
         if (x.unless && x.unless.some((id) => on[id] != null)) continue;
         const { lo, hi } = bandEdges(m.band, cfg);
-        if (x.side === 'above') { if (v > hi) on[x.id] = v - hi; }
-        else if (x.side === 'below') { if (v < lo) on[x.id] = lo - v; }
+        /* the same room for arithmetic as the band itself: a body posed exactly to an
+           edge is inside it, not a fault by a ten-thousandth of a degree */
+        if (x.side === 'above') { if (v > hi + EDGE) on[x.id] = v - hi; }
+        else if (x.side === 'below') { if (v < lo - EDGE) on[x.id] = lo - v; }
       }
       const v = { ok: true, good, faults: on };
       if (reps) {
@@ -258,11 +267,13 @@
     const drawList = f.draw || [];
     function draw(d, r, v) {
       const P = r.points;
+      /* a plain name from the side measured; other.knee from the other side */
+      const one = (n) => (String(n).startsWith('other.') ? (r.other && r.other[n.slice(6)]) || null : P[n] || null);
       const at = (name) => {
         if (!name) return null;
         const i = String(name).indexOf(':');
-        if (i > 0) { const used = r.of[name.slice(0, i)]; const n = used && used[name.slice(i + 1)]; return n ? pointOf(n, P, null) : null; }
-        return pointOf(name, P, null);
+        if (i > 0) { const used = r.of[name.slice(0, i)]; const n = used && used[name.slice(i + 1)]; return n ? one(n) : null; }
+        return one(name);
       };
       const goodOf = (keys) => keys.reduce((a, k) => a && v.good[k], true);
       for (const g of drawList) {
@@ -339,7 +350,7 @@
     const ms = f.measurements || [];
     if (!ms.length) err('measurements', 'at least one measurement');
     const keys = new Set();
-    const lmOk = (n) => { if (Array.isArray(n)) return n.every(lmOk); if (typeof n !== 'string') return false; const dot = n.indexOf('.'); const base = dot > 0 ? n.slice(dot + 1) : n; return LANDMARKS.includes(base) && (dot <= 0 || ['L', 'R', 'l', 'r'].includes(n.slice(0, dot))); };
+    const lmOk = (n) => { if (Array.isArray(n)) return n.every(lmOk); if (typeof n !== 'string') return false; const dot = n.indexOf('.'); const base = dot > 0 ? n.slice(dot + 1) : n; return LANDMARKS.includes(base) && (dot <= 0 || ['L', 'R', 'l', 'r', 'other'].includes(n.slice(0, dot))); };
     const NEED = { angle: ['a', 'b', 'c'], tilt: ['base', 'top'], floor: ['at', 'to'], bend: ['a', 'b', 'c'], rise: ['a', 'b'], down: ['from', 'to'], distance: ['a', 'b'], sum: [] };
     ms.forEach((m, i) => {
       const at = `measurements[${i}]`;
