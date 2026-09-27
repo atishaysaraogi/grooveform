@@ -232,6 +232,7 @@
       this.quietUntil = 0;              // nothing is said before this: the opening words are being said
       this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
       this.lastT = null; this.log = [];
+      if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
 

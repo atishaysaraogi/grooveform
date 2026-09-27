@@ -209,6 +209,11 @@
     g.appendChild(field('Which side is measured', d.side.pick || 'clearest', (v) => { d.side.pick = v; }, { options: [['clearest', 'the side the model sees best'], ['left', 'the left'], ['right', 'the right'], ['highest', 'the side whose joint is higher'], ['measure', 'the side whose measurement is larger']], structural: true }));
     if (d.side.pick === 'highest') g.appendChild(field('That joint', d.side.joint, (v) => { d.side.joint = v; }, { options: lmOpts('—') }));
     if (d.side.pick === 'measure') g.appendChild(field('That measurement', d.side.measure, (v) => { d.side.measure = v; }, { options: optsOf(measureKeys(), '—') }));
+    if (d.side.pick === 'highest' || d.side.pick === 'measure') {
+      const h = d.side.hold || {};
+      g.appendChild(field('Held: the other side must lead by (hip-to-joint lengths, or the measurement\'s units; empty = re-pick every frame)', h.margin, (v) => { if (v == null) delete d.side.hold; else d.side.hold = Object.assign({}, d.side.hold, { margin: v }); }, { type: 'number', title: 'with the knees level the higher one changes frame to frame on the model\'s wobble; a hold stops the drawn leg and its numbers jumping between the two sides' }));
+      g.appendChild(field('…for this many frames in a row', h.frames, (v) => { if (d.side.hold) { if (v == null) delete d.side.hold.frames; else d.side.hold.frames = v; } }, { type: 'number' }));
+    }
     s.appendChild(g); host.appendChild(s);
 
     /* measurements */

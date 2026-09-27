@@ -192,6 +192,17 @@
 
     /* the side to measure, and its points */
     const pick = (f.side && f.side.pick) || 'clearest';
+    /* A side once picked is held. With the knees level, "the higher knee" changes from
+       frame to frame on the model's wobble alone, and the drawn leg and every number
+       would jump between the two sides' points (a recorded take flipped 47 times in a
+       minute at rest). With `side.hold` the other side takes over only when it leads by
+       `margin` — for `highest`, a share of the distance from the hip to that joint; for
+       `measure`, in the measurement's own units — for `frames` frames in a row, or at
+       once when the held side can no longer be seen. A session starts afresh (reset(),
+       called by a new coach). */
+    const hold = f.side && f.side.hold ? { margin: f.side.hold.margin == null ? 0.25 : f.side.hold.margin, frames: f.side.hold.frames == null ? 5 : f.side.hold.frames } : null;
+    const held = { side: null, want: null, run: 0 };
+    const reset = () => { held.side = null; held.want = null; held.run = 0; };
     function sides(lmk, aspect, cfg) {
       if (!lmk || lmk.length < 33) return null;
       const both = { L: Core.sidePoints(lmk, aspect, 'L'), R: Core.sidePoints(lmk, aspect, 'R') };
@@ -208,12 +219,27 @@
         return { ok: false, side: best.side, vis: best.vis, why: 'Some of you is out of shot or hidden', both };
       }
       let best;
+      const mm = pick === 'measure' ? byKey[f.side.measure] : null;
+      const val = (o) => (mm ? measure(mm, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg, o.side), Core, values: {}, side: o.side }).x || 0 : 0);   // null reads as 0, as a leg not seen lifted
       if (pick === 'highest' && f.side.joint) best = usable.slice().sort((a, b) => ((-pointOf(f.side.joint, b.P, both, b.side).y) - (-pointOf(f.side.joint, a.P, both, a.side).y)) || (b.vis - a.vis))[0];
-      else if (pick === 'measure' && byKey[f.side.measure]) {
-        const m = byKey[f.side.measure];
-        const val = (o) => measure(m, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg, o.side), Core, values: {}, side: o.side }).x || 0;   // null reads as 0, as a leg not seen lifted
-        best = usable.slice().sort((a, b) => (val(b) - val(a)) || (b.vis - a.vis))[0];
-      } else best = usable.slice().sort((a, b) => b.vis - a.vis)[0];
+      else if (mm) best = usable.slice().sort((a, b) => (val(b) - val(a)) || (b.vis - a.vis))[0];
+      else best = usable.slice().sort((a, b) => b.vis - a.vis)[0];
+      if (hold && (pick === 'highest' || mm)) {
+        const cur = usable.find((o) => o.side === held.side);
+        if (!cur) { held.side = best.side; held.want = null; held.run = 0; }
+        else if (best.side !== cur.side) {
+          /* how far the other side leads: the joint's height in hip-to-joint lengths, or the measurement */
+          let lead = 0;
+          if (pick === 'highest') {
+            const jc = pointOf(f.side.joint, cur.P, both, cur.side), jo = pointOf(f.side.joint, best.P, both, best.side), hip = pointOf('hip', cur.P, both, cur.side);
+            const scale = jc && hip ? Math.hypot(hip.x - jc.x, hip.y - jc.y) : 0;
+            lead = jc && jo && scale ? (jc.y - jo.y) / scale : 0;
+          } else lead = val(best) - val(cur);
+          if (lead > hold.margin) { held.run = held.want === best.side ? held.run + 1 : 1; held.want = best.side; if (held.run >= hold.frames) { held.side = best.side; held.want = null; held.run = 0; } }
+          else { held.want = null; held.run = 0; }
+        } else { held.want = null; held.run = 0; }
+        best = usable.find((o) => o.side === held.side) || best;
+      }
       return { ok: true, side: best.side, vis: best.vis, points: best.P, both };
     }
 
@@ -323,7 +349,7 @@
       bones: lm.bones || [], dots: lm.dots || joints.slice(), limb: lm.limb || {},
       bands, measurements: ms,
       faults: order, setup: setupIds, prompts: prompt ? [prompt.id] : [], cues,
-      ready, read, judge, draw: drawList.length ? draw : null,
+      ready, read, judge, reset, draw: drawList.length ? draw : null,
       spec: f,
     };
     return move;
@@ -423,6 +449,14 @@
     if (side.pick && !PICKS.includes(side.pick)) err('side.pick', 'one of ' + PICKS.join(', '));
     if (side.pick === 'highest' && !lmOk(side.joint)) err('side.joint', 'the landmark whose higher side is measured');
     if (side.pick === 'measure' && !keys.has(side.measure)) err('side.measure', 'the measurement whose larger side is measured');
+    if (side.hold != null) {
+      if (typeof side.hold !== 'object') err('side.hold', '{ margin, frames }: how far and how long the other side must lead before it is measured instead');
+      else {
+        if (side.hold.margin != null && !(side.hold.margin > 0)) err('side.hold.margin', 'a lead above zero: hip-to-joint lengths for highest, the measurement\'s units for measure');
+        if (side.hold.frames != null && !(Number.isInteger(side.hold.frames) && side.hold.frames >= 1)) err('side.hold.frames', 'a whole number of frames, at least one');
+      }
+      if (side.pick !== 'highest' && side.pick !== 'measure') warn('side.hold', 'only a pick by height or by measurement is held');
+    }
     (f.draw || []).forEach((g, i) => {
       const at = `draw[${i}]`;
       if (!DRAWS.includes(g.kind)) err(at + '.kind', 'one of ' + DRAWS.join(', '));

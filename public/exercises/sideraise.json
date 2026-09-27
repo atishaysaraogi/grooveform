@@ -183,7 +183,11 @@
   },
   "side": {
     "pick": "highest",
-    "joint": "ankle"
+    "joint": "ankle",
+    "hold": {
+      "margin": 0.2,
+      "frames": 5
+    }
   },
   "landmarks": {
     "joints": [

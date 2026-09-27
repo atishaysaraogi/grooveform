@@ -41,6 +41,7 @@ function body(o) {
   return lm;
 }
 const run = (m, o, over) => {
+  if (m.reset) m.reset();   // each posed body is a session of its own: no side held from the last
   const cfg = Object.assign({}, Core.COMMON, m.defaults, over);
   const r = m.read(body(o), o.aspect || 16 / 9, cfg);
   return { r, v: m.judge(r, cfg), cfg };
@@ -96,6 +97,32 @@ test('straight leg raise: both legs straight, the lift measured against the rest
   /* a lift with the far knee hidden is not a lift: the reference has to be seen */
   ({ r, v } = run(M, lifted(40, { hide: ['L.knee'] })));
   assert.equal(r.lift, 0); assert.equal(v.raised, false);
+});
+
+test('the side measured is held: level knees wobbling do not flip it, a real lift on the other side takes it within five frames', () => {
+  const M = Moves.slr; M.reset();
+  const cfg = Object.assign({}, Core.COMMON, M.defaults);
+  const sideOf = (o) => M.read(body(o), 16 / 9, cfg).side;
+  const first = sideOf(SUPINE);
+  const other = first === 'R' ? 'L' : 'R';
+  /* the other knee a few degrees up one frame and down the next: the model's wobble, not a new side */
+  let flips = 0, prev = first;
+  for (let i = 0; i < 20; i++) {
+    const o = other === 'L' ? { thighF: -90 - (i % 2 ? 4 : -4) } : { thigh: -90 - (i % 2 ? 4 : -4), shin: -90 - (i % 2 ? 4 : -4) };
+    const s = sideOf(Object.assign({}, SUPINE, o)); if (s !== prev) flips++; prev = s;
+  }
+  assert.equal(flips, 0, 'held through the wobble');
+  /* the other leg lifted forty degrees: measured from the fifth frame */
+  const up = other === 'L' ? { thighF: -130, shinF: -130, footF: 50 } : { thigh: -130, shin: -130, foot: 50 };
+  const seen = [];
+  for (let i = 0; i < 7; i++) seen.push(sideOf(Object.assign({}, SUPINE, up)));
+  assert.deepEqual(seen.slice(0, 4), [first, first, first, first], 'four frames of lead are not yet a switch: ' + seen.join(''));
+  assert.deepEqual(seen.slice(4), [other, other, other], 'the fifth is: ' + seen.join(''));
+  /* a new coach starts the move afresh: the other knee a little higher is picked at once */
+  new Core.Coach(M);
+  const fresh = other === 'L' ? { thighF: -94 } : { thigh: -94, shin: -94 };
+  assert.equal(sideOf(Object.assign({}, SUPINE, fresh)), first === 'L' ? 'R' : 'L', 'nothing held from before');
+  assert.ok(M.spec.side.hold && M.spec.side.hold.frames === 5, 'from the file');
 });
 
 /* on the side facing the camera, head to the right: the same angles read as a side view of a body lying on its front-ish; the lift is the leg against the trunk */

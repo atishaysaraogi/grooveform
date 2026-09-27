@@ -91,7 +91,11 @@
   },
   "side": {
     "pick": "highest",
-    "joint": "knee"
+    "joint": "knee",
+    "hold": {
+      "margin": 0.25,
+      "frames": 5
+    }
   },
   "landmarks": {
     "joints": [

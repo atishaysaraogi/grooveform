@@ -176,6 +176,15 @@ it, and the floor line is drawn along it.
 | `highest` + `joint` | the side whose joint is higher (the donkey kick's knee) |
 | `measure` + `measure` | the side whose measurement is larger (the knee raise's thigh) |
 
+`hold` keeps a side once picked: `{ "margin": 0.25, "frames": 5 }` means the
+other side is measured only once it leads by a quarter of the hip-to-joint
+distance (for `measure`, by that much of the measurement) for five frames in
+a row, or at once when the held side can no longer be seen. Without it the
+higher of two level knees changes from frame to frame on the model's wobble,
+and the drawn leg and every number jump between the two sides' points (a
+recorded straight leg raise flipped 47 times in a minute; with the hold, once).
+Each new session starts afresh.
+
 ## Measurements
 
 Each is a named number read every frame and smoothed.

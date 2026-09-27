@@ -10,7 +10,7 @@ const M = require('../public/js/moves.js').donkeykick;
 const D = Math.PI / 180;
 const ASPECT = 16 / 9;
 const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, o);
-const read = (lm, o) => M.read(lm, ASPECT, cfg(o));
+const read = (lm, o) => { if (M.reset) M.reset(); return M.read(lm, ASPECT, cfg(o)); };   // each posed body is a session of its own: no side held from the last
 const judge = (r, o) => M.judge(r, cfg(o));
 
 /* On hands and knees, side on, built backwards from the angles it should read.

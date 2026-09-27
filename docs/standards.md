@@ -55,7 +55,11 @@ below only.
 without them, since a straight leg lifted to the height is the exercise and
 pointed toes are a note on it. A return has to hold for `returnMs` before it
 ends a rep: side on, the model swaps the two legs for a frame or two now and
-then, and one such frame ended a rep in the recorded take.
+then, and one such frame ended a rep in the recorded take. The side measured
+is held (`side.hold`): with both legs down the higher knee is a matter of the
+model's wobble, and re-picking it every frame drew the leg from one side's
+points, then the other's, 47 times in a recorded minute; the other leg now
+takes over only when its knee leads by a quarter of a thigh for five frames.
 
 **The far leg when both are down.** Side on, the resting leg lies behind the
 lifted one; with both legs down the far knee is hidden and the model stops
