@@ -67,8 +67,11 @@ test('straight leg raise: both legs straight, the lift measured against the rest
   assert.ok(Math.abs(r.foot - 90) < 1, 'toes up reads the same lifted: ' + r.foot);
   /* the edges: thirty and forty five are in, twenty and fifty five are not */
   assert.equal(firstFault(M, run(M, lifted(30)).v), null); assert.equal(firstFault(M, run(M, lifted(45)).v), null);
-  assert.equal(firstFault(M, run(M, lifted(20)).v), 'liftLow'); assert.equal(firstFault(M, run(M, lifted(55)).v), 'liftHigh');
-  assert.equal(run(M, lifted(10)).v.raised, false, 'ten is not yet under way'); assert.equal(run(M, lifted(20)).v.raised, true);
+  assert.equal(firstFault(M, run(M, lifted(25)).v), 'liftLow'); assert.equal(firstFault(M, run(M, lifted(55)).v), 'liftHigh');
+  assert.equal(firstFault(M, run(M, lifted(47)).v), null, 'a couple of degrees past forty five is the model\'s wobble, not a fault');
+  /* at rest the model reads the two knees a little apart: twelve is still the start; twenty five is under way */
+  assert.equal(run(M, lifted(12)).v.atStart, true, 'twelve is the start'); assert.equal(run(M, lifted(12)).v.raised, false);
+  assert.equal(run(M, lifted(25)).v.raised, true, 'twenty five is under way');
   /* the knee bent on the way up, and the toes pointing: the knee comes first */
   ({ r, v } = run(M, lifted(40, { shin: -105, foot: 175 })));
   assert.ok(r.knee < 160, 'a bent knee: ' + r.knee);

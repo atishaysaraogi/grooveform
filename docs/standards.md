@@ -29,7 +29,7 @@ lift done lying on the back (hip flexion), on the side (abduction), face down
 |---|---|---|
 | Both legs straight on the floor, toes pulled back, knee pressed straight before the lift | NHS South Tees ("pull the foot back… press the back of the knee down"); Hinge Health | `kneeBend` and `toesDown` are set-up faults: knee ≥ 165°, foot angle at the heel 60–105°. The NHS handout bends the other knee; this file keeps both legs straight, as asked, and the resting leg then serves as the floor line |
 | Lift the whole leg with the knee straight | NHS South Tees; Hinge Health | `kneeBend` stays on through the rep; the resting knee bending or lifting is `restBend` (≥ 160°) |
-| Height 30–45°: the height of a bent knee in most physio handouts; the NHS "no more than 6 inches" is the conservative early-rehab version | Hinge Health; NHS South Tees | the lift as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top, too high and too low both called; the rep is under way at 15° and counts back under 8° |
+| Height 30–45°: the height of a bent knee in most physio handouts; the NHS "no more than 6 inches" is the conservative early-rehab version | Hinge Health; NHS South Tees | the lift as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top (48 allowed for the model's wobble), too high and too low both called; the rep is under way at 22° and counts back under 15°, because side on the model reads the two knees 8–15° apart even with both legs down (a recorded take) |
 | Hold a couple of seconds, lower slowly | NHS South Tees | hold 2 s at the top, "lower slowly" judged at 1 s |
 
 **Why the lift is measured against the other leg, not the floor or the

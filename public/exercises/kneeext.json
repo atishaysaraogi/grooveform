@@ -56,48 +56,30 @@
     "abs": 0.2
   },
   "figure": {
-    "points": {
+    "pose": {
       "A": {
-        "h": [279, 62],
-        "sh": [279, 84],
-        "hip": [279, 128],
-        "kn": [309, 128],
-        "an": [309, 158],
-        "ft": [323, 158],
-        "el": [283, 110],
-        "wr": [295, 130],
-        "knF": [305, 131],
-        "anF": [305, 161],
-        "ftF": [319, 161],
-        "elF": [279, 113],
-        "wrF": [291, 133]
+        "torso": 0,
+        "thigh": 90,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 10,
+        "farm": 30,
+        "thighF": 90,
+        "shinF": 0,
+        "footF": 0
       },
       "B": {
-        "h": [275, 65],
-        "sh": [275, 87],
-        "hip": [275, 131],
-        "kn": [305, 131],
-        "an": [335, 131],
-        "ft": [337, 117],
-        "el": [279, 113],
-        "wr": [291, 133],
-        "knF": [305, 131],
-        "anF": [305, 161],
-        "ftF": [319, 161],
-        "elF": [279, 113],
-        "wrF": [291, 133]
+        "torso": 0,
+        "thigh": 90,
+        "shin": 90,
+        "foot": 80,
+        "uarm": 10,
+        "farm": 30,
+        "thighF": 90,
+        "shinF": 0,
+        "footF": 0
       },
-      "flip": false,
-      "side": "both",
-      "props": [
-        {
-          "kind": "box",
-          "x": 273,
-          "y": 130,
-          "w": 30,
-          "h": 33
-        }
-      ]
+      "anchor": "ftF"
     }
   },
   "facing": {
@@ -179,7 +161,10 @@
       "band": {
         "min": "kneeMin"
       },
-      "scale": [60, 180],
+      "scale": [
+        60,
+        180
+      ],
       "settings": [
         {
           "key": "kneeMin",
@@ -201,7 +186,10 @@
       "band": {
         "sym": "thighLift"
       },
-      "scale": [-30, 30],
+      "scale": [
+        -30,
+        30
+      ],
       "settings": [
         {
           "key": "thighLift",
@@ -223,7 +211,10 @@
       "band": {
         "sym": "torsoLean"
       },
-      "scale": [-40, 40],
+      "scale": [
+        -40,
+        40
+      ],
       "settings": [
         {
           "key": "torsoLean",
@@ -248,7 +239,10 @@
         "lo": "footMin",
         "hi": "footMax"
       },
-      "scale": [40, 170],
+      "scale": [
+        40,
+        170
+      ],
       "settings": [
         {
           "key": "footMin",
@@ -275,7 +269,10 @@
   "ready": {
     "atStart": true,
     "ranges": {
-      "torso": [-25, 25]
+      "torso": [
+        -25,
+        25
+      ]
     }
   },
   "prompt": {
