@@ -196,3 +196,13 @@ test('a draft laid over the library stands in for the move of its id, and goes a
   Moves.draft(null);
   assert.equal(Moves.list.length, before); assert.equal(Moves.bridge2, undefined);
 });
+
+test('the version file says which version is published, and the stamp on kept numbers names the file it was kept under', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const v = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'version.json'), 'utf8'));
+  assert.equal(v.v, Core.VER, 'written by the index step, from core.js');
+  const m = { v: 2, defaults: { a: 1 } };
+  assert.equal(Core.stampOf(m), JSON.stringify([2, { a: 1 }]));
+  assert.notEqual(Core.stampOf(m), Core.stampOf({ v: 1, defaults: { a: 1 } }), 'a re-cut file, same numbers, is a new stamp');
+  assert.equal(Core.stampOf({ defaults: {} }), JSON.stringify([1, {}]), 'a file without a version is version one');
+});

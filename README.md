@@ -513,6 +513,17 @@ takes' verdicts, a trace to and from a file — and `trace.test.js` holds it.
 
 ## Running it
 
+**Which version a phone is running.** The script URLs carry a version stamp
+(`Core.VER`, bumped each release), but a browser can keep a whole old copy of
+the page. So at every start the app fetches `public/version.json` fresh (a
+timestamp on the URL, no cache) — the index step writes it from `core.js` —
+and a copy that is behind reloads itself once; if it is still behind after
+that, the home page says so. The version running is on the home page and in
+the first line of every downloaded log, so a recording can be matched to the
+code that made it. Numbers kept for an exercise carry a stamp of the file's
+version and defaults (`Core.stampOf`); a stamp that no longer matches drops
+them, and a kept number outside its setting's own range is dropped on its own.
+
 ```sh
 npm run dev        # http://localhost:8000 — localhost counts as secure, so the camera works
 npm test           # the measuring and the coaching, against bodies posed to a known angle

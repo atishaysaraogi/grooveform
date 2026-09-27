@@ -10,6 +10,7 @@
 const fs = require('fs'), path = require('path');
 const DIR = path.join(__dirname, '..', 'public', 'exercises');
 const Spec = require('../public/js/spec.js');
+const Core = require('../public/js/core.js');
 
 const files = () => fs.readdirSync(DIR).filter((f) => /\.json$/.test(f) && f !== 'index.json').sort();
 function index() {
@@ -21,6 +22,9 @@ function index() {
   /* only the list matters: the date is not a reason to rewrite the file */
   const same = before && (() => { try { return JSON.stringify(JSON.parse(before).files) === JSON.stringify(list); } catch { return false; } })();
   if (!same) fs.writeFileSync(file, after);
+  /* the version running, for a page to check itself against a fresh copy of it */
+  const vfile = path.join(DIR, '..', 'version.json'), vtext = JSON.stringify({ v: Core.VER }) + '\n';
+  if (!fs.existsSync(vfile) || fs.readFileSync(vfile, 'utf8') !== vtext) fs.writeFileSync(vfile, vtext);
   return list;
 }
 function check() {

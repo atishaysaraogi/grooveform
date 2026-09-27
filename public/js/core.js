@@ -532,8 +532,13 @@
   /* the shape of what the app remembers in the browser; the Review page writes
      tuned numbers into the same store, so both have to agree on it */
   const SETTINGS_V = 7;
+  /* Numbers a browser keeps for an exercise carry a stamp of the file they were kept
+     under: its version and its defaults. A stamp that no longer matches drops them —
+     an edge renamed, a threshold given a new meaning, a file re-cut. The coach's page
+     and the Review page write and read the same stamp. */
+  const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-27a';
+  const VER = '2026-09-27b';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -558,6 +563,6 @@
     return lines;
   }
 
-  return { VER, SETTINGS_V, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
+  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

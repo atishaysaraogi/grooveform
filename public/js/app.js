@@ -20,6 +20,22 @@ Moves.ready.then(function () {
      a trial run; it goes when it is dropped there or here */
   const DRAFT = 'ontrack.draft';
   try { const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); if (d) Moves.draft(d); } catch (e) { try { localStorage.removeItem(DRAFT); } catch { } }
+
+  /* A copy of the app the browser kept past a release. The version file is fetched
+     fresh at every start — a timestamp on the URL, no cache — and a copy that is
+     behind it reloads itself, once (a second start on the same old copy says so
+     instead of looping). The version running is on the home page and in every log,
+     so a recording can be matched to the code that made it. */
+  (function checkVersion() {
+    const line = document.getElementById('ver-line'), note = document.getElementById('ver-note');
+    if (line) line.textContent = 'Version ' + Core.VER;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json()).then((v) => {
+      if (!v || !v.v || v.v === Core.VER) return;
+      let tried = false; try { tried = sessionStorage.getItem('ontrack.reloaded') === Core.VER; } catch { }
+      if (note) { note.hidden = false; note.textContent = `A newer version is out (${v.v}); this page is ${Core.VER}. Reload the page to get it.`; }
+      if (!tried) { try { sessionStorage.setItem('ontrack.reloaded', Core.VER); } catch { } location.reload(); }
+    }).catch(() => { });
+  })();
   if (!Moves.list.length) {
     const lede = document.querySelector('.lede');
     if (lede) lede.textContent = 'No exercises could be loaded' + (Moves.problems.length ? ': ' + Moves.problems.map((p) => p.file + ' — ' + p.error).join('; ') : '.');
@@ -114,12 +130,31 @@ Moves.ready.then(function () {
      a new meaning — what was kept for it is let go rather than laid over the
      new file: the straight leg raise's lift once ran 130–155 and now runs
      30–45, and a phone that kept the old edges could never count a rep. */
-  const stampOf = (m) => JSON.stringify(m.defaults);
+  const stampOf = Core.stampOf;
   function ownSettings(m) {
     const mine = saved.bands[m.id];
     /* no stamp means the numbers were kept before files carried one, under
-       whatever the exercise measured then — those go the same way */
-    if (mine && mine.stamp !== stampOf(m)) { saved.bands[m.id] = { stamp: stampOf(m) }; store.set(saved); }
+       whatever the exercise measured then — those go the same way; the weight and
+       the band picked for the exercise are not judged numbers and stay */
+    if (mine && mine.stamp !== stampOf(m)) {
+      const kept = { stamp: stampOf(m) };
+      if (mine.load != null) kept.load = mine.load;
+      if (mine.band != null) kept.band = mine.band;
+      saved.bands[m.id] = kept; store.set(saved);
+    }
+    /* and a kept number outside the range its setting declares is not a tuning of
+       this file — it was kept under another meaning of the name (a lift edge of 130
+       against a setting that runs 10 to 60) — so it goes too */
+    const now = saved.bands[m.id];
+    if (now) {
+      let dropped = false;
+      for (const s of settingsOf(m)) {
+        if (now[s.key] == null) continue;
+        const v = Number(now[s.key]);
+        if (!(v >= s.min && v <= s.max)) { delete now[s.key]; dropped = true; }
+      }
+      if (dropped) store.set(saved);
+    }
     return saved.bands[m.id] || {};
   }
   function buildSettings() {
@@ -1327,7 +1362,7 @@ Moves.ready.then(function () {
     const sets = setsDone.length ? setsDone : (coach ? [coach.summary()] : []);
     const c = cfg();
     const bands = move.bands.map((b) => `${b.label} ${bandText(b, c)}°`).join(', ');
-    const lines = [`${move.name} — ${new Date().toLocaleString()}`, bands];
+    const lines = [`${move.name} — ${new Date().toLocaleString()} — version ${Core.VER}`, bands];
     sets.forEach((s, i) => {
       lines.push('', `Set ${i + 1}: ` + (move.reps ? `${s.reps} of ${s.repTarget} reps, ${s.targetSec}s each — in position ${s.holdSec}s, longest hold ${s.bestSec}s`
         : `target ${s.targetSec}s — in position ${s.holdSec}s${s.reachedTarget ? ' (reached)' : ''}, longest hold ${s.bestSec}s`));

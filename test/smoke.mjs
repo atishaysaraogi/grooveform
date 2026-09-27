@@ -1177,6 +1177,14 @@ try {
     await page.reload();
     await page.waitForSelector('#picker .item');
     assert.equal(await page.inputValue('#cfg-repCount'), '10', 'the file\'s own number again, not the one kept under the old file');
+    /* a kept number outside the range its setting declares was kept under another meaning
+       of the name, whatever its stamp says: it goes too (reps run 1 to 50) */
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wallsit')); s.bands.kneeraise.repCount = '500'; localStorage.setItem('wallsit', JSON.stringify(s)); });
+    await page.reload();
+    await page.waitForSelector('#picker .item');
+    assert.equal(await page.inputValue('#cfg-repCount'), '10', 'a number outside its own range is not a tuning of this file');
+    /* and the page says which version it is */
+    assert.equal(await page.textContent('#ver-line'), 'Version ' + (await page.evaluate(() => Core.VER)), 'the version on the home page');
     await setCfg('cfg-repCount', '3');
     /* and the plank's own band, changed two exercises ago, is still its own */
     await pick('plank');
