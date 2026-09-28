@@ -1070,7 +1070,8 @@ try {
     await page.waitForFunction(() => window.__review.trace && window.__review.trace.source === 'video', null, { timeout: 30000 });
     const n = await page.evaluate(() => window.__review.trace.frames.length);
     assert.ok(n >= 15 && n <= 25, 'four seconds at five a second: ' + n + ' frames');
-    await page.click('#lanes', { position: { x: 400, y: 20 } });
+    const lw = await page.evaluate(() => document.getElementById('lanes').clientWidth);   // the lanes sit under the video now, in its column
+    await page.click('#lanes', { position: { x: Math.round(lw * 0.9), y: 20 } });
     await wait(300);
     assert.ok((await page.evaluate(() => document.getElementById('clip').currentTime)) > 0.5, 'a tap on the lanes goes to that moment');
     /* the animation editor: in the Build tab now, working on a draft — a copy of the bridge */

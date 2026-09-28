@@ -110,6 +110,52 @@
       return { id, stretches, said, ms: stretches.reduce((a, s) => a + (s.t1 - s.t0), 0) };
     }).filter(Boolean);
   }
+  /* the reading a rep is judged on, and its lines: the compiled move keeps the file, and the
+     numbers come from the run's own settings */
+  function progressOf(move, cfg) {
+    const p = move.reps && move.spec && move.spec.progress; if (!p) return null;
+    const m = (move.measurements || []).find((q) => q.key === p.measure);
+    const kind = m ? m.kind : 'angle';
+    return { key: p.measure, of: m ? (m.of || m.key) : p.measure, band: (move.bands || []).find((b) => b.key === p.measure) || null,
+      raiseAt: cfg[p.raiseAt], downAt: cfg[p.downAt], dir: p.direction === 'down' ? -1 : 1,
+      label: (m && (m.label || m.hud)) || p.measure, unit: ['angle', 'tilt', 'floor', 'down', 'bend'].includes(kind) ? '\u00b0' : kind === 'distance' ? '%' : '',
+      keep: (move.spec.inPosition || (move.bands || []).map((b) => b.key)).filter((k) => k !== p.measure) };
+  }
+  /* why an attempt did or did not count, in numbers: how far it got, how long it was in
+     position at the top, how long the hold clock ran against its target, which band broke
+     the position and for how long, how long the person was not seen */
+  function account(result, move, i0, i1) {
+    const P = progressOf(move, result.cfg); if (!P) return null;
+    const rows = result.rows, cfg = result.cfg;
+    let peak = null, inPosMs = 0, unseenMs = 0; const bad = {};
+    for (let i = i0; i <= i1; i++) {
+      const r = rows[i], dt = i ? r.t - rows[i - 1].t : 0, v = r.verdict;
+      const x = r.reading && r.reading.ok ? r.reading[P.of] : null;
+      if (x != null && (peak == null || (P.dir > 0 ? x > peak : x < peak))) peak = x;
+      if (!v || !v.ok) { unseenMs += dt; continue; }
+      if (v.inPosition) inPosMs += dt;
+      if (v.raised) for (const k of P.keep) if (v.good && v.good[k] === false) bad[k] = (bad[k] || 0) + dt;
+    }
+    return { peak, inPosMs, unseenMs, bad, targetMs: cfg.holdTargetSec * 1000, settleMs: cfg.settleMs, returnMs: cfg.returnMs || 0, raiseAt: P.raiseAt, downAt: P.downAt, dir: P.dir, unit: P.unit,
+      top: P.band ? bandRange(P.band, cfg) : null };
+  }
+  /* movements that fell short of a rep: between reps, the reading left the start line, got at
+     least four tenths of the way to the line a rep begins at, and came back without one beginning */
+  function misses(result, move) {
+    const P = progressOf(move, result.cfg); if (!P) return [];
+    const rows = result.rows, out = []; let cur = null;
+    const gap = P.raiseAt - P.downAt; if (!gap) return [];
+    const close = () => { if (cur) { const share = (cur.peak - P.downAt) / gap; if (share >= 0.4 && share < 1) out.push({ t0: cur.t0, t1: cur.t1, tPeak: cur.tPeak, peak: cur.peak, share, raiseAt: P.raiseAt, unit: P.unit }); } cur = null; };
+    for (const r of rows) {
+      const o = r.out, down = o && o.ready && o.phase === 'down';
+      if (!down) { cur = null; continue; }   // an excursion still open when a rep begins is its run-up, not a miss
+      const x = r.reading && r.reading.ok ? r.reading[P.of] : null, atStart = !!(r.verdict && r.verdict.ok && r.verdict.atStart);
+      if (cur) { cur.t1 = r.t; if (x != null && (P.dir > 0 ? x > cur.peak : x < cur.peak)) { cur.peak = x; cur.tPeak = r.t; } if (atStart) close(); }
+      else if (x != null && !atStart) cur = { t0: r.t, t1: r.t, peak: x, tPeak: r.t };
+    }
+    return out;
+  }
+
   function reps(result, move) {
     const rows = result.rows; if (!rows.length) return [];
     const segs = [];
@@ -132,8 +178,10 @@
       return segs.map((s) => {
         if (s.counted) n += 1;
         return {
-          n: s.counted ? n : null, counted: s.counted, open: !!s.open, t0: s.t0, t1: s.t1,
+          n: s.counted ? n : null, counted: s.counted, open: !!s.open, t0: s.t0, t1: s.t1, i0: s.i0, i1: s.i1,
           holdMs: Math.max(0, s.holdMs || 0), lowerMs: s.lowerAt != null ? s.t1 - s.lowerAt : null,
+          early: result.cues.some((c) => c.id === 'early' && c.t >= s.t0 && c.t <= s.t1 + 1),
+          why: account(result, move, s.i0, s.i1),
           faults: faultsIn(result, move, s.t0, s.t1),
           before: { t0: s.before.t0, t1: s.before.t1, faults: faultsIn(result, move, s.before.t0, s.before.t1, setup.length ? setup : []) },
           cues: result.cues.filter((c) => c.t >= s.t0 && c.t <= s.t1),
@@ -170,5 +218,5 @@
     return { meta, frames };
   }
 
-  return { settingsOf, defaults, bandRange, run, stretches, faultIds, verdicts, reps, pack, unpack };
+  return { settingsOf, defaults, bandRange, run, stretches, faultIds, verdicts, reps, misses, progressOf, pack, unpack };
 });

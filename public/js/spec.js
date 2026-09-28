@@ -23,8 +23,10 @@
      sum      the sum of other measurements (`terms`, each with an optional `times`)
    Any of them may carry `offset` (added), `times` (multiplied first) and `bias`
    (a number or a setting's name, taken off: a known slant in the landmarks),
-   `unseen` (the reading when a landmark it needs is hidden) and `gate` (the reading
-   stands only while an earlier measurement is within min/max). A
+   `unseen` (the reading when a landmark it needs is hidden), `gate` (the reading
+   stands only while an earlier measurement is within min/max) and `fromStart`
+   ("change": the reading less its value at the start position; "ratio": percent of
+   that value — a length seen by the camera as a limb turns toward it). A
    landmark may be named plainly (the side being measured), with a side,
    `L.knee` / `R.knee` (a front view), or as `other.knee` — the side not being
    measured, such as the resting leg. `to` may be a list — the first one the
@@ -358,6 +360,8 @@
       figure: f.figure && f.figure.points ? f.figure.points : undefined,
       defaults: Object.assign({}, f.defaults || {}),
       extra, joints, needed,
+      /* readings taken against the start position: the coach snapshots them when the set-up wait ends */
+      fromStart: ms.filter((m) => m.fromStart).map((m) => ({ key: nameOf(m), how: m.fromStart })),
       bones: lm.bones || [], dots: lm.dots || joints.slice(), limb: lm.limb || {},
       bands, measurements: ms,
       faults: order, setup: setupIds, prompts: prompt ? [prompt.id] : [], cues,
@@ -410,6 +414,7 @@
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
       if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
       if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
+      if (m.fromStart != null && !['change', 'ratio'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position) or "ratio" (percent of its value at the start)');
       if (m.gate != null) {
         const before = (f.measurements || []).slice(0, (f.measurements || []).indexOf(m)).map((q) => q.key);
         if (typeof m.gate !== 'object' || !before.includes(m.gate.measure)) err(at + '.gate', 'names a measurement listed before this one: ' + (before.join(', ') || 'none'));

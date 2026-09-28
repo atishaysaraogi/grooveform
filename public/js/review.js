@@ -196,87 +196,139 @@ Moves.ready.then(function () {
   /* ---------- the reps, one by one ---------- */
   let focusRep = null;
   const sec = (ms) => (ms / 1000).toFixed(1) + 's';
+  const fmtV = (v, u) => (v == null ? '—' : (Math.abs(v) >= 100 || u === '°' ? Math.round(v) : +v.toFixed(1)) + (u || ''));
+  /* why an attempt did or did not count, in words, from the numbers Trace kept */
+  function whyOf(r) {
+    const w = r.why; if (!w) return '';
+    const up = w.dir > 0, past = up ? '≥' : '≤';
+    const parts = [];
+    parts.push(`reached ${fmtV(w.peak, w.unit)} (a rep starts ${past} ${fmtV(w.raiseAt, w.unit)}` + (w.top ? `, the top is ${fmtV(w.top.lo, w.unit)}–${fmtV(w.top.hi, w.unit)}` : '') + ')');
+    if (w.targetMs > 0) parts.push(`the hold clock ran ${sec(r.holdMs)} of the ${sec(w.targetMs)} asked` + (w.inPosMs < w.targetMs + w.settleMs && !r.counted ? ` — it runs only once every band has been right for ${sec(w.settleMs)}, and was in position ${sec(w.inPosMs)} in all` : ''));
+    const bad = Object.entries(w.bad).filter(([, ms]) => ms > 0).sort((x, y) => y[1] - x[1]);
+    if (bad.length) parts.push('out of its band at the top: ' + bad.map(([k, ms]) => `${esc((move.bands.find((b) => b.key === k) || {}).label || k)} for ${sec(ms)}`).join(', '));
+    if (w.unseenMs > 300) parts.push(`not seen for ${sec(w.unseenMs)}`);
+    if (!r.counted && !r.open) parts.push(r.early ? `back at the start (${past === '≥' ? '≤' : '≥'} ${fmtV(w.downAt, w.unit)} for ${sec(w.returnMs)}) before the hold was done — not counted` : 'not counted');
+    if (r.counted && w.targetMs === 0) parts.push('counted on reaching the top and coming back — no hold asked');
+    return parts.join(' · ');
+  }
   function renderReps() {
     const host = $('reps');
     if (!result) { host.innerHTML = ''; $('reps-note').textContent = ''; return; }
-    const reps = Trace.reps(result, move);
+    const reps = Trace.reps(result, move), misses = move.reps ? Trace.misses(result, move) : [];
     const label = (id) => (move.cues[id] && move.cues[id].label) || id;
     const counted = reps.filter((r) => r.counted).length;
-    $('reps-note').textContent = move.reps ? `${counted} counted${reps.length > counted ? `, ${reps.length - counted} not` : ''}` : `${reps.length} stretch${reps.length === 1 ? '' : 'es'} held`;
+    $('reps-note').textContent = move.reps ? `${counted} counted${reps.length > counted ? `, ${reps.length - counted} not` : ''}${misses.length ? `, ${misses.length} short of a rep` : ''}` : `${reps.length} stretch${reps.length === 1 ? '' : 'es'} held`;
     const faultLine = (f) => `<b>${esc(label(f.id))}</b> ${f.stretches.map((s) => s.t0 === s.t1 ? sec(s.t0) : sec(s.t0) + '–' + sec(s.t1)).join(', ')}` +
       (f.said.length ? ` <span class="said">said at ${f.said.map(sec).join(', ')}</span>` : ' <span class="muted">not said</span>');
-    host.innerHTML = reps.map((r, i) => {
+    const items = reps.map((r, i) => ({ t: r.t0, html: (() => {
       const head = move.reps ? (r.counted ? `Rep ${r.n}` : (r.open ? 'Under way at the end' : 'Attempt, not counted')) : `Hold ${r.n}`;
       const meta = [`${sec(r.t0)} to ${sec(r.t1)}`, r.holdMs ? `held ${sec(r.holdMs)}` : null, r.lowerMs != null ? `lowered over ${sec(r.lowerMs)}` : null].filter(Boolean).join(' · ');
+      const why = move.reps ? `<div class="rep-why">${whyOf(r)}</div>` : '';
       const before = r.before.faults.length ? `<div class="rep-before">before it: ${r.before.faults.map(faultLine).join('; ')}</div>` : '';
       const inside = r.faults.length ? `<ul>${r.faults.map((f) => `<li>${faultLine(f)}</li>`).join('')}</ul>` : '<div class="clean">clean</div>';
-      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${before}${inside}</li>`;
-    }).join('') || '<li class="muted">No rep seen yet.</li>';
-    host.querySelectorAll('li.rep').forEach((li) => { li.onclick = () => { const i = Number(li.dataset.i); focusRep = i; const r = reps[i]; if (video.duration) video.currentTime = r.t0 / 1000; else drawOverlay(r.t0); drawLanes(); renderReps(); }; });
-    lanesReps = reps;
+      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${why}${before}${inside}</li>`;
+    })() })).concat(misses.map((m) => ({ t: m.t0, html: `<li class="miss" data-t="${m.tPeak}"><div class="rep-head"><b>Short of a rep</b> <span class="muted">${sec(m.t0)} to ${sec(m.t1)}</span></div><div class="rep-why">reached ${fmtV(m.peak, m.unit)} at ${sec(m.tPeak)}, ${Math.round(m.share * 100)}% of the way to the ${fmtV(m.raiseAt, m.unit)} a rep starts at — nothing began</div></li>` })));
+    items.sort((x, y) => x.t - y.t);
+    const readyAt = result.rows.find((r) => r.out && r.out.ready);
+    const setup = move.reps ? `<li class="setup"><div class="rep-head"><b>Before the coaching</b> <span class="muted">${readyAt ? `${sec(result.rows[0].t)} to ${sec(readyAt.t)}` : 'the whole recording'}</span></div><div class="rep-why">${readyAt ? `the start position was held for ${sec(result.cfg.readyMs)} and the coaching began` : `the start position was never held for ${sec(result.cfg.readyMs)} — no rep can begin until it is`}</div></li>` : '';
+    host.innerHTML = setup + (items.map((x) => x.html).join('') || (move.reps ? '' : '<li class="muted">No stretch held yet.</li>'));
+    if (move.reps && !items.length) host.insertAdjacentHTML('beforeend', '<li class="muted">No attempt at a rep seen.</li>');
+    host.querySelectorAll('li.rep[data-i]').forEach((li) => { li.onclick = () => { const i = Number(li.dataset.i); focusRep = i; const r = reps[i]; if (video.duration) video.currentTime = r.t0 / 1000; else drawOverlay(r.t0); drawLanes(); renderReps(); }; });
+    host.querySelectorAll('li.miss[data-t]').forEach((li) => { li.onclick = () => { const t = Number(li.dataset.t); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } }; });
+    lanesReps = reps; lanesMisses = misses;
   }
-  let lanesReps = [];
+  let lanesReps = [], lanesMisses = [];
   const bandColour = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
+  const PH = { setup: 'rgba(232,237,244,.10)', down: 'rgba(90,169,255,.18)', up: 'rgba(53,208,127,.30)', lower: 'rgba(255,181,69,.30)', done: 'rgba(53,208,127,.5)' };
   function drawLanes() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const W = lanes.clientWidth || 600, laneH = 56, gap = 6, bottom = 54;
-    const H = move.bands.length * (laneH + gap) + bottom;
+    const P = result && Trace.progressOf(move, result.cfg);
+    const W = lanes.clientWidth || 600, laneH = 56, gap = 6, bottom = 54, progH = P ? 150 : 0;
+    const bands = move.bands.filter((b) => !P || b.key !== P.key);
+    const H = progH + (P ? gap : 0) + bands.length * (laneH + gap) + bottom;
     lanes.width = Math.round(W * dpr); lanes.height = Math.round(H * dpr); lanes.style.height = H + 'px';
     const ctx = lanes.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.textBaseline = 'top';
     if (!result) { ctx.fillStyle = C.dim; ctx.fillText('Load a video or a trace', 8, 8); return; }
     const rows = result.rows, dur = Math.max(1, trace.duration || rows[rows.length - 1].t);
-    const x = (t) => (t / dur) * W;
-    const c = result.cfg, left = 74;
-    move.bands.forEach((b, i) => {
-      const y0 = i * (laneH + gap), { lo, hi } = Trace.bandRange(b, c), [s0, s1] = b.scale;
-      const y = (v) => y0 + laneH - ((Math.max(s0, Math.min(s1, v)) - s0) / (s1 - s0)) * laneH;
-      ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(left, y0, W - left, laneH);
-      ctx.fillStyle = 'rgba(53,208,127,.22)'; ctx.fillRect(left, y(hi), W - left, y(lo) - y(hi));
+    const c = result.cfg, left = 74, span = W - left;
+    const x = (t) => left + (t / dur) * span, fw = Math.max(1, span / rows.length);
+    const line = (Kf, y0, h, key, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.beginPath(); let pen = false; for (const r of rows) { const v = r.reading && r.reading.ok ? r.reading[key] : null; if (v == null) { pen = false; continue; } const px = x(r.t), py = Kf(v); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); } ctx.stroke(); };
+    /* the rep lane: the reading a rep is judged on, its lines, its top, and the coach's phases behind it */
+    if (P) {
+      const vals = rows.map((r) => (r.reading && r.reading.ok ? r.reading[P.of] : null)).filter((v) => v != null);
+      const marks = [P.raiseAt, P.downAt].concat(P.band ? Object.values(Trace.bandRange(P.band, c)) : []);
+      let s0 = Math.min(...marks, ...(vals.length ? [Math.min(...vals)] : [])), s1 = Math.max(...marks, ...(vals.length ? [Math.max(...vals)] : []));
+      const pad = Math.max(2, (s1 - s0) * 0.08); s0 -= pad; s1 += pad;
+      const y = (v) => 14 + (progH - 14) - ((Math.max(s0, Math.min(s1, v)) - s0) / (s1 - s0)) * (progH - 14);
+      ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(left, 0, span, progH);
+      /* phases: grey before the coaching, blue between reps, green up, amber lowering */
+      const TINT = { setup: 'rgba(232,237,244,.09)', down: 'rgba(90,169,255,.09)', up: 'rgba(53,208,127,.16)', lower: 'rgba(255,181,69,.18)', done: 'rgba(90,169,255,.09)' };
+      for (const r of rows) { const o = r.out; const ph = o ? (o.between ? 'done' : o.phase) : null; if (ph && TINT[ph]) { ctx.fillStyle = TINT[ph]; ctx.fillRect(x(r.t), 0, fw, progH); } }
+      /* the top: the band it must be inside to hold */
+      if (P.band) { const { lo, hi } = Trace.bandRange(P.band, c); ctx.fillStyle = 'rgba(53,208,127,.28)'; ctx.fillRect(left, y(hi), span, y(lo) - y(hi)); }
+      /* the two lines */
+      const backed = (words, px, py, colour, align) => { ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; const w = ctx.measureText(words).width + 6; const x0 = align === 'right' ? px - w : px; ctx.fillStyle = 'rgba(11,15,22,.8)'; ctx.fillRect(x0, py - 1, w, 13); ctx.fillStyle = colour; ctx.fillText(words, x0 + 3, py); };
+      const dashed = (v, colour, words) => { ctx.strokeStyle = colour; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(left, y(v)); ctx.lineTo(W, y(v)); ctx.stroke(); ctx.setLineDash([]); backed(words, W - 2, y(v) + (P.dir > 0 === (v === P.raiseAt) ? -14 : 3), colour, 'right'); };
+      dashed(P.raiseAt, C.accent, `a rep starts ${P.dir > 0 ? 'above' : 'below'} ${fmtV(P.raiseAt, P.unit)}`);
+      dashed(P.downAt, C.warn, `back at the start ${P.dir > 0 ? 'below' : 'above'} ${fmtV(P.downAt, P.unit)}`);
+      /* the reading, and over it the moments the hold clock ran */
+      line(y, 0, progH, P.of, C.ink, 2);
+      ctx.strokeStyle = C.good; ctx.lineWidth = 4; ctx.beginPath(); let pen = false;
+      for (const r of rows) { const on = r.out && r.out.holding, v = r.reading && r.reading.ok ? r.reading[P.of] : null; if (!on || v == null) { pen = false; continue; } const px = x(r.t), py = y(v); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); } ctx.stroke();
+      /* frames the top band was out */
+      if (P.band) { ctx.fillStyle = 'rgba(255,92,108,.55)'; for (const r of rows) if (r.verdict && r.verdict.ok && r.verdict.good && r.verdict.good[P.key] === false) ctx.fillRect(x(r.t), progH - 4, fw, 4); }
+      ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.ink; ctx.fillText('THE REP', 6, 4);
+      ctx.fillStyle = C.dim; ctx.fillText(P.label.slice(0, 12), 6, 18); ctx.fillText(`${fmtV(s1, P.unit)}`, 6, 32); ctx.fillText(`${fmtV(s0, P.unit)}`, 6, progH - 14);
+      /* the stretch before the coaching, said in words once */
+      const readyAt = rows.find((r) => r.out && r.out.ready);
+      if (!readyAt || readyAt.t > dur * 0.06) backed(readyAt ? 'waiting for the start position' : 'the start position was never held', left + 3, progH / 2, C.dim);
+      /* movements that fell short of a rep */
+      ctx.font = '700 12px ui-sans-serif, system-ui, sans-serif';
+      for (const m of lanesMisses) { const px = x(m.tPeak), py = y(m.peak); ctx.fillStyle = C.warn; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillText('?', px + 6, Math.max(2, py - 14)); }
+    }
+    const yBands = progH + (P ? gap : 0);
+    bands.forEach((b, i) => {
+      const y0 = yBands + i * (laneH + gap), { lo, hi } = Trace.bandRange(b, c), [t0, t1] = b.scale;
+      const y = (v) => y0 + laneH - ((Math.max(t0, Math.min(t1, v)) - t0) / (t1 - t0)) * laneH;
+      ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(left, y0, span, laneH);
+      ctx.fillStyle = 'rgba(53,208,127,.22)'; ctx.fillRect(left, y(hi), span, y(lo) - y(hi));
+      ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif';
       ctx.fillStyle = C.ink; ctx.fillText(b.hud, 6, y0 + 4);
       ctx.fillStyle = C.dim; ctx.fillText(`${Math.round(lo)}–${Math.round(hi)}`, 6, y0 + 18);
-      /* the reading */
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); let pen = false;
-      for (const r of rows) {
-        const v = r.reading && r.reading.ok ? r.reading[b.of] : null;
-        if (v == null) { pen = false; continue; }
-        const px = left + x(r.t) * (1 - left / W), py = y(v);
-        if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
+      line(y, y0, laneH, b.of, C.ink, 1.5);
       /* frames where this band was out */
       ctx.fillStyle = 'rgba(255,92,108,.55)';
-      for (const r of rows) if (r.verdict && r.verdict.ok && r.verdict.good && r.verdict.good[b.key] === false) ctx.fillRect(left + x(r.t) * (1 - left / W), y0 + laneH - 4, Math.max(1, W / rows.length), 4);
+      for (const r of rows) if (r.verdict && r.verdict.ok && r.verdict.good && r.verdict.good[b.key] === false) ctx.fillRect(x(r.t), y0 + laneH - 4, fw, 4);
     });
     /* the coach: phases and cues */
-    const yb = move.bands.length * (laneH + gap);
-    ctx.fillStyle = C.ink; ctx.fillText('COACH', 6, yb + 4);
-    const PH = { setup: 'rgba(232,237,244,.10)', down: 'rgba(90,169,255,.18)', up: 'rgba(53,208,127,.30)', lower: 'rgba(255,181,69,.30)', done: 'rgba(53,208,127,.5)' };
+    const yb = yBands + bands.length * (laneH + gap);
+    ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.ink; ctx.fillText('COACH', 6, yb + 4);
     for (const r of rows) {
       const ph = r.out && (r.out.between ? 'done' : r.out.phase);
       const col = ph ? PH[ph] : (r.out && r.out.holding ? PH.up : (r.verdict && r.verdict.inPosition ? PH.down : null));
-      if (col) { ctx.fillStyle = col; ctx.fillRect(left + x(r.t) * (1 - left / W), yb, Math.max(1, W / rows.length), 18); }
+      if (col) { ctx.fillStyle = col; ctx.fillRect(x(r.t), yb, fw, 18); }
     }
     for (const cue of result.cues) {
-      const px = left + x(cue.t) * (1 - left / W);
+      const px = x(cue.t);
       const good = cue.id === 'hold' || cue.id === 'done' || /^call\d|^count\d/.test(cue.id) || cue.id === 'start';
       ctx.fillStyle = good ? C.good : cue.id === 'raise' || cue.id === 'lower' ? C.accent : C.bad;
       ctx.fillRect(px, yb + 20, 2, 14);
       const words = (move.cues[cue.id] && move.cues[cue.id].label) || cue.id;
-      ctx.save(); ctx.translate(px + 4, yb + 36); ctx.fillStyle = ctx.fillStyle; ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 16), 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(px + 4, yb + 36); ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 16), 0, 0); ctx.restore();
     }
     /* the reps, marked off */
-    ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif';
+    ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif';
     lanesReps.forEach((r, i) => {
-      const x0 = left + x(r.t0) * (1 - left / W), x1 = left + x(r.t1) * (1 - left / W);
+      const x0 = x(r.t0), x1 = x(r.t1);
       if (focusRep === i) { ctx.fillStyle = 'rgba(90,169,255,.10)'; ctx.fillRect(x0, 0, x1 - x0, H); }
       ctx.strokeStyle = r.counted ? 'rgba(232,237,244,.35)' : 'rgba(255,181,69,.5)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, H); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = r.counted ? C.ink : C.warn; ctx.fillText(r.counted ? String(r.n) : '×', x0 + 3, 2);
+      const words = r.counted ? `rep ${r.n}` : '× not counted'; ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif'; const w = ctx.measureText(words).width + 6; ctx.fillStyle = 'rgba(11,15,22,.8)'; ctx.fillRect(x0 + 1, 1, w, 13); ctx.fillStyle = r.counted ? C.good : C.warn; ctx.fillText(words, x0 + 4, 2);
     });
     /* the playhead */
-    if (video.duration) { const px = left + x(video.currentTime * 1000) * (1 - left / W); ctx.strokeStyle = C.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke(); }
+    if (video.duration) { const px = x(video.currentTime * 1000); ctx.strokeStyle = C.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke(); }
   }
   lanes.onclick = (e) => {
     if (!result) return;

@@ -445,6 +445,17 @@ you watched.
 `review.html` (the ◔ button in the bar) is the tuning bench and the builder, carrying the
 OnTrack Studio's method over to this app's moves.
 
+**What was read**, under the video on the Recordings tab: the top lane is
+the rep — the reading the rep is judged on against the line a rep starts at,
+the line it must come back to and the band its top must be inside, over the
+coach's phases (waiting for the start position, between reps, up with the
+hold clock's run marked on the line, lowering), each rep marked where it
+began, an attempt that was not counted with ×, and a movement that fell short
+of the starting line with ?. Below it a lane per band and the coach's cues.
+*Rep by rep* says of each attempt why it counted or did not: how far it got
+against the lines, how long the hold clock ran against the hold asked and why
+it stopped, which band broke the position and for how long.
+
 **Every point the model sees** (a review aid, to be taken out once the
 exercises are settled): on the live page's Settings sheet, "Show every point
 the model sees", and on the Recordings tab a checkbox above the numbers. All
@@ -595,11 +606,14 @@ movement drawn (the old Studio's figure builder: a starting pose — side on or
 facing the phone × standing, seated, kneeling, on the back, on the front, on
 all fours, on the side — dragged into a start and an end, a drag turning the
 bone above the joint and carrying everything below it); what is measured, as
-the Studio did it — pick the kind, then tap a point on the figure for each of
-its slots, the figure showing every landmark the camera reads, heel and toe
-included — each measurement reading its value at A and B off the drawing and
-given a role — tracks the rep, must be right, a note, just a reading — from
-which its band, thresholds and faults come; the phone and the words, templated from the pose with the long tail
+the Studio did it and apart from the drawing — a card a measurement, its
+kind, a slot for each point filled from a landmark list or by a tap on the
+figure, read as the value, the change from the start or a percentage of the
+start (a length seen by the camera against its own length at the start), a
+role — tracks the rep, must be right, a note, just a reading — with the
+band's shape and edges and the rep's thresholds typed, *From the drawing*
+filling them from the figure on request, and a fault a side to reword — from
+which the file's `band`, `progress` and `faults` are written; the phone and the words, templated from the pose with the long tail
 under *More words*; and the numbers. Landmarks, bones, the skeleton's colours
 and the drawing on the picture are derived from the measurements. Every field
 the file has is still reachable under *More*. A copy of a library exercise or

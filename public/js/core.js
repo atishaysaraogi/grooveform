@@ -232,6 +232,7 @@
       this.quietUntil = 0;              // nothing is said before this: the opening words are being said
       this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
       this.lastT = null; this.log = [];
+      this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
     }
     reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
@@ -245,10 +246,26 @@
     step(r, t) {
       const dt = this.lastT == null ? 0 : Math.min(t - this.lastT, 250);
       this.lastT = t; this.totalMs += dt;
+      this.relate(r);
       const v = this.move.judge(r, this.cfg);
       const held = this.gate(r, t, v);
       if (held) return held;
       return this.move.reps ? this.stepReps(r, t, v, dt) : this.stepHold(r, t, v, dt);
+    }
+
+    /* A reading taken against the start position. Until the set-up wait is over the
+       baseline follows the person (so the reading is "no change" — at the start by
+       definition, which is what lets the wait end); once the coaching begins it is
+       frozen, and from then on the reading is the change from it, or the percent of it:
+       a limb turning toward the camera shows shorter, and that shortening is the
+       movement. */
+    relate(r) {
+      const fs = this.move.fromStart; if (!fs || !fs.length || !r || !r.ok) return;
+      if (!this.ready || !this.base) { this.base = {}; for (const { key } of fs) this.base[key] = r[key]; }
+      for (const { key, how } of fs) {
+        const raw = r[key], b = this.base[key];
+        r[key] = raw == null || b == null ? null : how === 'ratio' ? (b ? (100 * raw) / b : null) : raw - b;
+      }
     }
 
     /* Before the coaching, and whenever nobody is in the frame.
@@ -551,7 +568,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-28b';
+  const VER = '2026-09-28c';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

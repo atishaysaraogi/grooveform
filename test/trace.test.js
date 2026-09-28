@@ -133,3 +133,20 @@ test('a hold is cut into the stretches its clock ran', () => {
   assert.ok(holds[1].before.faults.some((f) => f.id === 'hipLow'), 'what broke the hold, in between');
   assert.ok(W.faults.length, 'the wall sit exists');
 });
+
+test('an attempt is accounted for: how far it got, its hold against the target, and what fell short of a rep', () => {
+  /* a rep, a half-hearted lift that never reaches the line, and an attempt put down before its hold */
+  const frames = take([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 2600], [HALF, 1200], [REST, 2000], [TOP, 800], [REST, 1500]]);
+  const r = Trace.run(M, {}, frames, ASPECT);
+  const reps = Trace.reps(r, M);
+  assert.equal(reps.length, 2, 'a rep and an attempt: ' + reps.length);
+  const P = Trace.progressOf(M, r.cfg);
+  assert.ok(P && P.of && typeof P.raiseAt === 'number' && typeof P.downAt === 'number', 'the rep reading and its lines: ' + JSON.stringify(P));
+  for (const x of reps) { assert.ok(x.why && x.why.peak != null, 'each attempt says how far it got'); assert.equal(x.why.targetMs, r.cfg.holdTargetSec * 1000); }
+  assert.ok(reps[0].counted && !reps[1].counted && reps[1].early, 'the second was put down early');
+  assert.ok(reps[1].why.inPosMs < reps[0].why.inPosMs, 'and was in position for less of its time: ' + reps[1].why.inPosMs + ' < ' + reps[0].why.inPosMs);
+  const misses = Trace.misses(r, M);
+  assert.equal(misses.length, 1, 'the half lift fell short of a rep: ' + JSON.stringify(misses));
+  assert.ok(misses[0].share >= 0.4 && misses[0].share < 1 && misses[0].t0 > reps[0].t1 && misses[0].t1 < reps[1].t0, 'between the rep and the attempt: ' + JSON.stringify(misses[0]));
+  assert.equal(Trace.misses(r, Object.assign({}, M, { reps: false })).length, 0, 'a hold has no reps to fall short of');
+});

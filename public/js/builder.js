@@ -44,9 +44,10 @@ Moves.ready.then(function () {
   ];
 
   let draft = null, timer = 0;
-  /* measuring on the figure, as the old Studio did it: pick the kind, then tap a point
-     for each empty slot; the list walks itself on to the next. `making` is the one
-     under way: its kind, its slots so far, and which slot the next tap fills. */
+  /* measuring as the old Studio did it: a card per measurement, its kind, and a slot
+     per point — filled from a list or by a tap on the figure. `editing` is the slot a
+     tap fills next: { m, slot }. The figure only illustrates; nothing on the cards
+     changes when it is dragged. */
   const SLOTS = {
     angle: [['a', 'one end'], ['b', 'the joint'], ['c', 'other end']], tilt: [['base', 'base'], ['top', 'top']], floor: [['at', 'at'], ['to', 'to']],
     down: [['from', 'from'], ['to', 'to']], rise: [['a', 'the reference'], ['b', 'the point']], distance: [['a', 'from'], ['b', 'to']], bend: [['a', 'line start'], ['b', 'the point'], ['c', 'line end']],
@@ -61,8 +62,8 @@ Moves.ready.then(function () {
     distance: 'the distance between the two points as a percent of a reference segment, the shin unless changed under More.',
     bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle.',
   };
-  let making = { kind: 'angle', slots: {}, at: 'a' };
-  const mode = () => making.kind;
+  /* which measurement's which slot the next tap on the figure (or pick from the list) fills */
+  let editing = null;
 
   /* ================= starting poses ================= */
   const FRONT_SIDE_LYING = { h: [200, 148], shL: [220, 166], shR: [220, 130], hipL: [262, 159], hipR: [262, 137], knL: [290, 161], knR: [290, 135], anL: [315, 163], anR: [315, 133], elL: [180, 160], wrL: [166, 158], elR: [232, 128], wrR: [246, 150] };
@@ -127,7 +128,7 @@ Moves.ready.then(function () {
       muscles: {}, facing: { from: 'hip', to: 'knee' }, side: { pick: 'clearest' },
       landmarks: { joints: [], needed: [], bones: [], dots: [], limb: {} },
       measurements: [], faults: [], draw: [],
-      defaults: { holdTargetSec: 2, callAtSec: [], repCount: 10, setCount: 3, lowerSec: 1, restSec: 2, deepAt: 10 },
+      defaults: { holdTargetSec: 0, callAtSec: [], repCount: 10, setCount: 3, lowerSec: 1, restSec: 2, deepAt: 10 },
       settings: [{ key: 'repCount', label: 'Reps in a set', min: 1, max: 50 }, { key: 'setCount', label: 'Sets', min: 1, max: 10 }, { key: 'lowerSec', label: 'Lowering takes at least, seconds', min: 0, max: 10 }, { key: 'restSec', label: 'Quiet after a rep, seconds', min: 0, max: 10 }],
       prompt: { id: 'raise', text: '' },
       figure: { points: figureOfPose(p) },
@@ -162,7 +163,7 @@ Moves.ready.then(function () {
     draft.auto = auto || draft.auto || {};   // a loaded or copied file is the person's: nothing in it is the template's
     draft.figure = { points: figurePoints(draft) }; delete draft.figure.pose;
     inferRoles();
-    setKind('angle');
+    editing = null;
     if (window.__review) window.__review.setFig(draft.figure.points);
     render();
     commit(false);
@@ -172,10 +173,10 @@ Moves.ready.then(function () {
      that is each measurement's role here, and the role is the builder's, not the file's */
   function inferRoles() {
     const pos = draft.inPosition, pk = progressKey();
-    for (const m of draft.measurements || []) m.role = m.key === pk ? 'progress' : !m.band ? 'reading' : (!pos || pos.includes(m.key)) ? 'hold' : 'note';
+    for (const m of draft.measurements || []) { m.role = m.key === pk ? 'progress' : !m.band ? 'reading' : (!pos || pos.includes(m.key)) ? 'hold' : 'note'; m.named = true; m.short = m.short || m.label || m.key; }
   }
   /* the file as it is written: the builder's bookkeeping left out */
-  function fileOf() { const f = clone(draft); delete f.auto; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; } return f; }
+  function fileOf() { const f = clone(draft); delete f.auto; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; delete m.named; } return f; }
 
   /* every change comes here: the derived parts are brought up to date, the file is
      checked, the problems listed, the draft kept, and when whole laid over the library */
@@ -204,7 +205,7 @@ Moves.ready.then(function () {
     try { localStorage.removeItem(DRAFT); } catch { }
     Moves.draft(null);
     if (window.__review) { window.__review.refreshMoves(); window.__review.pickMove(Moves.list[0].id, true); }
-    draft = null; setKind('angle');
+    draft = null; editing = null;
     parkEditor();
     $('build-form').innerHTML = ''; $('problems').innerHTML = ''; $('build-json').value = '';
     $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.';
@@ -216,7 +217,7 @@ Moves.ready.then(function () {
   /* ================= what is derived ================= */
   const keyOf = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^[^a-z]+/, '') || 'newmove';
   const lmRefs = (m) => { const out = []; for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) { const v = m[k]; if (Array.isArray(v)) out.push(...v); else if (v) out.push(v); } if (m.per) out.push(...m.per); return out; };
-  const plain = (n) => n.replace(/^(other|L|R)\./, '');
+  const plain = (n) => String(n || '').replace(/^(other|L|R)\./, '');
   const bandedKeys = () => draft.measurements.filter((m) => m.band).map((m) => m.key);
   const progressKey = () => (draft.type === 'reps' && draft.progress ? draft.progress.measure : null);
   const roleOf = (m) => (m.key === progressKey() ? 'progress' : !m.band ? 'reading' : (draft.inPosition || bandedKeys()).includes(m.key) ? 'hold' : 'note');
@@ -264,7 +265,7 @@ Moves.ready.then(function () {
       if (pk) { d.progress.raiseAt = 'raiseAt'; d.progress.downAt = 'downAt'; if (typeof d.defaults.raiseAt !== 'number') d.defaults.raiseAt = 0; if (typeof d.defaults.downAt !== 'number') d.defaults.downAt = 0; }
       if (!d.settings.some((s) => s.key === 'raiseAt') && pk) { const m = d.measurements.find((q) => q.key === pk); d.settings.push({ key: 'raiseAt', label: `${m ? m.label || m.key : 'Reading'} that counts as under way`, min: Math.min(d.defaults.raiseAt - 40, 0), max: d.defaults.raiseAt + 40 }); }
       d.prompt = d.prompt || { id: 'raise', text: '' };
-      if (a.prompt && pk) { const m = d.measurements.find((q) => q.key === pk); d.prompt.text = m ? (d.progress.direction === 'down' ? `Lower — ${m.label || m.key}` : `${cap(m.label || m.key)} — lift`) : ''; }
+      if (a.prompt && pk) { const m = d.measurements.find((q) => q.key === pk); d.prompt.text = m ? (d.progress.direction === 'down' ? `Lower — ${m.short || m.label || m.key}` : `${cap(m.short || m.label || m.key)} — lift`) : ''; }
     } else { delete d.progress; delete d.prompt; }
     /* every setting a band names is in defaults; every setting listed has one */
     for (const m of d.measurements) for (const s of m.settings || []) if (typeof d.defaults[s.key] !== 'number') d.defaults[s.key] = 0;
@@ -280,6 +281,7 @@ Moves.ready.then(function () {
   const figView = () => (draft && draft.figure && draft.figure.points && draft.figure.points.view === 'front' ? 'front' : 'side');
   /* a landmark name → the figure's point (the heel is the ankle; a far limb not drawn apart is the near one) */
   function pointFor(name, K, view) {
+    if (!name || !K) return null;
     const P = (k) => (K[k] ? { x: K[k][0], y: K[k][1] } : null);
     if (view === 'front') {
       const m = /^([LR])\.(\w+)$/.exec(name); const sd = m ? m[1] : 'R', n = m ? m[2] : name;
@@ -318,145 +320,140 @@ Moves.ready.then(function () {
   const fmt = (v, m) => (v == null ? '—' : (m && m.kind === 'distance' && !m.times ? v.toFixed(2) : Math.round(v) + (m && m.kind === 'distance' ? '%' : '°')));
   const valuesAB = (m) => { const f = draft.figure.points; return { A: valueOf(m, f.A), B: valueOf(m, f.B || f.A) }; };
 
-  /* ================= measuring: a kind, then a point for each slot ================= */
+  /* ================= measuring, by hand, as the old Studio did it =================
+     A measurement is a kind and a landmark for each of its slots, filled from a list
+     over the slot or by tapping the figure; its role, its edges and its thresholds
+     are typed, with a button to take numbers from the drawing when that helps. */
   const NEIGHBOURS = {
     side: { kn: ['hip', 'an'], hip: ['sh', 'kn'], an: ['kn', 'ft'], sh: ['hip', 'el'], el: ['sh', 'wr'], he: ['ft', 'kn'], knF: ['hip', 'anF'], anF: ['knF', 'ftF'], elF: ['sh', 'wrF'], heF: ['ftF', 'knF'] },
     front: { knL: ['hipL', 'anL'], hipL: ['shL', 'knL'], shL: ['hipL', 'elL'], elL: ['shL', 'wrL'], anL: ['knL', 'toL'], heL: ['toL', 'knL'], knR: ['hipR', 'anR'], hipR: ['shR', 'knR'], shR: ['hipR', 'elR'], elR: ['shR', 'wrR'], anR: ['knR', 'toR'], heR: ['toR', 'knR'] },
   };
-  /* what a pair of landmarks is, for names: hip→shoulder is the torso, knee→ankle the shin */
   const SEGMENTS = [['hip', 'shoulder', 'torso'], ['hip', 'knee', 'thigh'], ['knee', 'ankle', 'shin'], ['shoulder', 'elbow', 'arm'], ['elbow', 'wrist', 'forearm'], ['heel', 'toe', 'foot'], ['ankle', 'toe', 'foot'], ['shoulder', 'wrist', 'arm'], ['hip', 'ankle', 'leg'], ['shoulder', 'ear', 'neck']];
   const side_ = (n) => (/^other\./.test(n) ? 'other' : /^L\./.test(n) ? 'l' : /^R\./.test(n) ? 'r' : '');
-  const segmentOf = (x, y) => { const a = plain(x), b = plain(y); const hit = SEGMENTS.find(([p, q]) => (p === a && q === b) || (p === b && q === a)); return hit ? (side_(x) || side_(y)) + hit[2] : null; };
-  const uniqueKey = (base) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m.key === k)) k = base + n++; return k; };
-  const wordsFor = (name) => String(name).replace(/^other\./, 'other ').replace(/^L\./, 'left ').replace(/^R\./, 'right ').replace(/^other(?=[a-z])/, 'other ').replace(/^l(?=[a-z])/, 'left ').replace(/^r(?=[a-z])/, 'right ');
-  const hudOf = (name) => plain(name).replace(/^other/, '').slice(0, 5).toUpperCase();
-  /* the measurement the filled slots make */
-  function fromSlots(kind, S) {
-    const view = figView();
-    if (kind === 'angle') { const j = plain(S.b), short = wordsFor(S.b); return { key: uniqueKey(side_(S.b) + j), kind, a: S.a, b: S.b, c: S.c, label: `${short} angle`, short, hud: hudOf(S.b) }; }
-    if (kind === 'tilt') { const seg = segmentOf(S.base, S.top); const short = seg ? wordsFor(seg) : `${wordsFor(S.top)} over ${wordsFor(S.base)}`; return { key: uniqueKey(seg || plain(S.top) + 'lean'), kind, base: S.base, top: S.top, label: `${short} lean from vertical`, short, hud: hudOf(seg || S.top) }; }
-    if (kind === 'floor') { const seg = segmentOf(S.at, S.to); const short = seg ? wordsFor(seg) : `${wordsFor(S.at)} to ${wordsFor(S.to)}`; return { key: uniqueKey(seg || plain(S.to) + 'floor'), kind, at: S.at, to: S.to, label: `${short} against the floor`, short, hud: hudOf(seg || S.to) }; }
-    if (kind === 'down') { const seg = segmentOf(S.from, S.to); const short = seg ? wordsFor(seg) : `${wordsFor(S.from)} to ${wordsFor(S.to)}`; return { key: uniqueKey(seg || plain(S.to) + 'lift'), kind, from: S.from, to: S.to, label: `${short} lifted from hanging`, short, hud: hudOf(seg || S.to) }; }
-    if (kind === 'rise') { const short = `${wordsFor(S.b)} height`; return { key: uniqueKey(side_(S.b) + plain(S.b) + 'up'), kind, a: S.a, b: S.b, label: `${wordsFor(S.b)} above the ${wordsFor(S.a)}`, short, hud: hudOf(S.b) }; }
-    if (kind === 'distance') { const per = view === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']; const seg = segmentOf(S.a, S.b); const short = seg ? `${wordsFor(seg)} length` : `${wordsFor(S.a)}–${wordsFor(S.b)} length`; return { key: uniqueKey((seg || plain(S.a) + plain(S.b)) + 'len'), kind, a: S.a, b: S.b, per, times: 100, label: `${short}, % of the shin`, short, hud: 'LEN' }; }
-    if (kind === 'bend') { const short = `${wordsFor(S.b)} off the line`; return { key: uniqueKey(side_(S.b) + plain(S.b) + 'bend'), kind, a: S.a, b: S.b, c: S.c, label: `${wordsFor(S.b)} off the ${wordsFor(S.a)}–${wordsFor(S.c)} line`, short, hud: hudOf(S.b) }; }
-    return null;
-  }
+  const segmentOf = (x, y) => { if (!x || !y) return null; const a = plain(x), b = plain(y); const hit = SEGMENTS.find(([p, q]) => (p === a && q === b) || (p === b && q === a)); return hit ? (side_(x) || side_(y)) + hit[2] : null; };
+  const uniqueKey = (base, self) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m !== self && m.key === k)) k = base + n++; return k; };
+  const wordsFor = (name) => String(name || '').replace(/^other\./, 'other ').replace(/^L\./, 'left ').replace(/^R\./, 'right ').replace(/^other(?=[a-z])/, 'other ').replace(/^l(?=[a-z])/, 'left ').replace(/^r(?=[a-z])/, 'right ');
+  const hudOf = (name) => plain(name || 'm').replace(/^other/, '').slice(0, 5).toUpperCase();
   const slotsOf = (kind) => SLOTS[kind] || SLOTS.angle;
-  const nextEmpty = () => { const sl = slotsOf(making.kind).find(([k]) => !making.slots[k]); return sl ? sl[0] : null; };
-  function setKind(kind) { making = { kind, slots: {}, at: slotsOf(kind)[0][0] }; }
-  /* a tap on the figure: fills the slot being filled and walks on; on an angle with nothing filled,
-     a joint fills all three from the limbs meeting there */
-  function tapped(k) {
-    if (!k) return;
-    const view = figView(), name = NAME[view][k]; if (!name) return;
-    const S = making.slots, sl = slotsOf(making.kind);
-    if (making.kind === 'angle' && !S.a && !S.b && !S.c && NEIGHBOURS[view][k]) { const [x, y] = NEIGHBOURS[view][k]; S.a = NAME[view][x]; S.b = name; S.c = NAME[view][y]; }
-    else { S[making.at || nextEmpty() || sl[sl.length - 1][0]] = name; }
-    making.at = nextEmpty();
-    if (making.at) { drawMeasure(); renderSlots(); return; }
-    const m = fromSlots(making.kind, S); if (!m) return;
-    m.role = 'reading';
-    draft.measurements.push(m);
-    /* the first measurement of a rep exercise is what the rep is: it tracks it */
-    if (draft.type === 'reps' && !progressKey()) setRole(m, 'progress'); else setRole(m, 'hold');
-    setKind(making.kind);
+  const filled = (m) => slotsOf(m.kind).every(([k]) => m[k]);
+  const nextEmpty = (m, after) => { const sl = slotsOf(m.kind).map(([k]) => k); const from = after ? sl.indexOf(after) + 1 : 0; return sl.slice(from).concat(sl.slice(0, from)).find((k) => !m[k]) || null; };
+  /* a name and a short name for a measurement from what it reads, unless given */
+  function nameIt(m) {
+    if (m.named) return;
+    const S = m, seg = m.kind === 'tilt' ? segmentOf(S.base, S.top) : m.kind === 'floor' ? segmentOf(S.at, S.to) : m.kind === 'down' ? segmentOf(S.from, S.to) : m.kind === 'distance' ? segmentOf(S.a, S.b) : null;
+    let key = 'm', short = 'reading', label = '';
+    if (m.kind === 'angle' && S.b) { key = side_(S.b) + plain(S.b); short = wordsFor(S.b); label = `${short} angle`; }
+    else if (m.kind === 'tilt' && S.top) { key = seg || plain(S.top) + 'lean'; short = seg ? wordsFor(seg) : wordsFor(S.top); label = `${short} lean from vertical`; }
+    else if (m.kind === 'floor' && S.to) { key = seg || plain(S.to) + 'floor'; short = seg ? wordsFor(seg) : wordsFor(S.to); label = `${short} against the floor`; }
+    else if (m.kind === 'down' && S.to) { key = seg || plain(S.to) + 'lift'; short = seg ? wordsFor(seg) : wordsFor(S.to); label = `${short} lifted from hanging`; }
+    else if (m.kind === 'rise' && S.b) { key = side_(S.b) + plain(S.b) + 'up'; short = `${wordsFor(S.b)} height`; label = S.a ? `${wordsFor(S.b)} above the ${wordsFor(S.a)}` : short; }
+    else if (m.kind === 'distance' && S.a && S.b) { key = (seg || plain(S.a) + plain(S.b)) + 'len'; short = seg ? `${wordsFor(seg)} length` : `${wordsFor(S.a)}–${wordsFor(S.b)} length`; label = m.fromStart === 'ratio' ? `${short}, % of its start` : `${short}, % of the shin`; }
+    else if (m.kind === 'bend' && S.b) { key = side_(S.b) + plain(S.b) + 'bend'; short = `${wordsFor(S.b)} off the line`; label = S.a && S.c ? `${wordsFor(S.b)} off the ${wordsFor(S.a)}–${wordsFor(S.c)} line` : short; }
+    if (m.fromStart === 'change' && label) label += ', change from the start';
+    const old = m.key, nk = uniqueKey(key, m);
+    if (old !== nk) { m.key = nk; for (const x of draft.faults) if (x.measure === old) x.measure = nk; if (draft.progress && draft.progress.measure === old) draft.progress.measure = nk; if (draft.inPosition) draft.inPosition = draft.inPosition.map((k) => (k === old ? nk : k)); }
+    m.label = label; m.short = short; m.hud = m.kind === 'distance' ? 'LEN' : hudOf(m.b || m.top || m.to || 'm');
+  }
+  /* a slot filled: by the list or by the figure; then the next empty one is the one being filled */
+  function fillSlot(m, slot, name) {
+    m[slot] = name;
+    if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) { const k = keyOfName(name, figView()); const nb = k && NEIGHBOURS[figView()][k]; if (nb) { m.a = NAME[figView()][nb[0]]; m.c = NAME[figView()][nb[1]]; } }
+    nameIt(m);
+    const nxt = nextEmpty(m, slot);
+    editing = nxt ? { m, slot: nxt } : null;
     commit(true);
   }
-  /* the slots as buttons: the one being filled is pressed; a filled one taps to refill */
-  let slotHost = null;
-  function renderSlots() {
-    if (!slotHost) return; slotHost.innerHTML = '';
-    slotHost.appendChild(el('p', 'tiny', KIND_HELP[making.kind] || ''));
-    const row = el('div', 'chips');
-    for (const [k, words] of slotsOf(making.kind)) { const b = btn(`${words}: ${making.slots[k] ? wordsFor(making.slots[k]) : '…'}`, () => { making.at = k; drawMeasure(); renderSlots(); }); b.setAttribute('aria-pressed', String(making.at === k)); row.appendChild(b); }
-    if (Object.keys(making.slots).length) row.appendChild(btn('clear', () => { setKind(making.kind); drawMeasure(); renderSlots(); }));
-    slotHost.appendChild(row);
+  function tapped(k) {
+    if (!k || !editing) return;
+    const name = NAME[figView()][k]; if (!name) return;
+    fillSlot(editing.m, editing.slot, name);
   }
-  /* a role: what the measurement is for. Its edges and thresholds come from the drawing */
+  /* the landmark list over a slot, as the Studio had it */
+  function landmarkPopup(anchor, m, slot) {
+    document.querySelectorAll('.lm-pop').forEach((n) => n.remove());
+    const pop = el('div', 'lm-pop');
+    const group = (title, names) => { pop.appendChild(el('div', 'lm-title', esc(title))); const g = el('div', 'lm-grid'); for (const n of names) { const b = btn(plain(n), () => { pop.remove(); fillSlot(m, slot, n); }, 'tiny-btn'); if (m[slot] === n) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } pop.appendChild(g); };
+    if (figView() === 'front') { group('Left side', LM.map((n) => 'L.' + n)); group('Right side', LM.map((n) => 'R.' + n)); }
+    else { group('The side being measured', LM); group('The other side', LM.map((n) => 'other.' + n)); }
+    pop.appendChild(el('p', 'tiny', 'Or tap the point on the figure below.'));
+    anchor.parentNode.appendChild(pop);
+    const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('pointerdown', close, true); } };
+    setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
+  }
+  /* what the drawing says the measurement reads, on request: the edges around the end, the
+     thresholds between start and end */
   const TOL = (m) => (m.kind === 'angle' || m.kind === 'bend' ? 10 : m.kind === 'distance' ? 10 : 8);
-  const ensure = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: `${cap(m.label || m.key)}, ${words}`, min: Math.round(lo), max: Math.round(hi) }); };
+  const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
+  const ensureSetting = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: `${cap(m.short || m.label || m.key)}, ${words}`, min: Math.round(lo), max: Math.round(hi) }); };
   function clearBand(m) {
     for (const s of m.settings || []) { if (!(draft.settings || []).some((t) => t.key === s.key) && !['raiseAt', 'downAt'].includes(s.key)) delete draft.defaults[s.key]; }
     delete m.band; delete m.settings; delete m.scale; delete m.note;
     draft.faults = draft.faults.filter((x) => x.measure !== m.key);
   }
+  /* a band of a shape, with default edges for its kind and a fault for each side, editable */
+  function setBand(m, kind) {
+    const d = draft, base = m.key, L = m.short || m.label || m.key, def = bandDefault(m), span = def.range[1] - def.range[0];
+    clearBand(m);
+    if (kind === 'none') return;
+    m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? [0, 200] : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
+    if (kind === 'range') { m.band = { lo: base + 'Min', hi: base + 'Max' }; ensureSetting(m, base + 'Min', def.range[0], 'at least', def.range[0] - span, def.range[1] + span); ensureSetting(m, base + 'Max', def.range[1], 'at most', def.range[0] - span, def.range[1] + span); }
+    else if (kind === 'min') { m.band = { min: base + 'Min' }; ensureSetting(m, base + 'Min', def.min, 'at least', def.min - span, def.min + span); }
+    else if (kind === 'max') { m.band = { max: base + 'Max' }; ensureSetting(m, base + 'Max', def.max, 'at most', def.max - span, def.max + span); }
+    else if (kind === 'sym') { m.band = { sym: base + 'Max' }; m.scale = [-45, 45]; ensureSetting(m, base + 'Max', def.sym, 'allowed either way', 1, 45); }
+    const f = (id, side, label, text, deep, tone) => d.faults.push({ id, measure: m.key, side, label: label.slice(0, 26), text, deep, tone });
+    if (kind === 'min') f(base + 'Low', 'below', `${cap(L)} short`, `Keep the ${L} — it is dropping`, `More ${L} — it is well short`, 'plain');
+    else if (kind === 'max') f(base + 'High', 'above', `${cap(L)} too far`, `Not so much ${L}`, `Less ${L} — it is well past`, 'plain');
+    else if (kind === 'sym') { f(base + 'Over', 'above', `${cap(L)} off one way`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); f(base + 'Under', 'below', `${cap(L)} off the other`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); }
+    else { f(base + 'Low', 'below', `${cap(L)} short`, `A little further — ${L}`, `Further — ${L} is well short`, 'up'); f(base + 'High', 'above', `${cap(L)} too far`, `Not so far — ${L}`, `Ease off — ${L} is well past`, 'down'); }
+  }
   function setRole(m, role) {
     const d = draft, was = roleOf(m);
     if (was === 'progress' && role !== 'progress') { delete d.progress; delete d.defaults.raiseAt; delete d.defaults.downAt; d.settings = d.settings.filter((s) => s.key !== 'raiseAt'); }
-    if (role === 'reading') { clearBand(m); m.role = 'reading'; return; }
-    const { A, B } = valuesAB(m), tol = TOL(m), base = m.key, v = (A + B) / 2;
-    clearBand(m);
     m.role = role;
-    m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? [0, 150] : m.kind === 'down' ? [0, 180] : [-90, 90];
-    const L = m.short || m.label || m.key;
-    m.autoBand = true;   // the edges follow the drawing until one of them is edited
+    if (role === 'reading') { clearBand(m); return; }
     if (role === 'progress') {
-      if (A == null || B == null) { m.role = 'hold'; return setRole(m, 'hold'); }
-      const up = B >= A;
-      d.progress = { measure: m.key, raiseAt: 'raiseAt', downAt: 'downAt', direction: up ? 'up' : 'down' };
-      d.defaults.raiseAt = Math.round(A + (B - A) * 0.4); d.defaults.downAt = Math.round(A + (B - A) * 0.15);
+      const prev = d.measurements.find((q) => q !== m && roleOf(q) === 'progress'); if (prev) prev.role = 'hold';
+      const def = bandDefault(m).range;
+      d.progress = { measure: m.key, raiseAt: 'raiseAt', downAt: 'downAt', direction: (d.progress && d.progress.direction) || 'up' };
+      if (typeof d.defaults.raiseAt !== 'number') d.defaults.raiseAt = Math.round(def[0] + (def[1] - def[0]) * 0.4);
+      if (typeof d.defaults.downAt !== 'number') d.defaults.downAt = Math.round(def[0] + (def[1] - def[0]) * 0.15);
       d.settings = d.settings.filter((s) => s.key !== 'raiseAt');
-      d.settings.push({ key: 'raiseAt', label: `${cap(L)} that counts as under way`, min: Math.round(Math.min(A, B) - 20), max: Math.round(Math.max(A, B) + 20) });
-      m.band = { lo: base + 'Min', hi: base + 'Max' }; m.note = 'at the top';
-      ensure(m, base + 'Min', B - tol, 'at the top, at least', Math.min(A, B) - 30, Math.max(A, B) + 30);
-      ensure(m, base + 'Max', B + tol, 'at the top, at most', Math.min(A, B) - 30, Math.max(A, B) + 30);
-      d.faults.push({ id: base + 'Short', measure: m.key, side: up ? 'below' : 'above', label: `${cap(L)} short`.slice(0, 26), text: `A little further — ${L}`, deep: `Further — ${L} is well short`, tone: up ? 'up' : 'down' });
-      d.faults.push({ id: base + 'Far', measure: m.key, side: up ? 'above' : 'below', label: `${cap(L)} too far`.slice(0, 26), text: `Not so far — ${L}`, deep: `Ease off — ${L} is well past`, tone: up ? 'down' : 'up' });
+      d.settings.push({ key: 'raiseAt', label: `${cap(m.short || m.label || m.key)} that counts as under way`, min: Math.round(def[0] - (def[1] - def[0])), max: Math.round(def[1] + (def[1] - def[0])) });
+      if (!m.band) setBand(m, 'range');
+      m.note = 'at the top';
       return;
     }
-    /* must be right, or a note: a band around where the drawing has it, one-sided at the extremes */
+    if (!m.band) setBand(m, m.kind === 'angle' ? 'min' : 'range');
     m.note = role === 'note' ? 'a note' : 'keep';
-    const lo = Math.min(A == null ? B : A, B == null ? A : B), hi = Math.max(A == null ? B : A, B == null ? A : B);
-    if (m.kind === 'angle' && lo >= 160) {
-      m.band = { min: base + 'Min' }; ensure(m, base + 'Min', lo - tol, 'at least', 90, 180);
-      d.faults.push({ id: base + 'Bend', measure: m.key, side: 'below', label: `${cap(L)} bending`.slice(0, 26), text: `Keep the ${L} straight`, deep: `Straighten the ${L} — it is bending`, tone: 'plain' });
-    } else if (m.kind === 'angle' && hi <= 20) {
-      m.band = { max: base + 'Max' }; ensure(m, base + 'Max', hi + tol, 'at most', 0, 90);
-      d.faults.push({ id: base + 'Open', measure: m.key, side: 'above', label: `${cap(L)} opening`.slice(0, 26), text: `Keep the ${L} closed`, deep: `Close the ${L} — it is opening`, tone: 'plain' });
-    } else if ((m.kind === 'tilt' || m.kind === 'rise' || m.kind === 'bend') && Math.abs(lo) <= 12 && Math.abs(hi) <= 12) {
-      m.band = { sym: base + 'Max' }; m.scale = [-45, 45]; ensure(m, base + 'Max', tol, 'allowed either way', 1, 45);
-      d.faults.push({ id: base + 'Over', measure: m.key, side: 'above', label: `${cap(L)} off one way`.slice(0, 26), text: `Bring the ${L} back level`, deep: `The ${L} is well off — bring it back`, tone: 'plain' });
-      d.faults.push({ id: base + 'Under', measure: m.key, side: 'below', label: `${cap(L)} off the other`.slice(0, 26), text: `Bring the ${L} back level`, deep: `The ${L} is well off — bring it back`, tone: 'plain' });
-    } else {
-      m.band = { lo: base + 'Min', hi: base + 'Max' };
-      ensure(m, base + 'Min', lo - tol, 'at least', lo - 40, hi + 40); ensure(m, base + 'Max', hi + tol, 'at most', lo - 40, hi + 40);
-      d.faults.push({ id: base + 'Low', measure: m.key, side: 'below', label: `${cap(L)} too low`.slice(0, 26), text: `${cap(L)} a little more`, deep: `More ${L} — it is well short`, tone: 'up' });
-      d.faults.push({ id: base + 'High', measure: m.key, side: 'above', label: `${cap(L)} too high`.slice(0, 26), text: `Not so much ${L}`, deep: `Less ${L} — it is well past`, tone: 'down' });
-    }
   }
-  /* the drawing moved: a band that was never edited follows it (its faults keep their words) */
-  /* the band's shape the drawing calls for: one-sided at the extremes, symmetric about level, a range otherwise */
-  function kindFor(m, role, lo, hi) {
-    if (role === 'progress') return 'range';
-    if (m.kind === 'angle' && lo >= 160) return 'min';
-    if (m.kind === 'angle' && hi <= 20) return 'max';
-    if ((m.kind === 'tilt' || m.kind === 'rise' || m.kind === 'bend') && Math.abs(lo) <= 12 && Math.abs(hi) <= 12) return 'sym';
-    return 'range';
-  }
-  function retune(m) {
-    const d = draft, role = roleOf(m); if (!m.autoBand || !m.band) return;
-    const { A, B } = valuesAB(m); if (A == null || B == null) return;
-    const tol = TOL(m), base = m.key, lo = Math.min(A, B), hi = Math.max(A, B), kind = Spec.bandKind(m.band);
-    /* a still-automatic band whose shape no longer fits the drawing is made again, words and all */
-    if (kindFor(m, role, lo, hi) !== kind) { setRole(m, role); return; }
+  /* the numbers the drawing gives, on request */
+  function fromDrawing(m) {
+    const d = draft, { A, B } = valuesAB(m); if (A == null || B == null) return;
+    const tol = TOL(m), lo = Math.min(A, B), hi = Math.max(A, B), kind = Spec.bandKind(m.band), role = roleOf(m);
     if (role === 'progress') {
-      const up = B >= A; d.progress.direction = up ? 'up' : 'down';
+      d.progress.direction = B >= A ? 'up' : 'down';
       d.defaults.raiseAt = Math.round(A + (B - A) * 0.4); d.defaults.downAt = Math.round(A + (B - A) * 0.15);
-      d.defaults[m.band.lo] = Math.round(B - tol); d.defaults[m.band.hi] = Math.round(B + tol);
-      for (const x of d.faults) { if (x.measure !== m.key) continue; if (x.id === base + 'Short') { x.side = up ? 'below' : 'above'; x.tone = up ? 'up' : 'down'; } if (x.id === base + 'Far') { x.side = up ? 'above' : 'below'; x.tone = up ? 'down' : 'up'; } }
+      if (kind === 'range') { d.defaults[m.band.lo] = Math.round(B - tol); d.defaults[m.band.hi] = Math.round(B + tol); }
+      for (const x of d.faults) { if (x.measure !== m.key) continue; const up = B >= A; if (/Low$/.test(x.id)) { x.side = up ? 'below' : 'above'; x.tone = up ? 'up' : 'down'; } if (/High$/.test(x.id)) { x.side = up ? 'above' : 'below'; x.tone = up ? 'down' : 'up'; } }
       return;
     }
     if (kind === 'min') d.defaults[m.band.min] = Math.round(lo - tol);
     else if (kind === 'max') d.defaults[m.band.max] = Math.round(hi + tol);
     else if (kind === 'sym') d.defaults[m.band.sym] = Math.round(Math.max(Math.abs(lo), Math.abs(hi)) + tol);
-    else { d.defaults[m.band.lo] = Math.round(lo - tol); d.defaults[m.band.hi] = Math.round(hi + tol); }
+    else if (kind === 'range') { d.defaults[m.band.lo] = Math.round(lo - tol); d.defaults[m.band.hi] = Math.round(hi + tol); }
+  }
+  function addMeasure() {
+    const m = { key: uniqueKey('m'), kind: 'angle', label: '', hud: 'M', role: 'reading' };
+    draft.measurements.push(m);
+    editing = { m, slot: 'b' };
+    commit(true);
   }
   function removeMeasure(m) {
     clearBand(m);
     if (roleOf(m) === 'progress') { delete draft.progress; delete draft.defaults.raiseAt; delete draft.defaults.downAt; draft.settings = draft.settings.filter((s) => s.key !== 'raiseAt'); }
     draft.measurements = draft.measurements.filter((q) => q !== m);
     if (draft.inPosition) draft.inPosition = draft.inPosition.filter((k) => k !== m.key);
+    if (editing && editing.m === m) editing = null;
   }
 
   /* ---- the measuring canvas: the figure at A with every landmark the model has, named, to tap ---- */
@@ -487,15 +484,15 @@ Moves.ready.then(function () {
     if (B !== K) chain(B, 'rgba(90,169,255,.22)', 4 * T.s);
     chain(K, 'rgba(232,237,244,.55)', 4 * T.s);
     /* what is measured already, in the colour of its role */
-    const P = (n) => { const p = pointFor(Array.isArray(n) ? n[0] : n, K, view); return p ? at([p.x, p.y]) : null; };
+    const P = (n) => { if (!n) return null; const p = pointFor(Array.isArray(n) ? n[0] : n, K, view); return p ? at([p.x, p.y]) : null; };
     for (const m of draft.measurements) {
       const role = roleOf(m), colour = role === 'progress' ? '#5aa9ff' : role === 'hold' ? '#35d07f' : role === 'note' ? '#ffb545' : 'rgba(232,237,244,.5)';
       ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 2.5;
       if (m.kind === 'angle' || m.kind === 'bend') { const a = P(m.a), b = P(m.b), c = P(m.c); if (a && b && c) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.lineTo(...c); ctx.stroke(); const rad = 14 * Math.max(0.6, T.s / 2); ctx.beginPath(); ctx.arc(b[0], b[1], rad, Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0]), false); ctx.stroke(); } }
       else { const a = P(m.a || m.base || m.from || m.at), b = P(m.b || m.top || m.to); if (a && b) { ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]); } }
     }
-    /* the slots picked so far, in amber, and their order */
-    const picks = Object.entries(making.slots);
+    /* the measurement being edited: its filled slots in amber, numbered in slot order */
+    const picks = editing ? slotsOf(editing.m.kind).filter(([k]) => editing.m[k]).map(([k]) => [k, editing.m[k]]) : [];
     /* every landmark, a dot and a name: the near side's names above, the far side's below, the
        names along a row staggered so a lying body's do not run into each other */
     const fs = Math.max(9, Math.min(11, rr.width / 70));
@@ -515,8 +512,8 @@ Moves.ready.then(function () {
       ctx.fillStyle = picked ? '#ffb545' : far ? 'rgba(232,237,244,.55)' : 'rgba(232,237,244,.9)'; ctx.fillText(label, lx, ly);
     }
     ctx.fillStyle = 'rgba(232,237,244,.6)'; ctx.textAlign = 'left';
-    const sl = slotsOf(making.kind).find(([k]) => k === making.at);
-    ctx.fillText(`${KIND_WORDS[making.kind]} — tap ${sl ? sl[1] : 'a point'}` + (making.kind === 'angle' && !picks.length ? ' (a joint fills all three)' : ''), 8, 12);
+    const sl = editing && slotsOf(editing.m.kind).find(([k]) => k === editing.slot);
+    ctx.fillText(editing ? `${editing.m.label || KIND_WORDS[editing.m.kind]} — tap ${sl ? sl[1] : 'a point'}` + (editing.m.kind === 'angle' && editing.slot === 'b' ? ' (a joint fills all three)' : '') : 'Tap a slot on a card, then a point here', 8, 12);
   }
   function hitAt(e) {
     const T = mTransform(), r = mcanvas.getBoundingClientRect(), K = draft.figure.points.A, N = NAME[figView()];
@@ -578,7 +575,6 @@ Moves.ready.then(function () {
     if (!j || !j.A) return;   // the editor before any figure is set
     draft.figure = { points: Object.assign({}, j, { B: j.hold ? undefined : j.B }) };
     draft.muscles = j.w || {};
-    for (const m of draft.measurements) retune(m);
     commit(false);
     /* the edges on the cards follow too */
     document.querySelectorAll('[data-def]').forEach((n) => { if (document.activeElement !== n) n.value = draft.defaults[n.dataset.def]; });
@@ -636,61 +632,80 @@ Moves.ready.then(function () {
     s.appendChild(more); host.appendChild(s);
 
     /* 2 — drawn */
-    s = section('The movement, drawn', 'A is the start, B the end; the coach animates between them. Drag the joints. What you draw is what step 3 measures.');
+    s = section('The movement, drawn', 'A is the start, B the end; the coach animates between them. Drag the joints. The drawing is the demo on the exercise page and a picture to measure on; step 3 does not change when it moves.');
     placeEditor(s);
     host.appendChild(s);
 
     /* 3 — measured */
-    s = section('What is measured', 'Pick the kind, then tap a point on the figure for each slot; the list walks on to the next. Every landmark the camera reads is there, the far side dimmer. Each measurement reads its value at A and at B off the drawing, and its role says what it is for: the one that tracks the rep, the ones that must be right at the top, a note that is called but does not stop the count, or just a reading.');
-    s.appendChild(chips(Object.keys(SLOTS).map((k) => [k, KIND_WORDS[k], KIND_HELP[k]]), making.kind, (v) => { setKind(v); drawMeasure(); renderSlots(); document.querySelectorAll('#build-form .kind-chips .btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kind === v))); }));
-    s.lastChild.classList.add('kind-chips'); s.lastChild.querySelectorAll('.btn').forEach((b, i) => { b.dataset.kind = Object.keys(SLOTS)[i]; });
-    slotHost = el('div'); s.appendChild(slotHost); renderSlots();
+    s = section('What is measured', 'A measurement is a kind and a landmark for each of its slots — pick from the list over a slot, or tap the point on the figure. Its role says what it is for: the one that tracks the rep, the ones that must be right at the top, a note that is called but does not stop the count, or just a reading. Edges and thresholds are yours to type; “From the drawing” fills them from the figure’s start and end.');
     mcanvas = el('canvas', 'measure-fig'); mcanvas.setAttribute('aria-label', 'The figure, to tap what is measured');
     mcanvas.addEventListener('pointerdown', (e) => { e.preventDefault(); tapped(hitAt(e)); });
     s.appendChild(mcanvas);
-    if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. The first measurement becomes what the rep is tracked by.' : 'Nothing measured yet. Measure what has to be right for the hold.'));
+    s.appendChild(btn('Add a measurement', addMeasure, 'primary'));
+    if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. Add one and make it the one that tracks the rep.' : 'Nothing measured yet. Add what has to be right for the hold.'));
     d.measurements.forEach((m, i) => {
-      const card = el('div', 'mcard'); const role = roleOf(m);
+      const card = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); const role = roleOf(m);
       const head = el('div', 'mhead');
       head.appendChild(el('b', null, esc(m.label || m.key)));
-      head.appendChild(el('span', 'mvals', ''));
-      head.lastChild.dataset.val = m.key;
+      head.appendChild(el('span', 'mvals', '')); head.lastChild.dataset.val = m.key;
       const tools = el('span', 'rowtools');
       tools.appendChild(btn('↑', () => { if (i > 0) { [d.measurements[i - 1], d.measurements[i]] = [d.measurements[i], d.measurements[i - 1]]; commit(true); } }, 'tiny-btn'));
       tools.appendChild(btn('↓', () => { if (i < d.measurements.length - 1) { [d.measurements[i + 1], d.measurements[i]] = [d.measurements[i], d.measurements[i + 1]]; commit(true); } }, 'tiny-btn'));
       tools.appendChild(btn('✕', () => { removeMeasure(m); commit(true); }, 'tiny-btn'));
       head.appendChild(tools);
       card.appendChild(head);
-      const roles = d.type === 'reps' ? [['progress', 'tracks the rep'], ['hold', 'must be right at the top'], ['note', 'a note — called, does not stop the count'], ['reading', 'just a reading']] : [['hold', 'must be right for the hold'], ['note', 'a note — called, does not stop the clock'], ['reading', 'just a reading']];
-      card.appendChild(chips(roles, role, (v) => { if (v === 'progress') { const prev = d.measurements.find((q) => roleOf(q) === 'progress'); if (prev && prev !== m) setRole(prev, 'hold'); } setRole(m, v); commit(true); }));
+      /* the kind and its slots */
       g = grid('tight');
-      if (m.band) {
-        const kind = Spec.bandKind(m.band);
-        const refs = kind === 'sym' ? [['sym', 'within ±']] : kind === 'min' ? [['min', 'at least']] : kind === 'max' ? [['max', 'at most']] : [['lo', 'at least'], ['hi', 'at most']];
-        const edge = (label, key) => { const f = field(label, d.defaults[key], (v) => { d.defaults[key] = v; delete m.autoBand; }, { type: 'number' }); f.querySelector('input').dataset.def = key; return f; };
-        for (const [rk, rl] of refs) g.appendChild(edge(rl, m.band[rk]));
-        if (role === 'progress') { g.appendChild(edge('under way past', 'raiseAt')); g.appendChild(edge('counts back at', 'downAt')); }
-        if (m.autoBand) g.appendChild(el('p', 'auto-note', 'These follow the drawing (the value at the end, give or take) until you edit one.'));
+      g.appendChild(field('kind', m.kind, (v) => { const keep = new Set(slotsOf(v).map(([k]) => k)); for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) if (!keep.has(k)) delete m[k]; if (v !== 'distance') { delete m.per; delete m.times; } else { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); m.times = 100; } m.kind = v; nameIt(m); editing = { m, slot: nextEmpty(m) || slotsOf(v)[0][0] }; }, { options: Object.keys(SLOTS).map((k) => [k, KIND_WORDS[k]]), structural: true, title: KIND_HELP[m.kind] }));
+      g.appendChild(field('read as', m.fromStart || '', (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, { options: [['', 'the value'], ['change', 'change from the start position'], ['ratio', '% of its value at the start']], structural: true, title: 'against the start: the coach reads the value when the set-up wait ends and measures from it — a length seen by the camera shortens as the limb turns toward it' }));
+      card.appendChild(g);
+      const slotRow = el('div', 'chips slots');
+      for (const [k, words] of slotsOf(m.kind)) {
+        const b = btn(`${words}: ${m[k] ? esc(plain(m[k])) + (side_(m[k]) ? ` (${side_(m[k]) === 'other' ? 'other side' : side_(m[k]) === 'l' ? 'left' : 'right'})` : '') : '…'}`, () => { editing = { m, slot: k }; drawMeasure(); document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('editing', c === card)); slotRow.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); landmarkPopup(b, m, k); });
+        b.setAttribute('aria-pressed', String(!!(editing && editing.m === m && editing.slot === k)));
+        b.classList.add('slot'); slotRow.appendChild(b);
+      }
+      if (m.kind === 'distance') { const per = m.per || []; for (const n of [0, 1]) { const b = btn(`${n ? 'to' : 'as % of'}: ${per[n] ? esc(plain(per[n])) : '…'}`, () => { const pk = 'per' + n; m.per = m.per || ['knee', 'ankle']; landmarkPopup(b, { get [pk]() { return m.per[n]; }, set [pk](v) { m.per[n] = v; }, kind: m.kind, key: m.key }, pk); }); slotRow.appendChild(b); } }
+      card.appendChild(slotRow);
+      card.appendChild(el('p', 'tiny', esc(KIND_HELP[m.kind] || '')));
+      /* the role */
+      const roles = d.type === 'reps' ? [['progress', 'tracks the rep'], ['hold', 'must be right at the top'], ['note', 'a note — called, does not stop the count'], ['reading', 'just a reading']] : [['hold', 'must be right for the hold'], ['note', 'a note — called, does not stop the clock'], ['reading', 'just a reading']];
+      card.appendChild(chips(roles, role, (v) => { setRole(m, v); commit(true); }));
+      /* the numbers */
+      g = grid('tight');
+      if (role === 'progress') {
+        g.appendChild(field('it', d.progress.direction || 'up', (v) => { d.progress.direction = v; }, { options: [['up', 'rises during the rep'], ['down', 'falls during the rep']] }));
+        g.appendChild(field('under way past', d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, { type: 'number', title: 'the rep is under way once the reading passes this' }));
+        g.appendChild(field('counts back at', d.defaults.downAt, (v) => { d.defaults.downAt = v; }, { type: 'number', title: 'the rep counts once the reading is back past this' }));
+      }
+      if (role !== 'reading') {
+        const kind = Spec.bandKind(m.band) || 'none';
+        g.appendChild(field(role === 'progress' ? 'at the top it must be' : 'it must be', kind, (v) => { setBand(m, v); }, { options: [['none', 'anything (not judged)'], ['range', 'between two edges'], ['min', 'at least'], ['max', 'at most'], ['sym', 'within ± one number']], structural: true }));
+        if (m.band) {
+          const refs = kind === 'sym' ? [['sym', 'within ±']] : kind === 'min' ? [['min', 'at least']] : kind === 'max' ? [['max', 'at most']] : [['lo', 'at least'], ['hi', 'at most']];
+          for (const [rk, rl] of refs) { const key = m.band[rk]; const f = field(rl, d.defaults[key], (v) => { d.defaults[key] = v; }, { type: 'number' }); f.querySelector('input').dataset.def = key; g.appendChild(f); }
+        }
       }
       card.appendChild(g);
+      if (role !== 'reading' && filled(m)) card.appendChild(btn('From the drawing — the edges around the end, the thresholds between start and end', () => { fromDrawing(m); commit(true); }));
+      /* the faults */
       const fs = d.faults.filter((x) => x.measure === m.key);
       for (const x of fs) {
         const row = el('div', 'fault-row grid tight');
-        row.appendChild(field(`when ${x.side} the band: on the picture`, x.label, (v) => { x.label = v; }));
+        row.appendChild(field('when', x.side, (v) => { x.side = v; }, { options: [['above', 'above the band'], ['below', 'below the band']] }));
+        row.appendChild(field('on the picture', x.label, (v) => { x.label = v; }));
         row.appendChild(field('said', x.text, (v) => { x.text = v; }));
         row.appendChild(field('said when well past', x.deep, (v) => { x.deep = v; }));
         row.appendChild(field('coached before the first rep too', !!x.setup, (v) => { if (v) x.setup = true; else delete x.setup; }, { type: 'check' }));
+        const rm = btn('✕', () => { d.faults = d.faults.filter((q) => q !== x); commit(true); }, 'tiny-btn'); rm.title = 'remove this fault'; row.appendChild(rm);
         card.appendChild(row);
       }
+      if (m.band) card.appendChild(btn('Add a fault on this measurement', () => { d.faults.push({ id: m.key + 'Fault' + (fs.length + 1), measure: m.key, side: 'above', label: `${cap(m.short || m.key)}`, text: '', deep: '', tone: 'plain' }); commit(true); }));
       more = details('More about this measurement');
       const gg = grid('tight');
-      gg.appendChild(field('words for it', m.label, (v) => { m.label = v; }, { structural: true }));
-      gg.appendChild(field('short name on the picture', m.hud, (v) => { m.hud = v; }));
-      gg.appendChild(field('key', m.key, (v) => { const old = m.key; m.key = keyOf(v); for (const x of d.faults) if (x.measure === old) x.measure = m.key; if (d.progress && d.progress.measure === old) d.progress.measure = m.key; }, { structural: true }));
-      gg.appendChild(field('kind', m.kind, (v) => { m.kind = v; }, { options: Spec.KINDS, structural: true }));
-      const NEED = { angle: ['a', 'b', 'c'], tilt: ['base', 'top'], floor: ['at', 'to'], bend: ['a', 'b', 'c'], rise: ['a', 'b'], down: ['from', 'to'], distance: ['a', 'b'], sum: [] };
-      for (const k of NEED[m.kind] || []) gg.appendChild(field(k, Array.isArray(m[k]) ? m[k][0] : m[k], (v) => { m[k] = v; }, { options: lmOpts('—') }));
-      if (m.kind === 'distance') gg.appendChild(field('as a share of (two landmarks)', list(m.per), (v) => { const l = fromList(v); m.per = l.length === 2 ? l : undefined; }));
+      gg.appendChild(field('words for it', m.label, (v) => { m.label = v; m.named = true; }, { structural: true }));
+      gg.appendChild(field('short name on the picture', m.hud, (v) => { m.hud = v; m.named = true; }));
+      gg.appendChild(field('key', m.key, (v) => { const old = m.key; m.key = keyOf(v); m.named = true; for (const x of d.faults) if (x.measure === old) x.measure = m.key; if (d.progress && d.progress.measure === old) d.progress.measure = m.key; }, { structural: true }));
       gg.appendChild(field('offset (added)', m.offset, (v) => { if (v == null) delete m.offset; else m.offset = v; }, { type: 'number' }));
       gg.appendChild(field('times', m.times, (v) => { if (v == null) delete m.times; else m.times = v; }, { type: 'number' }));
       gg.appendChild(field('bias (taken off: a number or a setting)', m.bias, (v) => { if (v == null || v === '') delete m.bias; else m.bias = isNaN(Number(v)) ? v : Number(v); }));
@@ -756,7 +771,7 @@ Moves.ready.then(function () {
     /* 5 — the numbers */
     s = section('The numbers', 'The set and the hold. The edges and thresholds of what is measured are on their cards above.');
     g = grid('tight');
-    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number' })); g.appendChild(field('Hold at the top, seconds', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number' })); }
+    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number' })); g.appendChild(field('Hold at the top, seconds (0: the rep counts on reaching the top and coming back)', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number' })); }
     else g.appendChild(field('Hold the position for, seconds', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number' }));
     g.appendChild(field('Sets', d.defaults.setCount, (v) => { d.defaults.setCount = v; }, { type: 'number' }));
     if (d.type === 'hold') g.appendChild(field('Time calls, seconds left', list(d.defaults.callAtSec), (v) => { d.defaults.callAtSec = fromList(v).map(Number).filter((n) => n > 0); }));
@@ -807,5 +822,5 @@ Moves.ready.then(function () {
   if (kept) start(kept, kept.auto || {});
   else { renderStart(); $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.'; }
 
-  window.__builder = { get draft() { return draft; }, start, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, tapped, setKind, get making() { return making; }, keyOfName: (n) => keyOfName(n, figView()) };
+  window.__builder = { get draft() { return draft; }, start, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, tapped, addMeasure, fillSlot, setRole, setBand, fromDrawing, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
 });

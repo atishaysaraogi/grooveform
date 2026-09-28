@@ -153,30 +153,47 @@ pose sets the body position, the phone's orientation, which way the body
 faces, the placement words and the opening words; each stays the template's
 until edited, and a *use the template* link puts it back.
 
-Step 3, *What is measured*, works as the old Studio's did: pick the kind —
-angle at a joint, segment from vertical, segment from the floor, lifted from
-hanging, height of a point over another, distance as % of a segment, a
-point's offset from a line — and the kind's slots appear; tap a point on the
-figure for each, and the list walks itself on to the next. The figure shows
-every landmark the camera reads, named: ear, shoulder, elbow, wrist, hip,
-knee, ankle, heel and toe, the far side dimmer (left and right in a front
-view). On an angle with nothing filled, one tap on a joint fills all three
-slots from the limbs meeting there. Each finished measurement reads its value
-at A and at B off the drawing, and carries a role:
+Step 3, *What is measured*, works as the old Studio's did, and the drawing
+has no say in it: dragging the figure changes the demo and the values shown
+on the cards, nothing else. *Add a measurement* makes a card; on it, the
+kind — angle at a joint, segment from vertical, segment from the floor,
+lifted from hanging, height of a point over another, distance as % of a
+segment, a point's offset from a line — and a slot for each of the kind's
+points. A slot opens a list of every landmark (ear, shoulder, elbow, wrist,
+hip, knee, ankle, heel, toe; the side being measured and the other side, or
+left and right in a front view), or a tap on the figure below fills the slot
+being edited and moves on to the next. On an angle with nothing filled, one
+tap on a joint fills all three slots from the limbs meeting there. Each
+finished measurement reads its value at A and at B off the drawing, for
+reference.
+
+*Read as* says what the reading is: the value itself; the change from where
+it stood at the start (`fromStart: "change"`); or a percentage of where it
+stood at the start (`fromStart: "ratio"`) — so a segment's length as seen by
+the camera can be judged against its own length at the start, which is how a
+foot turning away from the camera, or a limb coming towards it, shows. The
+coach takes the baseline the moment the set-up wait ends.
+
+Each card carries a role:
 
 | role | in the file |
 |---|---|
-| tracks the rep | `progress` on it, `raiseAt`/`downAt` set between its A and B values, a band around its B value with a short and a too-far fault |
-| must be right | a band around where the drawing has it (one-sided at the extremes: a straight knee gets `min`), in `inPosition`, with faults either side |
-| a note | the same band and faults, left out of `inPosition`: called, but the count goes on |
+| tracks the rep | `progress` on it, `raiseAt`/`downAt` as settings, a band it must be inside at the top with a short and a too-far fault |
+| must be right | a band, in `inPosition` — the hold clock stops while it is out — with faults either side |
+| a note | a band and faults, left out of `inPosition`: called, but the count goes on |
 | just a reading | no band: on the picture only |
 
-The first measurement of a rep exercise tracks the rep. A band's edges — and
-its shape, one-sided at the extremes — follow the drawing until an edge is
-edited. Landmarks, `needed`, bones, the
-skeleton's colours and the drawing list are derived from the measurements;
-the faults' words are templates to rewrite on the card; everything else the
-file allows is under *More* on each card and each step.
+The band's shape is chosen — between two edges, at least, at most, within ±
+one number — and its edges are typed, as are the two thresholds of the rep;
+each starts from a default for the kind. *From the drawing* fills them from
+the figure on request: the edges around the value at B, the thresholds
+between A and B. Every band comes with a fault a side, worded from a
+template and rewritten on the card; *Add a fault* adds another. Landmarks,
+`needed`, bones, the skeleton's colours and the drawing list are derived from
+the measurements; everything else the file allows is under *More* on each
+card and each step. A new rep exercise asks for no hold at the top: the rep
+counts on reaching the top and coming back, until the hold field says
+otherwise.
 
 ## Landmarks
 
@@ -264,6 +281,13 @@ measurement is within `min`/`max` (numbers, or settings' names); otherwise it
 is null, not judged, and with `optional` the frame stands. The side-lying
 raise's toe angle is gated on the foot's length against the shin, so it is
 read only when the foot is long enough in the picture to be in profile.
+`fromStart` reads the measurement against the start position: `"change"` is
+the reading less its value when the set-up wait ended, `"ratio"` is percent
+of that value. Until the wait ends the baseline follows the person, so the
+reading is no change and the start position can be held; then it is frozen
+for the set. A length seen by the camera shortens as the limb turns toward
+it, and `"ratio"` on a `distance` is how that turning is measured — an arm
+raised toward the phone, a thigh drawn up in a front view.
 
 A **band** makes the measurement judged, gives it a lane on the Review page,
 a card on the live page and a line on the HUD: `{lo, hi}` between two edges,

@@ -7,6 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Core = require('../public/js/core.js');
 const Moves = require('../public/js/moves.js');
+const Spec = require('../public/js/spec.js');
 
 const D = Math.PI / 180;
 /* A side-on body from joint angles, in a frame `aspect` wide. Angles follow the
@@ -292,4 +293,39 @@ test('every new exercise carries what the page and the voice need', () => {
     assert.ok(m.tags.length >= 3, id + ': tags for the search');
     for (const f of m.faults) if (f !== 'lost' && !m.prompts.includes(f)) assert.ok(m.cues[f].label.length <= 26, id + ': ' + f + ' label');
   }
+});
+
+test('a measurement read against the start: no change until the set-up wait ends, then the change or the percent of it', () => {
+  /* a length seen by the camera, as a share of the shin: the foot at the start, then three times longer */
+  const file = Spec.blank();
+  file.id = 'reach'; file.name = 'Reach'; file.position = 'lying';
+  file.landmarks = { joints: ['hip', 'knee', 'ankle', 'heel', 'toe'], needed: ['hip', 'knee', 'ankle', 'heel', 'toe'], bones: [['hip', 'knee'], ['knee', 'ankle']], dots: ['hip', 'knee', 'ankle'], limb: {} };
+  file.measurements = [{ key: 'foot', label: 'foot length, % of its start', hud: 'FOOT', kind: 'distance', a: 'toe', b: 'heel', per: ['knee', 'ankle'], times: 100, fromStart: 'ratio', band: { lo: 'footMin', hi: 'footMax' }, scale: [0, 400], settings: [{ key: 'footMin', label: 'at the top, at least', min: 100, max: 400 }, { key: 'footMax', label: 'at the top, at most', min: 100, max: 500 }] }];
+  file.progress = { measure: 'foot', raiseAt: 'raiseAt', downAt: 'downAt', direction: 'up' };
+  file.prompt = { id: 'raise', text: 'Reach' };
+  file.faults = [{ id: 'footShort', measure: 'foot', side: 'below', label: 'Short', text: 'Further', tone: 'up' }];
+  file.draw = []; file.settings = [];
+  file.defaults = { footMin: 250, footMax: 400, raiseAt: 180, downAt: 130, holdTargetSec: 0, callAtSec: [], repCount: 10, setCount: 1, lowerSec: 0, restSec: 0, deepAt: 10 };
+  assert.deepEqual(Spec.check(file).filter((p) => p.level === 'error'), [], 'a whole file');
+  const M = Spec.compile(file, Core);
+  assert.deepEqual(M.fromStart, [{ key: 'foot', how: 'ratio' }]);
+  const c = new Core.Coach(M), sm = new Core.Smoother(1);
+  const at = (o, t) => c.step(sm.apply(M.read(body(o), 16 / 9, c.cfg)), t);
+  /* a long foot to begin with: the reading is 100 — no change — whatever the length, so the wait can end */
+  let out; for (let t = 0; t < 2600; t += 33) out = at(Object.assign({}, SUPINE, { footLen: 0.06 }), t);
+  assert.equal(out.ready, true, 'the wait ended on a reading of no change');
+  assert.ok(Math.abs(out.reading.foot - 100) < 0.01, 'at the start: ' + out.reading.foot);
+  /* then the foot three times longer in the picture: three hundred percent of its start */
+  for (let t = 2600; t < 3600; t += 33) out = at(Object.assign({}, SUPINE, { footLen: 0.18 }), t);
+  assert.ok(Math.abs(out.reading.foot - 300) < 0.01, 'three times: ' + out.reading.foot);
+  assert.equal(out.phase, 'lower', 'past raiseAt and within the band: the top, and no hold asked for');
+  for (let t = 3600; t < 4600; t += 33) out = at(Object.assign({}, SUPINE, { footLen: 0.06 }), t);
+  assert.equal(c.reps, 1, 'back to the start: a rep');
+  /* "change" is the difference */
+  file.measurements[0].fromStart = 'change'; file.defaults.raiseAt = 150; file.defaults.downAt = 30; file.defaults.footMin = 150; file.defaults.footMax = 300;
+  const M2 = Spec.compile(file, Core), c2 = new Core.Coach(M2), sm2 = new Core.Smoother(1);
+  for (let t = 0; t < 2600; t += 33) out = c2.step(sm2.apply(M2.read(body(Object.assign({}, SUPINE, { footLen: 0.06 })), 16 / 9, c2.cfg)), t);
+  assert.ok(Math.abs(out.reading.foot) < 0.01, 'no change at the start');
+  for (let t = 2633; t < 2800; t += 33) out = c2.step(sm2.apply(M2.read(body(Object.assign({}, SUPINE, { footLen: 0.18 })), 16 / 9, c2.cfg)), t);   // three frames: the median of three needs them
+  assert.ok(Math.abs(out.reading.foot - (0.18 - 0.06) / 0.19 * 100) < 3, 'the change, in the measurement\'s own units (percent points of the shin): ' + out.reading.foot);
 });

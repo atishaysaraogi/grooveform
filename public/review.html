@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-28b">
+<html lang="en" data-v="2026-09-28c">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-28b">
+<link rel="stylesheet" href="styles.css?v=2026-09-28c">
 </head>
 <body class="review">
 <header class="bar">
@@ -21,7 +21,7 @@
 <main>
   <!-- ============ build: an exercise, from a pose to a file ============ -->
   <section id="pane-build" hidden>
-    <p class="muted">An exercise is one file. Start from a pose, draw the movement, click the figure to say what is measured, and the file writes itself: the phone, the words, the skeleton, the numbers all come with defaults you can change. When it is whole it stands in the library on this browser, the Recordings tab judges videos with it and Try it live runs it in the coach. Download it and drop it into <code>public/exercises</code>.</p>
+    <p class="muted">An exercise is one file. Start from a pose, draw the movement, add the measurements — a kind and its points, from a list or a tap on the figure — and the file writes itself: the phone, the words, the skeleton, the numbers all come with defaults you can change. When it is whole it stands in the library on this browser, the Recordings tab judges videos with it and Try it live runs it in the coach. Download it and drop it into <code>public/exercises</code>.</p>
     <div id="build-start" class="build-start"></div>
     <div class="row">
       <button class="btn" id="build-copy">Edit a copy of the exercise selected above</button>
@@ -90,9 +90,17 @@
     <p class="note" id="progress" hidden></p>
 
     <div class="review-grid">
-      <div class="stage small" id="stage">
-        <video id="clip" playsinline muted controls></video>
-        <canvas id="overlay"></canvas>
+      <div class="stage-col">
+        <div class="stage small" id="stage">
+          <video id="clip" playsinline muted controls></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <section class="panel lanes-panel">
+          <h2>What was read <span class="tiny" id="trace-note">no recording yet</span></h2>
+          <canvas id="lanes" height="10"></canvas>
+          <p class="tiny">The top lane is the rep: the reading a rep is judged on, the line a rep starts at (blue), the line it must come back to (amber) and the band the top must be inside (green). Behind it, what the coach was doing: grey — waiting for the start position, nothing counts yet; blue — between reps; green — up, with the thick green on the line where the hold clock ran; amber — lowering. A rep is marked where it began, an attempt that was not counted with ×, and a movement that fell short of the starting line with ?. Below, one lane per band, red marks where it was out, and the coach's cues. Tap anywhere to go to that moment.</p>
+          <ol class="log" id="cue-log"></ol>
+        </section>
       </div>
       <div class="panel">
         <label class="tiny"><input type="checkbox" id="all-points"> Show every point the model sees, with how sure it is of each — the joints not tracked for this exercise too (a review aid; drawn into the demo film as well)</label>
@@ -116,15 +124,8 @@
     </div>
 
     <section class="panel">
-      <h2>What was read <span class="tiny" id="trace-note">no recording yet</span></h2>
-      <canvas id="lanes" height="10"></canvas>
-      <p class="tiny">Each lane is one reading against its band (green). Red marks are frames where that band was out. The bottom lane is the coach: phases, and the cues it would have said, at the moments it would have said them. Tap anywhere to go to that moment.</p>
-      <ol class="log" id="cue-log"></ol>
-    </section>
-
-    <section class="panel">
       <h2>Rep by rep <span class="tiny" id="reps-note"></span></h2>
-      <p class="tiny">Each rep the coach saw — counted, or an attempt it dropped — with every fault it had on the screen inside it and from when to when, whether the fault was said and at what moment, and the set-up faults in the pause before it. A fault has to hold for the persist time to be listed, as it has to before it is said; a flicker shorter than that is left out. Move a number above and this changes with it. Tap a rep to go to it.</p>
+      <p class="tiny">Each rep the coach saw — counted, or an attempt it dropped — with why it counted or did not (how far it got against the lines, how long the hold clock ran against the hold asked, which band broke the position), then every fault it had on the screen inside it and from when to when, whether the fault was said and at what moment, and the set-up faults in the pause before it. A fault has to hold for the persist time to be listed, as it has to before it is said; a flicker shorter than that is left out. Move a number above and this changes with it. Tap a rep to go to it.</p>
       <ol class="reps" id="reps"></ol>
     </section>
 
@@ -146,19 +147,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-09-28b"></script>
-<script src="js/spec.js?v=2026-09-28b"></script>
-<script src="js/moves.js?v=2026-09-28b"></script>
-<script src="js/trace.js?v=2026-09-28b"></script>
-<script src="js/overlay.js?v=2026-09-28b"></script>
-<script src="js/sound.js?v=2026-09-28b"></script>
-<script src="js/codec.js?v=2026-09-28b"></script>
-<script src="js/mp4.js?v=2026-09-28b"></script>
-<script src="js/speech.js?v=2026-09-28b"></script>
-<script src="js/mixdown.js?v=2026-09-28b"></script>
-<script src="js/figure.js?v=2026-09-28b"></script>
-<script src="js/anatomy.js?v=2026-09-28b"></script>
-<script src="js/review.js?v=2026-09-28b"></script>
-<script src="js/builder.js?v=2026-09-28b"></script>
+<script src="js/core.js?v=2026-09-28c"></script>
+<script src="js/spec.js?v=2026-09-28c"></script>
+<script src="js/moves.js?v=2026-09-28c"></script>
+<script src="js/trace.js?v=2026-09-28c"></script>
+<script src="js/overlay.js?v=2026-09-28c"></script>
+<script src="js/sound.js?v=2026-09-28c"></script>
+<script src="js/codec.js?v=2026-09-28c"></script>
+<script src="js/mp4.js?v=2026-09-28c"></script>
+<script src="js/speech.js?v=2026-09-28c"></script>
+<script src="js/mixdown.js?v=2026-09-28c"></script>
+<script src="js/figure.js?v=2026-09-28c"></script>
+<script src="js/anatomy.js?v=2026-09-28c"></script>
+<script src="js/review.js?v=2026-09-28c"></script>
+<script src="js/builder.js?v=2026-09-28c"></script>
 </body>
 </html>
