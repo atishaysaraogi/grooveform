@@ -1073,8 +1073,10 @@ try {
     await page.click('#lanes', { position: { x: 400, y: 20 } });
     await wait(300);
     assert.ok((await page.evaluate(() => document.getElementById('clip').currentTime)) > 0.5, 'a tap on the lanes goes to that moment');
-    /* the animation editor */
-    await page.click('#tab-anim');
+    /* the animation editor: in the Build tab now, working on a draft — a copy of the bridge */
+    await page.click('#tab-build');
+    await page.click('#build-copy');
+    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     await wait(300);
     const before = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
     assert.match(await page.inputValue('#anim-json'), /"view":"side","A":\{"h"/, 'the bridge\'s figure loaded');

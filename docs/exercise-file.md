@@ -9,7 +9,7 @@ rewrites `index.json` from the folder; the dev server lists the folder itself.
 
 The Build tab of `review.html` writes these files. It checks every change
 against the rules below, and when the file is whole it stands in the library
-on that browser: the Recordings tab judges videos with it, the Animation tab
+on that browser: the Recordings tab judges videos with it, the Build tab
 draws it, and *Try it live* runs it in the coach.
 
 `public/js/spec.js` is the reader: `Spec.check(file)` lists the problems,
@@ -118,7 +118,7 @@ Degrees: `torso` from vertical (+ leaning the way the body faces); `thigh`,
 "figure": { "points": { "A": { "h": [380, 144], "sh": [362, 150], ... }, "B": { ... }, "flip": true, "side": "both", "wall": 340, "props": [] } }
 ```
 
-Points are what the Animation tab drags (a 400×175 space, floor at y 163);
+Points are what the figure editor in the Build tab drags (a 400×175 space, floor at y 163);
 `props` are the equipment the figure module can draw (box, bar, disc, band).
 Every exercise page draws the figure from its file, nothing else, so an
 edited file is what shows.
@@ -126,22 +126,47 @@ edited file is what shows.
 ### Editing an existing exercise's animation
 
 1. Open `review.html` (the ◔ button) and pick the exercise in the dropdown.
-2. Build tab → *Edit a copy of the one selected above*. It is a draft now.
-3. Animation tab. The draft's figure is loaded. Press *A — start* or *B — end*
-   and drag the joints; shift-drag moves the whole figure; the dimmer handles
-   are the far limbs. Set *Holds still*, *Faces*, *Working side*, the wall,
-   and the muscle sliders. The preview beside it plays the result.
-4. Build tab → *The figure* → *Given as: points* → *Take the figure from the
-   Animation tab*. The problems list should stay clear.
-5. *Try it live* opens the exercise's page in the coach with the new figure
-   animating over the top half.
-6. *Download the file* and replace `public/exercises/<id>.json` with it, then
+2. Build tab → *Edit a copy of the exercise selected above*. It is a draft now,
+   and step 2 of the form, *The movement, drawn*, holds its figure. A figure
+   the file gives as angles is turned into points there.
+3. Press *A — start* or *B — end* and drag the joints; shift-drag moves the
+   whole figure; in a side view the dimmer handles are the far limbs. Set
+   *Holds still*, *Faces*, *Working side*, the wall, and under *Muscles
+   working* the sliders. The preview beside it plays the result. Every drag
+   goes straight into the draft; nothing has to be copied across.
+4. The problems list should stay clear. *Try it live* opens the exercise's
+   page in the coach with the new figure animating over the top half.
+5. *Download the file* and replace `public/exercises/<id>.json` with it, then
    commit and push. Then *Drop the draft* on either page, so the browser uses
    the library's copy again.
 
-For a figure given as angles, step 3 can instead be the *The figure* section
-of the Build tab: change the numbers for A and B and the preview on the
-exercise page follows.
+### Building an exercise from nothing
+
+The Build tab starts from a pose: side on or facing the phone × standing,
+seated, kneeling, on the back, on the front, on all fours, on the side. The
+pose sets the body position, the phone's orientation, which way the body
+faces, the placement words and the opening words; each stays the template's
+until edited, and a *use the template* link puts it back.
+
+Step 3, *What is measured*, is the figure again, to tap. A mode chip says
+what a tap means: the **angle at a joint** (the two limbs meeting there), the
+**lean of a limb** (the torso from upright; a leg or arm from hanging), the
+**height of one point over another** (tap the reference, then the point), or
+the **length between two points** (as a share of the shin). Each tap adds a
+measurement whose value at A and at B is read off the drawing, and a role:
+
+| role | in the file |
+|---|---|
+| tracks the rep | `progress` on it, `raiseAt`/`downAt` set between its A and B values, a band around its B value with a short and a too-far fault |
+| must be right | a band around where the drawing has it (one-sided at the extremes: a straight knee gets `min`), in `inPosition`, with faults either side |
+| a note | the same band and faults, left out of `inPosition`: called, but the count goes on |
+| just a reading | no band: on the picture only |
+
+The first measurement of a rep exercise tracks the rep. A band's edges follow
+the drawing until one of them is edited. Landmarks, `needed`, bones, the
+skeleton's colours and the drawing list are derived from the measurements;
+the faults' words are templates to rewrite on the card; everything else the
+file allows is under *More* on each card and each step.
 
 ## Landmarks
 

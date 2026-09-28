@@ -589,15 +589,24 @@ becomes `draw`. The five exercises that were written by hand were written
 again as files, and the same tests held every number they act on to the
 same bodies before and after.
 
-**The Build page** (`review.html`, the Build tab) writes the file on a form:
-every field, grouped as the file is, checked on every change, with the
-problems listed. A new exercise starts from a blank one, from a copy of a
-library exercise, or from a file. When the file is whole it stands in the
-library on that browser — the Recordings tab judges videos with it and hands
-the tuned numbers back into it, the Animation tab draws its figure and hands
-the points back, and *Try it live* opens it in the coach, where it is listed
-with a draft badge and runs like any other. Download the file, drop it into
-the folder, push.
+**The Build page** (`review.html`, the Build tab) makes the file from a
+pose, in five steps: the exercise (a name, reps or a hold, sides, load); the
+movement drawn (the figure editor: a starting pose — side on or facing the
+phone × standing, seated, kneeling, on the back, on the front, on all fours,
+on the side — dragged into a start and an end); what is measured, chosen by
+tapping the figure (the angle at a joint, the lean of a limb, the height of
+one point over another, the length between two), each measurement reading its
+value at A and B off the drawing and given a role — tracks the rep, must be
+right, a note, just a reading — from which its band, thresholds and faults
+come; the phone and the words, templated from the pose with the long tail
+under *More words*; and the numbers. Landmarks, bones, the skeleton's colours
+and the drawing on the picture are derived from the measurements. Every field
+the file has is still reachable under *More*. A copy of a library exercise or
+a loaded file opens the same way. The draft is checked on every change with
+the problems listed; when whole it stands in the library on that browser —
+the Recordings tab judges videos with it and hands the tuned numbers back,
+and *Try it live* opens it in the coach, listed with a draft badge. Download
+the file, drop it into the folder, push.
 
 `docs/exercise-template.xlsx` is the same brief as a spreadsheet, for working
 an exercise out away from the page; `scripts/exercise-template.py` builds it.

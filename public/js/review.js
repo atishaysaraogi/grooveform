@@ -36,7 +36,9 @@ Moves.ready.then(function () {
     move = Moves[id] || Moves.bridge || Moves.list[0]; $('move').value = move.id;
     if (!same) tuned = {};
     $('tuned-to-draft').hidden = !move.draft;
-    buildSliders(); buildTags(); rerun(); if (!same) animLoad();
+    buildSliders(); buildTags(); rerun();
+    /* the editor follows the exercise unless the builder has a draft, whose figure it holds */
+    if (!same && !(window.__builder && window.__builder.draft)) animLoad();
   }
   function buildSliders() {
     const host = $('sliders'); host.innerHTML = '';
@@ -365,21 +367,29 @@ Moves.ready.then(function () {
   };
 
   /* ---------- the animation editor: the muscle figure, by hand ---------- */
-  const KEYS = ['h', 'sh', 'hip', 'kn', 'an', 'ft', 'el', 'wr', 'knF', 'anF', 'ftF', 'elF', 'wrF'];
+  /* the points of a figure, by view: a side view has one limb near and one far; a
+     front view (a body lying on its side facing the camera) has a left and a right */
+  const KEYS_BY = { side: ['h', 'sh', 'hip', 'kn', 'an', 'ft', 'el', 'wr', 'knF', 'anF', 'ftF', 'elF', 'wrF'], front: ['h', 'shL', 'shR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'elL', 'wrL', 'elR', 'wrR'] };
   const FAR = new Set(['knF', 'anF', 'ftF', 'elF', 'wrF']);
-  const fig = { A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {} };
-  let kf = 'A', drag = null;
+  const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {} };
+  const KEYS = () => KEYS_BY[fig.view] || KEYS_BY.side;
+  let kf = 'A', drag = null, quiet = false;
   const edit = $('anim-edit');
+  const copyK = (K, keys) => { const o = {}; for (const k of keys) if (K && K[k]) o[k] = [K[k][0], K[k][1]]; return o; };
+  /* a figure given as points (a file's figure.points, or the builder's draft) into the editor */
+  function setFig(f) {
+    if (!f || !f.A) return;
+    fig.view = f.view === 'front' && f.A.hipL ? 'front' : 'side';
+    fig.A = copyK(f.A, KEYS()); fig.B = copyK(f.B || f.A, KEYS());
+    fig.hold = !!f.hold; fig.flip = !!f.flip; fig.side = f.side || 'both'; fig.wall = f.wall != null ? f.wall : null; fig.w = Object.assign({}, f.w || {});
+    $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall;
+    buildWeights(); quiet = true; animChanged(); quiet = false;
+  }
+  /* the selected exercise's figure into the editor */
   function animLoad() {
     const f = window.Figure ? Figure.figureOf(move) : null;
-    const copy = (K) => { const o = {}; for (const k of KEYS) if (K && K[k]) o[k] = [K[k][0], K[k][1]]; return o; };
-    fig.A = f ? copy(f.A) : copy(Figure.fromAngles({ A: { torso: 0 } }).A);
-    fig.B = f ? copy(f.B || f.A) : copy(fig.A);
-    fig.hold = !!(f && f.hold); fig.flip = !!(move.figure && move.figure.flip) || (move.pose && move.pose.A && move.pose.A.face === 'left');
-    fig.side = (move.figure && move.figure.side) || 'both'; fig.wall = f && f.wall != null ? f.wall : null;
-    fig.w = Object.assign({}, move.muscles || (move.figure && move.figure.w) || {});
-    $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall;
-    buildWeights(); animChanged();
+    const base = f || Object.assign(Figure.fromAngles({ A: { torso: 0 } }), { view: 'side' });
+    setFig(Object.assign({}, base, { view: base.view || (move.figure && move.figure.view) || 'side', flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), side: (move.figure && move.figure.side) || 'both', w: move.muscles || (move.figure && move.figure.w) || {} }));
   }
   function buildWeights() {
     const host = $('weights'); host.innerHTML = '';
@@ -390,18 +400,20 @@ Moves.ready.then(function () {
       lab.querySelector('input').oninput = (e) => { fig.w[k] = Number(e.target.value) / 100; $('w-' + k).textContent = fig.w[k].toFixed(2); if (!fig.w[k]) delete fig.w[k]; animChanged(); };
     }
   }
-  const figureJson = () => ({ view: 'side', A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}) });
+  const figureJson = () => ({ view: fig.view, A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}) });
   function animChanged() {
     drawEditor();
     const j = figureJson();
     $('anim-json').value = JSON.stringify(j);
     A.register('edit', Object.assign({}, j, { B: j.B || j.A }));
-    A.mountAll($('pane-anim'));
+    A.mountAll($('fig-editor'));
+    /* the builder's draft carries the figure: every drag goes to it */
+    if (!quiet && window.__builder && window.__builder.figChanged) window.__builder.figChanged(j);
   }
   /* the editor's canvas: the keyframe drawn as the muscle figure, the joints as handles */
   function fitBox() {
     const xs = [216, 400], ys = [26, 168];
-    for (const K of [fig.A, fig.B]) for (const k in K) { xs.push(K[k][0]); ys.push(K[k][1]); }
+    for (const K of [fig.A, fig.B]) for (const k in K || {}) { xs.push(K[k][0]); ys.push(K[k][1]); }
     if (fig.wall != null) xs.push(fig.wall);
     const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 10, y0 = Math.min(...ys) - 16;
     return { x: x0, y: y0, w: x1 - x0, h: 168 - y0 };
@@ -416,7 +428,8 @@ Moves.ready.then(function () {
     if (!r.width) return;
     edit.width = Math.round(r.width * dpr); edit.height = Math.round(r.height * dpr);
     const ctx = edit.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
-    const T = editTransform(), K = fig[kf];
+    const K = fig[kf]; if (!K) return;   // nothing to draw until a figure is set
+    const T = editTransform();
     ctx.save(); ctx.translate(T.tx, T.ty); ctx.scale(T.s, T.s);
     ctx.strokeStyle = C.line; ctx.lineWidth = 2 / T.s; ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
     if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
@@ -426,9 +439,9 @@ Moves.ready.then(function () {
     };
     const drive = kf === 'B' || fig.hold ? 1 : 0.25, heats = {};
     for (const k of A.regions) heats[k] = 0.07 + (fig.w[k] || 0) * drive * 0.93;
-    try { A.drawFigure(ctx, A.unify(K, 'side'), P, heats, 'side', { hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w }); } catch { }
+    try { A.drawFigure(ctx, A.unify(K, fig.view), P, heats, fig.view, { hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w }); } catch { }
     /* the handles */
-    for (const k of KEYS) {
+    for (const k of KEYS()) {
       const p = K[k]; if (!p) continue;
       ctx.beginPath(); ctx.arc(p[0], p[1], 4 / T.s, 0, Math.PI * 2);
       ctx.fillStyle = FAR.has(k) ? 'rgba(90,169,255,.55)' : C.accent; ctx.fill();
@@ -443,7 +456,7 @@ Moves.ready.then(function () {
   edit.addEventListener('pointerdown', (e) => {
     const [x, y] = toFig(e), K = fig[kf];
     let best = null, bd = 12;
-    for (const k of KEYS) { const p = K[k]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = k; } }
+    for (const k of KEYS()) { const p = K[k]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = k; } }
     drag = { key: e.shiftKey ? '*' : best, last: [x, y] };
     if (drag.key) { edit.setPointerCapture(e.pointerId); e.preventDefault(); }
   });
@@ -470,13 +483,13 @@ Moves.ready.then(function () {
 
   /* ---------- tabs and wiring ---------- */
   function showTab(which) {
-    for (const t of ['build', 'review', 'anim']) { $('pane-' + t).hidden = which !== t; $('tab-' + t).setAttribute('aria-selected', String(which === t)); }
-    if (which === 'anim') animChanged(); else if (which === 'review') { sizeOverlay(); drawLanes(); drawOverlay(); }
+    if (which === 'anim') which = 'build';   // the animation editor lives in the Build tab now
+    for (const t of ['build', 'review']) { $('pane-' + t).hidden = which !== t; $('tab-' + t).setAttribute('aria-selected', String(which === t)); }
+    if (which === 'build') animChanged(); else if (which === 'review') { sizeOverlay(); drawLanes(); drawOverlay(); }
     try { history.replaceState(null, '', location.pathname + '?tab=' + which + (move ? '&move=' + move.id : '')); } catch { }
   }
   $('tab-build').onclick = () => showTab('build');
   $('tab-review').onclick = () => showTab('review');
-  $('tab-anim').onclick = () => showTab('anim');
   $('move').onchange = () => pickMove($('move').value);
 
   /* ---------- a demo film: the clip drawn over and voiced, after the fact ----------
@@ -564,7 +577,7 @@ Moves.ready.then(function () {
   window.__review = {
     get demo() { return demo; },
     get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
-    get fig() { return figureJson(); }, get move() { return move; }, pickMove, refreshMoves, setTuned, showTab,
+    get fig() { return figureJson(); }, get move() { return move; }, pickMove, refreshMoves, setTuned, showTab, setFig, animLoad, animChanged,
     loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; judge(); },
   };
   const q = new URLSearchParams(location.search);

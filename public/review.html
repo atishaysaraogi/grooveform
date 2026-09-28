@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-27b">
+<html lang="en" data-v="2026-09-28a">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-27b">
+<link rel="stylesheet" href="styles.css?v=2026-09-28a">
 </head>
 <body class="review">
 <header class="bar">
@@ -14,35 +14,65 @@
   <nav class="tabs" role="tablist">
     <button class="tab" id="tab-build" role="tab" aria-selected="false">Build</button>
     <button class="tab" id="tab-review" role="tab" aria-selected="true">Recordings</button>
-    <button class="tab" id="tab-anim" role="tab" aria-selected="false">Animation</button>
   </nav>
   <a class="chip" href="index.html">Back to the coach</a>
 </header>
 
 <main>
-  <!-- ============ build: an exercise's file, written on a page ============ -->
+  <!-- ============ build: an exercise, from a pose to a file ============ -->
   <section id="pane-build" hidden>
-    <p class="muted">An exercise is one file (<code>public/exercises/&lt;id&gt;.json</code>): what it measures, what counts as right, what it says and in what order, how it is drawn, the words around it. Build one here from nothing, from a copy of a library exercise, or from a file; every change is checked. When it is whole it stands in the library on this browser, so the Recordings tab judges videos with it, the Animation tab draws it, and Try it live runs it in the coach. Download the file and drop it into the folder: the app reads the folder.</p>
+    <p class="muted">An exercise is one file. Start from a pose, draw the movement, click the figure to say what is measured, and the file writes itself: the phone, the words, the skeleton, the numbers all come with defaults you can change. When it is whole it stands in the library on this browser, the Recordings tab judges videos with it and Try it live runs it in the coach. Download it and drop it into <code>public/exercises</code>.</p>
+    <div id="build-start" class="build-start"></div>
     <div class="row">
-      <button class="btn primary" id="build-new">New exercise</button>
-      <button class="btn" id="build-copy">Edit a copy of the one selected above</button>
+      <button class="btn" id="build-copy">Edit a copy of the exercise selected above</button>
       <label class="btn file"><input type="file" id="build-file" accept=".json,application/json">Load a file</label>
-      <button class="btn" id="build-download">Download the file</button>
       <button class="btn primary" id="try-live" disabled>Try it live</button>
+      <button class="btn" id="build-download">Download the file</button>
       <button class="btn" id="build-drop">Drop the draft</button>
     </div>
     <p class="note" id="build-note"></p>
+    <div id="build-form" class="build-form"></div>
+    <!-- the figure editor: static markup the builder places into its "drawn" step; parked here when no draft is open -->
+    <div id="fig-park" hidden>
+      <div id="fig-editor" class="review-grid">
+        <div>
+          <div class="row">
+            <span class="seg" role="radiogroup" aria-label="Keyframe">
+              <button class="btn" id="kf-A" aria-pressed="true">A — start</button>
+              <button class="btn" id="kf-B" aria-pressed="false">B — end</button>
+            </span>
+            <button class="btn" id="anim-copy-ab">Copy A to B</button>
+            <button class="btn" id="anim-load" title="Replace the drawing with the figure of the exercise selected in the bar">Take the selected exercise’s figure</button>
+          </div>
+          <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
+          <p class="tiny">Drag a joint. Hold shift to move the whole figure. In a side view the far limbs are the dimmer ones.</p>
+          <div class="grid">
+            <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
+            <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
+            <label>Working side<select id="anim-side"><option value="both">Both</option><option value="R">Near</option><option value="L">Far</option></select></label>
+            <label>Wall at x (blank for none)<input type="number" id="anim-wall" min="200" max="420" step="1"></label>
+          </div>
+        </div>
+        <div>
+          <canvas class="demo-fig muscle" data-anat="edit" role="img" aria-label="The move, animated"></canvas>
+          <details><summary>Muscles working</summary><div class="grid sliders" id="weights"></div></details>
+          <details><summary>The figure as JSON</summary>
+            <div class="row"><button class="btn" id="anim-download">Download the figure</button><button class="btn" id="anim-copy">Copy as JSON</button></div>
+            <textarea id="anim-json" rows="4" spellcheck="false" aria-label="The figure as JSON"></textarea>
+          </details>
+        </div>
+      </div>
+    </div>
     <section class="panel">
       <h2>Problems</h2>
       <ul class="problems" id="problems"></ul>
     </section>
-    <div id="build-form" class="build-form"></div>
-    <section class="panel">
-      <h2>The file</h2>
+    <details class="panel">
+      <summary>The file</summary>
       <p class="tiny">The whole file as it stands. It can be edited here too; Apply reads it back into the form.</p>
       <textarea id="build-json" rows="14" spellcheck="false" aria-label="The exercise file as JSON"></textarea>
       <div class="row"><button class="btn" id="build-apply-json">Apply the JSON</button></div>
-    </section>
+    </details>
   </section>
 
   <!-- ============ recordings: judge a video after the fact, tune the numbers against it ============ -->
@@ -112,56 +142,21 @@
     </section>
   </section>
 
-  <!-- ============ animation: the move drawn with its muscles, edited by hand ============ -->
-  <section id="pane-anim" hidden>
-    <p class="muted">The move as a body with the muscles working. Drag the joints to set the start (A) and the end (B) of the movement; set how hard each muscle works; watch it move. The figure is saved as JSON to go into the move.</p>
-    <div class="review-grid">
-      <div class="panel">
-        <div class="row">
-          <span class="seg" role="radiogroup" aria-label="Keyframe">
-            <button class="btn" id="kf-A" aria-pressed="true">A — start</button>
-            <button class="btn" id="kf-B" aria-pressed="false">B — end</button>
-          </span>
-          <button class="btn" id="anim-load">Load the move's figure</button>
-          <button class="btn" id="anim-copy-ab">Copy A to B</button>
-        </div>
-        <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
-        <p class="tiny">Drag a joint. Hold shift to move the whole figure. The far limbs are the dimmer ones.</p>
-        <div class="grid">
-          <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
-          <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
-          <label>Working side<select id="anim-side"><option value="both">Both</option><option value="R">Near</option><option value="L">Far</option></select></label>
-          <label>Wall at x (blank for none)<input type="number" id="anim-wall" min="200" max="420" step="1"></label>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Preview</h2>
-        <canvas class="demo-fig muscle" data-anat="edit" role="img" aria-label="The move, animated"></canvas>
-        <h2>Muscles working</h2>
-        <div class="grid sliders" id="weights"></div>
-        <div class="row">
-          <button class="btn primary" id="anim-download">Download the figure</button>
-          <button class="btn" id="anim-copy">Copy as JSON</button>
-        </div>
-        <textarea id="anim-json" rows="6" spellcheck="false" aria-label="The figure as JSON"></textarea>
-      </div>
-    </div>
-  </section>
 </main>
 
-<script src="js/core.js?v=2026-09-27b"></script>
-<script src="js/spec.js?v=2026-09-27b"></script>
-<script src="js/moves.js?v=2026-09-27b"></script>
-<script src="js/trace.js?v=2026-09-27b"></script>
-<script src="js/overlay.js?v=2026-09-27b"></script>
-<script src="js/sound.js?v=2026-09-27b"></script>
-<script src="js/codec.js?v=2026-09-27b"></script>
-<script src="js/mp4.js?v=2026-09-27b"></script>
-<script src="js/speech.js?v=2026-09-27b"></script>
-<script src="js/mixdown.js?v=2026-09-27b"></script>
-<script src="js/figure.js?v=2026-09-27b"></script>
-<script src="js/anatomy.js?v=2026-09-27b"></script>
-<script src="js/review.js?v=2026-09-27b"></script>
-<script src="js/builder.js?v=2026-09-27b"></script>
+<script src="js/core.js?v=2026-09-28a"></script>
+<script src="js/spec.js?v=2026-09-28a"></script>
+<script src="js/moves.js?v=2026-09-28a"></script>
+<script src="js/trace.js?v=2026-09-28a"></script>
+<script src="js/overlay.js?v=2026-09-28a"></script>
+<script src="js/sound.js?v=2026-09-28a"></script>
+<script src="js/codec.js?v=2026-09-28a"></script>
+<script src="js/mp4.js?v=2026-09-28a"></script>
+<script src="js/speech.js?v=2026-09-28a"></script>
+<script src="js/mixdown.js?v=2026-09-28a"></script>
+<script src="js/figure.js?v=2026-09-28a"></script>
+<script src="js/anatomy.js?v=2026-09-28a"></script>
+<script src="js/review.js?v=2026-09-28a"></script>
+<script src="js/builder.js?v=2026-09-28a"></script>
 </body>
 </html>
