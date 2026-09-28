@@ -369,11 +369,20 @@ Moves.ready.then(function () {
   /* ---------- the animation editor: the muscle figure, by hand ---------- */
   /* the points of a figure, by view: a side view has one limb near and one far; a
      front view (a body lying on its side facing the camera) has a left and a right */
-  const KEYS_BY = { side: ['h', 'sh', 'hip', 'kn', 'an', 'ft', 'el', 'wr', 'knF', 'anF', 'ftF', 'elF', 'wrF'], front: ['h', 'shL', 'shR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'elL', 'wrL', 'elR', 'wrR'] };
-  const FAR = new Set(['knF', 'anF', 'ftF', 'elF', 'wrF']);
+  const KEYS_BY = { side: ['h', 'sh', 'hip', 'kn', 'an', 'he', 'ft', 'el', 'wr', 'knF', 'anF', 'heF', 'ftF', 'elF', 'wrF'], front: ['h', 'shL', 'shR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'heL', 'heR', 'toL', 'toR', 'elL', 'wrL', 'elR', 'wrR'] };
+  const FAR = new Set(['knF', 'anF', 'heF', 'ftF', 'elF', 'wrF']);
+  /* the bone above each joint: a drag turns that bone and carries everything below it round,
+     so every limb keeps its length — a hip drags the whole body */
+  const PARENT = {
+    side: { h: 'sh', sh: 'hip', el: 'sh', wr: 'el', elF: 'sh', wrF: 'elF', kn: 'hip', an: 'kn', he: 'an', ft: 'an', knF: 'hip', anF: 'knF', heF: 'anF', ftF: 'anF' },
+    front: { h: 'shR', shL: 'hipL', shR: 'hipR', elL: 'shL', wrL: 'elL', elR: 'shR', wrR: 'elR', knL: 'hipL', anL: 'knL', heL: 'anL', toL: 'anL', knR: 'hipR', anR: 'knR', heR: 'anR', toR: 'anR' },
+  };
+  const ROOTS = { side: ['hip'], front: ['hipL', 'hipR'] };
+  const GHOST_CHAINS = { side: [['sh', 'hip', 'kn', 'an', 'ft'], ['sh', 'el', 'wr'], ['hip', 'knF', 'anF', 'ftF'], ['sh', 'elF', 'wrF'], ['an', 'he'], ['anF', 'heF']], front: [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR'], ['anL', 'heL', 'toL'], ['anR', 'heR', 'toR']] };
   const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {} };
   const KEYS = () => KEYS_BY[fig.view] || KEYS_BY.side;
-  let kf = 'A', drag = null, quiet = false;
+  let kf = 'A', drag = null, quiet = false, orig = null;
+  const descendants = (k) => { const P = PARENT[fig.view] || PARENT.side; return KEYS().filter((c) => { let x = c; while (x) { if (x === k) return true; x = P[x]; } return false; }); };
   const edit = $('anim-edit');
   const copyK = (K, keys) => { const o = {}; for (const k of keys) if (K && K[k]) o[k] = [K[k][0], K[k][1]]; return o; };
   /* a figure given as points (a file's figure.points, or the builder's draft) into the editor */
@@ -382,6 +391,7 @@ Moves.ready.then(function () {
     fig.view = f.view === 'front' && f.A.hipL ? 'front' : 'side';
     fig.A = copyK(f.A, KEYS()); fig.B = copyK(f.B || f.A, KEYS());
     fig.hold = !!f.hold; fig.flip = !!f.flip; fig.side = f.side || 'both'; fig.wall = f.wall != null ? f.wall : null; fig.w = Object.assign({}, f.w || {});
+    orig = JSON.stringify({ A: fig.A, B: fig.B });   // for "Undo my edits"
     $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall;
     buildWeights(); quiet = true; animChanged(); quiet = false;
   }
@@ -433,6 +443,12 @@ Moves.ready.then(function () {
     ctx.save(); ctx.translate(T.tx, T.ty); ctx.scale(T.s, T.s);
     ctx.strokeStyle = C.line; ctx.lineWidth = 2 / T.s; ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
     if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
+    /* the other keyframe sits behind, faint, so an edit is seen against where the body was */
+    const other = fig[kf === 'A' ? 'B' : 'A'];
+    if (other && !fig.hold) {
+      ctx.strokeStyle = 'rgba(90,169,255,.22)'; ctx.lineWidth = 3 / T.s; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const c of GHOST_CHAINS[fig.view] || GHOST_CHAINS.side) { const pts = c.filter((k) => other[k]); if (pts.length < 2) continue; ctx.beginPath(); pts.forEach((k, i) => { if (i) ctx.lineTo(other[k][0], other[k][1]); else ctx.moveTo(other[k][0], other[k][1]); }); ctx.stroke(); }
+    }
     const P = {
       skin: cssVar('--fig-skin', '#46295f'), skinline: cssVar('--fig-line', '#7658a0'), muscle: cssVar('--fig-muscle', '#55367a'),
       far: cssVar('--fig-far', '#38215a'), farline: cssVar('--fig-farline', '#4d3178'), warm: cssVar('--tangerine', '#ffb545'), hot: cssVar('--pink', '#ff5c8a'), floor: C.line, prop: '#1d2430',
@@ -440,6 +456,9 @@ Moves.ready.then(function () {
     const drive = kf === 'B' || fig.hold ? 1 : 0.25, heats = {};
     for (const k of A.regions) heats[k] = 0.07 + (fig.w[k] || 0) * drive * 0.93;
     try { A.drawFigure(ctx, A.unify(K, fig.view), P, heats, fig.view, { hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w }); } catch { }
+    /* the feet, which the muscle figure does not draw: ankle to heel to toe */
+    ctx.strokeStyle = 'rgba(232,237,244,.5)'; ctx.lineWidth = 2 / T.s;
+    for (const [a, b] of fig.view === 'front' ? [['anL', 'heL'], ['heL', 'toL'], ['anR', 'heR'], ['heR', 'toR']] : [['an', 'he'], ['he', 'ft'], ['anF', 'heF'], ['heF', 'ftF']]) { if (K[a] && K[b]) { ctx.beginPath(); ctx.moveTo(K[a][0], K[a][1]); ctx.lineTo(K[b][0], K[b][1]); ctx.stroke(); } }
     /* the handles */
     for (const k of KEYS()) {
       const p = K[k]; if (!p) continue;
@@ -457,23 +476,35 @@ Moves.ready.then(function () {
     const [x, y] = toFig(e), K = fig[kf];
     let best = null, bd = 12;
     for (const k of KEYS()) { const p = K[k]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = k; } }
-    drag = { key: e.shiftKey ? '*' : best, last: [x, y] };
+    /* a root (the hip) drags the whole body; shift swaps turning for stretching for this one drag */
+    const roots = ROOTS[fig.view] || ROOTS.side, stretch = $('anim-stretch') ? $('anim-stretch').checked : false;
+    drag = { key: best && roots.includes(best) ? '*' : best, last: [x, y], stretch: e.shiftKey ? !stretch : stretch };
     if (drag.key) { edit.setPointerCapture(e.pointerId); e.preventDefault(); }
   });
   edit.addEventListener('pointermove', (e) => {
     if (!drag || !drag.key) return;
     const [x, y] = toFig(e), K = fig[kf], dx = x - drag.last[0], dy = y - drag.last[1];
-    if (drag.key === '*') { for (const k in K) { K[k][0] = Math.round(K[k][0] + dx); K[k][1] = Math.round(K[k][1] + dy); } }
-    else { K[drag.key] = [Math.round(x), Math.round(y)]; }
+    const P = PARENT[fig.view] || PARENT.side, par = drag.key === '*' ? null : P[drag.key];
+    if (drag.key === '*') { for (const k in K) { K[k][0] += dx; K[k][1] += dy; } }
+    else if (drag.stretch || !par || !K[par]) {
+      /* the bone follows the pointer and changes length; everything below comes along unchanged */
+      for (const k of descendants(drag.key)) if (K[k]) { K[k][0] += dx; K[k][1] += dy; }
+    } else {
+      /* the bone above the joint turns about its top; everything below turns with it, every length kept */
+      const o = K[par], a0 = Math.atan2(drag.last[1] - o[1], drag.last[0] - o[0]), a1 = Math.atan2(y - o[1], x - o[0]), d = a1 - a0, cs = Math.cos(d), sn = Math.sin(d);
+      for (const k of descendants(drag.key)) if (K[k]) { const px = K[k][0] - o[0], py = K[k][1] - o[1]; K[k][0] = o[0] + px * cs - py * sn; K[k][1] = o[1] + px * sn + py * cs; }
+    }
     drag.last = [x, y];
     animChanged();
   });
-  const drop = () => { drag = null; };
+  const rounded = () => { for (const K of [fig.A, fig.B]) for (const k in K || {}) { K[k][0] = Math.round(K[k][0]); K[k][1] = Math.round(K[k][1]); } };
+  const drop = () => { if (drag) { drag = null; rounded(); animChanged(); } };
   edit.addEventListener('pointerup', drop); edit.addEventListener('pointercancel', drop);
   $('kf-A').onclick = () => { kf = 'A'; $('kf-A').setAttribute('aria-pressed', 'true'); $('kf-B').setAttribute('aria-pressed', 'false'); drawEditor(); };
   $('kf-B').onclick = () => { kf = 'B'; $('kf-B').setAttribute('aria-pressed', 'true'); $('kf-A').setAttribute('aria-pressed', 'false'); drawEditor(); };
   $('anim-load').onclick = animLoad;
-  $('anim-copy-ab').onclick = () => { fig.B = JSON.parse(JSON.stringify(fig.A)); animChanged(); };
+  $('anim-copy-ab').onclick = () => { fig[kf === 'A' ? 'B' : 'A'] = JSON.parse(JSON.stringify(fig[kf])); animChanged(); };
+  $('anim-undo').onclick = () => { if (!orig) return; const o = JSON.parse(orig); fig.A = o.A; fig.B = o.B; animChanged(); };
   $('anim-hold').onchange = (e) => { fig.hold = e.target.value === 'yes'; animChanged(); };
   $('anim-flip').onchange = (e) => { fig.flip = e.target.value === 'yes'; animChanged(); };
   $('anim-side').onchange = (e) => { fig.side = e.target.value; animChanged(); };

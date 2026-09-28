@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-28a">
+<html lang="en" data-v="2026-09-28b">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-28a">
+<link rel="stylesheet" href="styles.css?v=2026-09-28b">
 </head>
 <body class="review">
 <header class="bar">
@@ -41,11 +41,13 @@
               <button class="btn" id="kf-A" aria-pressed="true">A — start</button>
               <button class="btn" id="kf-B" aria-pressed="false">B — end</button>
             </span>
-            <button class="btn" id="anim-copy-ab">Copy A to B</button>
+            <button class="btn" id="anim-copy-ab" title="Copy the pose being edited onto the other keyframe">Copy this pose onto the other</button>
+            <button class="btn" id="anim-undo">Undo my edits</button>
             <button class="btn" id="anim-load" title="Replace the drawing with the figure of the exercise selected in the bar">Take the selected exercise’s figure</button>
           </div>
           <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
-          <p class="tiny">Drag a joint. Hold shift to move the whole figure. In a side view the far limbs are the dimmer ones.</p>
+          <p class="tiny">Drag a joint: the bone above it turns and everything below comes round with it, every limb keeping its length. The hip drags the whole body. The other keyframe sits behind, faint. In a side view the far limbs are the dimmer handles.</p>
+          <label class="tiny check"><input type="checkbox" id="anim-stretch"> Stretch limbs — a drag moves the joint itself and changes the bone’s length (shift swaps this for one drag)</label>
           <div class="grid">
             <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
             <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
@@ -144,19 +146,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-09-28a"></script>
-<script src="js/spec.js?v=2026-09-28a"></script>
-<script src="js/moves.js?v=2026-09-28a"></script>
-<script src="js/trace.js?v=2026-09-28a"></script>
-<script src="js/overlay.js?v=2026-09-28a"></script>
-<script src="js/sound.js?v=2026-09-28a"></script>
-<script src="js/codec.js?v=2026-09-28a"></script>
-<script src="js/mp4.js?v=2026-09-28a"></script>
-<script src="js/speech.js?v=2026-09-28a"></script>
-<script src="js/mixdown.js?v=2026-09-28a"></script>
-<script src="js/figure.js?v=2026-09-28a"></script>
-<script src="js/anatomy.js?v=2026-09-28a"></script>
-<script src="js/review.js?v=2026-09-28a"></script>
-<script src="js/builder.js?v=2026-09-28a"></script>
+<script src="js/core.js?v=2026-09-28b"></script>
+<script src="js/spec.js?v=2026-09-28b"></script>
+<script src="js/moves.js?v=2026-09-28b"></script>
+<script src="js/trace.js?v=2026-09-28b"></script>
+<script src="js/overlay.js?v=2026-09-28b"></script>
+<script src="js/sound.js?v=2026-09-28b"></script>
+<script src="js/codec.js?v=2026-09-28b"></script>
+<script src="js/mp4.js?v=2026-09-28b"></script>
+<script src="js/speech.js?v=2026-09-28b"></script>
+<script src="js/mixdown.js?v=2026-09-28b"></script>
+<script src="js/figure.js?v=2026-09-28b"></script>
+<script src="js/anatomy.js?v=2026-09-28b"></script>
+<script src="js/review.js?v=2026-09-28b"></script>
+<script src="js/builder.js?v=2026-09-28b"></script>
 </body>
 </html>

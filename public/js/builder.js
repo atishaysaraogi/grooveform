@@ -44,8 +44,25 @@ Moves.ready.then(function () {
   ];
 
   let draft = null, timer = 0;
-  /* measuring on the figure: what a click means, and the joints clicked so far */
-  let mode = 'angle', picked = [];
+  /* measuring on the figure, as the old Studio did it: pick the kind, then tap a point
+     for each empty slot; the list walks itself on to the next. `making` is the one
+     under way: its kind, its slots so far, and which slot the next tap fills. */
+  const SLOTS = {
+    angle: [['a', 'one end'], ['b', 'the joint'], ['c', 'other end']], tilt: [['base', 'base'], ['top', 'top']], floor: [['at', 'at'], ['to', 'to']],
+    down: [['from', 'from'], ['to', 'to']], rise: [['a', 'the reference'], ['b', 'the point']], distance: [['a', 'from'], ['b', 'to']], bend: [['a', 'line start'], ['b', 'the point'], ['c', 'line end']],
+  };
+  const KIND_WORDS = { angle: 'Angle at a joint', tilt: 'Segment from vertical', floor: 'Segment from the floor', down: 'Lifted from hanging', rise: 'Height of a point over another', distance: 'Distance, % of a segment', bend: 'Point’s offset from a line' };
+  const KIND_HELP = {
+    angle: 'the angle at the middle point between the other two — a knee, a hip, an elbow. One tap on a joint fills all three from the limbs meeting there.',
+    tilt: 'how far the line base→top leans off vertical, signed the way the body faces: a torso from upright, a shin from plumb.',
+    floor: 'the angle the line at→to makes with the floor: 90 is plumb, less is leaning the way the body faces.',
+    down: 'how far the line from→to is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
+    rise: 'how far the second point sits above the first, as an angle off level: + above, − below.',
+    distance: 'the distance between the two points as a percent of a reference segment, the shin unless changed under More.',
+    bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle.',
+  };
+  let making = { kind: 'angle', slots: {}, at: 'a' };
+  const mode = () => making.kind;
 
   /* ================= starting poses ================= */
   const FRONT_SIDE_LYING = { h: [200, 148], shL: [220, 166], shR: [220, 130], hipL: [262, 159], hipR: [262, 137], knL: [290, 161], knR: [290, 135], anL: [315, 163], anR: [315, 133], elL: [180, 160], wrL: [166, 158], elR: [232, 128], wrR: [246, 150] };
@@ -62,19 +79,19 @@ Moves.ready.then(function () {
   ];
   /* a pose as the figure the file carries: points, both keyframes */
   function figureOfPose(p) {
-    if (p.points) { const A = clone(p.points.A); return { view: 'front', A, B: clone(A), hold: false, side: 'both', flip: false, w: {} }; }
+    if (p.points) { const A = clone(p.points.A); return withFeet({ view: 'front', A, B: clone(A), hold: false, side: 'both', flip: false, w: {} }); }
     const f = Figure.fromAngles(p.pose);
-    return { view: 'side', A: f.A, B: clone(f.A), hold: false, side: 'both', flip: (p.pose.A || {}).face === 'left', w: {} };
+    return withFeet({ view: 'side', A: f.A, B: clone(f.A), hold: false, side: 'both', flip: (p.pose.A || {}).face === 'left', w: {} });
   }
-  const SIDE_CHAINS = [['sh', 'hip', 'kn', 'an', 'ft'], ['sh', 'el', 'wr'], ['hip', 'knF', 'anF', 'ftF'], ['sh', 'elF', 'wrF']];
-  const FRONT_CHAINS = [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR']];
+  const SIDE_CHAINS = [['h', 'sh', 'hip', 'kn', 'an', 'he', 'ft'], ['an', 'ft'], ['sh', 'el', 'wr'], ['hip', 'knF', 'anF', 'heF', 'ftF'], ['anF', 'ftF'], ['sh', 'elF', 'wrF']];
+  const FRONT_CHAINS = [['shL', 'hipL', 'knL', 'anL', 'heL', 'toL'], ['shR', 'hipR', 'knR', 'anR', 'heR', 'toR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR'], ['h', 'shL'], ['h', 'shR']];
   const chainsOf = (view) => (view === 'front' ? FRONT_CHAINS : SIDE_CHAINS);
   /* a small drawing of a pose for the picker */
   function poseSvg(fig) {
     const K = fig.A, pts = Object.values(K);
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     const x0 = Math.min(...xs) - 16, x1 = Math.max(...xs) + 16, y0 = Math.min(...ys) - 18;
-    const path = chainsOf(fig.view).filter((c) => c.every((k) => K[k])).map((c) => 'M' + c.map((k) => K[k].join(' ')).join(' L ')).join(' ');
+    const path = chainsOf(fig.view).map((c) => c.filter((k) => K[k])).filter((c) => c.length > 1).map((c) => 'M' + c.map((k) => K[k].join(' ')).join(' L ')).join(' ');
     return `<svg viewBox="${x0} ${y0} ${x1 - x0} ${168 - y0}"><line class="floor" x1="${x0}" y1="163" x2="${x1}" y2="163"/><path class="ink" d="${path}"/><circle class="ink" cx="${K.h[0]}" cy="${K.h[1]}" r="9"/></svg>`;
   }
 
@@ -118,19 +135,34 @@ Moves.ready.then(function () {
     };
     return d;
   }
+  /* the feet the muscle figure never drew: a heel behind and below the ankle, a toe ahead; in a
+     front view both below it. Added once to a figure that lacks them, then dragged like any joint. */
+  function withFeet(f) {
+    const feet = (K) => {
+      if (!K) return K;
+      if (f.view === 'front') {
+        for (const sd of ['L', 'R']) { const an = K['an' + sd]; if (!an) continue; if (!K['he' + sd]) K['he' + sd] = [an[0], an[1] + 4]; if (!K['to' + sd]) K['to' + sd] = [an[0] + (sd === 'L' ? -3 : 3), an[1] + 9]; }
+      } else {
+        for (const [an, ft, he] of [['an', 'ft', 'he'], ['anF', 'ftF', 'heF']]) { if (!K[an] || K[he]) continue; const t = K[ft] || [K[an][0] + 10, K[an][1] + 4]; const dx = t[0] - K[an][0], dy = t[1] - K[an][1], n = Math.hypot(dx, dy) || 1; K[he] = [Math.round(K[an][0] - dx / n * 5), Math.round(K[an][1] - dy / n * 5 + 4)]; }
+      }
+      return K;
+    };
+    f.A = feet(f.A); if (f.B) f.B = feet(f.B);
+    return f;
+  }
   /* the figure a draft carries, as points for the editor */
   function figurePoints(d) {
     const f = d.figure || {};
-    if (f.points && f.points.A) return Object.assign({ view: f.points.view || 'side' }, f.points, { w: d.muscles || f.points.w || {} });
-    if (f.pose && f.pose.A) { const r = Figure.fromAngles(f.pose); return { view: 'side', A: r.A, B: r.B, hold: !!f.pose.hold, flip: (f.pose.A || {}).face === 'left', side: 'both', w: d.muscles || {}, ...(r.wall != null ? { wall: r.wall } : {}) }; }
-    return figureOfPose(POSES[0]);
+    if (f.points && f.points.A) return withFeet(Object.assign({ view: f.points.view || 'side' }, clone(f.points), { w: d.muscles || f.points.w || {} }));
+    if (f.pose && f.pose.A) { const r = Figure.fromAngles(f.pose); return withFeet({ view: 'side', A: r.A, B: r.B, hold: !!f.pose.hold, flip: (f.pose.A || {}).face === 'left', side: 'both', w: d.muscles || {}, ...(r.wall != null ? { wall: r.wall } : {}) }); }
+    return withFeet(figureOfPose(POSES[0]));
   }
   function start(json, auto) {
     draft = clone(json);
     draft.auto = auto || draft.auto || {};   // a loaded or copied file is the person's: nothing in it is the template's
     draft.figure = { points: figurePoints(draft) }; delete draft.figure.pose;
     inferRoles();
-    picked = [];
+    setKind('angle');
     if (window.__review) window.__review.setFig(draft.figure.points);
     render();
     commit(false);
@@ -172,7 +204,7 @@ Moves.ready.then(function () {
     try { localStorage.removeItem(DRAFT); } catch { }
     Moves.draft(null);
     if (window.__review) { window.__review.refreshMoves(); window.__review.pickMove(Moves.list[0].id, true); }
-    draft = null; picked = [];
+    draft = null; setKind('angle');
     parkEditor();
     $('build-form').innerHTML = ''; $('problems').innerHTML = ''; $('build-json').value = '';
     $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.';
@@ -241,22 +273,23 @@ Moves.ready.then(function () {
 
   /* ================= the figure's geometry: what a measurement reads at A and at B ================= */
   const NAME = {
-    side: { h: 'ear', sh: 'shoulder', hip: 'hip', kn: 'knee', an: 'ankle', ft: 'toe', el: 'elbow', wr: 'wrist', knF: 'other.knee', anF: 'other.ankle', ftF: 'other.toe', elF: 'other.elbow', wrF: 'other.wrist' },
-    front: { h: 'ear', shL: 'L.shoulder', shR: 'R.shoulder', hipL: 'L.hip', hipR: 'R.hip', knL: 'L.knee', knR: 'R.knee', anL: 'L.ankle', anR: 'R.ankle', elL: 'L.elbow', elR: 'R.elbow', wrL: 'L.wrist', wrR: 'R.wrist' },
+    side: { h: 'ear', sh: 'shoulder', hip: 'hip', kn: 'knee', an: 'ankle', he: 'heel', ft: 'toe', el: 'elbow', wr: 'wrist', knF: 'other.knee', anF: 'other.ankle', heF: 'other.heel', ftF: 'other.toe', elF: 'other.elbow', wrF: 'other.wrist' },
+    front: { h: 'ear', shL: 'L.shoulder', shR: 'R.shoulder', hipL: 'L.hip', hipR: 'R.hip', knL: 'L.knee', knR: 'R.knee', anL: 'L.ankle', anR: 'R.ankle', heL: 'L.heel', heR: 'R.heel', toL: 'L.toe', toR: 'R.toe', elL: 'L.elbow', elR: 'R.elbow', wrL: 'L.wrist', wrR: 'R.wrist' },
   };
+  const keyOfName = (name, view) => Object.keys(NAME[view]).find((k) => NAME[view][k] === name) || null;
   const figView = () => (draft && draft.figure && draft.figure.points && draft.figure.points.view === 'front' ? 'front' : 'side');
   /* a landmark name → the figure's point (the heel is the ankle; a far limb not drawn apart is the near one) */
   function pointFor(name, K, view) {
     const P = (k) => (K[k] ? { x: K[k][0], y: K[k][1] } : null);
     if (view === 'front') {
       const m = /^([LR])\.(\w+)$/.exec(name); const sd = m ? m[1] : 'R', n = m ? m[2] : name;
-      const key = { shoulder: 'sh', hip: 'hip', knee: 'kn', ankle: 'an', heel: 'an', elbow: 'el', wrist: 'wr' }[n];
-      return n === 'ear' ? P('h') : key ? P(key + sd) : null;
+      const key = { shoulder: 'sh', hip: 'hip', knee: 'kn', ankle: 'an', heel: 'he', toe: 'to', elbow: 'el', wrist: 'wr' }[n];
+      return n === 'ear' ? P('h') : key ? (P(key + sd) || P((n === 'heel' || n === 'toe' ? 'an' : key) + sd)) : null;
     }
     const far = /^other\./.test(name), n = plain(name);
-    const near = { ear: 'h', shoulder: 'sh', hip: 'hip', knee: 'kn', ankle: 'an', heel: 'an', toe: 'ft', elbow: 'el', wrist: 'wr' }[n];
-    const farK = { knee: 'knF', ankle: 'anF', heel: 'anF', toe: 'ftF', elbow: 'elF', wrist: 'wrF' }[n];
-    return (far && farK && P(farK)) || (near ? P(near) : null);
+    const near = { ear: 'h', shoulder: 'sh', hip: 'hip', knee: 'kn', ankle: 'an', heel: 'he', toe: 'ft', elbow: 'el', wrist: 'wr' }[n];
+    const farK = { knee: 'knF', ankle: 'anF', heel: 'heF', toe: 'ftF', elbow: 'elF', wrist: 'wrF' }[n];
+    return (far && farK && P(farK)) || (near ? (P(near) || (n === 'heel' ? P('an') : null)) : null);
   }
   function facingOf(K, view) {
     const f = draft.facing || { from: 'hip', to: 'knee' };
@@ -285,53 +318,60 @@ Moves.ready.then(function () {
   const fmt = (v, m) => (v == null ? '—' : (m && m.kind === 'distance' && !m.times ? v.toFixed(2) : Math.round(v) + (m && m.kind === 'distance' ? '%' : '°')));
   const valuesAB = (m) => { const f = draft.figure.points; return { A: valueOf(m, f.A), B: valueOf(m, f.B || f.A) }; };
 
-  /* ================= measuring by clicking ================= */
+  /* ================= measuring: a kind, then a point for each slot ================= */
   const NEIGHBOURS = {
-    side: { kn: ['hip', 'an'], hip: ['sh', 'kn'], an: ['kn', 'ft'], sh: ['hip', 'el'], el: ['sh', 'wr'], knF: ['hip', 'anF'], anF: ['knF', 'ftF'], elF: ['sh', 'wrF'] },
-    front: { knL: ['hipL', 'anL'], hipL: ['shL', 'knL'], shL: ['hipL', 'elL'], elL: ['shL', 'wrL'], knR: ['hipR', 'anR'], hipR: ['shR', 'knR'], shR: ['hipR', 'elR'], elR: ['shR', 'wrR'] },
+    side: { kn: ['hip', 'an'], hip: ['sh', 'kn'], an: ['kn', 'ft'], sh: ['hip', 'el'], el: ['sh', 'wr'], he: ['ft', 'kn'], knF: ['hip', 'anF'], anF: ['knF', 'ftF'], elF: ['sh', 'wrF'], heF: ['ftF', 'knF'] },
+    front: { knL: ['hipL', 'anL'], hipL: ['shL', 'knL'], shL: ['hipL', 'elL'], elL: ['shL', 'wrL'], anL: ['knL', 'toL'], heL: ['toL', 'knL'], knR: ['hipR', 'anR'], hipR: ['shR', 'knR'], shR: ['hipR', 'elR'], elR: ['shR', 'wrR'], anR: ['knR', 'toR'], heR: ['toR', 'knR'] },
   };
-  const LIMBS = {
-    side: [['hip', 'sh', 'torso'], ['hip', 'kn', 'thigh'], ['kn', 'an', 'shin'], ['an', 'ft', 'foot'], ['sh', 'el', 'arm'], ['el', 'wr', 'forearm'], ['hip', 'knF', 'otherthigh'], ['knF', 'anF', 'othershin'], ['anF', 'ftF', 'otherfoot'], ['sh', 'elF', 'otherarm'], ['elF', 'wrF', 'otherforearm']],
-    front: [['hipL', 'shL', 'ltorso'], ['hipL', 'knL', 'lthigh'], ['knL', 'anL', 'lshin'], ['shL', 'elL', 'larm'], ['elL', 'wrL', 'lforearm'], ['hipR', 'shR', 'rtorso'], ['hipR', 'knR', 'rthigh'], ['knR', 'anR', 'rshin'], ['shR', 'elR', 'rarm'], ['elR', 'wrR', 'rforearm']],
-  };
-  const JOINT_KEY = { kn: 'knee', hip: 'hip', an: 'ankle', sh: 'shoulder', el: 'elbow', ft: 'foot', knF: 'otherknee', anF: 'otherankle', elF: 'otherelbow', ftF: 'otherfoot', knL: 'lknee', hipL: 'lhip', shL: 'lshoulder', elL: 'lelbow', knR: 'rknee', hipR: 'rhip', shR: 'rshoulder', elR: 'relbow', anL: 'lankle', anR: 'rankle', wr: 'wrist', wrF: 'otherwrist', wrL: 'lwrist', wrR: 'rwrist', h: 'head' };
-  const uniqueKey = (base) => { let k = base, n = 2; while (draft.measurements.some((m) => m.key === k)) k = base + n++; return k; };
-  const wordsFor = (name) => name.replace(/^other/, 'other ').replace(/^l(?=[a-z])/, 'left ').replace(/^r(?=[a-z])/, 'right ');
-  /* the measurement a click makes */
-  function measureAtJoint(k) {
-    const view = figView(), N = NAME[view];
-    if (k === 'ft' || k === 'ftF') { const pre = k === 'ftF' ? 'other.' : ''; return { key: uniqueKey(JOINT_KEY[k]), kind: 'angle', a: pre + 'toe', b: pre + 'heel', c: pre + 'knee', label: `${wordsFor(JOINT_KEY[k])} angle (toe, heel, knee)`, short: wordsFor(JOINT_KEY[k]), hud: 'FOOT' }; }
-    const nb = NEIGHBOURS[view][k]; if (!nb) return null;
-    const key = uniqueKey(JOINT_KEY[k] || k);
-    return { key, kind: 'angle', a: N[nb[0]], b: N[k], c: N[nb[1]], label: `${wordsFor(JOINT_KEY[k] || k)} angle`, short: wordsFor(JOINT_KEY[k] || k), hud: (JOINT_KEY[k] || k).slice(0, 5).toUpperCase() };
+  /* what a pair of landmarks is, for names: hip→shoulder is the torso, knee→ankle the shin */
+  const SEGMENTS = [['hip', 'shoulder', 'torso'], ['hip', 'knee', 'thigh'], ['knee', 'ankle', 'shin'], ['shoulder', 'elbow', 'arm'], ['elbow', 'wrist', 'forearm'], ['heel', 'toe', 'foot'], ['ankle', 'toe', 'foot'], ['shoulder', 'wrist', 'arm'], ['hip', 'ankle', 'leg'], ['shoulder', 'ear', 'neck']];
+  const side_ = (n) => (/^other\./.test(n) ? 'other' : /^L\./.test(n) ? 'l' : /^R\./.test(n) ? 'r' : '');
+  const segmentOf = (x, y) => { const a = plain(x), b = plain(y); const hit = SEGMENTS.find(([p, q]) => (p === a && q === b) || (p === b && q === a)); return hit ? (side_(x) || side_(y)) + hit[2] : null; };
+  const uniqueKey = (base) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m.key === k)) k = base + n++; return k; };
+  const wordsFor = (name) => String(name).replace(/^other\./, 'other ').replace(/^L\./, 'left ').replace(/^R\./, 'right ').replace(/^other(?=[a-z])/, 'other ').replace(/^l(?=[a-z])/, 'left ').replace(/^r(?=[a-z])/, 'right ');
+  const hudOf = (name) => plain(name).replace(/^other/, '').slice(0, 5).toUpperCase();
+  /* the measurement the filled slots make */
+  function fromSlots(kind, S) {
+    const view = figView();
+    if (kind === 'angle') { const j = plain(S.b), short = wordsFor(S.b); return { key: uniqueKey(side_(S.b) + j), kind, a: S.a, b: S.b, c: S.c, label: `${short} angle`, short, hud: hudOf(S.b) }; }
+    if (kind === 'tilt') { const seg = segmentOf(S.base, S.top); const short = seg ? wordsFor(seg) : `${wordsFor(S.top)} over ${wordsFor(S.base)}`; return { key: uniqueKey(seg || plain(S.top) + 'lean'), kind, base: S.base, top: S.top, label: `${short} lean from vertical`, short, hud: hudOf(seg || S.top) }; }
+    if (kind === 'floor') { const seg = segmentOf(S.at, S.to); const short = seg ? wordsFor(seg) : `${wordsFor(S.at)} to ${wordsFor(S.to)}`; return { key: uniqueKey(seg || plain(S.to) + 'floor'), kind, at: S.at, to: S.to, label: `${short} against the floor`, short, hud: hudOf(seg || S.to) }; }
+    if (kind === 'down') { const seg = segmentOf(S.from, S.to); const short = seg ? wordsFor(seg) : `${wordsFor(S.from)} to ${wordsFor(S.to)}`; return { key: uniqueKey(seg || plain(S.to) + 'lift'), kind, from: S.from, to: S.to, label: `${short} lifted from hanging`, short, hud: hudOf(seg || S.to) }; }
+    if (kind === 'rise') { const short = `${wordsFor(S.b)} height`; return { key: uniqueKey(side_(S.b) + plain(S.b) + 'up'), kind, a: S.a, b: S.b, label: `${wordsFor(S.b)} above the ${wordsFor(S.a)}`, short, hud: hudOf(S.b) }; }
+    if (kind === 'distance') { const per = view === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']; const seg = segmentOf(S.a, S.b); const short = seg ? `${wordsFor(seg)} length` : `${wordsFor(S.a)}–${wordsFor(S.b)} length`; return { key: uniqueKey((seg || plain(S.a) + plain(S.b)) + 'len'), kind, a: S.a, b: S.b, per, times: 100, label: `${short}, % of the shin`, short, hud: 'LEN' }; }
+    if (kind === 'bend') { const short = `${wordsFor(S.b)} off the line`; return { key: uniqueKey(side_(S.b) + plain(S.b) + 'bend'), kind, a: S.a, b: S.b, c: S.c, label: `${wordsFor(S.b)} off the ${wordsFor(S.a)}–${wordsFor(S.c)} line`, short, hud: hudOf(S.b) }; }
+    return null;
   }
-  function measureAtLimb(limb) {
-    const view = figView(), N = NAME[view], [p, q, name] = limb;
-    const key = uniqueKey(name), label = wordsFor(name), hud = name.replace(/^(other|l|r)/, '').slice(0, 5).toUpperCase();
-    if (/torso$/.test(name)) return { key, kind: 'tilt', base: N[p], top: N[q], label: `${label} lean from upright`, short: label, hud };
-    if (/foot$/.test(name)) { const pre = /^other/.test(name) ? 'other.' : ''; return { key, kind: 'angle', a: pre + 'toe', b: pre + 'heel', c: pre + 'knee', label: `${label} angle (toe, heel, knee)`, short: label, hud }; }
-    return { key, kind: 'down', from: N[p], to: N[q], label: `${label} lifted from hanging`, short: label, hud };
-  }
-  const measureRise = (a, b) => { const N = NAME[figView()]; const name = (JOINT_KEY[b] || b) + 'up'; return { key: uniqueKey(name), kind: 'rise', a: N[a], b: N[b], label: `${wordsFor(JOINT_KEY[b] || b)} above the ${wordsFor(JOINT_KEY[a] || a)}`, short: `${wordsFor(JOINT_KEY[b] || b)} height`, hud: (JOINT_KEY[b] || b).slice(0, 4).toUpperCase() }; };
-  const measureLength = (a, b) => { const N = NAME[figView()], view = figView(); const per = view === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']; const name = (JOINT_KEY[a] || a) + (JOINT_KEY[b] || b); return { key: uniqueKey(name.slice(0, 12)), kind: 'distance', a: N[a], b: N[b], per, times: 100, label: `${wordsFor(JOINT_KEY[a] || a)} to ${wordsFor(JOINT_KEY[b] || b)}, % of the shin`, short: `${wordsFor(JOINT_KEY[a] || a)}–${wordsFor(JOINT_KEY[b] || b)} length`, hud: 'LEN' }; };
-  /* the click itself: one joint for an angle, a limb for its lean, two joints for a height or a length */
-  function clicked(hit) {
-    if (!hit) return;
-    let m = null;
-    if (mode === 'angle' && hit.joint) m = measureAtJoint(hit.joint);
-    else if (mode === 'limb' && hit.limb) m = measureAtLimb(hit.limb);
-    else if ((mode === 'rise' || mode === 'length') && hit.joint) {
-      picked.push(hit.joint);
-      if (picked.length < 2) { drawMeasure(); return; }
-      m = mode === 'rise' ? measureRise(picked[0], picked[1]) : measureLength(picked[0], picked[1]);
-      picked = [];
-    }
-    if (!m) return;
+  const slotsOf = (kind) => SLOTS[kind] || SLOTS.angle;
+  const nextEmpty = () => { const sl = slotsOf(making.kind).find(([k]) => !making.slots[k]); return sl ? sl[0] : null; };
+  function setKind(kind) { making = { kind, slots: {}, at: slotsOf(kind)[0][0] }; }
+  /* a tap on the figure: fills the slot being filled and walks on; on an angle with nothing filled,
+     a joint fills all three from the limbs meeting there */
+  function tapped(k) {
+    if (!k) return;
+    const view = figView(), name = NAME[view][k]; if (!name) return;
+    const S = making.slots, sl = slotsOf(making.kind);
+    if (making.kind === 'angle' && !S.a && !S.b && !S.c && NEIGHBOURS[view][k]) { const [x, y] = NEIGHBOURS[view][k]; S.a = NAME[view][x]; S.b = name; S.c = NAME[view][y]; }
+    else { S[making.at || nextEmpty() || sl[sl.length - 1][0]] = name; }
+    making.at = nextEmpty();
+    if (making.at) { drawMeasure(); renderSlots(); return; }
+    const m = fromSlots(making.kind, S); if (!m) return;
     m.role = 'reading';
     draft.measurements.push(m);
     /* the first measurement of a rep exercise is what the rep is: it tracks it */
     if (draft.type === 'reps' && !progressKey()) setRole(m, 'progress'); else setRole(m, 'hold');
+    setKind(making.kind);
     commit(true);
+  }
+  /* the slots as buttons: the one being filled is pressed; a filled one taps to refill */
+  let slotHost = null;
+  function renderSlots() {
+    if (!slotHost) return; slotHost.innerHTML = '';
+    slotHost.appendChild(el('p', 'tiny', KIND_HELP[making.kind] || ''));
+    const row = el('div', 'chips');
+    for (const [k, words] of slotsOf(making.kind)) { const b = btn(`${words}: ${making.slots[k] ? wordsFor(making.slots[k]) : '…'}`, () => { making.at = k; drawMeasure(); renderSlots(); }); b.setAttribute('aria-pressed', String(making.at === k)); row.appendChild(b); }
+    if (Object.keys(making.slots).length) row.appendChild(btn('clear', () => { setKind(making.kind); drawMeasure(); renderSlots(); }));
+    slotHost.appendChild(row);
   }
   /* a role: what the measurement is for. Its edges and thresholds come from the drawing */
   const TOL = (m) => (m.kind === 'angle' || m.kind === 'bend' ? 10 : m.kind === 'distance' ? 10 : 8);
@@ -386,10 +426,20 @@ Moves.ready.then(function () {
     }
   }
   /* the drawing moved: a band that was never edited follows it (its faults keep their words) */
+  /* the band's shape the drawing calls for: one-sided at the extremes, symmetric about level, a range otherwise */
+  function kindFor(m, role, lo, hi) {
+    if (role === 'progress') return 'range';
+    if (m.kind === 'angle' && lo >= 160) return 'min';
+    if (m.kind === 'angle' && hi <= 20) return 'max';
+    if ((m.kind === 'tilt' || m.kind === 'rise' || m.kind === 'bend') && Math.abs(lo) <= 12 && Math.abs(hi) <= 12) return 'sym';
+    return 'range';
+  }
   function retune(m) {
     const d = draft, role = roleOf(m); if (!m.autoBand || !m.band) return;
     const { A, B } = valuesAB(m); if (A == null || B == null) return;
     const tol = TOL(m), base = m.key, lo = Math.min(A, B), hi = Math.max(A, B), kind = Spec.bandKind(m.band);
+    /* a still-automatic band whose shape no longer fits the drawing is made again, words and all */
+    if (kindFor(m, role, lo, hi) !== kind) { setRole(m, role); return; }
     if (role === 'progress') {
       const up = B >= A; d.progress.direction = up ? 'up' : 'down';
       d.defaults.raiseAt = Math.round(A + (B - A) * 0.4); d.defaults.downAt = Math.round(A + (B - A) * 0.15);
@@ -409,31 +459,34 @@ Moves.ready.then(function () {
     if (draft.inPosition) draft.inPosition = draft.inPosition.filter((k) => k !== m.key);
   }
 
-  /* ---- the measuring canvas: the figure at A, its joints and limbs to click, the measurements drawn on it ---- */
+  /* ---- the measuring canvas: the figure at A with every landmark the model has, named, to tap ---- */
   let mcanvas = null;
-  function mTransform() {
-    const r = mcanvas.getBoundingClientRect(), f = draft.figure.points;
-    const xs = [], ys = [];
+  function mBox() {
+    const f = draft.figure.points, xs = [], ys = [];
     for (const K of [f.A, f.B || f.A]) for (const k in K) { xs.push(K[k][0]); ys.push(K[k][1]); }
-    const x0 = Math.min(...xs) - 20, x1 = Math.max(...xs) + 20, y0 = Math.min(...ys) - 20, y1 = Math.max(...ys) + 12;
-    const s = Math.min(r.width / (x1 - x0), r.height / (y1 - y0)) * 0.94;
-    return { s, tx: r.width / 2 - (x0 + x1) / 2 * s, ty: r.height / 2 - (y0 + y1) / 2 * s, w: r.width, h: r.height };
+    return { x0: Math.min(...xs) - 30, x1: Math.max(...xs) + 30, y0: Math.min(...ys) - 24, y1: Math.max(...ys) + 18 };
+  }
+  function mTransform() {
+    /* the canvas takes the drawing's shape: a standing body tall, a lying one wide */
+    const b = mBox(), ratio = Math.max(1.2, Math.min(3.2, (b.x1 - b.x0) / (b.y1 - b.y0)));
+    if (mcanvas.style.aspectRatio !== `${ratio}`) mcanvas.style.aspectRatio = `${ratio}`;
+    const r = mcanvas.getBoundingClientRect();
+    const s = Math.min(r.width / (b.x1 - b.x0), r.height / (b.y1 - b.y0)) * 0.96;
+    return { s, tx: r.width / 2 - (b.x0 + b.x1) / 2 * s, ty: r.height / 2 - (b.y0 + b.y1) / 2 * s, w: r.width, h: r.height };
   }
   function drawMeasure() {
     if (!mcanvas || !draft) return;
     const r = mcanvas.getBoundingClientRect(); if (!r.width) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    mcanvas.width = Math.round(r.width * dpr); mcanvas.height = Math.round(r.height * dpr);
-    const ctx = mcanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
-    const T = mTransform(), f = draft.figure.points, view = figView(), K = f.A, B = f.B || f.A;
+    const T = mTransform(), rr = mcanvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    mcanvas.width = Math.round(rr.width * dpr); mcanvas.height = Math.round(rr.height * dpr);
+    const ctx = mcanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, rr.width, rr.height);
+    const f = draft.figure.points, view = figView(), K = f.A, B = f.B || f.A, N = NAME[view];
     const at = (p) => [T.tx + p[0] * T.s, T.ty + p[1] * T.s];
-    const chain = (Kf, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const c of chainsOf(view)) { const pts = c.filter((k) => Kf[k]); if (pts.length < 2) continue; ctx.beginPath(); pts.forEach((k, i) => { const [x, y] = at(Kf[k]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); } if (Kf.h) { const [x, y] = at(Kf.h); ctx.beginPath(); ctx.arc(x, y, 9 * T.s, 0, Math.PI * 2); ctx.stroke(); } };
-    /* the floor, the end position as a ghost, the start in full */
-    ctx.strokeStyle = 'rgba(232,237,244,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, T.ty + 163 * T.s); ctx.lineTo(r.width, T.ty + 163 * T.s); ctx.stroke();
-    if (B !== K) chain(B, 'rgba(90,169,255,.28)', 5 * T.s);
-    chain(K, 'rgba(232,237,244,.7)', 5 * T.s);
-    /* what is measured, in colour */
-    ctx.font = `700 ${Math.max(10, 11)}px ui-sans-serif, system-ui, sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    const chain = (Kf, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const c of chainsOf(view)) { const pts = c.filter((k) => Kf[k]); if (pts.length < 2) continue; ctx.beginPath(); pts.forEach((k, i) => { const [x, y] = at(Kf[k]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); } if (Kf.h) { const [x, y] = at(Kf.h); ctx.beginPath(); ctx.arc(x, y, 8 * T.s, 0, Math.PI * 2); ctx.stroke(); } };
+    ctx.strokeStyle = 'rgba(232,237,244,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, T.ty + 163 * T.s); ctx.lineTo(rr.width, T.ty + 163 * T.s); ctx.stroke();
+    if (B !== K) chain(B, 'rgba(90,169,255,.22)', 4 * T.s);
+    chain(K, 'rgba(232,237,244,.55)', 4 * T.s);
+    /* what is measured already, in the colour of its role */
     const P = (n) => { const p = pointFor(Array.isArray(n) ? n[0] : n, K, view); return p ? at([p.x, p.y]) : null; };
     for (const m of draft.measurements) {
       const role = roleOf(m), colour = role === 'progress' ? '#5aa9ff' : role === 'hold' ? '#35d07f' : role === 'note' ? '#ffb545' : 'rgba(232,237,244,.5)';
@@ -441,27 +494,36 @@ Moves.ready.then(function () {
       if (m.kind === 'angle' || m.kind === 'bend') { const a = P(m.a), b = P(m.b), c = P(m.c); if (a && b && c) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.lineTo(...c); ctx.stroke(); const rad = 14 * Math.max(0.6, T.s / 2); ctx.beginPath(); ctx.arc(b[0], b[1], rad, Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0]), false); ctx.stroke(); } }
       else { const a = P(m.a || m.base || m.from || m.at), b = P(m.b || m.top || m.to); if (a && b) { ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]); } }
     }
-    /* the targets: joints as dots, limbs' middles in limb mode */
-    if (mode === 'limb') for (const [p, q] of LIMBS[view]) { if (!K[p] || !K[q]) continue; const a = at(K[p]), b = at(K[q]); ctx.fillStyle = 'rgba(255,181,69,.9)'; ctx.fillRect((a[0] + b[0]) / 2 - 4, (a[1] + b[1]) / 2 - 4, 8, 8); }
-    for (const k in K) {
-      if (k === 'h') continue;
-      const [x, y] = at(K[k]), on = picked.includes(k);
-      ctx.beginPath(); ctx.arc(x, y, on ? 7 : 5, 0, Math.PI * 2); ctx.fillStyle = on ? '#ffb545' : mode === 'limb' ? 'rgba(232,237,244,.35)' : '#e8edf4'; ctx.fill();
+    /* the slots picked so far, in amber, and their order */
+    const picks = Object.entries(making.slots);
+    /* every landmark, a dot and a name: the near side's names above, the far side's below, the
+       names along a row staggered so a lying body's do not run into each other */
+    const fs = Math.max(9, Math.min(11, rr.width / 70));
+    ctx.font = `700 ${fs}px ui-sans-serif, system-ui, sans-serif`; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    const keys = Object.keys(K).filter((k) => N[k]);
+    const rows = { near: keys.filter((k) => !/^(other|L)\./.test(N[k])).sort((p, q) => K[p][0] - K[q][0]), far: keys.filter((k) => /^(other|L)\./.test(N[k])).sort((p, q) => K[p][0] - K[q][0]) };
+    for (const k of keys) {
+      const name = N[k], [x, y] = at(K[k]), far = rows.far.includes(k), picked = picks.find(([, v]) => v === name);
+      ctx.beginPath(); ctx.arc(x, y, picked ? 7 : 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = picked ? '#ffb545' : far ? 'rgba(232,237,244,.45)' : '#e8edf4'; ctx.fill();
+      if (picked) { ctx.fillStyle = '#0b0f16'; ctx.textAlign = 'center'; ctx.fillText(String(picks.indexOf(picked) + 1), x, y + 0.5); }
+      const label = name.replace(/^other\./, '·').replace(/^L\./, 'L ').replace(/^R\./, 'R ');
+      const row = far ? rows.far : rows.near, i = row.indexOf(k), step = (i % 2) * (fs + 2);
+      const lx = x + (far ? -7 : 7), ly = y + (far ? 9 + step : -(9 + step));
+      ctx.textAlign = far ? 'right' : 'left';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(11,15,22,.9)'; ctx.strokeText(label, lx, ly);
+      ctx.fillStyle = picked ? '#ffb545' : far ? 'rgba(232,237,244,.55)' : 'rgba(232,237,244,.9)'; ctx.fillText(label, lx, ly);
     }
     ctx.fillStyle = 'rgba(232,237,244,.6)'; ctx.textAlign = 'left';
-    ctx.fillText(mode === 'angle' ? 'Tap a joint: the angle at it' : mode === 'limb' ? 'Tap a limb’s middle: its lean' : mode === 'rise' ? (picked.length ? 'Now the point that rises' : 'Tap the reference point, then the one that rises') : (picked.length ? 'Now the other end' : 'Tap the two ends'), 8, 12);
+    const sl = slotsOf(making.kind).find(([k]) => k === making.at);
+    ctx.fillText(`${KIND_WORDS[making.kind]} — tap ${sl ? sl[1] : 'a point'}` + (making.kind === 'angle' && !picks.length ? ' (a joint fills all three)' : ''), 8, 12);
   }
   function hitAt(e) {
-    const T = mTransform(), r = mcanvas.getBoundingClientRect(), f = draft.figure.points, K = f.A, view = figView();
-    const x = (e.clientX - r.left - T.tx) / T.s, y = (e.clientY - r.top - T.ty) / T.s, tol = 14 / T.s;
-    if (mode === 'limb') {
-      let best = null, bd = tol * 1.4;
-      for (const l of LIMBS[view]) { const p = K[l[0]], q = K[l[1]]; if (!p || !q) continue; const d = Math.hypot((p[0] + q[0]) / 2 - x, (p[1] + q[1]) / 2 - y); if (d < bd) { bd = d; best = l; } }
-      return best ? { limb: best } : null;
-    }
+    const T = mTransform(), r = mcanvas.getBoundingClientRect(), K = draft.figure.points.A, N = NAME[figView()];
+    const x = (e.clientX - r.left - T.tx) / T.s, y = (e.clientY - r.top - T.ty) / T.s, tol = 12 / T.s;
     let best = null, bd = tol;
-    for (const k in K) { if (k === 'h') continue; const d = Math.hypot(K[k][0] - x, K[k][1] - y); if (d < bd) { bd = d; best = k; } }
-    return best ? { joint: best } : null;
+    for (const k in K) { if (!N[k]) continue; const d = Math.hypot(K[k][0] - x, K[k][1] - y); if (d < bd) { bd = d; best = k; } }
+    return best;
   }
 
   /* ================= controls ================= */
@@ -579,12 +641,14 @@ Moves.ready.then(function () {
     host.appendChild(s);
 
     /* 3 — measured */
-    s = section('What is measured', 'Tap the figure. Each measurement reads its value at A and at B off the drawing, and its role says what it is for: the one that tracks the rep, the ones that must be right at the top, a note that is called but does not stop the count, or just a reading for the picture.');
-    s.appendChild(chips([['angle', 'Angle at a joint', 'tap a joint: the angle between the two limbs meeting there'], ['limb', 'Lean of a limb', 'tap a limb: how far it leans (the torso from upright, a leg or arm from hanging)'], ['rise', 'Height of one point over another', 'tap the reference, then the point that rises'], ['length', 'Length between two points', 'tap two points: their distance, as a share of the shin']], mode, (v) => { mode = v; picked = []; commit(true); }));
+    s = section('What is measured', 'Pick the kind, then tap a point on the figure for each slot; the list walks on to the next. Every landmark the camera reads is there, the far side dimmer. Each measurement reads its value at A and at B off the drawing, and its role says what it is for: the one that tracks the rep, the ones that must be right at the top, a note that is called but does not stop the count, or just a reading.');
+    s.appendChild(chips(Object.keys(SLOTS).map((k) => [k, KIND_WORDS[k], KIND_HELP[k]]), making.kind, (v) => { setKind(v); drawMeasure(); renderSlots(); document.querySelectorAll('#build-form .kind-chips .btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kind === v))); }));
+    s.lastChild.classList.add('kind-chips'); s.lastChild.querySelectorAll('.btn').forEach((b, i) => { b.dataset.kind = Object.keys(SLOTS)[i]; });
+    slotHost = el('div'); s.appendChild(slotHost); renderSlots();
     mcanvas = el('canvas', 'measure-fig'); mcanvas.setAttribute('aria-label', 'The figure, to tap what is measured');
-    mcanvas.addEventListener('pointerdown', (e) => { e.preventDefault(); clicked(hitAt(e)); });
+    mcanvas.addEventListener('pointerdown', (e) => { e.preventDefault(); tapped(hitAt(e)); });
     s.appendChild(mcanvas);
-    if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. The first thing you tap becomes what the rep is tracked by.' : 'Nothing measured yet. Tap what has to be right for the hold.'));
+    if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. The first measurement becomes what the rep is tracked by.' : 'Nothing measured yet. Measure what has to be right for the hold.'));
     d.measurements.forEach((m, i) => {
       const card = el('div', 'mcard'); const role = roleOf(m);
       const head = el('div', 'mhead');
@@ -743,5 +807,5 @@ Moves.ready.then(function () {
   if (kept) start(kept, kept.auto || {});
   else { renderStart(); $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.'; }
 
-  window.__builder = { get draft() { return draft; }, start, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, get mode() { return mode; }, set mode(v) { mode = v; picked = []; drawMeasure(); }, clicked, hitAt: (e) => hitAt(e) };
+  window.__builder = { get draft() { return draft; }, start, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, tapped, setKind, get making() { return making; }, keyOfName: (n) => keyOfName(n, figView()) };
 });

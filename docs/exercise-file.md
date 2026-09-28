@@ -129,11 +129,16 @@ edited file is what shows.
 2. Build tab → *Edit a copy of the exercise selected above*. It is a draft now,
    and step 2 of the form, *The movement, drawn*, holds its figure. A figure
    the file gives as angles is turned into points there.
-3. Press *A — start* or *B — end* and drag the joints; shift-drag moves the
-   whole figure; in a side view the dimmer handles are the far limbs. Set
-   *Holds still*, *Faces*, *Working side*, the wall, and under *Muscles
-   working* the sliders. The preview beside it plays the result. Every drag
-   goes straight into the draft; nothing has to be copied across.
+3. Press *A — start* or *B — end* and drag the joints. As in the old Studio's
+   figure builder, dragging a joint turns the bone above it and carries
+   everything below it round, so every limb keeps its length; the hip drags
+   the whole body; the other keyframe sits behind, faint. *Stretch limbs*
+   (or shift for one drag) moves the joint itself and changes the bone's
+   length instead. *Copy this pose onto the other* and *Undo my edits* are
+   there for the rest. The feet — heel and toe — are handles too, added to a
+   figure that lacked them. Set *Holds still*, *Faces*, *Working side*, the
+   wall, and under *Muscles working* the sliders. Every drag goes straight
+   into the draft; nothing has to be copied across.
 4. The problems list should stay clear. *Try it live* opens the exercise's
    page in the coach with the new figure animating over the top half.
 5. *Download the file* and replace `public/exercises/<id>.json` with it, then
@@ -148,12 +153,16 @@ pose sets the body position, the phone's orientation, which way the body
 faces, the placement words and the opening words; each stays the template's
 until edited, and a *use the template* link puts it back.
 
-Step 3, *What is measured*, is the figure again, to tap. A mode chip says
-what a tap means: the **angle at a joint** (the two limbs meeting there), the
-**lean of a limb** (the torso from upright; a leg or arm from hanging), the
-**height of one point over another** (tap the reference, then the point), or
-the **length between two points** (as a share of the shin). Each tap adds a
-measurement whose value at A and at B is read off the drawing, and a role:
+Step 3, *What is measured*, works as the old Studio's did: pick the kind —
+angle at a joint, segment from vertical, segment from the floor, lifted from
+hanging, height of a point over another, distance as % of a segment, a
+point's offset from a line — and the kind's slots appear; tap a point on the
+figure for each, and the list walks itself on to the next. The figure shows
+every landmark the camera reads, named: ear, shoulder, elbow, wrist, hip,
+knee, ankle, heel and toe, the far side dimmer (left and right in a front
+view). On an angle with nothing filled, one tap on a joint fills all three
+slots from the limbs meeting there. Each finished measurement reads its value
+at A and at B off the drawing, and carries a role:
 
 | role | in the file |
 |---|---|
@@ -162,8 +171,9 @@ measurement whose value at A and at B is read off the drawing, and a role:
 | a note | the same band and faults, left out of `inPosition`: called, but the count goes on |
 | just a reading | no band: on the picture only |
 
-The first measurement of a rep exercise tracks the rep. A band's edges follow
-the drawing until one of them is edited. Landmarks, `needed`, bones, the
+The first measurement of a rep exercise tracks the rep. A band's edges — and
+its shape, one-sided at the extremes — follow the drawing until an edge is
+edited. Landmarks, `needed`, bones, the
 skeleton's colours and the drawing list are derived from the measurements;
 the faults' words are templates to rewrite on the card; everything else the
 file allows is under *More* on each card and each step.

@@ -591,14 +591,15 @@ same bodies before and after.
 
 **The Build page** (`review.html`, the Build tab) makes the file from a
 pose, in five steps: the exercise (a name, reps or a hold, sides, load); the
-movement drawn (the figure editor: a starting pose — side on or facing the
-phone × standing, seated, kneeling, on the back, on the front, on all fours,
-on the side — dragged into a start and an end); what is measured, chosen by
-tapping the figure (the angle at a joint, the lean of a limb, the height of
-one point over another, the length between two), each measurement reading its
-value at A and B off the drawing and given a role — tracks the rep, must be
-right, a note, just a reading — from which its band, thresholds and faults
-come; the phone and the words, templated from the pose with the long tail
+movement drawn (the old Studio's figure builder: a starting pose — side on or
+facing the phone × standing, seated, kneeling, on the back, on the front, on
+all fours, on the side — dragged into a start and an end, a drag turning the
+bone above the joint and carrying everything below it); what is measured, as
+the Studio did it — pick the kind, then tap a point on the figure for each of
+its slots, the figure showing every landmark the camera reads, heel and toe
+included — each measurement reading its value at A and B off the drawing and
+given a role — tracks the rep, must be right, a note, just a reading — from
+which its band, thresholds and faults come; the phone and the words, templated from the pose with the long tail
 under *More words*; and the numbers. Landmarks, bones, the skeleton's colours
 and the drawing on the picture are derived from the measurements. Every field
 the file has is still reachable under *More*. A copy of a library exercise or
