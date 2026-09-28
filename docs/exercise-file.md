@@ -326,7 +326,7 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 | `settleMs` | 700 | in position this long before the clock starts |
 | `returnMs` | 400 | back at the start this long before a rep is over: a frame or two of the model swapping the legs is not a return |
 | `lostEverySec` | 15 | "I can't see you" every this |
-| `smooth` | 0.35 | smoothing on the readings (1 = none) |
+| `smooth` | 0.35 | smoothing on the readings (1 = none), after a median of the last three frames that drops a single wild one |
 | `vis` | 0.5 | a landmark below this is not trusted |
 
 `settings` lists the exercise's own numbers offered under "Every number" on

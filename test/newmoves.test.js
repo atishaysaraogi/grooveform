@@ -129,7 +129,8 @@ test('the side measured is held: level knees wobbling do not flip it, a real lif
 /* on the side facing the camera, head to the right: the same angles read as a side view of a body lying on its front-ish; the lift is the leg against the trunk */
 test('side-lying leg raise: forty five is the top, past it is too high, the knee stays straight', () => {
   const M = Moves.sideraise;
-  const LYING = { torso: 90, thigh: -90, shin: -90, foot: 0, thighF: -90, shinF: -90, footF: 0, uarm: -90, farm: -90, hipAt: [1.0, 0.7] };
+  /* the foot short in the picture, as a foot pointing at the phone shows: a fifth of the shin */
+  const LYING = { torso: 90, thigh: -90, shin: -90, foot: 0, thighF: -90, shinF: -90, footF: 0, uarm: -90, farm: -90, hipAt: [1.0, 0.7], footLen: 0.04 };
   let { r, v } = run(M, LYING);
   assert.ok(r.ok && v.atStart && !v.raised, 'lying in line is the start: ' + JSON.stringify(v));
   ({ r, v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -135 })));
@@ -139,30 +140,32 @@ test('side-lying leg raise: forty five is the top, past it is too high, the knee
   ({ v } = run(M, Object.assign({}, LYING, { thigh: -155, shin: -155 })));
   assert.equal(firstFault(M, v), 'liftHigh', 'sixty five is past the hip\'s own limit');
   ({ v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -110 })));
-  assert.equal(firstFault(M, v), 'kneeBend');
-  /* the toes: called only when the foot is plainly in profile (long against the shin) and pointed past 110 at the heel */
+  assert.equal(firstFault(M, v), null, 'twenty five off straight reads 155: the edge, and from the front the model reads this knee a few degrees under');
+  ({ v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -100 })));
+  assert.equal(firstFault(M, v), 'kneeBend', 'thirty five off straight is a bend');
+  /* the toes, during a rep: judged by how long the foot shows against the shin — short is
+     pointing at the phone (pulled back), long is laid along the leg (pointing away) */
   const UP = Object.assign({}, LYING, { thigh: -135, shin: -135 });
-  let pointed = null, back = null;
-  for (let ft = -180; ft < 180; ft += 5) { const x = run(M, Object.assign({}, UP, { foot: ft, footLen: 0.12 })).r.foot; if (x != null && (pointed == null || x > pointed.x)) pointed = { ft, x }; if (x != null && (back == null || Math.abs(x - 90) < Math.abs(back.x - 90))) back = { ft, x }; }
-  assert.ok(pointed.x > 170 && Math.abs(back.x - 90) < 3, `the rig can pose the foot pointed (${pointed.x}) and pulled back (${back.x})`);
-  ({ r, v } = run(M, Object.assign({}, UP, { foot: pointed.ft, footLen: 0.12 })));
-  assert.ok(v.faults.toesAway > 0, 'long in the picture and pointed: toes away');
+  ({ r, v } = run(M, Object.assign({}, UP, { footLen: 0.12 })));
+  assert.ok(Math.abs(r.footlen - 63) < 2, 'twelve over nineteen: ' + r.footlen);
+  assert.ok(v.faults.toesAway > 0, 'long in the picture: toes away');
   assert.equal(v.inPosition, true, 'and the position is still the lift and the knee: the count goes on');
-  ({ r, v } = run(M, Object.assign({}, UP, { foot: back.ft, footLen: 0.12 })));
-  assert.equal(v.faults.toesAway, undefined, 'pulled back: no fault');
-  ({ r, v } = run(M, Object.assign({}, UP, { foot: pointed.ft })));
-  assert.equal(r.foot, null, 'a short foot in the picture is pointing at the camera or away from it: not read');
-  assert.ok(r.ok && v.ok && v.faults.toesAway == null, 'and nothing is called');
-  assert.ok(r.footlen < 0.5 && M.spec.defaults.footLenMin === 0.55 && M.spec.defaults.footMax === 110);
-  assert.deepEqual(M.setup, ['kneeBend', 'toesAway'], 'coached at the start too');
+  ({ r, v } = run(M, Object.assign({}, UP, { footLen: 0.07 })));
+  assert.ok(Math.abs(r.footlen - 37) < 2 && v.faults.toesAway > 0, 'thirty seven is past thirty');
+  ({ r, v } = run(M, UP));
+  assert.ok(r.footlen < 30 && v.faults.toesAway == null, 'a fifth of the shin: pointing at the phone, nothing called');
+  assert.equal(r.foot, null, 'the angle at the heel is drawn only once the foot is in profile');
+  ({ r } = run(M, Object.assign({}, UP, { footLen: 0.12 })));
+  assert.ok(r.foot != null, 'and then it is: ' + r.foot);
+  assert.ok(M.spec.defaults.footLenMax === 30 && M.spec.defaults.kneeMin === 155);
+  assert.deepEqual(M.setup, ['kneeBend'], 'the toes are a rep fault, not a set-up one');
+  assert.ok(!M.setup.includes('toesAway') && M.faults.includes('toesAway'));
   /* through the smoothing, a closed gate is still null — the last value is not held — and it starts afresh when it opens */
   const sm = new Core.Smoother(0.35); const cfg2 = Object.assign({}, Core.COMMON, M.defaults);
-  const long = sm.apply(M.read(body(Object.assign({}, UP, { foot: pointed.ft, footLen: 0.12 })), 16 / 9, cfg2));
-  assert.ok(long.foot > 170, 'read: ' + long.foot);
-  const short = sm.apply(M.read(body(Object.assign({}, UP, { foot: pointed.ft })), 16 / 9, cfg2));
+  const long = sm.apply(M.read(body(Object.assign({}, UP, { footLen: 0.12 })), 16 / 9, cfg2));
+  assert.ok(long.foot != null, 'read: ' + long.foot);
+  const short = sm.apply(M.read(body(UP), 16 / 9, cfg2));
   assert.equal(short.foot, null, 'gate closed: null, not the last reading');
-  const again = sm.apply(M.read(body(Object.assign({}, UP, { foot: back.ft, footLen: 0.12 })), 16 / 9, cfg2));
-  assert.ok(Math.abs(again.foot - 90) < 3, 'open again: the new reading itself, not a blend with the old one: ' + again.foot);
 });
 
 test('prone leg raise: a hand\'s width is the top, higher is too high, the chest coming up is the back arching', () => {

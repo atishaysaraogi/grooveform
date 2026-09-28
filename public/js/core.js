@@ -515,11 +515,18 @@
      degree or two on a body that is not moving, and a threshold sitting inside
      that wobble fires on nothing. */
   class Smoother {
-    constructor(alpha) { this.a = alpha == null ? COMMON.smooth : alpha; this.v = {}; }
-    reset() { this.v = {}; }
+    constructor(alpha) { this.a = alpha == null ? COMMON.smooth : alpha; this.v = {}; this.raw = {}; }
+    reset() { this.v = {}; this.raw = {}; }
+    /* the median of the last three frames goes into the average, so a single wild frame
+       — a knee read at 12° because the ankle jumped for one frame, which used to pull
+       the smoothed value down by fifty and end a hold — never reaches the reading; the
+       cost is one frame of delay */
     of(key, x) {
       if (x == null || !Number.isFinite(x)) return this.v[key] == null ? null : this.v[key];
-      this.v[key] = this.v[key] == null ? x : this.v[key] + this.a * (x - this.v[key]);
+      const r = this.raw[key] || (this.raw[key] = []);
+      r.push(x); if (r.length > 3) r.shift();
+      const m = r.length < 3 ? x : [r[0], r[1], r[2]].sort((p, q) => p - q)[1];
+      this.v[key] = this.v[key] == null ? m : this.v[key] + this.a * (m - this.v[key]);
       return this.v[key];
     }
     /* smooth every angle on a reading in place, leaving the points alone. A reading
@@ -528,7 +535,7 @@
     apply(r) {
       if (!r || !r.ok || !r.angles) return r;
       for (const k of r.angles) {
-        if (r[k] == null && r.nulls && r.nulls.includes(k)) { delete this.v[k]; continue; }
+        if (r[k] == null && r.nulls && r.nulls.includes(k)) { delete this.v[k]; delete this.raw[k]; continue; }
         r[k] = this.of(k, r[k]);
       }
       return r;
