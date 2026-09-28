@@ -238,6 +238,10 @@
       g.appendChild(field('offset (added)', m.offset, (v) => { if (v == null) delete m.offset; else m.offset = v; }, { type: 'number' }));
       g.appendChild(field('times (multiplied)', m.times, (v) => { if (v == null) delete m.times; else m.times = v; }, { type: 'number' }));
       g.appendChild(field('bias (taken off: a number, or a setting\'s key)', m.bias, (v) => { if (v == null || v === '') delete m.bias; else m.bias = isNaN(Number(v)) ? v : Number(v); }, { title: 'a known slant in the landmarks — the bridge\'s foot reads 9° heel-up when flat, so "footBias" with footBias 9 in the defaults' }));
+      { const gt = m.gate || {}; const earlier = (d.measurements || []).slice(0, i).map((q) => q.key);
+        g.appendChild(field('gate — read only while this earlier measurement…', gt.measure, (v) => { if (!v) delete m.gate; else m.gate = Object.assign({}, m.gate, { measure: v }); }, { options: [['', '— (always read)']].concat(earlier.map((k) => [k, k])) }));
+        g.appendChild(field('…is at least (a number or a setting\'s key)', gt.min, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.min; else m.gate.min = isNaN(Number(v)) ? v : Number(v); } }));
+        g.appendChild(field('…and at most', gt.max, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.max; else m.gate.max = isNaN(Number(v)) ? v : Number(v); } })); }
       g.appendChild(field('unseen — the reading when a landmark it needs is hidden', m.unseen, (v) => { if (v == null) delete m.unseen; else m.unseen = v; }, { type: 'number', title: 'a limb hidden behind its twin is lying on it: the straight leg raise\'s lift reads 0 when the far knee is not seen' }));
       g.appendChild(field('optional — not read is not a fault', m.optional, (v) => { if (v) m.optional = true; else delete m.optional; }, { type: 'check' }));
       const kind = Spec.bandKind(m.band) || 'none';

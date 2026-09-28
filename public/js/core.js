@@ -522,10 +522,15 @@
       this.v[key] = this.v[key] == null ? x : this.v[key] + this.a * (x - this.v[key]);
       return this.v[key];
     }
-    /* smooth every angle on a reading in place, leaving the points alone */
+    /* smooth every angle on a reading in place, leaving the points alone. A reading
+       the move lists in `nulls` (a gated one) that is null this frame stays null and
+       forgets its past, so when it is read again it starts from what is seen then. */
     apply(r) {
       if (!r || !r.ok || !r.angles) return r;
-      for (const k of r.angles) r[k] = this.of(k, r[k]);
+      for (const k of r.angles) {
+        if (r[k] == null && r.nulls && r.nulls.includes(k)) { delete this.v[k]; continue; }
+        r[k] = this.of(k, r[k]);
+      }
       return r;
     }
   }

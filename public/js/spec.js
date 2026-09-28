@@ -22,7 +22,9 @@
      distance the distance a→b, as a share of the distance c→d when `per` is given
      sum      the sum of other measurements (`terms`, each with an optional `times`)
    Any of them may carry `offset` (added), `times` (multiplied first) and `bias`
-   (a number or a setting's name, taken off: a known slant in the landmarks). A
+   (a number or a setting's name, taken off: a known slant in the landmarks),
+   `unseen` (the reading when a landmark it needs is hidden) and `gate` (the reading
+   stands only while an earlier measurement is within min/max). A
    landmark may be named plainly (the side being measured), with a side,
    `L.knee` / `R.knee` (a front view), or as `other.knee` — the side not being
    measured, such as the resting leg. `to` may be a list — the first one the
@@ -125,6 +127,14 @@
        limb the camera cannot see beside its twin is lying on it (the straight leg
        raise's far knee, behind the near one when both legs are down, reads a lift of 0) */
     if (m.unseen != null && (x == null || pts.some((p) => !p || p.v == null || p.v < cfg.vis))) return { x: m.unseen, used };
+    /* `gate`: this reading stands only while an earlier measurement is within min/max
+       (numbers, or settings' names); otherwise it is null — not read, not judged. The
+       side-lying raise's toe angle means something only when the foot is long enough
+       in the picture to be seen in profile. */
+    if (m.gate && x != null) {
+      const gv = values[m.gate.measure], lim = (v) => (typeof v === 'string' ? cfg[v] : v);
+      if (gv == null || (m.gate.min != null && gv < lim(m.gate.min)) || (m.gate.max != null && gv > lim(m.gate.max))) return { x: null, used };
+    }
     /* `times` multiplies, `offset` adds, `bias` (a number, or the name of a setting) is
        taken off — a known slant in the landmarks, kept where it can be tuned; `scale`
        is the meter's two ends and not this */
@@ -249,7 +259,9 @@
       if (!s.ok) return { ok: false, side: s.side, vis: s.vis, why: s.why };
       const P = s.points, both = s.both;
       const facing = facingOf(P, both, cfg, s.side);
-      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, angles: ms.map(nameOf), of: {} };
+      /* `nulls`: the readings whose null is meant — a gate closed — and is to pass through
+         the smoothing as null rather than hold the last value */
+      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, angles: ms.map(nameOf), nulls: ms.filter((m) => m.gate).map(nameOf), of: {} };
       const values = {};   // by key, for a sum's terms
       const ctx = { P, both, cfg, facing, Core, values, side: s.side };
       for (const m of ms) { const got = measure(m, ctx); r[nameOf(m)] = got.x; values[m.key] = got.x; r.of[m.key] = got.used; }
@@ -398,6 +410,12 @@
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
       if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
       if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
+      if (m.gate != null) {
+        const before = (f.measurements || []).slice(0, (f.measurements || []).indexOf(m)).map((q) => q.key);
+        if (typeof m.gate !== 'object' || !before.includes(m.gate.measure)) err(at + '.gate', 'names a measurement listed before this one: ' + (before.join(', ') || 'none'));
+        for (const k of ['min', 'max']) { const v = m.gate[k]; if (v != null && typeof v !== 'number' && !(typeof v === 'string' && typeof defaults[v] === 'number')) err(`${at}.gate.${k}`, 'a number, or the name of a setting in defaults'); }
+        if (m.gate.min == null && m.gate.max == null) err(at + '.gate', 'a min, a max, or both');
+      }
       if (m.band) {
         const b = m.band, kind = bandKind(b);
         const refs = kind === 'sym' ? [b.sym] : kind === 'min' ? [b.min] : kind === 'max' ? [b.max] : [b.lo, b.hi];

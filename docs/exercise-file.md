@@ -193,7 +193,7 @@ Each is a named number read every frame and smoothed.
 { "key": "shin", "of": "shinAngle",           // key: the band's name; of (optional): the reading's name when it differs
   "label": "toe, heel, knee", "hud": "SHIN", "note": "target",   // the live page's card, the picture's corner
   "kind": "angle", "a": "toe", "b": "heel", "c": "knee",
-  "offset": 0, "times": 1, "bias": 0, "unseen": null, "optional": false,
+  "offset": 0, "times": 1, "bias": 0, "unseen": null, "gate": null, "optional": false,
   "band": { "lo": "shinMin", "hi": "shinMax" }, "scale": [40, 170],
   "settings": [{ "key": "shinMin", "label": "Shin angle, lowest", "min": 30, "max": 165 }, ...],
   "why": "a note" }
@@ -224,7 +224,11 @@ number the measurement reads instead when a landmark it needs is hidden or
 below the trust bar: the straight leg raise's lift reads 0 when the far knee
 is hidden behind the near one, because a leg the camera cannot see beside its
 twin is lying on it — and that landmark is then left out of `needed`, so the
-frame is not lost.
+frame is not lost. `gate` makes a reading stand only while an earlier
+measurement is within `min`/`max` (numbers, or settings' names); otherwise it
+is null, not judged, and with `optional` the frame stands. The side-lying
+raise's toe angle is gated on the foot's length against the shin, so it is
+read only when the foot is long enough in the picture to be in profile.
 
 A **band** makes the measurement judged, gives it a lane on the Review page,
 a card on the live page and a line on the HUD: `{lo, hi}` between two edges,

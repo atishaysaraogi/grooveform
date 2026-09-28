@@ -41,8 +41,8 @@
       "Lift the leg to about forty five degrees — no higher: past that the hip hikes and the work leaves the glute.",
       "Hold for the count, then lower slowly. The rep counts when the leg is back down."
     ],
-    "cannot": "The hips rolling back and the toes turning up to the ceiling: it sees the lift and the knee from the front. Keep the top hip stacked over the bottom one yourself.",
-    "about": "Side-lying leg raise — lying on your side facing the phone: the lift, as the angle at the hip between shoulder and ankle, 130–150° at the top (a lift of 30–50°, the hip's own limit is about 45°); and the knee, at least 165° so the leg stays straight. Hold two seconds at the top, lower slowly, and the rep counts when the leg is back down.",
+    "cannot": "The hips rolling back, and the toes turning up to the ceiling as against pointing away: it sees the lift and the knee from the front, and calls the foot only when it is plainly laid along the leg. Keep the top hip stacked over the bottom one yourself.",
+    "about": "Side-lying leg raise — lying on your side facing the phone: the lift, as the angle at the hip between shoulder and ankle, 130–150° at the top (a lift of 30–50°, the hip's own limit is about 45°); and the knee, at least 165° so the leg stays straight. Hold two seconds at the top, lower slowly, and the rep counts when the leg is back down. The toes are called only when the foot is plainly pointed along the leg — long in the picture and past 110° at the heel — and a rep still counts with them; from the front a foot toward the camera cannot be read.",
     "lost": "Lie on your side facing the camera, whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -303,6 +303,60 @@
         }
       ],
       "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+    },
+    {
+      "key": "footlen",
+      "label": "foot length against the shin",
+      "hud": "FOOT",
+      "kind": "distance",
+      "a": "toe",
+      "b": "heel",
+      "per": [
+        "knee",
+        "ankle"
+      ],
+      "scale": [
+        0,
+        1
+      ],
+      "why": "How long the foot is in the picture, as a share of the shin. Lying face on to the phone, a foot pulled back points its toes at the camera and shows short; a foot pointed along the leg lies in profile and shows long. Not judged itself: it is the gate on the toe angle below. In a recorded take the raised foot showed 30–45% of the shin in most reps, pointed or not, and 60–80% only when it was plainly laid along the leg."
+    },
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "toward you",
+      "kind": "angle",
+      "a": "toe",
+      "b": "heel",
+      "c": "knee",
+      "optional": true,
+      "gate": {
+        "measure": "footlen",
+        "min": "footLenMin"
+      },
+      "band": {
+        "max": "footMax"
+      },
+      "scale": [
+        60,
+        180
+      ],
+      "settings": [
+        {
+          "key": "footMax",
+          "label": "Toe, heel, knee angle past which the toes are pointing away (degrees)",
+          "min": 90,
+          "max": 175
+        },
+        {
+          "key": "footLenMin",
+          "label": "Foot length against the shin from which the foot counts as seen in profile",
+          "min": 0.2,
+          "max": 1
+        }
+      ],
+      "why": "The angle at the heel between the toe and the knee: about 90 with the toes pulled back toward you, toward 180 with the foot pointed along the leg. Read only while the foot is long enough in the picture to be in profile (the gate on footlen, at least 0.55 of the shin, above the 30–45% the raised foot showed pointing toward the phone), because from the front a foot pointing at the camera gives this angle no meaning — in a recorded take pulled-back and pointed reps read alike, 143–177, until the foot was plainly laid along the leg. So this calls only the obvious case: a foot in profile past the angle. Optional: a hidden heel does not lose the frame. The toes turning up to the ceiling look the same from here and are not told apart."
     }
   ],
   "progress": {
@@ -311,6 +365,10 @@
     "downAt": "downAt",
     "direction": "down"
   },
+  "inPosition": [
+    "lift",
+    "knee"
+  ],
   "ready": {
     "atStart": true,
     "ranges": {
@@ -353,6 +411,16 @@
       "text": "Lift a little higher",
       "deep": "Higher — up to about forty five degrees",
       "tone": "up"
+    },
+    {
+      "id": "toesAway",
+      "measure": "foot",
+      "side": "above",
+      "setup": true,
+      "label": "Toes pointing away",
+      "text": "Pull your toes back toward you",
+      "deep": "Toes toward you — the foot is pointing away along the leg",
+      "tone": "plain"
     }
   ],
   "draw": [
@@ -371,6 +439,11 @@
       "kind": "arc",
       "measure": "knee",
       "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "foot",
+      "size": 0.5
     }
   ],
   "defaults": {
@@ -385,7 +458,9 @@
     "setCount": 3,
     "lowerSec": 1,
     "restSec": 2,
-    "deepAt": 10
+    "deepAt": 10,
+    "footMax": 110,
+    "footLenMin": 0.55
   },
   "settings": [
     {
