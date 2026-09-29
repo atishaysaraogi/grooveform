@@ -127,16 +127,16 @@
   function account(result, move, i0, i1) {
     const P = progressOf(move, result.cfg); if (!P) return null;
     const rows = result.rows, cfg = result.cfg;
-    let peak = null, inPosMs = 0, unseenMs = 0; const bad = {};
+    let peak = null, inPosMs = 0, unseenMs = 0, edgeMs = 0; const bad = {}, edgeParts = {};
     for (let i = i0; i <= i1; i++) {
       const r = rows[i], dt = i ? r.t - rows[i - 1].t : 0, v = r.verdict;
       const x = r.reading && r.reading.ok ? r.reading[P.of] : null;
       if (x != null && (peak == null || (P.dir > 0 ? x > peak : x < peak))) peak = x;
-      if (!v || !v.ok) { unseenMs += dt; continue; }
+      if (!v || !v.ok) { unseenMs += dt; const e = r.reading && r.reading.edge; if (e) { edgeMs += dt; const w = Core.partWords(e.side, e.joint); edgeParts[w] = (edgeParts[w] || 0) + dt; } continue; }
       if (v.inPosition) inPosMs += dt;
       if (v.raised) for (const k of P.keep) if (v.good && v.good[k] === false) bad[k] = (bad[k] || 0) + dt;
     }
-    return { peak, inPosMs, unseenMs, bad, targetMs: cfg.holdTargetSec * 1000, settleMs: cfg.settleMs, returnMs: cfg.returnMs || 0, raiseAt: P.raiseAt, downAt: P.downAt, dir: P.dir, unit: P.unit,
+    return { peak, inPosMs, unseenMs, edgeMs, edgeParts, bad, targetMs: cfg.holdTargetSec * 1000, settleMs: cfg.settleMs, returnMs: cfg.returnMs || 0, raiseAt: P.raiseAt, downAt: P.downAt, dir: P.dir, unit: P.unit,
       top: P.band ? bandRange(P.band, cfg) : null };
   }
   /* movements that fell short of a rep: between reps, the reading left the start line, got at

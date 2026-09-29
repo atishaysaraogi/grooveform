@@ -80,6 +80,8 @@ side: `L.knee`, `R.knee` (see Landmarks).
 | `about` | the numbers, explained, for the exercise page |
 | `hint` | one line for a card |
 | `lost` | said when nobody is in the frame (every 15 s) — default "Step into the camera, side on" |
+| `edge` | said when a needed landmark is at the picture's edge, on the same slow clock as `lost` and instead of it; `{joint}` is filled with the part — "left foot", "right hand" — default "Your {joint} is at the edge of the picture — move so all of you is in" |
+| `framing` | said once during the set-up wait when a needed landmark is inside the picture but within two margins of its edge — default "Your {joint} is close to the edge of the picture — move back a little, so there is room round you". Neither is one of the person's faults: not in the fault order, never in a rep's account |
 | `lower` | reps: the hold at the top is done — default "Lower slowly" |
 | `early` | reps: back down before the hold was done — default "Hold it at the top next time" |
 | `hold` | into position — default "That is it — hold" |

@@ -456,6 +456,21 @@ of the starting line with ?. Below it a lane per band and the coach's cues.
 against the lines, how long the hold clock ran against the hold asked and why
 it stopped, which band broke the position and for how long.
 
+**The picture's edge.** The model goes on placing a foot that has left the
+frame, and at 60–98% certainty in recorded takes, so the certainty bar alone
+never says it is gone. A needed landmark nearer the picture's edge than the
+`edge` margin (3% of the frame), or past it, is not trusted, and the coach says
+which part it is — "Your left foot is at the edge of the picture — move so all
+of you is in" — on the slow clock "I can't see you" uses, instead of it.
+Beside the edge, a landmark whose certainty has slid `drop` (0.25) below its
+best of the last ten frames is not trusted either, the fall that comes as a
+limb goes out, caught before the bar is. During the set-up wait a needed
+landmark inside the picture but within two margins of its edge is said once
+— "close to the edge — move back a little" — so the framing is fixed before
+the set. The review aid draws the margin and rings a joint at or past it; the
+rep lane marks the frames not trusted for it in the same colour, and Rep by
+rep says for how long, and which part.
+
 **Every point the model sees** (a review aid, to be taken out once the
 exercises are settled): on the live page's Settings sheet, "Show every point
 the model sees", and on the Recordings tab a checkbox above the numbers. All

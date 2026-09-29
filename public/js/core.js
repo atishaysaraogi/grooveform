@@ -27,6 +27,8 @@
   /* Settings every move shares. A move's own defaults are laid over these. */
   const COMMON = {
     vis: 0.5,             // a landmark below this is not trusted
+    edge: 0.03,           // a needed landmark nearer the picture's edge than this share of it, or past it, is not trusted: the model keeps guessing at a foot that has left the frame
+    drop: 0.25,           // near the edge, a needed landmark whose certainty has fallen this far below its best of the last ten frames is not trusted either
     smooth: 0.35,         // EMA on the angles; 1 = no smoothing
     persistMs: 500,       // how long a fault holds before it is worth saying
     cooldownMs: 4000,     // how long before the same cue may be said again
@@ -43,6 +45,15 @@
   };
 
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+  /* Said about the picture, not the exercise: never one of the person's faults. */
+  const SYSTEM = ['lost', 'edge', 'framing'];
+  const PART = { ear: 'head', shoulder: 'shoulder', elbow: 'elbow', wrist: 'hand', hip: 'hip', knee: 'knee', ankle: 'foot', heel: 'foot', toe: 'foot' };
+  const partWords = (side, joint) => `${side === 'L' ? 'left ' : side === 'R' ? 'right ' : ''}${PART[joint] || joint}`;
+  const fillPart = (text, side, joint) => String(text || '').replace(/\{joint\}/g, partWords(side, joint));
+  /* every way a {joint} text can come out, for the voice pack */
+  const PARTS = [...new Set(Object.values(PART))];
+  const partTexts = (text) => (/\{joint\}/.test(text) ? [].concat(...['L', 'R'].map((sd) => PARTS.map((w) => String(text).replace(/\{joint\}/g, `${sd === 'L' ? 'left' : 'right'} ${w}`)))) : [text]);
   const DEG = 180 / Math.PI;
 
   /* Is a reading inside its band? A body posed to exactly the edge comes back a
@@ -132,10 +143,14 @@
      builds them itself and chooses; everything else goes through `frame`. */
   function sidePoints(lm, aspect, side) {
     const j = SIDE[side], P = {};
-    for (const k of Object.keys(j)) { const p = lm[j[k]]; if (!p) return null; P[k] = { x: p.x * aspect, y: p.y, v: visOf(p) }; }
+    for (const k of Object.keys(j)) { const p = lm[j[k]]; if (!p) return null; P[k] = { x: p.x * aspect, y: p.y, v: visOf(p), d: Math.min(p.x, 1 - p.x, p.y, 1 - p.y) }; }   // d: how far inside the picture, in shares of it; negative outside
     return P;
   }
-  const seen = (P, needed, cfg) => needed.every((k) => P[k] && P[k].v >= cfg.vis);
+  /* trusted: seen clearly enough, and not at the picture's edge — the model goes on placing
+     a foot that has left the frame, at 60–98% certainty in recorded takes, so certainty alone
+     does not say it is gone */
+  const trusted = (p, cfg) => !!p && p.v >= cfg.vis && (p.d == null || p.d >= (cfg.edge || 0));
+  const seen = (P, needed, cfg) => needed.every((k) => trusted(P[k], cfg));
 
   /* Landmarks → the side worth measuring, by how clearly it can be seen. Returns
      null when the frame cannot be used at all, and `{ok:false}` when the body is
@@ -145,7 +160,10 @@
     const { side, vis } = pickSide(lm, joints);
     const P = sidePoints(lm, aspect, side);
     if (!P) return null;
-    if (!seen(P, needed, cfg)) return { ok: false, side, vis, why: 'Some of you is out of shot or hidden' };
+    if (!seen(P, needed, cfg)) {
+      const k = needed.find((n) => !trusted(P[n], cfg)), atEdge = P[k] && P[k].v >= cfg.vis;
+      return Object.assign({ ok: false, side, vis, why: atEdge ? `Your ${partWords(side, k)} is at the edge of the picture` : 'Some of you is out of shot or hidden' }, atEdge ? { edge: { joint: k, side, how: 'edge' } } : {});
+    }
     return { ok: true, side, vis, points: P };
   }
 
@@ -207,6 +225,8 @@
   const SHARED_CUES = {
     hold: { text: 'That is it — hold' },
     lost: { text: 'I can\u2019t see you \u2014 step into the camera, side on' },
+    edge: { text: 'Your {joint} is at the edge of the picture \u2014 move so all of you is in' },
+    framing: { text: 'Your {joint} is close to the edge of the picture \u2014 move back a little, so there is room round you' },
     fast: { text: 'slower on the way down' },
   };
 
@@ -231,6 +251,7 @@
       this.ready = false; this.readySince = 0;   // the set-up wait, until the start position is held
       this.quietUntil = 0;              // nothing is said before this: the opening words are being said
       this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
+      this.nearSince = 0; this.lastNear = 0;     // a needed point close to the picture's edge during the set-up wait: since when, and when it was last said
       this.lastT = null; this.log = [];
       this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
@@ -295,7 +316,10 @@
         this.inSince = 0; this.runMs = 0; this.holdDue = 0; this.wasIn = false; this.since = {}; this.downSince = 0;
         let cue = null;
         if (t - this.lostSince >= cfg.persistMs && (!this.lastLost || t - this.lastLost >= (cfg.lostEverySec || 15) * 1000)) {
-          cue = this.offer('lost', t, this.cues.lost.text);
+          /* a frame not trusted because a needed point is at the picture's edge is said as
+             that, naming the part, rather than as nobody being there */
+          const e = r && r.edge;
+          cue = e && this.cues.edge ? this.offer('edge', t, fillPart(this.cues.edge.text, e.side, e.joint)) : this.offer('lost', t, this.cues.lost.text);
           if (cue) this.lastLost = t;
         }
         return shape({ cue });
@@ -305,7 +329,18 @@
         const at = this.move.ready ? !!this.move.ready(r, v, cfg) : reps ? !!v.atStart : true;
         if (at) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
         else this.readySince = 0;
-        if (!this.ready) return shape({});
+        if (!this.ready) {
+          /* the moment to fix the framing is now, before the set: a needed point close to
+             the edge (inside it, still trusted) is said once, naming the part */
+          const near = r && r.near && r.near.length ? r.near[0] : null;
+          if (near) { if (!this.nearSince) this.nearSince = t; } else this.nearSince = 0;
+          let cue = null;
+          if (near && this.cues.framing && t - this.nearSince >= cfg.persistMs && (!this.lastNear || t - this.lastNear >= (cfg.lostEverySec || 15) * 1000)) {
+            cue = this.offer('framing', t, fillPart(this.cues.framing.text, near.side, near.joint));
+            if (cue) this.lastNear = t;
+          }
+          return shape({ cue });
+        }
       }
       return null;
     }
@@ -568,7 +603,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-28c';
+  const VER = '2026-09-29a';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -593,6 +628,6 @@
     return lines;
   }
 
-  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
+  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

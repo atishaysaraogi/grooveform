@@ -21,7 +21,7 @@ Moves.ready.then(function () {
   $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}${m.draft ? ' (draft)' : ''}</option>`).join('');
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', line: '#263040', accent: '#5aa9ff' };
+  const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', line: '#263040', accent: '#5aa9ff', edge: '#e879f9' };
   const A = window.OnTrackAnatomy;
 
   let move = Moves.bridge || Moves.list[0], tuned = {}, trace = null, result = null, takes = [];
@@ -190,7 +190,8 @@ Moves.ready.then(function () {
   function judge() {
     result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect) : null;
     $('export-trace').disabled = !trace; $('add-take').disabled = !trace;
-    $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') : '') : 'no recording yet';
+    const edgeMs = result ? result.rows.reduce((a, r, i) => a + (r.reading && r.reading.edge && i ? r.t - result.rows[i - 1].t : 0), 0) : 0;
+    $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') + (edgeMs ? ` · ${(edgeMs / 1000).toFixed(1)} s with a point at the picture's edge` : '') : '') : 'no recording yet';
     drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts();
   }
   /* ---------- the reps, one by one ---------- */
@@ -206,7 +207,7 @@ Moves.ready.then(function () {
     if (w.targetMs > 0) parts.push(`the hold clock ran ${sec(r.holdMs)} of the ${sec(w.targetMs)} asked` + (w.inPosMs < w.targetMs + w.settleMs && !r.counted ? ` — it runs only once every band has been right for ${sec(w.settleMs)}, and was in position ${sec(w.inPosMs)} in all` : ''));
     const bad = Object.entries(w.bad).filter(([, ms]) => ms > 0).sort((x, y) => y[1] - x[1]);
     if (bad.length) parts.push('out of its band at the top: ' + bad.map(([k, ms]) => `${esc((move.bands.find((b) => b.key === k) || {}).label || k)} for ${sec(ms)}`).join(', '));
-    if (w.unseenMs > 300) parts.push(`not seen for ${sec(w.unseenMs)}`);
+    if (w.unseenMs > 300) parts.push(`not trusted for ${sec(w.unseenMs)}` + (w.edgeMs ? ' \u2014 ' + Object.entries(w.edgeParts).map(([part, ms]) => `the ${part} at the edge of the picture for ${sec(ms)}`).join(', ') : ''));
     if (!r.counted && !r.open) parts.push(r.early ? `back at the start (${past === '≥' ? '≤' : '≥'} ${fmtV(w.downAt, w.unit)} for ${sec(w.returnMs)}) before the hold was done — not counted` : 'not counted');
     if (r.counted && w.targetMs === 0) parts.push('counted on reaching the top and coming back — no hold asked');
     return parts.join(' · ');
@@ -279,6 +280,8 @@ Moves.ready.then(function () {
       for (const r of rows) { const on = r.out && r.out.holding, v = r.reading && r.reading.ok ? r.reading[P.of] : null; if (!on || v == null) { pen = false; continue; } const px = x(r.t), py = y(v); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); } ctx.stroke();
       /* frames the top band was out */
       if (P.band) { ctx.fillStyle = 'rgba(255,92,108,.55)'; for (const r of rows) if (r.verdict && r.verdict.ok && r.verdict.good && r.verdict.good[P.key] === false) ctx.fillRect(x(r.t), progH - 4, fw, 4); }
+      /* frames not trusted because a needed point was at the picture's edge */
+      ctx.fillStyle = C.edge; for (const r of rows) if (r.reading && r.reading.edge) ctx.fillRect(x(r.t), 0, fw, 4);
       ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.ink; ctx.fillText('THE REP', 6, 4);
       ctx.fillStyle = C.dim; ctx.fillText(P.label.slice(0, 12), 6, 18); ctx.fillText(`${fmtV(s1, P.unit)}`, 6, 32); ctx.fillText(`${fmtV(s0, P.unit)}`, 6, progH - 14);
       /* the stretch before the coaching, said in words once */
@@ -313,7 +316,7 @@ Moves.ready.then(function () {
     for (const cue of result.cues) {
       const px = x(cue.t);
       const good = cue.id === 'hold' || cue.id === 'done' || /^call\d|^count\d/.test(cue.id) || cue.id === 'start';
-      ctx.fillStyle = good ? C.good : cue.id === 'raise' || cue.id === 'lower' ? C.accent : C.bad;
+      ctx.fillStyle = good ? C.good : cue.id === 'raise' || cue.id === 'lower' ? C.accent : cue.id === 'edge' || cue.id === 'framing' ? C.edge : C.bad;
       ctx.fillRect(px, yb + 20, 2, 14);
       const words = (move.cues[cue.id] && move.cues[cue.id].label) || cue.id;
       ctx.save(); ctx.translate(px + 4, yb + 36); ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 16), 0, 0); ctx.restore();

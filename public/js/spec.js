@@ -192,6 +192,9 @@
     for (const x of faults) cues[x.id] = strip({ label: x.label, text: x.text, deep: x.deep, tone: x.tone });
     if (prompt) cues[prompt.id] = strip({ text: prompt.text, tone: prompt.tone });
     cues.lost = { text: words.lost || 'Step into the camera, side on' };
+    /* about the picture, not the person: {joint} is filled with the part — "left foot" */
+    cues.edge = { text: words.edge || Core.SHARED_CUES.edge.text };
+    cues.framing = { text: words.framing || Core.SHARED_CUES.framing.text };
     if (reps) { cues.lower = { text: words.lower || 'Lower slowly' }; cues.early = { text: words.early || 'Hold it at the top next time' }; }
     if (words.hold) cues.hold = { text: words.hold };
 
@@ -214,21 +217,40 @@
        called by a new coach). */
     const hold = f.side && f.side.hold ? { margin: f.side.hold.margin == null ? 0.25 : f.side.hold.margin, frames: f.side.hold.frames == null ? 5 : f.side.hold.frames } : null;
     const held = { side: null, want: null, run: 0 };
-    const reset = () => { held.side = null; held.want = null; held.run = 0; };
+    const hist = {};   // each needed point's certainty over the last ten frames, by side and name
+    const reset = () => { held.side = null; held.want = null; held.run = 0; for (const k of Object.keys(hist)) delete hist[k]; };
+    /* Why a needed point is not to be trusted, or null. Hidden: under the certainty bar.
+       Edge: nearer the picture's edge than `edge`, or past it — the model goes on placing a
+       foot that has left the frame, and at 60–98% certainty in recorded takes, so the bar
+       alone does not catch it. Drop: near the edge (inside three margins of it), certainty
+       has fallen `drop` below its best of the last ten frames — the slide that comes as a
+       limb goes out, caught before the bar is. */
+    const distrust = (k, P, both, sd, cfg) => {
+      const p = pointOf(k, P, both, sd); if (!p) return 'hidden';
+      const edge = cfg.edge || 0;
+      if (p.d != null && p.d < edge) return 'edge';
+      if (p.v < cfg.vis) return 'hidden';
+      const drop = cfg.drop == null ? 0 : cfg.drop;
+      if (drop > 0 && p.d != null && p.d < 3 * edge) { const h = hist[sd + '.' + k]; if (h && h.length && Math.max(...h) - p.v > drop) return 'drop'; }
+      return null;
+    };
     function sides(lmk, aspect, cfg) {
       if (!lmk || lmk.length < 33) return null;
       const both = { L: Core.sidePoints(lmk, aspect, 'L'), R: Core.sidePoints(lmk, aspect, 'R') };
       if (!both.L || !both.R) return null;
-      const seen = (P, sd) => needed.every((k) => { const p = pointOf(k, P, both, sd); return p && p.v >= cfg.vis; });
+      const lack = (P, sd) => { for (const k of needed) { const how = distrust(k, P, both, sd, cfg); if (how) return { joint: k, side: sd, how }; } return null; };
       const vis = (P, sd) => joints.reduce((a, k) => { const p = pointOf(k, P, both, sd); return a + (p ? p.v : 0); }, 0) / Math.max(1, joints.length);
-      const opts = ['L', 'R'].map((s) => ({ side: s, P: both[s], ok: seen(both[s], s), vis: vis(both[s], s) }));
+      const opts = ['L', 'R'].map((s) => { const miss = lack(both[s], s); return { side: s, P: both[s], ok: !miss, miss, vis: vis(both[s], s) }; });
+      /* the certainties this frame go into the history after the judgement, not before */
+      for (const s of ['L', 'R']) for (const k of needed) { const p = pointOf(k, both[s], both, s); if (!p) continue; const key = s + '.' + k; const h = hist[key] || (hist[key] = []); h.push(p.v); if (h.length > 10) h.shift(); }
       let chosen;
       if (pick === 'left' || pick === 'right') chosen = [opts[pick === 'left' ? 0 : 1]];
       else chosen = opts;
       const usable = chosen.filter((o) => o.ok);
       if (!usable.length) {
-        const best = chosen.slice().sort((a, b) => b.vis - a.vis)[0];
-        return { ok: false, side: best.side, vis: best.vis, why: 'Some of you is out of shot or hidden', both };
+        const best = chosen.slice().sort((a, b) => b.vis - a.vis)[0], miss = best.miss;
+        const atEdge = miss && miss.how !== 'hidden';
+        return Object.assign({ ok: false, side: best.side, vis: best.vis, why: atEdge ? `Your ${Core.partWords(miss.side, miss.joint)} is at the edge of the picture` : 'Some of you is out of shot or hidden', both }, atEdge ? { edge: miss } : {});
       }
       let best;
       const mm = pick === 'measure' ? byKey[f.side.measure] : null;
@@ -252,18 +274,20 @@
         } else { held.want = null; held.run = 0; }
         best = usable.find((o) => o.side === held.side) || best;
       }
-      return { ok: true, side: best.side, vis: best.vis, points: best.P, both };
+      /* trusted, but close to the edge: said during the set-up wait, so the framing is fixed before the set */
+      const near = needed.map((k) => ({ joint: k, side: best.side, p: pointOf(k, best.P, both, best.side) })).filter((n) => n.p && n.p.d != null && n.p.d < 2 * (cfg.edge || 0)).map((n) => ({ joint: n.joint, side: n.side }));
+      return { ok: true, side: best.side, vis: best.vis, points: best.P, both, near };
     }
 
     function read(lmk, aspect, cfg) {
       const s = sides(lmk, aspect, cfg);
       if (!s) return null;
-      if (!s.ok) return { ok: false, side: s.side, vis: s.vis, why: s.why };
+      if (!s.ok) return Object.assign({ ok: false, side: s.side, vis: s.vis, why: s.why }, s.edge ? { edge: s.edge } : {});
       const P = s.points, both = s.both;
       const facing = facingOf(P, both, cfg, s.side);
       /* `nulls`: the readings whose null is meant — a gate closed — and is to pass through
          the smoothing as null rather than hold the last value */
-      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, angles: ms.map(nameOf), nulls: ms.filter((m) => m.gate).map(nameOf), of: {} };
+      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, near: s.near, angles: ms.map(nameOf), nulls: ms.filter((m) => m.gate).map(nameOf), of: {} };
       const values = {};   // by key, for a sum's terms
       const ctx = { P, both, cfg, facing, Core, values, side: s.side };
       for (const m of ms) { const got = measure(m, ctx); r[nameOf(m)] = got.x; values[m.key] = got.x; r.of[m.key] = got.used; }
@@ -434,7 +458,7 @@
       }
     });
     for (const s of f.settings || []) if (typeof defaults[s.key] !== 'number') err('settings', `a setting with no default: ${s.key}`);
-    const ids = new Set(['lost']);
+    const ids = new Set(['lost', 'edge', 'framing']);   // the coach's own cue ids, about the picture: no fault may take them
     (f.faults || []).forEach((x, i) => {
       const at = `faults[${i}]`;
       if (!x.id || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(x.id)) err(at + '.id', 'one word'); else if (ids.has(x.id)) err(at + '.id', 'used twice: ' + x.id); else ids.add(x.id);

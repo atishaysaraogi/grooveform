@@ -55,10 +55,12 @@
 
   /* everything a move might say in a set, to be made before it starts: each
      cue's words and its stronger words, the counts, the time calls, the ends */
+  /* a text with {joint} in it is said with the part filled in — "left foot" — so every filling is a phrase */
+  const fillings = (t) => (/\{joint\}/.test(t) ? [].concat(...['left', 'right'].map((sd) => ['head', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot'].map((w) => t.replace(/\{joint\}/g, `${sd} ${w}`)))) : [t]);
   function texts(move, cfg, shared) {
     const out = new Set();
     const cues = Object.assign({}, shared || {}, move.cues || {});
-    for (const c of Object.values(cues)) { if (c.text) out.add(c.text); if (c.deep) out.add(c.deep); }
+    for (const c of Object.values(cues)) { if (c.text) fillings(c.text).forEach((t) => out.add(t)); if (c.deep) fillings(c.deep).forEach((t) => out.add(t)); }
     if (move.start) out.add(move.start);
     const fast = cues.fast && cues.fast.text;
     if (move.reps) {
@@ -82,7 +84,7 @@
   /* what a voice pack holds: every move's words, and the numbers the coach reads out */
   function packTexts(Moves, Core) {
     const out = new Set();
-    const add = (t) => { const k = key(t); if (k) out.add(k); };
+    const add = (t) => { for (const f of fillings(String(t == null ? '' : t))) { const k = key(f); if (k) out.add(k); } };
     const shared = Core.SHARED_CUES;
     for (const c of Object.values(shared)) { add(c.text); if (c.deep) add(c.deep); }
     for (const m of Moves.list) {

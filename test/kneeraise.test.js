@@ -34,8 +34,8 @@ const judge = (r, o) => M.judge(r, cfg(o));
    The other leg is left standing straight underneath, as the one holding the
    person up. */
 function body({ thigh = 0, knee = 180, foot = 85, facing = 1, up = 'R', vis = 0.95,
-                hipAt = [0.22, 0.42], thighLen = 0.17, shinLen = 0.16, heelDrop = 0.03,
-                footLen = 0.08, torso = 0.22 } = {}) {
+                hipAt = [0.28, 0.42], thighLen = 0.11, shinLen = 0.10, heelDrop = 0.02,
+                footLen = 0.05, torso = 0.18 } = {}) {
   const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
   const leg = (lift, bend, ang) => {
     const hip = { x: hipAt[0], y: hipAt[1] };

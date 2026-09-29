@@ -252,6 +252,9 @@
     const mirrored = !!cfg.mirror;
     ctx.save();
     ctx.setLineDash([]); ctx.lineCap = 'round'; ctx.shadowBlur = 0;
+    /* the margin: a needed point nearer the edge than this is not trusted (cfg.edge) */
+    const m = cfg.edge == null ? 0.03 : cfg.edge;
+    if (m > 0) { ctx.setLineDash([6, 4]); ctx.lineWidth = Math.max(1, s * 0.5); ctx.strokeStyle = 'rgba(232,121,249,.7)'; ctx.strokeRect(fit.x + m * fit.w, fit.y + m * fit.h, fit.w * (1 - 2 * m), fit.h * (1 - 2 * m)); ctx.setLineDash([]); }
     for (const [a, b] of POINT_LINES) {
       const p = lm[a], q = lm[b]; if (!p || !q) continue;
       const c = Math.min(sureOf(p), sureOf(q));
@@ -269,6 +272,8 @@
       ctx.beginPath(); ctx.arc(x, y, s * (big ? 2.6 : 1.6), 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
       if (own.has(i)) { ctx.lineWidth = s * 0.9; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, s * 4.4, 0, Math.PI * 2); ctx.stroke(); }
+      /* a joint at or past the margin: ringed in the margin's colour, whatever its certainty */
+      if (LABELLED.has(i) && Math.min(p.x / A, 1 - p.x / A, p.y, 1 - p.y) < m) { ctx.lineWidth = s * 1.2; ctx.strokeStyle = 'rgba(232,121,249,.95)'; ctx.beginPath(); ctx.arc(x, y, s * 6, 0, Math.PI * 2); ctx.stroke(); }
       if (LABELLED.has(i)) label(ctx, `${POINT_NAMES[i]} ${Math.round(c * 100)}`, x, y + (right ? 1 : -1) * fs * 1.1, fs, sureColour(c, bar), mirrored);
     });
     ctx.restore();
