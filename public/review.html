@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-30a">
+<html lang="en" data-v="2026-09-30b">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-30a">
+<link rel="stylesheet" href="styles.css?v=2026-09-30b">
 </head>
 <body class="review">
 <header class="bar">
@@ -45,14 +45,22 @@
             <button class="btn" id="anim-undo">Undo my edits</button>
             <button class="btn" id="anim-load" title="Replace the drawing with the figure of the exercise selected in the bar">Take the selected exercise’s figure</button>
           </div>
+          <div class="row">
+            <span class="seg" role="radiogroup" aria-label="Viewpoint">
+              <button class="btn" id="ev-camera" aria-pressed="true">From the camera</button>
+              <button class="btn" id="ev-top" aria-pressed="false">From above</button>
+              <button class="btn" id="ev-iso" aria-pressed="false">Isometric</button>
+            </span>
+          </div>
           <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
-          <p class="tiny">Drag a joint: the bone above it turns and everything below comes round with it, every limb keeping its length. The hip drags the whole body. The other keyframe sits behind, faint. In a side view the far limbs are the dimmer handles.</p>
+          <p class="tiny">From the camera, drag a joint: the bone above it turns and everything below comes round with it, every limb keeping its length. The hip drags the whole body. The other keyframe sits behind, faint. In a side view the far limbs are the dimmer handles. From above, the camera sits at the bottom of the picture: drag a joint down to bring it toward the camera, up to take it away, and what hangs off it comes along; a limb that comes toward the camera or goes away from it can only be shown here. Isometric is a look at both together, not editable.</p>
           <label class="tiny check"><input type="checkbox" id="anim-stretch"> Stretch limbs — a drag moves the joint itself and changes the bone’s length (shift swaps this for one drag)</label>
           <div class="grid">
             <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
             <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
             <label>Working side<select id="anim-side"><option value="both">Both</option><option value="R">Near</option><option value="L">Far</option></select></label>
             <label>Wall at x (blank for none)<input type="number" id="anim-wall" min="200" max="420" step="1"></label>
+            <label>A second angle on the exercise page<select id="anim-second"><option value="">None — the camera’s view is enough</option><option value="top">From above</option><option value="iso">Isometric</option></select></label>
           </div>
         </div>
         <div>
@@ -156,19 +164,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-09-30a"></script>
-<script src="js/spec.js?v=2026-09-30a"></script>
-<script src="js/moves.js?v=2026-09-30a"></script>
-<script src="js/trace.js?v=2026-09-30a"></script>
-<script src="js/overlay.js?v=2026-09-30a"></script>
-<script src="js/sound.js?v=2026-09-30a"></script>
-<script src="js/codec.js?v=2026-09-30a"></script>
-<script src="js/mp4.js?v=2026-09-30a"></script>
-<script src="js/speech.js?v=2026-09-30a"></script>
-<script src="js/mixdown.js?v=2026-09-30a"></script>
-<script src="js/figure.js?v=2026-09-30a"></script>
-<script src="js/anatomy.js?v=2026-09-30a"></script>
-<script src="js/review.js?v=2026-09-30a"></script>
-<script src="js/builder.js?v=2026-09-30a"></script>
+<script src="js/core.js?v=2026-09-30b"></script>
+<script src="js/spec.js?v=2026-09-30b"></script>
+<script src="js/moves.js?v=2026-09-30b"></script>
+<script src="js/trace.js?v=2026-09-30b"></script>
+<script src="js/overlay.js?v=2026-09-30b"></script>
+<script src="js/sound.js?v=2026-09-30b"></script>
+<script src="js/codec.js?v=2026-09-30b"></script>
+<script src="js/mp4.js?v=2026-09-30b"></script>
+<script src="js/speech.js?v=2026-09-30b"></script>
+<script src="js/mixdown.js?v=2026-09-30b"></script>
+<script src="js/figure.js?v=2026-09-30b"></script>
+<script src="js/anatomy.js?v=2026-09-30b"></script>
+<script src="js/review.js?v=2026-09-30b"></script>
+<script src="js/builder.js?v=2026-09-30b"></script>
 </body>
 </html>

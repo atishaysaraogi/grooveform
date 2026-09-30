@@ -474,20 +474,24 @@ Moves.ready.then(function () {
   };
   const ROOTS = { side: ['hip'], front: ['hipL', 'hipR'] };
   const GHOST_CHAINS = { side: [['sh', 'hip', 'kn', 'an', 'ft'], ['sh', 'el', 'wr'], ['hip', 'knF', 'anF', 'ftF'], ['sh', 'elF', 'wrF'], ['an', 'he'], ['anF', 'heF']], front: [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR'], ['anL', 'heL', 'toL'], ['anR', 'heR', 'toR']] };
-  const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {} };
+  const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {}, second: null };
+  /* the editor's viewpoint: the camera's (editable, the muscle figure), from above (editable in
+     depth only), isometric (a look) */
+  let ev = 'camera';
+  const pr = (p, k) => Figure.project(p, k, ev);
   const KEYS = () => KEYS_BY[fig.view] || KEYS_BY.side;
   let kf = 'A', drag = null, quiet = false, orig = null;
   const descendants = (k) => { const P = PARENT[fig.view] || PARENT.side; return KEYS().filter((c) => { let x = c; while (x) { if (x === k) return true; x = P[x]; } return false; }); };
   const edit = $('anim-edit');
-  const copyK = (K, keys) => { const o = {}; for (const k of keys) if (K && K[k]) o[k] = [K[k][0], K[k][1]]; return o; };
+  const copyK = (K, keys) => { const o = {}; for (const k of keys) if (K && K[k]) o[k] = typeof K[k][2] === 'number' ? [K[k][0], K[k][1], K[k][2]] : [K[k][0], K[k][1]]; return o; };
   /* a figure given as points (a file's figure.points, or the builder's draft) into the editor */
   function setFig(f) {
     if (!f || !f.A) return;
     fig.view = f.view === 'front' && f.A.hipL ? 'front' : 'side';
     fig.A = copyK(f.A, KEYS()); fig.B = copyK(f.B || f.A, KEYS());
-    fig.hold = !!f.hold; fig.flip = !!f.flip; fig.side = f.side || 'both'; fig.wall = f.wall != null ? f.wall : null; fig.w = Object.assign({}, f.w || {});
+    fig.hold = !!f.hold; fig.flip = !!f.flip; fig.side = f.side || 'both'; fig.wall = f.wall != null ? f.wall : null; fig.w = Object.assign({}, f.w || {}); fig.second = Figure.VIEWS.includes(f.second) && f.second !== 'camera' ? f.second : null;
     orig = JSON.stringify({ A: fig.A, B: fig.B });   // for "Undo my edits"
-    $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall;
+    $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall; $('anim-second').value = fig.second || '';
     buildWeights(); quiet = true; animChanged(); quiet = false;
   }
   /* the selected exercise's figure into the editor */
@@ -505,7 +509,7 @@ Moves.ready.then(function () {
       lab.querySelector('input').oninput = (e) => { fig.w[k] = Number(e.target.value) / 100; $('w-' + k).textContent = fig.w[k].toFixed(2); if (!fig.w[k]) delete fig.w[k]; animChanged(); };
     }
   }
-  const figureJson = () => ({ view: fig.view, A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}) });
+  const figureJson = () => ({ view: fig.view, A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}), ...(fig.second ? { second: fig.second } : {}) });
   function animChanged() {
     drawEditor();
     const j = figureJson();
@@ -517,11 +521,12 @@ Moves.ready.then(function () {
   }
   /* the editor's canvas: the keyframe drawn as the muscle figure, the joints as handles */
   function fitBox() {
-    const xs = [216, 400], ys = [26, 168];
-    for (const K of [fig.A, fig.B]) for (const k in K || {}) { xs.push(K[k][0]); ys.push(K[k][1]); }
-    if (fig.wall != null) xs.push(fig.wall);
-    const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 10, y0 = Math.min(...ys) - 16;
-    return { x: x0, y: y0, w: x1 - x0, h: 168 - y0 };
+    const xs = [216, 400], ys = ev === 'top' ? [Figure.TOP_Y - 40, Figure.TOP_Y + 34] : [26, 168];
+    for (const K of [fig.A, fig.B]) for (const k in K || {}) { const p = pr(K[k], k); xs.push(p[0]); ys.push(p[1]); }
+    if (fig.wall != null && ev !== 'top') xs.push(fig.wall);
+    if (ev === 'iso') { xs.push(400 + Figure.ISO[0] * 60); ys.push(168 + Figure.ISO[1] * 60); }
+    const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 10, y0 = Math.min(...ys) - 16, y1 = Math.max(...ys) + (ev === 'top' ? 10 : 0);
+    return { x: x0, y: y0, w: x1 - x0, h: (ev === 'top' ? y1 : 168) - y0 };
   }
   function editTransform() {
     const r = edit.getBoundingClientRect(), box = fitBox();
@@ -536,6 +541,7 @@ Moves.ready.then(function () {
     const K = fig[kf]; if (!K) return;   // nothing to draw until a figure is set
     const T = editTransform();
     ctx.save(); ctx.translate(T.tx, T.ty); ctx.scale(T.s, T.s);
+    if (ev !== 'camera') { drawOtherView(ctx, K, T); ctx.restore(); ctx.fillStyle = C.dim; ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.textBaseline = 'top'; ctx.fillText((kf === 'A' ? 'A \u2014 the start' : 'B \u2014 the end') + (ev === 'top' ? ' \u00b7 from above: drag down toward the camera, up away' : ' \u00b7 isometric: a look, not editable'), 8, 8); return; }
     ctx.strokeStyle = C.line; ctx.lineWidth = 2 / T.s; ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
     if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
     /* the other keyframe sits behind, faint, so an edit is seen against where the body was */
@@ -566,11 +572,33 @@ Moves.ready.then(function () {
     ctx.fillText(kf === 'A' ? 'A — the start' : 'B — the end', 8, 8);
   }
   const cssVar = (name, fb) => (getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb);
+  /* from above or isometric: the chains as lines, the far limbs dimmer, the other keyframe faint,
+     the camera's mark or the floor as a slab; handles from above only */
+  function drawOtherView(ctx, K, T) {
+    const chains = GHOST_CHAINS[fig.view] || GHOST_CHAINS.side;
+    const line = (Kf, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width / T.s; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const c of chains) { const pts = c.filter((k) => Kf[k]); if (pts.length < 2) continue; const far = FAR.has(pts[pts.length - 1]); ctx.globalAlpha = far ? 0.4 : 1; ctx.beginPath(); pts.forEach((k, i) => { const p = pr(Kf[k], k); if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }); ctx.stroke(); } ctx.globalAlpha = 1; if (Kf.h) { const p = pr(Kf.h, 'h'); ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(p[0], p[1], 9, 0, Math.PI * 2); ctx.fill(); } };
+    ctx.strokeStyle = C.line; ctx.lineWidth = 2 / T.s;
+    if (ev === 'top') {
+      ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(180, Figure.TOP_Y); ctx.lineTo(440, Figure.TOP_Y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.dim; ctx.beginPath(); ctx.moveTo(300, Figure.TOP_Y + 26); ctx.lineTo(318, Figure.TOP_Y + 26); ctx.lineTo(313, Figure.TOP_Y + 17); ctx.lineTo(305, Figure.TOP_Y + 17); ctx.closePath(); ctx.fill();
+      ctx.font = `${11 / T.s}px ui-sans-serif, system-ui, sans-serif`; ctx.fillText('camera', 324, Figure.TOP_Y + 27);
+    } else {
+      const [dx, dy] = [Figure.ISO[0] * 60, Figure.ISO[1] * 60], nx = Figure.ISO[0] * -12, ny = Figure.ISO[1] * -12;
+      ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.beginPath(); ctx.moveTo(216 + nx, 164 + ny); ctx.lineTo(400 + nx, 164 + ny); ctx.lineTo(400 + dx, 164 + dy); ctx.lineTo(216 + dx, 164 + dy); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
+    }
+    const other = fig[kf === 'A' ? 'B' : 'A'];
+    if (other && !fig.hold) line(other, 'rgba(90,169,255,.22)', 3);
+    line(K, C.ink, 4);
+    if (ev !== 'top') return;
+    for (const k of KEYS()) { const p = K[k]; if (!p) continue; const q = pr(p, k); ctx.beginPath(); ctx.arc(q[0], q[1], 4 / T.s, 0, Math.PI * 2); ctx.fillStyle = FAR.has(k) ? 'rgba(90,169,255,.55)' : C.accent; ctx.fill(); ctx.strokeStyle = '#06121f'; ctx.lineWidth = 1 / T.s; ctx.stroke(); }
+  }
   function toFig(e) { const T = editTransform(), r = edit.getBoundingClientRect(); return [(e.clientX - r.left - T.tx) / T.s, (e.clientY - r.top - T.ty) / T.s]; }
   edit.addEventListener('pointerdown', (e) => {
+    if (ev === 'iso') return;   // a look, not editable
     const [x, y] = toFig(e), K = fig[kf];
     let best = null, bd = 12;
-    for (const k of KEYS()) { const p = K[k]; if (!p) continue; const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = k; } }
+    for (const k of KEYS()) { const p = K[k]; if (!p) continue; const q = pr(p, k); const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; best = k; } }
     /* a root (the hip) drags the whole body; shift swaps turning for stretching for this one drag */
     const roots = ROOTS[fig.view] || ROOTS.side, stretch = $('anim-stretch') ? $('anim-stretch').checked : false;
     drag = { key: best && roots.includes(best) ? '*' : best, last: [x, y], stretch: e.shiftKey ? !stretch : stretch };
@@ -580,7 +608,11 @@ Moves.ready.then(function () {
     if (!drag || !drag.key) return;
     const [x, y] = toFig(e), K = fig[kf], dx = x - drag.last[0], dy = y - drag.last[1];
     const P = PARENT[fig.view] || PARENT.side, par = drag.key === '*' ? null : P[drag.key];
-    if (drag.key === '*') { for (const k in K) { K[k][0] += dx; K[k][1] += dy; } }
+    if (ev === 'top') {
+      /* from above only the depth moves: down the page is toward the camera; what hangs off the joint comes along */
+      const keys = drag.key === '*' ? Object.keys(K) : descendants(drag.key);
+      for (const k of keys) if (K[k]) K[k][2] = Figure.zOf(K[k], k) - dy;
+    } else if (drag.key === '*') { for (const k in K) { K[k][0] += dx; K[k][1] += dy; } }
     else if (drag.stretch || !par || !K[par]) {
       /* the bone follows the pointer and changes length; everything below comes along unchanged */
       for (const k of descendants(drag.key)) if (K[k]) { K[k][0] += dx; K[k][1] += dy; }
@@ -592,12 +624,14 @@ Moves.ready.then(function () {
     drag.last = [x, y];
     animChanged();
   });
-  const rounded = () => { for (const K of [fig.A, fig.B]) for (const k in K || {}) { K[k][0] = Math.round(K[k][0]); K[k][1] = Math.round(K[k][1]); } };
+  const rounded = () => { for (const K of [fig.A, fig.B]) for (const k in K || {}) { K[k][0] = Math.round(K[k][0]); K[k][1] = Math.round(K[k][1]); if (typeof K[k][2] === 'number') { K[k][2] = Math.round(K[k][2]); if (K[k][2] === Figure.zOf([0, 0], k)) K[k].length = 2; } } };
   const drop = () => { if (drag) { drag = null; rounded(); animChanged(); } };
   edit.addEventListener('pointerup', drop); edit.addEventListener('pointercancel', drop);
   $('kf-A').onclick = () => { kf = 'A'; $('kf-A').setAttribute('aria-pressed', 'true'); $('kf-B').setAttribute('aria-pressed', 'false'); drawEditor(); };
   $('kf-B').onclick = () => { kf = 'B'; $('kf-B').setAttribute('aria-pressed', 'true'); $('kf-A').setAttribute('aria-pressed', 'false'); drawEditor(); };
   $('anim-load').onclick = animLoad;
+  for (const v of Figure.VIEWS) $('ev-' + v).onclick = () => { ev = v; for (const w of Figure.VIEWS) $('ev-' + w).setAttribute('aria-pressed', String(w === v)); drawEditor(); };
+  $('anim-second').onchange = (e) => { fig.second = e.target.value || null; animChanged(); };
   $('anim-copy-ab').onclick = () => { fig[kf === 'A' ? 'B' : 'A'] = JSON.parse(JSON.stringify(fig[kf])); animChanged(); };
   $('anim-undo').onclick = () => { if (!orig) return; const o = JSON.parse(orig); fig.A = o.A; fig.B = o.B; animChanged(); };
   $('anim-hold').onchange = (e) => { fig.hold = e.target.value === 'yes'; animChanged(); };
@@ -703,7 +737,7 @@ Moves.ready.then(function () {
   window.__review = {
     get demo() { return demo; },
     get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
-    get fig() { return figureJson(); }, get move() { return move; }, pickMove, refreshMoves, setTuned, showTab, setFig, animLoad, animChanged,
+    get fig() { return figureJson(); }, get move() { return move; }, get ev() { return ev; }, editBox: fitBox, editTransform, pickMove, refreshMoves, setTuned, showTab, setFig, animLoad, animChanged,
     loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; judge(); },
   };
   const q = new URLSearchParams(location.search);

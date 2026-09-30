@@ -251,7 +251,9 @@ Moves.ready.then(function () {
     host.innerHTML = '';
     for (const m of Moves.list) {
       const badge = m.draft ? ' <span class="badge">draft</span>' : m.status && m.status !== 'ready' ? ` <span class="badge">${esc(m.status)}</span>` : '';
-      const row = el('a', 'item', `<span class="txt"><span class="name">${esc(m.name)}${badge}</span>` + (m.muscles ? `<span class="muscles">${esc(muscleWords(m))}</span>` : '') + '</span>');
+      /* the exercise's own figure at its start, still, on a tile: the position and the facing before a tap */
+      let fig = ''; try { fig = window.Figure ? Figure.svg(m, '', 'camera', { still: true }) : ''; } catch { fig = ''; }
+      const row = el('a', 'item', `<span class="fig" aria-hidden="true">${fig}</span><span class="txt"><span class="name">${esc(m.name)}${badge}</span>` + (m.muscles ? `<span class="muscles">${esc(muscleWords(m))}</span>` : '') + '</span>');
       row.href = '#/ex/' + m.id; row.dataset.move = m.id;
       row.dataset.q = `${m.name} ${m.position || ''} ${(m.tags || []).join(' ')} ${m.category || ''} ${muscleWords(m)} ${m.camera === 'wide' ? 'floor lying' : 'standing'}`.toLowerCase();
       host.appendChild(row);
@@ -295,6 +297,12 @@ Moves.ready.then(function () {
     }
     c.setAttribute('data-anat', move.id);
     A.mountAll(opt('screen-ex'));
+    /* a second angle, when the file asks for one: from above, or isometric, as a plain stick figure */
+    const second = opt('fig-second'), want = move.figure && move.figure.second;
+    if (second.setAttribute) {
+      let s = ''; try { s = want && window.Figure ? Figure.svg(move, want === 'top' ? 'from above' : 'from the side', want) : ''; } catch { s = ''; }
+      second.innerHTML = s; second.hidden = !s;
+    }
   }
   /* the bubbles: tap one and it moves to the next choice. Each writes the setting
      the coach reads, so nothing about the judging changes underneath. */

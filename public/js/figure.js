@@ -93,6 +93,23 @@
     return null;
   }
 
+  /* ---- depth: a point may carry a third number, how far from the camera, + away ----
+     The camera's view is x, y. A view from above is x against depth, the camera at the
+     bottom of the picture, nearer lower; an isometric view is the camera's, each point
+     slid up and to the right by its depth. A point without a depth is at the camera's
+     own plane, except a far limb, which sits a little behind. */
+  const FAR_KEYS = new Set(['knF', 'anF', 'heF', 'ftF', 'elF', 'wrF']);
+  const FAR_Z = 16, TOP_Y = 150, ISO = [0.55, -0.32];
+  const VIEWS = ['camera', 'top', 'iso'];
+  const zOf = (p, k) => (Array.isArray(p) && typeof p[2] === 'number' ? p[2] : FAR_KEYS.has(k) ? FAR_Z : 0);
+  function project(p, k, view) {
+    if (!Array.isArray(p)) return p;
+    if (view === 'top') return [p[0], TOP_Y - zOf(p, k)];
+    if (view === 'iso') { const z = zOf(p, k); return [p[0] + ISO[0] * z, p[1] + ISO[1] * z]; }
+    return [p[0], p[1]];
+  }
+  const projectAll = (K, view) => { const o = {}; for (const k of Object.keys(K || {})) if (Array.isArray(K[k])) o[k] = project(K[k], k, view); return o; };
+
   /* ---- the drawing ---- */
   const P = (...pts) => 'M' + pts.map((p) => p.join(' ')).join(' L ');
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -108,40 +125,49 @@
     const an = (attr, v0, v1) => (b && v0 !== v1) ? `<animate attributeName="${attr}" values="${v0};${v1};${v0}" dur="3.2s" repeatCount="indefinite" ${EASE}/>` : '';
     return `<circle class="ink" cx="${a[0]}" cy="${a[1]}" r="10">${an('cx', a[0], b && b[0])}${an('cy', a[1], b && b[1])}</circle>`;
   }
-  /* the drawing's extent: both keyframes, the wall, the floor always in view */
-  function box(r) {
-    const pts = [...Object.values(r.A), ...Object.values(r.B || {})].filter(Array.isArray);
+  /* the drawing's extent: both keyframes, the wall, the floor always in view — in the
+     camera's view and the isometric one; from above, the points and the camera below them */
+  function box(r, view) {
+    const v = view || 'camera';
+    const pts = [...Object.values(projectAll(r.A, v)), ...Object.values(projectAll(r.B || {}, v))];
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    if (v === 'top') { const y0 = Math.min(...ys) - 20, y1 = Math.max(TOP_Y + 8, Math.max(...ys)) + 30; const x0 = Math.min(210, Math.min(...xs) - 14), x1 = Math.max(400, Math.max(...xs) + 14); return { x0, y0, w: x1 - x0, h: y1 - y0 }; }
     if (r.wall != null) xs.push(r.wall);
+    if (v === 'iso') { xs.push(400 + ISO[0] * 60); ys.push(161 + ISO[1] * 60); }
     const x0 = Math.min(210, Math.min(...xs) - 14), x1 = Math.max(400, Math.max(...xs) + 14), y0 = Math.min(...ys) - 20;
     return { x0, y0, w: x1 - x0, h: 168 - y0 };
   }
+  /* the ground of each view: the floor line, the camera's mark, or the floor as a slab */
+  function ground(r, v, b) {
+    if (v === 'top') { const cx = (b.x0 + b.w / 2); return `<line class="floor" x1="${b.x0}" y1="${TOP_Y}" x2="${b.x0 + b.w}" y2="${TOP_Y}" stroke-dasharray="6 5"/><path class="cam" d="M${cx - 9} ${TOP_Y + 26} h18 l-5 -9 h-8 z"/>`; }
+    if (v === 'iso') { const [dx, dy] = [ISO[0] * 60, ISO[1] * 60], nx = ISO[0] * -12, ny = ISO[1] * -12; return `<path class="floor" d="M${210 + nx} ${161 + ny} L ${400 + nx} ${161 + ny} L ${400 + dx} ${161 + dy} L ${210 + dx} ${161 + dy} Z"/>` + (r.wall != null ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="162" stroke-width="4"/>` : ''); }
+    return `<line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>` + (r.wall != null ? `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="162" stroke-width="4"/>` : '');
+  }
   const FRONT_CHAINS = [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR']];
   const frontPath = (K) => FRONT_CHAINS.filter((c) => c.every((k) => K[k])).map((c) => P(...c.map((k) => K[k]))).join(' ');
-  function svg(move, label) {
+  /* the figure as an SVG: from the camera (the default), from above, or isometric;
+     opts.still draws the start alone, for a list */
+  function svg(move, label, view, opts) {
     const r = figureOf(move);
     if (!r) return '';
+    const v = VIEWS.includes(view) ? view : 'camera', o = opts || {};
+    const A = projectAll(r.A, v), B = o.still || still(r) ? null : projectAll(r.B, v), b = box(r, v);
+    const words = label != null ? label : (still(r) ? 'hold still' : 'repeat slowly');
+    const open = `<svg class="demo-fig stick view-${v}${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${esc(move.name)}: ${esc(words)}">` + ground(r, v, b);
     /* a figure seen from the front (a body lying on its side, facing the camera): its chains, plainly */
     if (r.view === 'front' && r.A.hipL) {
-      const B = still(r) ? null : r.B, b = box(r);
-      const words = label != null ? label : (still(r) ? 'hold still' : 'repeat slowly');
-      return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${esc(move.name)}: ${esc(words)}">` +
-        `<line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>` + animPath(frontPath(r.A), B && frontPath(B), 'ink') + animHead(r.A.h, B && B.h) +
+      return open + animPath(frontPath(A), B && frontPath(B), 'ink') + animHead(A.h, B && B.h) +
         `<text x="${b.x0 + 10}" y="${b.y0 + 12}" text-anchor="start" class="lbl">${esc(words)}</text></svg>`;
     }
-    const B = still(r) ? null : r.B, b = box(r);
     let body = '';
-    if (r.wall != null) body += `<line class="floor" x1="${r.wall}" y1="30" x2="${r.wall}" y2="162" stroke-width="4"/>`;
-    if (r.A.knF || r.A.elF) body += animPath(farPath(r.A), B && farPath(B), 'ink far');
-    body += animPath(profilePath(r.A), B && profilePath(B), 'ink') + animHead(r.A.h, B && B.h);
-    const words = label != null ? label : (still(r) ? 'hold still' : 'repeat slowly');
-    return `<svg class="demo-fig${b.h < 100 ? ' lying' : ''}" viewBox="${b.x0} ${b.y0} ${b.w} ${b.h}" role="img" aria-label="${esc(move.name)}: ${esc(words)}">` +
-      `<line class="floor" x1="${b.x0}" y1="162" x2="${b.x0 + b.w}" y2="162"/>${body}` +
+    if (A.knF || A.elF) body += animPath(farPath(A), B && farPath(B), 'ink far');
+    body += animPath(profilePath(A), B && profilePath(B), 'ink') + animHead(A.h, B && B.h);
+    return open + body +
       /* the caption goes in the top corner away from the head */
-      (r.A.h[0] > b.x0 + b.w / 2
+      (A.h[0] > b.x0 + b.w / 2
         ? `<text x="${b.x0 + 10}" y="${b.y0 + 12}" text-anchor="start" class="lbl">${esc(words)}</text>`
         : `<text x="${b.x0 + b.w - 10}" y="${b.y0 + 12}" text-anchor="end" class="lbl">${esc(words)}</text>`) + '</svg>';
   }
 
-  return { L, sidePose, fromAngles, figureOf, plantedKey, box, svg };
+  return { L, sidePose, fromAngles, figureOf, plantedKey, box, svg, project, projectAll, zOf, VIEWS, FAR_Z, TOP_Y, ISO };
 });

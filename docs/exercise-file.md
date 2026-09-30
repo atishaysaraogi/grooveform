@@ -121,6 +121,17 @@ Degrees: `torso` from vertical (+ leaning the way the body faces); `thigh`,
 "figure": { "points": { "A": { "h": [380, 144], "sh": [362, 150], ... }, "B": { ... }, "flip": true, "side": "both", "wall": 340, "props": [] } }
 ```
 
+A point may carry a third number, its depth: how far from the camera, + away,
+in the same units. The camera's view ignores it; the editor's *From above*
+tab draws x against depth with the camera at the bottom of the picture and
+drags depth alone (what hangs off a joint comes along), and *Isometric* shows
+both together, as a look. A point without a depth sits at the camera's own
+plane; a far limb (`knF`, `anF`, `heF`, `ftF`, `elF`, `wrF`) a little behind.
+`"second": "top"` or `"iso"` on the points makes the exercise page show that
+angle as a plain stick figure under the muscle figure, for a movement that
+comes toward the camera or goes away from it, which the camera's view alone
+cannot show.
+
 Points are what the figure editor in the Build tab drags (a 400×175 space, floor at y 163);
 `props` are the equipment the figure module can draw (box, bar, disc, band).
 Every exercise page draws the figure from its file, nothing else, so an

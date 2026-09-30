@@ -59,3 +59,22 @@ test('the plank faces left and lies low; the bridge comes as points and moves', 
 test('every move has a figure', () => {
   for (const m of Moves.list) assert.ok(Figure.svg(m).startsWith('<svg'), m.id);
 });
+
+test('a point may carry a depth: the camera\'s view ignores it, the view from above and the isometric one use it', () => {
+  assert.deepEqual(Figure.project([300, 100, 20], 'kn', 'camera'), [300, 100], 'the camera sees x and y');
+  assert.deepEqual(Figure.project([300, 100, 20], 'kn', 'top'), [300, Figure.TOP_Y - 20], 'from above, farther is higher on the page');
+  assert.deepEqual(Figure.project([300, 100], 'kn', 'top'), [300, Figure.TOP_Y], 'no depth: at the camera\'s own plane');
+  assert.deepEqual(Figure.project([300, 100], 'knF', 'top'), [300, Figure.TOP_Y - Figure.FAR_Z], 'a far limb sits a little behind by default');
+  const iso = Figure.project([300, 100, 20], 'kn', 'iso');
+  assert.ok(iso[0] > 300 && iso[1] < 100, 'isometric: up and to the right with depth: ' + iso);
+  assert.deepEqual(Figure.project([300, 100, 0], 'kn', 'iso'), [300, 100]);
+  /* a three-number point draws as two in every view: no depth leaks into a path */
+  const m = { name: 't', figure: { A: { h: [300, 40, 5], sh: [300, 60, 5], hip: [300, 100, 5], kn: [310, 130, 12], an: [312, 160, 0], ft: [326, 160, 0], el: [300, 80], wr: [300, 100] } } };
+  for (const v of Figure.VIEWS) { const s = Figure.svg(m, '', v); assert.ok(s.startsWith('<svg'), v); assert.ok(!/d="[^"]*\d \d+ \d+ L/.test(s), v + ': a path of pairs'); assert.match(s, new RegExp('view-' + v)); }
+  assert.match(Figure.svg(m, '', 'top'), /class="cam"/, 'the camera is marked from above');
+  assert.match(Figure.svg(m, '', 'iso'), /class="floor" d="M/, 'the floor is a slab in the isometric view');
+  /* a still figure for a list: the start alone, nothing animated */
+  const still = Figure.svg(Moves.bridge, '', 'camera', { still: true });
+  assert.ok(!still.includes('<animate'), 'still'); assert.match(still, /class="ink far"/);
+  for (const mv of Moves.list) for (const v of Figure.VIEWS) assert.ok(Figure.svg(mv, '', v).startsWith('<svg'), mv.id + ' ' + v);
+});

@@ -24,7 +24,8 @@ for titles and Nunito for the rest. A sticky bar with the three stripes holds
 the mark on every page, a search over the exercises on the home page, and an
 info button whose popup is how it works in five steps with icons: set up your
 phone, walk into the camera, listen for cues, complete the exercise, review.
-The home screen is the list of exercises, each its name and what it works.
+The home screen is the list of exercises, each with its own figure at its
+starting pose on a cream tile, its name and what it works.
 An exercise's page fits a phone's screen: the title, the muscle figure
 animated over the top half, bubbles for reps (1, 5, 10, 15, starting at 10),
 sets (1, 2, 3, starting at 3), the hold (or the hold at the top) and the
@@ -628,6 +629,15 @@ progress thresholds and the start rule become `judge`; the drawing list
 becomes `draw`. The five exercises that were written by hand were written
 again as files, and the same tests held every number they act on to the
 same bodies before and after.
+
+**A second angle.** The figure editor has three viewpoints: from the camera
+(the muscle figure, dragged as before), from above (x against depth, the
+camera at the bottom of the picture; a drag moves a joint toward or away
+from the camera and carries what hangs off it) and isometric (a look at
+both). A point that has been given a depth carries it as a third number.
+*A second angle on the exercise page* puts the view from above or the
+isometric one under the muscle figure, as a plain stick figure, for a
+movement the camera's view alone cannot show.
 
 **The Build page** (`review.html`, the Build tab) makes the file from a
 pose, in five steps: the exercise (a name, reps or a hold, sides, load); the

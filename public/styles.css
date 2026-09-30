@@ -80,14 +80,24 @@ body.at-live .topbar { display: none; }
 /* ---- the exercises, as a list: the name, what it works, a coloured mark ---- */
 .list { display: block; margin: 8px 0 0; border-top: 2px solid var(--grape); }
 .item {
-  display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 12px; padding: 14px 4px 14px 2px;
+  display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 12px; padding: 12px 4px 12px 2px;
   border-bottom: 2px solid var(--line); color: var(--grape); text-decoration: none; cursor: pointer;
 }
 .item:active { background: var(--cream); }
 .item[hidden] { display: none; }
-.item::before { content: ''; width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--grape); background: var(--tangerine); }
-.item:nth-child(3n+2)::before { background: var(--lime); }
-.item:nth-child(3n+3)::before { background: var(--pink); }
+.item .fig { width: 64px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--cream); border-radius: 10px; overflow: hidden; }
+.item .fig svg { width: 60px; height: 40px; max-width: none; margin: 0; overflow: visible; }
+.item .fig .lbl { display: none; }
+/* the plain stick figure (Figure.svg): the home tiles and an exercise's second angle */
+.stick .ink { fill: none; stroke: var(--grape); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.stick circle.ink { fill: var(--grape); stroke: none; }
+.stick .far { opacity: .35; }
+.stick .floor { fill: none; stroke: var(--line); stroke-width: 4; }
+.stick.view-iso .floor { fill: var(--cream); stroke: var(--line); stroke-width: 2; }
+.stick .cam { fill: var(--grape); }
+.stick .lbl { font: 700 11px var(--font-body); fill: var(--muted); }
+.fig-second { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 6px 10px 2px; }
+.fig-second svg { width: 100%; max-width: 460px; height: auto; max-height: 190px; aspect-ratio: auto; display: block; margin: 0 auto; }
 .item .txt { min-width: 0; }
 .item .name { font: 400 1.2rem/1.15 var(--font-display); display: block; }
 .item .name .badge { vertical-align: middle; margin-left: 6px; background: var(--tangerine); }
