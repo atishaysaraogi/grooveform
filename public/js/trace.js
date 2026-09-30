@@ -35,11 +35,13 @@
      and the cues in order. */
   function run(move, tuned, frames, aspect) {
     const coach = new Core.Coach(move, tuned || {});
-    const smoother = new Core.Smoother(coach.cfg.smooth);
+    const smoother = new Core.Smoother(coach.cfg.smooth), gate = new Core.JumpGate(coach.cfg);
     const rows = frames.map((f) => {
-      const reading = smoother.apply(move.read(f.lm, aspect, coach.cfg));
+      const lm = gate.apply(f.lm, f.t);
+      if (f.scene) coach.scene(f.scene);
+      const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
       const out = coach.step(reading, f.t);
-      return { t: f.t, reading, verdict: out.verdict, out };
+      return { t: f.t, reading, verdict: out.verdict, out, held: gate.held.length, scene: f.scene || null };
     });
     return { move: move.id, rows, cues: coach.log.slice(), summary: coach.summary(), cfg: coach.cfg };
   }
@@ -207,13 +209,13 @@
   /* ---- a trace on disk: compact arrays, one file ---- */
   function pack(meta, frames) {
     return Object.assign({ v: 1 }, meta, {
-      frames: frames.map((f) => ({ t: Math.round(f.t), lm: f.lm ? f.lm.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +(p.z || 0).toFixed(4), +(p.visibility == null ? 1 : p.visibility).toFixed(3)]) : null })),
+      frames: frames.map((f) => Object.assign({ t: Math.round(f.t), lm: f.lm ? f.lm.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +(p.z || 0).toFixed(4), +(p.visibility == null ? 1 : p.visibility).toFixed(3)]) : null }, f.scene ? { s: [f.scene.luma, f.scene.dark, f.scene.bright, f.scene.body, f.scene.bg, f.scene.colour] } : {})),
     });
   }
   function unpack(json) {
     const d = typeof json === 'string' ? JSON.parse(json) : json;
     if (!d || d.v !== 1 || !Array.isArray(d.frames)) throw new Error('not a trace');
-    const frames = d.frames.map((f) => ({ t: f.t, lm: f.lm ? f.lm.map((p) => ({ x: p[0], y: p[1], z: p[2], visibility: p[3] })) : null }));
+    const frames = d.frames.map((f) => Object.assign({ t: f.t, lm: f.lm ? f.lm.map((p) => ({ x: p[0], y: p[1], z: p[2], visibility: p[3] })) : null }, f.s ? { scene: { luma: f.s[0], dark: f.s[1], bright: f.s[2], body: f.s[3], bg: f.s[4], colour: f.s[5] } } : {}));
     const { frames: _, ...meta } = d;
     return { meta, frames };
   }

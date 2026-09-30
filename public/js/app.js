@@ -69,7 +69,7 @@ Moves.ready.then(function () {
   let showPoints = false; try { showPoints = localStorage.getItem('ontrack.points') === '1'; } catch { }
   let stream = null, camFacing = 'user';   // the front camera: it is the one you can see while you set the phone down
   let running = false, raf = 0, lastTs = 0;
-  let coach = null, smoother = null, state = null;
+  let coach = null, smoother = null, gate = null, state = null;
   let banner = null;                      // the cue painted on the frame, and when it appeared
   let rec = null, inSet = false;          // the film under way (see startRecording), and whether a session is
   /* the session: which set this is, the ones done, and whether the last one has
@@ -633,6 +633,16 @@ Moves.ready.then(function () {
       w.postMessage({ type: 'load', model: want });
     });
   }
+  /* a 64 × 36 thumbnail of the camera frame, for Core.scene: the light and the background */
+  let sceneAt = 0, thumb = null;
+  function sampleScene(lm, vis) {
+    try {
+      if (!thumb) { thumb = document.createElement('canvas'); thumb.width = 64; thumb.height = 36; }
+      const ctx = thumb.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, 64, 36);
+      return Core.scene(ctx.getImageData(0, 0, 64, 36).data, 64, 36, lm, vis);
+    } catch { return null; }
+  }
   function onPose(e) {
     const m = e.data || {};
     if (m.type === 'pose') { latestLm = m.lm; inFlight = false; }
@@ -646,7 +656,7 @@ Moves.ready.then(function () {
     const opts = (delegate) => ({
       baseOptions: { modelAssetPath: MODELS[want], delegate },
       runningMode: 'VIDEO', numPoses: 1,
-      minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+      minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.7, minTrackingConfidence: 0.7,
     });
     if (landmarker) { try { landmarker.close(); } catch { } landmarker = null; }
     try { landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
@@ -800,7 +810,9 @@ Moves.ready.then(function () {
        is, so that is the space an angle has to be worked out in — the canvas may be
        a different shape entirely */
     const q = quarterTurn(), t = turned(q);
-    const turnedLm = Core.rotateLandmarks(lm, q);
+    const turnedLm = gate ? gate.apply(Core.rotateLandmarks(lm, q), now - t0) : Core.rotateLandmarks(lm, q);
+    /* the light and the background, looked at every so often while the person is getting set */
+    if (coach && !coach.ready && !between && !window.__poseSource && now - sceneAt > 700) { sceneAt = now; coach.scene(sampleScene(lm, coach.cfg.vis)); }
     const reading = smoother.apply(move.read(turnedLm, t.w / t.h, coach.cfg));
     let out;
     if (between) {
@@ -1165,7 +1177,7 @@ Moves.ready.then(function () {
     else setNo += 1;
     between = false;
     $('cue').textContent = ''; opt('faults').textContent = '';
-    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
+    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother(); gate = new Core.JumpGate(coach.cfg);
     banner = null; t0 = performance.now(); state = null;
     voice.warm();
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
@@ -1280,7 +1292,7 @@ Moves.ready.then(function () {
        coach — otherwise the readouts keep being painted by the last one, with its
        bands and its clock, until something else happens to replace it */
     if (inSet) await endSession(true);
-    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother();
+    coach = new Core.Coach(move, cfg()); smoother = new Core.Smoother(); gate = new Core.JumpGate(coach.cfg);
     banner = null; state = null; t0 = performance.now();
     syncBands();
     camShape = move.camera || null;

@@ -29,6 +29,8 @@
     vis: 0.5,             // a landmark below this is not trusted
     edge: 0.03,           // a needed landmark nearer the picture's edge than this share of it, or past it, is not trusted: the model keeps guessing at a foot that has left the frame
     drop: 0.25,           // near the edge, a needed landmark whose certainty has fallen this far below its best of the last ten frames is not trusted either
+    jump: 1.5,            // a landmark that moves faster than this many body-diagonals a second has snapped to the background: held where it was
+    jumpHold: 2,          // for at most this many frames, after which the new place is believed
     smooth: 0.35,         // EMA on the angles; 1 = no smoothing
     persistMs: 500,       // how long a fault holds before it is worth saying
     cooldownMs: 4000,     // how long before the same cue may be said again
@@ -47,7 +49,7 @@
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   /* Said about the picture, not the exercise: never one of the person's faults. */
-  const SYSTEM = ['lost', 'edge', 'framing'];
+  const SYSTEM = ['lost', 'edge', 'framing', 'dark', 'backlit', 'blend'];
   const PART = { ear: 'head', shoulder: 'shoulder', elbow: 'elbow', wrist: 'hand', hip: 'hip', knee: 'knee', ankle: 'foot', heel: 'foot', toe: 'foot' };
   const partWords = (side, joint) => `${side === 'L' ? 'left ' : side === 'R' ? 'right ' : ''}${PART[joint] || joint}`;
   const fillPart = (text, side, joint) => String(text || '').replace(/\{joint\}/g, partWords(side, joint));
@@ -227,8 +229,83 @@
     lost: { text: 'I can\u2019t see you \u2014 step into the camera, side on' },
     edge: { text: 'Your {joint} is at the edge of the picture \u2014 move so all of you is in' },
     framing: { text: 'Your {joint} is close to the edge of the picture \u2014 move back a little, so there is room round you' },
+    dark: { text: 'It\u2019s dark here \u2014 turn a light on, or face one' },
+    backlit: { text: 'You\u2019re against the light \u2014 turn so the light falls on you' },
+    blend: { text: 'You blend into the background \u2014 a plain wall behind you, or a different top, would help' },
     fast: { text: 'slower on the way down' },
   };
+
+  /* ---- the picture's guardrails, before anything is measured ----
+     A joint that leaps in one frame has snapped to something in the background, or the
+     model has swapped the two legs; it has not moved. It is held where it was for up to
+     `jumpHold` frames, after which the new place is believed. The allowance is `jump`
+     body-diagonals a second, never under five percent of the diagonal a frame (the
+     model's own wobble), so a slow movement is never held and a fast, real one is late
+     by two frames at most. The body's diagonal is the box round the trusted points. */
+  class JumpGate {
+    constructor(cfg) { this.cfg = cfg || {}; this.prev = null; this.t = 0; this.count = []; this.held = []; }
+    reset() { this.prev = null; this.count = []; this.held = []; }
+    apply(lm, t) {
+      const c = this.cfg, jump = c.jump == null ? 1.5 : c.jump, hold = c.jumpHold == null ? 2 : c.jumpHold, vis = c.vis == null ? 0.5 : c.vis;
+      this.held = [];
+      if (!lm || !lm.length || !(jump > 0)) { this.prev = null; return lm; }
+      const dt = this.prev ? t - this.t : 0;
+      if (!this.prev || !(dt > 0) || dt > 400) { this.prev = lm.slice(); this.t = t; this.count = []; return lm; }
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, n = 0;
+      for (const p of lm) { if (!p || visOf(p) < vis) continue; n++; if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x; if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y; }
+      if (n < 4) { this.prev = lm.slice(); this.t = t; this.count = []; return lm; }
+      const diag = Math.hypot(x1 - x0, y1 - y0) || 1, allow = Math.max(0.05, (jump * dt) / 1000) * diag;
+      const out = lm.slice();
+      for (let i = 0; i < lm.length; i++) {
+        const p = lm[i], q = this.prev[i]; if (!p || !q) continue;
+        if (Math.hypot(p.x - q.x, p.y - q.y) > allow && (this.count[i] || 0) < hold) { out[i] = Object.assign({}, q, { visibility: visOf(p) }); this.count[i] = (this.count[i] || 0) + 1; this.held.push(i); }
+        else this.count[i] = 0;
+      }
+      this.prev = out; this.t = t;
+      return out;
+    }
+  }
+
+  /* The light and the background, from a thumbnail of the frame (RGBA, w × h) and the
+     landmarks in it: how bright the picture is, how much of it is crushed black or
+     blown white, and how the body's box (the trusted points, padded) differs from the
+     rest in brightness and in colour. Cheap enough to run every frame; sampled every so
+     often during the set-up wait, where the words about it can still be acted on. */
+  /* dark: the picture's mean brightness under `dark`, or over half of it crushed black.
+     backlit: a window or a lamp behind — a good share of the picture blown white and the
+     body dark. A dark top on a light wall is contrast, not backlighting, so brightness
+     alone does not say it. blend: the body's box within `blend` of the rest in brightness
+     and within `blendColour` in colour. */
+  const SCENE = { dark: 0.22, darkShare: 0.5, backlitBody: 0.25, backlitBright: 0.15, blend: 0.07, blendColour: 0.08 };
+  function scene(data, w, h, lm, vis) {
+    if (!data || !w || !h) return null;
+    const bar = vis == null ? 0.5 : vis;
+    let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity, n = 0;
+    for (const p of lm || []) { if (!p || visOf(p) < bar) continue; n++; if (p.x < bx0) bx0 = p.x; if (p.x > bx1) bx1 = p.x; if (p.y < by0) by0 = p.y; if (p.y > by1) by1 = p.y; }
+    /* the box round the trusted points, unpadded: the points sit inside the body, so the box is body and not much wall */
+    const box = n >= 4 ? [Math.max(0, Math.floor(bx0 * w)), Math.max(0, Math.floor(by0 * h)), Math.min(w, Math.ceil(bx1 * w)), Math.min(h, Math.ceil(by1 * h))] : null;
+    let sum = 0, dark = 0, bright = 0, total = 0;
+    const inb = { r: 0, g: 0, b: 0, l: 0, n: 0 }, outb = { r: 0, g: 0, b: 0, l: 0, n: 0 };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255, l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      sum += l; total++; if (l < 0.08) dark++; if (l > 0.95) bright++;
+      const acc = box && x >= box[0] && x < box[2] && y >= box[1] && y < box[3] ? inb : outb;
+      acc.r += r; acc.g += g; acc.b += b; acc.l += l; acc.n++;
+    }
+    const mean = (a) => (a.n ? { r: a.r / a.n, g: a.g / a.n, b: a.b / a.n, l: a.l / a.n } : null);
+    const bi = mean(inb), bo = mean(outb);
+    const out = { luma: +(sum / total).toFixed(3), dark: +(dark / total).toFixed(3), bright: +(bright / total).toFixed(3), body: null, bg: null, colour: null };
+    if (bi && bo) { out.body = +bi.l.toFixed(3); out.bg = +bo.l.toFixed(3); out.colour = +(Math.hypot(bi.r - bo.r, bi.g - bo.g, bi.b - bo.b) / Math.sqrt(3)).toFixed(3); }
+    return out;
+  }
+  /* what, if anything, the scene calls for: the one thing to say about it */
+  function sceneCue(s) {
+    if (!s) return null;
+    if (s.luma < SCENE.dark || s.dark > SCENE.darkShare) return 'dark';
+    if (s.body != null && s.body < SCENE.backlitBody && s.bright > SCENE.backlitBright) return 'backlit';
+    if (s.body != null && Math.abs(s.bg - s.body) < SCENE.blend && s.colour != null && s.colour < SCENE.blendColour) return 'blend';
+    return null;
+  }
 
   /* ---- what to say, and when ----
      A cue is an instruction, and an instruction given for a flicker is noise. So
@@ -252,6 +329,7 @@
       this.quietUntil = 0;              // nothing is said before this: the opening words are being said
       this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
       this.nearSince = 0; this.lastNear = 0;     // a needed point close to the picture's edge during the set-up wait: since when, and when it was last said
+      this.sceneId = null; this.sceneSince = 0; this.saidScene = {};   // the light and the background, as last sampled; each thing about it said once a set
       this.lastT = null; this.log = [];
       this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
@@ -338,6 +416,13 @@
           if (near && this.cues.framing && t - this.nearSince >= cfg.persistMs && (!this.lastNear || t - this.lastNear >= (cfg.lostEverySec || 15) * 1000)) {
             cue = this.offer('framing', t, fillPart(this.cues.framing.text, near.side, near.joint));
             if (cue) this.lastNear = t;
+          }
+          /* the light and the background: said once a set, once it has held */
+          const sc = this.sceneId;
+          if (sc) { if (!this.sceneSince) this.sceneSince = t; } else this.sceneSince = 0;
+          if (!cue && sc && this.cues[sc] && !this.saidScene[sc] && t - this.sceneSince >= cfg.persistMs) {
+            cue = this.offer(sc, t, this.cues[sc].text);
+            if (cue) this.saidScene[sc] = t;
           }
           return shape({ cue });
         }
@@ -547,6 +632,9 @@
       return cue;
     }
 
+    /* the page hands in what it sees of the light and the background, now and then */
+    scene(s) { const id = sceneCue(s); if (id !== this.sceneId) this.sceneSince = 0; this.sceneId = id; this.sceneLast = s || null; }
+
     summary() {
       const reps = !!this.move.reps;
       const s = { move: this.move.id, holdSec: +(this.holdMs / 1000).toFixed(1),
@@ -603,7 +691,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-29a';
+  const VER = '2026-09-30a';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -628,6 +716,6 @@
     return lines;
   }
 
-  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
+  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

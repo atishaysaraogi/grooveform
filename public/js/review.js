@@ -43,12 +43,12 @@ Moves.ready.then(function () {
   function buildSliders() {
     const host = $('sliders'); host.innerHTML = '';
     const d = Trace.defaults(move);
+    /* a number each, typed: compact, and exact */
     for (const s of Trace.settingsOf(move)) {
       const v = tuned[s.key] != null ? tuned[s.key] : d[s.key];
-      const lab = el('label', null, `<span>${esc(s.label)} <b id="val-${s.key}">${v}</b></span>` +
-        `<input type="range" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1" value="${v}">`);
+      const lab = el('label', null, `<span>${esc(s.label)}</span><input type="number" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1" value="${v}">`);
       host.appendChild(lab);
-      lab.querySelector('input').oninput = (e) => { setTuned(s.key, Number(e.target.value)); };
+      lab.querySelector('input').oninput = (e) => { const n = Number(e.target.value); if (Number.isFinite(n)) setTuned(s.key, n); };
     }
     $('tuned-note').textContent = '';
   }
@@ -118,7 +118,7 @@ Moves.ready.then(function () {
       const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/vision_bundle.mjs`);
       const fileset = await vision.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP}/wasm`);
       const opts = (delegate) => ({ baseOptions: { modelAssetPath: MODELS.full, delegate }, runningMode: 'VIDEO', numPoses: 1,
-        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.7, minTrackingConfidence: 0.7 });
       try { inline = await vision.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
       catch { inline = await vision.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
       return inline;
@@ -126,6 +126,16 @@ Moves.ready.then(function () {
     return inlineLoad;
   }
   let workerFailed = null;
+  /* the light and the background of a frame, from a 64 × 36 thumbnail: kept with the trace */
+  let thumb = null;
+  function sceneOf(v, lm) {
+    try {
+      if (!thumb) { thumb = document.createElement('canvas'); thumb.width = 64; thumb.height = 36; }
+      const ctx = thumb.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, 0, 0, 64, 36);
+      return Core.scene(ctx.getImageData(0, 0, 64, 36).data, 64, 36, lm, (tuned.vis != null ? tuned.vis : Core.COMMON.vis));
+    } catch { return null; }
+  }
   async function poseFor(v, ts) {
     /* the model stood in for, as the browser suite does */
     if (window.__reviewPose) return window.__reviewPose(ts, v);
@@ -156,7 +166,7 @@ Moves.ready.then(function () {
       for (let t = 0; t < dur; t += 1 / fps) {
         await seekTo(Math.min(t, dur - 0.001));
         const lm = await poseFor(video, Math.round(t * 1000));
-        frames.push({ t: Math.round(t * 1000), lm });
+        frames.push({ t: Math.round(t * 1000), lm, scene: sceneOf(video, lm) });
         if (frames.length % 5 === 0) note(`Reading the video… ${Math.round((t / dur) * 100)}% (${frames.length} frames)`);
       }
     } catch (e) { note('Could not read the video: ' + (e.message || e)); return; }
@@ -191,6 +201,7 @@ Moves.ready.then(function () {
     result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect) : null;
     $('export-trace').disabled = !trace; $('add-take').disabled = !trace;
     const edgeMs = result ? result.rows.reduce((a, r, i) => a + (r.reading && r.reading.edge && i ? r.t - result.rows[i - 1].t : 0), 0) : 0;
+    renderTracked();
     $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') + (edgeMs ? ` · ${(edgeMs / 1000).toFixed(1)} s with a point at the picture's edge` : '') : '') : 'no recording yet';
     drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts();
   }
@@ -375,6 +386,35 @@ Moves.ready.then(function () {
       reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1, points: f ? f.lm : null,
       banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues,
     });
+    renderTracked(t);
+  }
+  /* ---------- beside the video: what is tracked, at the playhead, and the take in numbers ---------- */
+  const unitOf = (key) => { const m = (move.measurements || []).find((q) => q.key === key); const kind = m ? m.kind : 'angle'; return ['angle', 'tilt', 'floor', 'down', 'bend'].includes(kind) ? '\u00b0' : kind === 'distance' ? '%' : ''; };
+  function renderTracked(atMs) {
+    const host = $('tracked'); if (!host) return;
+    const body = host.tBodies[0] || host.appendChild(document.createElement('tbody'));
+    if (!result) { body.innerHTML = '<tr><td class="muted" colspan="4">Load a video or a trace.</td></tr>'; $('take-stats').textContent = ''; $('tracked-at').textContent = ''; return; }
+    const t = atMs != null ? atMs : video.currentTime * 1000, r = rowAt(t), rd = r && r.reading, v = r && r.verdict, o = r && r.out, c = result.cfg;
+    $('tracked-at').textContent = `at ${sec(t)}`;
+    const rows = [], P = Trace.progressOf(move, c);
+    for (const b of move.bands) {
+      const val = rd && rd.ok ? rd[b.of] : null, { lo, hi } = Trace.bandRange(b, c), ok = v && v.ok && v.good ? v.good[b.key] : null;
+      rows.push(`<tr class="${ok === false ? 'out' : ok ? 'in' : ''}"><th>${esc(b.hud)}</th><td class="v">${val == null ? '\u2014' : fmtV(val, unitOf(b.key))}</td><td class="muted">${Math.round(lo)}\u2013${Math.round(hi)}${P && P.key === b.key ? ' \u00b7 the rep' : ''}</td><td>${ok === false ? 'out' : ok ? 'in' : ''}</td></tr>`);
+    }
+    if (P && !move.bands.some((b) => b.key === P.key)) { const val = rd && rd.ok ? rd[P.of] : null; rows.push(`<tr><th>REP</th><td class="v">${fmtV(val, P.unit)}</td><td class="muted">starts ${P.dir > 0 ? '\u2265' : '\u2264'} ${fmtV(P.raiseAt, P.unit)}</td><td></td></tr>`); }
+    const phase = o ? (o.ready ? (o.phase || (o.holding ? 'holding' : 'in position')) : 'set-up wait') : '\u2014';
+    rows.push(`<tr><th>coach</th><td colspan="3">${esc(phase)}${o && o.reps != null ? ` \u00b7 rep ${o.reps} of ${o.repTarget}` : ''}${o && o.holdMs ? ` \u00b7 held ${sec(o.holdMs)}` : ''}</td></tr>`);
+    const seen = rd ? (rd.ok ? `the ${rd.side === 'L' ? 'left' : 'right'} side` : (rd.why || 'not seen')) : 'no frame';
+    const needed = move.needed || [], cert = rd && rd.ok && rd.points ? Math.round((100 * needed.reduce((a, k) => a + ((rd.points[k] && rd.points[k].v) || 0), 0)) / Math.max(1, needed.length)) : null;
+    rows.push(`<tr class="${rd && rd.ok ? '' : 'out'}"><th>seen</th><td colspan="3">${esc(seen)}${cert != null ? ` \u00b7 needed points ${cert}% sure` : ''}${r && r.held ? ` \u00b7 ${r.held} joint${r.held === 1 ? '' : 's'} held` : ''}</td></tr>`);
+    const s = r && r.scene;
+    if (s) { const cue = Core.sceneCue(s); rows.push(`<tr class="${cue ? 'out' : ''}"><th>light</th><td colspan="3">brightness ${s.luma}${s.body != null ? ` \u00b7 you ${s.body} vs background ${s.bg}, colour ${s.colour}` : ''}${cue ? ` \u00b7 <b>${esc((move.cues[cue] && move.cues[cue].text) || cue)}</b>` : ''}</td></tr>`); }
+    body.innerHTML = rows.join('');
+    const all = result.rows, dur = trace.duration || 0;
+    const edgeMs = all.reduce((a, x, i) => a + (x.reading && x.reading.edge && i ? x.t - all[i - 1].t : 0), 0), heldFrames = all.filter((x) => x.held).length, unseen = all.filter((x) => !x.verdict || !x.verdict.ok).length;
+    const scenes = all.map((x) => x.scene).filter(Boolean), avg = (k) => (scenes.reduce((a, q) => a + (q[k] || 0), 0) / scenes.length).toFixed(2);
+    const saidScene = result.cues.filter((q) => ['dark', 'backlit', 'blend'].includes(q.id)).map((q) => q.id);
+    $('take-stats').innerHTML = `<b>The take</b> \u00b7 ${trace.frames.length} frames, ${(dur / 1000).toFixed(1)} s${trace.fps ? `, ${trace.fps} a second` : ''} \u00b7 ${result.cues.length} cues${move.reps ? ` \u00b7 ${result.summary.reps} reps` : ` \u00b7 held ${result.summary.holdSec} s`} \u00b7 ${unseen} frame${unseen === 1 ? '' : 's'} not trusted${edgeMs ? ` (${(edgeMs / 1000).toFixed(1)} s at the edge)` : ''}${heldFrames ? ` \u00b7 a joint held in ${heldFrames}` : ''}${scenes.length ? ` \u00b7 light ${avg('luma')}, you ${avg('body')} vs background ${avg('bg')}${saidScene.length ? `, said: ${saidScene.join(', ')}` : ''}` : ''}`;
   }
   if ($('all-points')) $('all-points').addEventListener('change', () => drawOverlay());
   video.addEventListener('timeupdate', () => { drawOverlay(); drawLanes(); });

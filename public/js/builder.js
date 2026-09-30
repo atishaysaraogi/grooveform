@@ -42,6 +42,7 @@ Moves.ready.then(function () {
     ['gapMs', 'No two cues inside, ms'], ['settleMs', 'In position this long before the clock starts, ms'], ['returnMs', 'Back at the start this long before a rep is over, ms'],
     ['lostEverySec', '"I can’t see you" every, seconds'], ['smooth', 'Smoothing on the readings (1 = none)'], ['vis', 'A landmark below this is not trusted (0–1)'],
     ['edge', 'A needed point nearer the picture’s edge than this share of it is not trusted (0–0.2)'], ['drop', 'Near the edge, certainty this far below its recent best is not trusted (0–1)'],
+    ['jump', 'A point moving faster than this many body-diagonals a second is held where it was'], ['jumpHold', 'For at most this many frames'],
   ];
 
   let draft = null, timer = 0;
@@ -761,6 +762,9 @@ Moves.ready.then(function () {
     g.appendChild(autoField('lost', 'Nobody in the frame', d.words.lost, (v) => { d.words.lost = v; }));
     g.appendChild(field('A part at the edge of the picture ({joint} is filled in)', d.words.edge, (v) => { d.words.edge = v; }, { placeholder: Core.SHARED_CUES.edge.text }));
     g.appendChild(field('Close to the edge, during the set-up wait', d.words.framing, (v) => { d.words.framing = v; }, { placeholder: Core.SHARED_CUES.framing.text }));
+    g.appendChild(field('Too dark', d.words.dark, (v) => { d.words.dark = v; }, { placeholder: Core.SHARED_CUES.dark.text }));
+    g.appendChild(field('Against the light', d.words.backlit, (v) => { d.words.backlit = v; }, { placeholder: Core.SHARED_CUES.backlit.text }));
+    g.appendChild(field('Blending into the background', d.words.blend, (v) => { d.words.blend = v; }, { placeholder: Core.SHARED_CUES.blend.text }));
     if (d.type === 'reps') { g.appendChild(field('The hold at the top is done', d.words.lower, (v) => { d.words.lower = v; })); g.appendChild(field('Down before the hold was done', d.words.early, (v) => { d.words.early = v; })); }
     g.appendChild(field('Into position (blank keeps “That is it — hold”)', d.words.hold, (v) => { d.words.hold = v; }));
     g.appendChild(field('Label for the hold setting', d.words.holdLabel, (v) => { d.words.holdLabel = v; }, { placeholder: d.type === 'reps' ? 'Hold at the top for' : 'Hold the set for' }));

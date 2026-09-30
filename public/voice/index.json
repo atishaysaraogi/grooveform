@@ -3,7 +3,7 @@
 "engine": "piper via sherpa-onnx",
 "rate": 22050,
 "format": "mp3",
-"count": 894,
+"count": 897,
 "clips": {
 "0 reps": "a70a365300b3.mp3",
 "1": "356a192b7913.mp3",
@@ -697,6 +697,7 @@
 "Hold it to the end of the count next time": "e60535398a3b.mp3",
 "I can’t see you — step into the camera, side on": "8223e9f1f6fd.mp3",
 "Into position when you are ready": "9b2671f43598.mp3",
+"It’s dark here — turn a light on, or face one": "2bc10c68b0ca.mp3",
 "Keep the bottom leg straight": "4d864aa2fb99.mp3",
 "Keep the knee bent — sole to the ceiling": "4663f6e7db05.mp3",
 "Keep the knee straight": "bd9cd70e6745.mp3",
@@ -868,6 +869,7 @@
 "Walk your feet out a little": "a4df4729b142.mp3",
 "Walk your feet out — your knees are out over your toes": "1d760f20c5c9.mp3",
 "When you are ready": "b3994ed712d9.mp3",
+"You blend into the background — a plain wall behind you, or a different top, would help": "f4982bbd1e37.mp3",
 "Your left elbow is at the edge of the picture — move so all of you is in": "41d353d4bcf0.mp3",
 "Your left elbow is close to the edge of the picture — move back a little, so there is room round you": "b5a52e88eaa0.mp3",
 "Your left foot is at the edge of the picture — move so all of you is in": "b831bdfc9105.mp3",
@@ -896,6 +898,7 @@
 "Your right knee is close to the edge of the picture — move back a little, so there is room round you": "c3bb8261523b.mp3",
 "Your right shoulder is at the edge of the picture — move so all of you is in": "c60fc6071324.mp3",
 "Your right shoulder is close to the edge of the picture — move back a little, so there is room round you": "1f530ebf34c5.mp3",
+"You’re against the light — turn so the light falls on you": "11b0a493941c.mp3",
 "done": "e5fd9cfe0e80.mp3",
 "slower on the way down": "ea34bcf52cf9.mp3",
 "the other leg": "056f27bb5bb0.mp3"

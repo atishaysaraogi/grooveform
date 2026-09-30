@@ -195,6 +195,7 @@
     /* about the picture, not the person: {joint} is filled with the part — "left foot" */
     cues.edge = { text: words.edge || Core.SHARED_CUES.edge.text };
     cues.framing = { text: words.framing || Core.SHARED_CUES.framing.text };
+    for (const id of ['dark', 'backlit', 'blend']) cues[id] = { text: words[id] || Core.SHARED_CUES[id].text };
     if (reps) { cues.lower = { text: words.lower || 'Lower slowly' }; cues.early = { text: words.early || 'Hold it at the top next time' }; }
     if (words.hold) cues.hold = { text: words.hold };
 
@@ -458,7 +459,7 @@
       }
     });
     for (const s of f.settings || []) if (typeof defaults[s.key] !== 'number') err('settings', `a setting with no default: ${s.key}`);
-    const ids = new Set(['lost', 'edge', 'framing']);   // the coach's own cue ids, about the picture: no fault may take them
+    const ids = new Set(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend']);   // the coach's own cue ids, about the picture: no fault may take them
     (f.faults || []).forEach((x, i) => {
       const at = `faults[${i}]`;
       if (!x.id || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(x.id)) err(at + '.id', 'one word'); else if (ids.has(x.id)) err(at + '.id', 'used twice: ' + x.id); else ids.add(x.id);

@@ -82,6 +82,7 @@ side: `L.knee`, `R.knee` (see Landmarks).
 | `lost` | said when nobody is in the frame (every 15 s) — default "Step into the camera, side on" |
 | `edge` | said when a needed landmark is at the picture's edge, on the same slow clock as `lost` and instead of it; `{joint}` is filled with the part — "left foot", "right hand" — default "Your {joint} is at the edge of the picture — move so all of you is in" |
 | `framing` | said once during the set-up wait when a needed landmark is inside the picture but within two margins of its edge — default "Your {joint} is close to the edge of the picture — move back a little, so there is room round you". Neither is one of the person's faults: not in the fault order, never in a rep's account |
+| `dark`, `backlit`, `blend` | the light and the background, said once a set during the set-up wait when the picture calls for it: too dark (mean brightness under 0.22, or half the picture crushed black); a window or lamp behind (a good share of the picture blown white round a dark body); the body within 0.07 of the rest in brightness and 0.08 in colour — defaults "It's dark here — turn a light on, or face one", "You're against the light — turn so the light falls on you", "You blend into the background — a plain wall behind you, or a different top, would help" |
 | `lower` | reps: the hold at the top is done — default "Lower slowly" |
 | `early` | reps: back down before the hold was done — default "Hold it at the top next time" |
 | `hold` | into position — default "That is it — hold" |
@@ -389,6 +390,10 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 | `lostEverySec` | 15 | "I can't see you" every this |
 | `smooth` | 0.35 | smoothing on the readings (1 = none), after a median of the last three frames that drops a single wild one |
 | `vis` | 0.5 | a landmark below this is not trusted |
+| `edge` | 0.03 | a needed landmark nearer the picture's edge than this share of it, or past it, is not trusted — the model goes on placing a foot that has left the frame, at 60–98% certainty in recorded takes |
+| `drop` | 0.25 | near the edge (inside three margins), a needed landmark whose certainty has fallen this far below its best of the last ten frames is not trusted — the slide that comes as a limb goes out, caught before the certainty bar is |
+| `jump` | 1.5 | a landmark that moves faster than this many body-diagonals a second (never under 5% of the diagonal a frame) has snapped to the background or the legs have swapped: it is held where it was |
+| `jumpHold` | 2 | for at most this many frames, after which the new place is believed — a real, fast movement is late by two frames at most |
 
 `settings` lists the exercise's own numbers offered under "Every number" on
 its page (a band's edges are offered by the measurement):

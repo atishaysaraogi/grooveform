@@ -47,7 +47,7 @@ async function load(model) {
   const opts = (delegate) => ({
     baseOptions: { modelAssetPath: MODELS[model] || MODELS.full, delegate },
     runningMode: 'VIDEO', numPoses: 1,
-    minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+    minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.7, minTrackingConfidence: 0.7,
   });
   if (landmarker) { try { landmarker.close(); } catch { } landmarker = null; }
   try { landmarker = await vision.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }

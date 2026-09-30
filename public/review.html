@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-29a">
+<html lang="en" data-v="2026-09-30a">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-29a">
+<link rel="stylesheet" href="styles.css?v=2026-09-30a">
 </head>
 <body class="review">
 <header class="bar">
@@ -102,24 +102,33 @@
           <ol class="log" id="cue-log"></ol>
         </section>
       </div>
-      <div class="panel">
-        <label class="tiny"><input type="checkbox" id="all-points"> Show every point the model sees, with how sure it is of each — the joints not tracked for this exercise too (a review aid; drawn into the demo film as well)</label>
-        <h2>Numbers <span class="tiny" id="tuned-note"></span></h2>
-        <div class="grid sliders" id="sliders"></div>
-        <div class="row">
-          <button class="btn primary" id="apply">Use these numbers in the coach on this device</button>
-          <button class="btn" id="reset">Back to the defaults</button>
-          <button class="btn" id="download-numbers">Download the numbers</button>
-          <button class="btn" id="tuned-to-draft" hidden>Put these numbers into the draft</button>
-        </div>
-        <p class="tiny" id="apply-note"></p>
-        <h2>A demo film</h2>
-        <p class="tiny">The clip drawn over and voiced after the fact: the skeleton, the counters and every cue on the picture, and on the sound the coach's own voice and the tones at the moments they would have played, over the clip's own sound if it has any. The same drawing and the same sounds as the coach's page.</p>
-        <div class="row">
-          <button class="btn primary" id="render-demo" disabled>Render a demo film</button>
-          <label><input type="checkbox" id="demo-overlay" checked> Draw the coaching on the picture</label>
-        </div>
-        <p class="tiny" id="demo-note"></p>
+      <div class="side-col">
+        <section class="panel tracked-panel">
+          <h2>Tracked <span class="tiny" id="tracked-at"></span></h2>
+          <table class="tracked" id="tracked"><tbody></tbody></table>
+          <p class="tiny" id="take-stats"></p>
+          <label class="tiny"><input type="checkbox" id="all-points"> Every point the model sees, with its certainty, and the picture's margin (a review aid; drawn into the demo film too)</label>
+        </section>
+        <section class="panel">
+          <h2>Numbers <span class="tiny" id="tuned-note"></span></h2>
+          <div class="numbers" id="sliders"></div>
+          <div class="row">
+            <button class="btn primary" id="apply">Use these in the coach on this device</button>
+            <button class="btn" id="reset">Defaults</button>
+            <button class="btn" id="download-numbers">Download</button>
+            <button class="btn" id="tuned-to-draft" hidden>Into the draft</button>
+          </div>
+          <p class="tiny" id="apply-note"></p>
+          <details class="more">
+            <summary>A demo film</summary>
+            <p class="tiny">The clip drawn over and voiced after the fact: the skeleton, the counters and every cue on the picture, and on the sound the coach's own voice and the tones at the moments they would have played, over the clip's own sound if it has any. The same drawing and the same sounds as the coach's page.</p>
+            <div class="row">
+              <button class="btn primary" id="render-demo" disabled>Render a demo film</button>
+              <label><input type="checkbox" id="demo-overlay" checked> Draw the coaching on the picture</label>
+            </div>
+            <p class="tiny" id="demo-note"></p>
+          </details>
+        </section>
       </div>
     </div>
 
@@ -147,19 +156,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-09-29a"></script>
-<script src="js/spec.js?v=2026-09-29a"></script>
-<script src="js/moves.js?v=2026-09-29a"></script>
-<script src="js/trace.js?v=2026-09-29a"></script>
-<script src="js/overlay.js?v=2026-09-29a"></script>
-<script src="js/sound.js?v=2026-09-29a"></script>
-<script src="js/codec.js?v=2026-09-29a"></script>
-<script src="js/mp4.js?v=2026-09-29a"></script>
-<script src="js/speech.js?v=2026-09-29a"></script>
-<script src="js/mixdown.js?v=2026-09-29a"></script>
-<script src="js/figure.js?v=2026-09-29a"></script>
-<script src="js/anatomy.js?v=2026-09-29a"></script>
-<script src="js/review.js?v=2026-09-29a"></script>
-<script src="js/builder.js?v=2026-09-29a"></script>
+<script src="js/core.js?v=2026-09-30a"></script>
+<script src="js/spec.js?v=2026-09-30a"></script>
+<script src="js/moves.js?v=2026-09-30a"></script>
+<script src="js/trace.js?v=2026-09-30a"></script>
+<script src="js/overlay.js?v=2026-09-30a"></script>
+<script src="js/sound.js?v=2026-09-30a"></script>
+<script src="js/codec.js?v=2026-09-30a"></script>
+<script src="js/mp4.js?v=2026-09-30a"></script>
+<script src="js/speech.js?v=2026-09-30a"></script>
+<script src="js/mixdown.js?v=2026-09-30a"></script>
+<script src="js/figure.js?v=2026-09-30a"></script>
+<script src="js/anatomy.js?v=2026-09-30a"></script>
+<script src="js/review.js?v=2026-09-30a"></script>
+<script src="js/builder.js?v=2026-09-30a"></script>
 </body>
 </html>

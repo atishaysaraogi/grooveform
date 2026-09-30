@@ -471,6 +471,20 @@ the set. The review aid draws the margin and rings a joint at or past it; the
 rep lane marks the frames not trusted for it in the same colour, and Rep by
 rep says for how long, and which part.
 
+**Before anything is measured.** The model's tracker lets go of a lock on the
+background sooner (presence and tracking confidence 0.7). A landmark that
+leaps faster than `jump` body-diagonals a second has snapped to something in
+the background, or the model has swapped the legs; it is held where it was
+for up to `jumpHold` frames, then believed — a slow movement is never held, a
+fast real one is late by two frames at most. While the person is getting set
+the page looks at a 64 × 36 thumbnail of the frame every 0.7 s: how bright
+it is, how much is crushed black or blown white, and how the body's box
+differs from the rest in brightness and colour. The one thing the picture
+calls for is said once a set — "It's dark here", "You're against the light",
+"You blend into the background — a plain wall behind you, or a different
+top, would help". The Recordings tab keeps the same numbers per frame in a
+trace and shows them beside the video.
+
 **Every point the model sees** (a review aid, to be taken out once the
 exercises are settled): on the live page's Settings sheet, "Show every point
 the model sees", and on the Recordings tab a checkbox above the numbers. All
