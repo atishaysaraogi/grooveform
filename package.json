@@ -8,7 +8,9 @@
     "test": "node --test \"test/*.test.js\"",
     "library": "node scripts/library.js",
     "smoke": "node test/smoke.mjs",
-    "dev": "node scripts/serve.js"
+    "dev": "node scripts/serve.js",
+    "smoke:care": "node test/care-smoke.mjs",
+    "care": "node scripts/care-server.js"
   },
   "license": "MIT"
 }

@@ -93,7 +93,9 @@
     catch (e) { Plans.mine = []; }
   }
   function save() { if (node) return; try { localStorage.setItem(KEY, JSON.stringify({ v: 1, plans: Plans.mine })); } catch (e) { /* storage full or off */ } }
-  function get(id) { return Plans.mine.find((p) => p.id === id) || Plans.list.find((p) => p.id === id) || (Plans.shared && Plans.shared.id === id ? Plans.shared : null); }
+  /* a plan the page was handed from elsewhere (the care layer's assigned plan) is found by id too */
+  Plans.extra = [];
+  function get(id) { return Plans.mine.find((p) => p.id === id) || Plans.list.find((p) => p.id === id) || Plans.extra.find((p) => p.id === id) || (Plans.shared && Plans.shared.id === id ? Plans.shared : null); }
   function create(p) { const o = clean(Object.assign({}, p, { id: 'my-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }), true); Plans.mine.push(o); save(); return o; }
   function copy(p) { return create({ name: p.custom ? p.name + ' (copy)' : p.name + ' — my copy', for: p.for, blurb: p.blurb, notes: p.notes, sources: p.sources, items: JSON.parse(JSON.stringify(p.items)) }); }
   function remove(id) { const n = Plans.mine.length; Plans.mine = Plans.mine.filter((p) => p.id !== id); if (Plans.mine.length !== n) save(); }

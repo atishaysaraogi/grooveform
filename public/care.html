@@ -1,11 +1,12 @@
+<!-- GENERATED from index.html by scripts/care-page.js — edit index.html or care.js, not this file -->
 <!DOCTYPE html>
-<html lang="en" data-v="2026-10-01h">
+<html lang="en" data-v="2026-10-01h" data-care="1">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<title>OnTrack</title>
-<meta name="description" content="OnTrack: a form coach in your phone's camera. Pick an exercise, prop the phone up, step into the frame, and listen for cues — reps counted, holds timed, a recording you can download.">
+<title>OnTrack Care</title>
+<meta name="description" content="OnTrack Care: your physio's exercises on your phone, coached by the camera; a rep sent for review, answered in the app.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232B1546'/><rect x='10' y='40' width='44' height='6' rx='3' fill='%23FFB830'/><rect x='10' y='29' width='44' height='6' rx='3' fill='%23B8F542'/><rect x='10' y='18' width='44' height='6' rx='3' fill='%23FF2E88'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +18,7 @@
 <!-- ============ the bar: the stripes, the mark, a search, how it works ============ -->
 <header class="topbar" id="topbar">
   <button class="iconbtn back" id="nav-back" aria-label="Back" hidden>‹</button>
-  <a class="brand" href="#/" aria-label="OnTrack home"><span class="wordmark">OnTrack</span></a>
+  <a class="brand" href="#/" aria-label="OnTrack home"><span class="wordmark">OnTrack</span> <span class="care-mark">care</span></a>
   <span class="nav-title" id="nav-title"></span>
   <input type="search" id="nav-q" class="search" placeholder="Search exercises" aria-label="Search exercises" autocomplete="off">
   <button class="iconbtn" id="btn-how" aria-label="How it works" title="How it works"><span class="i-mark">i</span></button>
@@ -271,5 +272,9 @@
 <script src="js/figure.js?v=2026-10-01h"></script>
 <script src="js/anatomy.js?v=2026-10-01h"></script>
 <script src="js/app.js?v=2026-10-01h"></script>
+<script src="care-config.js?v=2026-10-01h"></script>
+<script src="js/care-core.js?v=2026-10-01h"></script>
+<script src="js/care-api.js?v=2026-10-01h"></script>
+<script src="js/care.js?v=2026-10-01h"></script>
 </body>
 </html>

@@ -32,6 +32,8 @@ function index() {
   /* the version running, for a page to check itself against a fresh copy of it */
   const vfile = path.join(DIR, '..', 'version.json'), vtext = JSON.stringify({ v: Core.VER }) + '\n';
   if (!fs.existsSync(vfile) || fs.readFileSync(vfile, 'utf8') !== vtext) fs.writeFileSync(vfile, vtext);
+  /* the care page, from the app's page */
+  require('./care-page.js').write();
   return list;
 }
 function check() {

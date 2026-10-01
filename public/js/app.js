@@ -246,6 +246,9 @@ Moves.ready.then(function () {
        camera, the coach and the voice stop with it: nothing is said to a page
        that is not the camera's */
     if (h !== '#/live' && (running || inSet)) leaveLive();
+    /* the care layer's own screens (care.html): the app's screens step aside, the layer shows its own */
+    if (/^#\/care(\/|$)/.test(h)) { screen = 'care'; for (const k of SCREENS) { opt('screen-' + k).hidden = true; document.body.classList.toggle('at-' + k, false); } document.body.classList.add('at-care'); opt('nav-back').hidden = false; opt('state').hidden = true; if (window.OnTrackAnatomy) OnTrackAnatomy.stopAll(); return; }
+    document.body.classList.remove('at-care');
     if ((m = h.match(/^#\/ex\/([a-z0-9]+)/)) && Moves[m[1]]) { planCtx = null; if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
     else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = exHref(); return; } show('live'); }
     else if (h === '#/done') { if (!setsDone.length) { location.hash = exHref(); return; } show('done'); }
@@ -267,7 +270,7 @@ Moves.ready.then(function () {
   /* the exercise page to go back to: the step of the plan, or the exercise itself */
   const exHref = () => (planCtx ? planHref(planCtx.plan, planCtx.i + 1) : '#/ex/' + move.id);
   window.addEventListener('hashchange', route);
-  opt('nav-back').onclick = () => { location.hash = screen === 'ex' ? (planCtx ? planHref(planCtx.plan) : '#/') : screen === 'plan' ? '#/' : exHref(); };
+  opt('nav-back').onclick = () => { location.hash = screen === 'care' ? '#/' : screen === 'ex' ? (planCtx ? planHref(planCtx.plan) : '#/') : screen === 'plan' ? '#/' : exHref(); };
 
   /* home: the list — each exercise's name and what it works — and a search over it.
      The search also knows the position and where the phone goes, though the row
@@ -1048,6 +1051,8 @@ Moves.ready.then(function () {
     drawFrame(reading, out.verdict, out, turnedLm);
     paintUi(reading, out.verdict, out);
     state = out;
+    /* the care layer keeps the pose record of the set from here: the landmarks, the reading, the verdict, the clock */
+    if (window.__careFrame) { try { window.__careFrame(turnedLm, reading, out, now - t0, setNo); } catch { } }
     /* the target reached ends the set by itself */
     if (!between && out.done) finishSet();
   }
@@ -1637,5 +1642,7 @@ Moves.ready.then(function () {
   }
   window.__app = { get coach() { return coach; }, get move() { return move; }, get state() { return state; }, get library() { return Moves; },
     get blob() { return rec && rec.blob; }, get rec() { return rec; }, get cameraRequest() { return lastCameraRequest; },
-    get worker() { return !!worker; }, get live() { return running; }, get session() { return { setNo, between, inSet, sets: setsDone.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; }, cfg, fire, drawFrame, paintUi, isCorrection };
+    get worker() { return !!worker; }, get live() { return running; }, get session() { return { setNo, between, inSet, sets: setsDone.slice(), meta: setsMeta.slice() }; }, get voice() { return voice; }, get audio() { return audio; }, get banner() { return banner; }, get voiced() { return voiced; },
+    get planCtx() { return planCtx ? { plan: planCtx.plan, i: planCtx.i, item: planCtx.item } : null; }, get feel() { return Object.assign({ note: String(opt('feel-note').value || '') }, feel); }, get saved() { return saved; },
+    cfg, fire, drawFrame, paintUi, isCorrection, showPlan: (p) => { showPlan(p); show('plan'); }, buildPlansHome };
 });

@@ -580,6 +580,8 @@ them, and a kept number outside its setting's own range is dropped on its own.
 npm run dev        # http://localhost:8000 — localhost counts as secure, so the camera works
 npm test           # the measuring and the coaching, against bodies posed to a known angle
 npm run smoke      # a real browser: canvas, cues, the encoder and the file  (needs playwright)
+npm run care       # the care server: the site plus /api, data in ./data   (docs/care.md)
+npm run smoke:care # the care page end to end, a physio's browser and a patient's  (needs playwright)
 ```
 
 No dependencies and no build step. `public/` is the site; the Pages workflow
@@ -696,6 +698,18 @@ can be changed step by step on its page; any exercise page's *Adjust* panel
 sets the range and the faults for that person and can add the exercise to a
 plan. A plan travels as a link, the plan itself in the address, or as a file
 (`docs/plans.md`).
+
+**Care** (`care.html`, `docs/care.md`). The same app with a layer for the people
+around a session: an account by phone number and a code, a physio who adds a
+patient by number and assigns a programme — modified step by step, never built
+from scratch — a patient who does it at home, sends a rep or a set for review
+with the clip and the skeleton, and gets the physio's verdict and reply; a
+visit interval with its reminders, exercise reminders at the person's time, a
+one-tap report, and the person's own data to export or delete. The logic
+(`public/js/care-core.js`) is one file run in node behind `scripts/care-server.js`
+(the real thing: one JSON file as the store, MSG91 for the messages, a
+scheduler in the process) and in the browser as a sandbox on a static host.
+`index.html` is untouched; `care.html` is written from it.
 
 `docs/exercise-template.xlsx` is the same brief as a spreadsheet, for working
 an exercise out away from the page; `scripts/exercise-template.py` builds it.
