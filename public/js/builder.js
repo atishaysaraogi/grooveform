@@ -652,7 +652,7 @@ Moves.ready.then(function () {
     const num = (value, onchange, defKey, title) => { const inp = el('input', 'inline num'); inp.type = 'number'; inp.step = 'any'; inp.value = value == null ? '' : value; if (defKey) inp.dataset.def = defKey; if (title) inp.title = title; inp.onchange = () => { const v = inp.value === '' ? null : Number(inp.value); onchange(v); commit(false); }; return inp; };
     const words = (t, cls) => el('span', 'w ' + (cls || ''), esc(t));
     const KIND_OPTS = Object.entries(KIND_WORDS);
-    const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the whole rep'], ['always', 'at all times, before the rep too']];
+    const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the whole rep'], ['always', 'at all times, before the rep too'], ['between', 'between reps only, at rest']];
     d.measurements.forEach((m, i) => {
       const card = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); const role = roleOf(m), u = unitOf(m);
       /* the head: its name, its kind, its values at A and B, the tools */

@@ -225,18 +225,34 @@ test('forward lunge: the front leg is the one measured, a right angle over the a
   assert.equal(v.raised, true); assert.equal(firstFault(M, v), 'kneeShallow');
 });
 
-test('static quads: pulling the toes up starts the contraction, letting go ends it, a bent knee is the fault', () => {
+test('static quads over a roll: the knee bent at rest, straight with the heel up and the toes pulled at the top, the roll judged between reps', () => {
   const M = Moves.quadset;
-  const RELAXED = Object.assign({}, SUPINE, { foot: 115, footF: 115 });   // both feet fallen away from the head by 25 degrees
-  let { r, v } = run(M, RELAXED);
-  assert.ok(r.ok && v.atStart && !v.raised && M.ready(r, v), 'relaxed is the start: foot ' + r.foot);
-  ({ r, v } = run(M, Object.assign({}, RELAXED, { foot: 95 })));
-  assert.equal(r.side, 'R', 'the leg whose toes came up is the one measured');
-  assert.ok(r.foot < 98, 'toes pulled up: ' + r.foot);
-  assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(firstFault(M, v), null);
-  ({ r, v } = run(M, Object.assign({}, RELAXED, { foot: 95, shin: -75 })));
-  assert.ok(r.knee < 170, 'a knee not pressed down: ' + r.knee);
-  assert.equal(firstFault(M, v), 'kneeBend');
+  /* the verdict holds every fault; the coach judges the rest ones between reps and the others at the top */
+  const topFault = (v) => M.faults.find((id) => v.faults[id] != null && M.when[id] !== 'between') || null;
+  /* the working leg over the roll: the knee up a little, bent to about 150; the other leg straight on the floor */
+  const REST = Object.assign({}, SUPINE, { thigh: -105, shin: -75, foot: 95 });
+  let { r, v } = run(M, REST);
+  assert.ok(r.ok && r.knee > 140 && r.knee < 160, 'bent over the roll: ' + r.knee);
+  assert.equal(r.side, 'R', 'the leg over the roll — the higher knee — is the one measured');
+  assert.ok(v.atStart && !v.raised && M.ready(r, v), 'and that is the start');
+  assert.equal(v.faults.propLow, undefined, 'the roll is right at rest');   // the knee is not straight, but that is judged at the top only
+  /* the leg nearly straight at rest: the roll is too low — said between reps, and not the start */
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -94, shin: -86, foot: 95 })));
+  assert.ok(r.knee > 160, 'nearly straight: ' + r.knee);
+  assert.equal(firstFault(M, v), 'propLow');
+  assert.equal(M.when.propLow, 'between', 'judged only at rest');
+  assert.ok(!M.ready(r, v), 'not the start: the coach asks for the roll instead');
+  assert.match(M.cues.notready.text, /prop the knee higher/i);
+  /* the top: straight, heel off the floor, toes pulled up */
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -100, shin: -100, foot: 65 })));
+  assert.ok(r.knee > 175 && r.foot < 100, `straight with the toes up: ${r.knee}, ${r.foot}`);
+  assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(topFault(v), null);
+  /* straight but the toes not pulled up; or not quite straight */
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -100, shin: -100, foot: 110 })));
+  assert.equal(topFault(v), 'toesLoose');
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -102, shin: -90, foot: 65 })));
+  assert.ok(r.knee > 160 && r.knee < 170, 'not locked out: ' + r.knee);
+  assert.equal(v.raised, true); assert.equal(topFault(v), 'kneeBend');
 });
 
 test('dynamic quads: sitting is the start, locked out is the top, the thigh lifting and leaning back are called', () => {

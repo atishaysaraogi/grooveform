@@ -10,16 +10,16 @@
     "lying",
     "supine",
     "quads",
-    "isometric",
-    "knee rehab"
+    "knee rehab",
+    "inner range"
   ],
   "equipment": [
     "a mat",
-    "a rolled towel, optional"
+    "a rolled towel or a foam roller"
   ],
   "type": "reps",
   "position": "lying",
-  "movement": "the thigh tightened, the back of the knee pressed to the floor and the toes pulled up, held",
+  "movement": "the knee bent over a roll, straightened until the leg is in a line with the heel off the floor and the toes pulled up, held, lowered",
   "sides": "alternate",
   "load": "none",
   "phone": {
@@ -30,26 +30,26 @@
     "height": "on the floor"
   },
   "words": {
-    "hint": "Lying with one leg straight: toes pulled up, knee pressed down, held five seconds.",
-    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, legs straight and relaxed.",
-    "position": "Lie on your back, side on to the phone, legs straight and relaxed, heels on the floor. Bend the other knee if your back prefers it.",
-    "top": "The toes pulled up toward you, the thigh tight and the back of the knee pressed into the floor, for the count.",
+    "hint": "Lying with a roll under the knee: straighten the leg, toes up, hold five seconds.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, a rolled towel or foam roller under one knee.",
+    "position": "Lie on your back, side on to the phone. A rolled towel or a foam roller under the working knee, so the knee is bent over it and the heel rests on the floor. The other leg straight along the floor.",
+    "top": "The leg straight in one line, the heel lifted off the floor, the toes pulled up toward you, for the count.",
     "howto": [
-      "Lie on your back with your legs straight and relaxed. One leg at a time is the working leg.",
-      "Pull the toes of that foot back toward you and press the back of the knee down into the floor. Feel the thigh tighten; the heel may lift an inch, which is fine.",
+      "Lie on your back with a rolled towel or a foam roller under one knee. The knee should be bent over it: if the leg is still nearly straight, prop the knee higher.",
+      "Pull the toes of that foot back toward you and straighten the knee, lifting the heel off the floor until the leg is in one line.",
       "Hold for the count — five seconds — breathing.",
-      "Let go completely, toes relaxed, before the next one. The rep counts as you let go."
+      "Lower the heel back to the floor and let the thigh go before the next one."
     ],
-    "cannot": "How hard the thigh is contracting: it sees the toes come up and the knee straighten, which go with the contraction, not the muscle itself. Press as hard as is comfortable.",
-    "about": "Static quads — lying on your back side on: the foot's angle at the heel between toe and knee, which falls as the toes are pulled up; the contraction is under way once it is below 98° and let go past 110°; and the knee, at least 170° while it is held. Hold five seconds, then relax fully; the rep counts on letting go.",
+    "cannot": "How hard the thigh is working: it sees the knee straighten and the toes come up, which go with the contraction. Press as hard as is comfortable.",
+    "about": "Static quads over a roll — lying on your back side on: the knee angle between hip and ankle, 150 or so at rest over the roll and 180 straight; a rep is under way past 165 and counts when the knee is back under 160; at the top the knee at least 170 and the foot's angle at the heel, between toe and knee, 100 or less with the toes pulled up. Between reps the knee must rest under 160, or the roll is too low. Hold five seconds at the top.",
     "lost": "Lie down side on to the camera, whole body in",
-    "lower": "And relax",
-    "early": "Hold it for the full count next time",
-    "holdLabel": "Hold the contraction for",
-    "safety": "Nothing should hurt: this is the gentlest knee exercise. A rolled towel under the knee helps if the thigh will not tighten.",
-    "easier": "A shorter hold; a towel under the knee.",
-    "harder": "A longer hold; more of them, every hour.",
-    "mistakes": "Letting the knee bend; forgetting to pull the toes up; holding the breath."
+    "lower": "And lower the heel",
+    "early": "Hold it straight for the full count next time",
+    "holdLabel": "Hold the leg straight for",
+    "safety": "Nothing should hurt. The roll takes the knee out of full extension, which is what makes this gentle: keep it under the knee, not the thigh or the calf.",
+    "easier": "A shorter hold; a lower roll.",
+    "harder": "A longer hold; a bigger roll; an ankle weight.",
+    "mistakes": "Lifting the whole leg from the hip instead of straightening the knee; forgetting to pull the toes up; letting the roll slip down the calf."
   },
   "muscles": {
     "thigh": 1,
@@ -60,25 +60,25 @@
       "A": {
         "torso": 90,
         "neck": 0,
-        "thigh": -90,
-        "shin": -90,
-        "foot": 30,
+        "thigh": -105,
+        "shin": -75,
+        "foot": 95,
         "uarm": -90,
         "farm": -90,
-        "thighF": -150,
-        "shinF": -30,
+        "thighF": -90,
+        "shinF": -90,
         "footF": 90
       },
       "B": {
         "torso": 90,
         "neck": 0,
-        "thigh": -90,
-        "shin": -90,
-        "foot": 95,
+        "thigh": -100,
+        "shin": -100,
+        "foot": 65,
         "uarm": -90,
         "farm": -90,
-        "thighF": -150,
-        "shinF": -30,
+        "thighF": -90,
+        "shinF": -90,
         "footF": 90
       }
     }
@@ -88,8 +88,12 @@
     "to": "shoulder"
   },
   "side": {
-    "pick": "measure",
-    "measure": "pull"
+    "pick": "highest",
+    "joint": "knee",
+    "hold": {
+      "margin": 0.15,
+      "frames": 5
+    }
   },
   "landmarks": {
     "joints": [
@@ -151,43 +155,10 @@
   },
   "measurements": [
     {
-      "key": "foot",
-      "label": "toe, heel, knee",
-      "hud": "TOES",
-      "note": "pulled up",
-      "kind": "angle",
-      "a": "toe",
-      "b": "heel",
-      "c": "knee",
-      "band": {
-        "lo": "footMin",
-        "hi": "footMax"
-      },
-      "scale": [
-        40,
-        170
-      ],
-      "settings": [
-        {
-          "key": "footMin",
-          "label": "Foot angle, lowest",
-          "min": 30,
-          "max": 165
-        },
-        {
-          "key": "footMax",
-          "label": "Foot angle, highest (toes pulled up)",
-          "min": 35,
-          "max": 170
-        }
-      ],
-      "why": "The foot against the shin, at the heel: relaxed it reads 110–125, toes pulled up 90 or less. The progress measurement: pulling the toes up is the start of the contraction, letting them go is the end."
-    },
-    {
       "key": "knee",
-      "label": "knee pressed straight",
+      "label": "knee angle",
       "hud": "KNEE",
-      "note": "straight",
+      "note": "straight at the top",
       "kind": "angle",
       "a": "hip",
       "b": "knee",
@@ -202,54 +173,103 @@
       "settings": [
         {
           "key": "kneeMin",
-          "label": "Knee angle, at least (180 is straight)",
-          "min": 140,
-          "max": 179
+          "label": "Knee angle at the top, at least (180 is straight)",
+          "min": 150,
+          "max": 180
         }
       ],
-      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+      "why": "The knee between hip and ankle: bent over the roll at rest, 150 or so; 180 straight. The progress measurement, rising through the rep. At the top at least 170."
     },
     {
-      "key": "pull",
-      "label": "toes pulled up",
-      "hud": "PULL",
-      "note": "which leg",
+      "key": "rest",
+      "label": "knee at rest",
+      "hud": "REST",
+      "note": "bent over the roll",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "max": "restMax"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "restMax",
+          "label": "Knee at rest, at most (the roll is too low past this)",
+          "min": 120,
+          "max": 175
+        }
+      ],
+      "why": "The same angle, judged only between reps: the knee must rest bent over the roll, under 160. Past that the roll is too low or has slipped, and the exercise is a leg raise, not a quad set."
+    },
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "pulled up",
       "kind": "angle",
       "a": "toe",
       "b": "heel",
       "c": "knee",
-      "times": -1,
-      "why": "The foot angle, negated, so the leg whose toes are pulled up further is the larger. Not judged: it picks the working leg, since both legs are straight."
+      "band": {
+        "max": "footMax"
+      },
+      "scale": [
+        40,
+        170
+      ],
+      "settings": [
+        {
+          "key": "footMax",
+          "label": "Foot angle at the top, at most (toes pulled up)",
+          "min": 60,
+          "max": 130
+        }
+      ],
+      "why": "The foot against the shin, at the heel: relaxed it reads 110–125, toes pulled up 100 or less. Judged at the top."
     }
   ],
   "progress": {
-    "measure": "foot",
+    "measure": "knee",
     "raiseAt": "raiseAt",
     "downAt": "downAt",
-    "direction": "down"
+    "direction": "up"
   },
+  "inPosition": [
+    "knee",
+    "foot"
+  ],
   "ready": {
     "atStart": true,
-    "ranges": {
-      "knee": [
-        150,
-        180
-      ]
-    }
+    "nudge": "Bend the knee over a rolled towel or a foam roller — if the leg is still nearly straight, prop the knee higher"
   },
   "prompt": {
     "id": "raise",
-    "text": "Toes up and press the knee down",
+    "text": "Straighten the knee — heel up, toes pulled toward you",
     "tone": "up"
   },
   "faults": [
     {
+      "id": "propLow",
+      "measure": "rest",
+      "side": "above",
+      "label": "Prop the knee higher",
+      "text": "Prop the knee higher — a rolled towel or a foam roller under it",
+      "deep": "The leg is nearly straight at rest — put more under the knee",
+      "tone": "plain",
+      "when": "between"
+    },
+    {
       "id": "kneeBend",
       "measure": "knee",
       "side": "below",
-      "label": "Knee not pressed down",
-      "text": "Press the back of your knee into the floor",
-      "deep": "Tighten the thigh — the knee is bent",
+      "label": "Knee not straight",
+      "text": "Straighten the knee fully — the leg in one line",
+      "deep": "Tighten the thigh and lock the knee out",
       "tone": "plain"
     },
     {
@@ -257,28 +277,28 @@
       "measure": "foot",
       "side": "above",
       "label": "Toes not pulled up",
-      "text": "Pull your toes further toward you",
+      "text": "Pull your toes toward you",
       "tone": "plain"
     }
   ],
   "draw": [
     {
       "kind": "arc",
-      "measure": "foot",
-      "size": 0.7
+      "measure": "knee",
+      "size": 0.8
     },
     {
       "kind": "arc",
-      "measure": "knee",
-      "size": 0.8
+      "measure": "foot",
+      "size": 0.7
     }
   ],
   "defaults": {
     "kneeMin": 170,
-    "footMin": 50,
+    "restMax": 160,
     "footMax": 100,
-    "raiseAt": 98,
-    "downAt": 110,
+    "raiseAt": 165,
+    "downAt": 160,
     "holdTargetSec": 5,
     "callAtSec": [],
     "repCount": 10,
@@ -296,9 +316,9 @@
     },
     {
       "key": "raiseAt",
-      "label": "Foot angle that counts as toes up",
-      "min": 70,
-      "max": 115
+      "label": "Knee angle that counts as under way",
+      "min": 150,
+      "max": 178
     },
     {
       "key": "lowerSec",

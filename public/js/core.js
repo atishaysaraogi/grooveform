@@ -49,7 +49,7 @@
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   /* Said about the picture, not the exercise: never one of the person's faults. */
-  const SYSTEM = ['lost', 'edge', 'framing', 'dark', 'backlit', 'blend'];
+  const SYSTEM = ['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready'];
   const PART = { ear: 'head', shoulder: 'shoulder', elbow: 'elbow', wrist: 'hand', hip: 'hip', knee: 'knee', ankle: 'foot', heel: 'foot', toe: 'foot' };
   const partWords = (side, joint) => `${side === 'L' ? 'left ' : side === 'R' ? 'right ' : ''}${PART[joint] || joint}`;
   const fillPart = (text, side, joint) => String(text || '').replace(/\{joint\}/g, partWords(side, joint));
@@ -330,6 +330,7 @@
       this.lostSince = 0; this.lastLost = 0;     // nobody in the frame: since when, and when it was last said
       this.nearSince = 0; this.lastNear = 0;     // a needed point close to the picture's edge during the set-up wait: since when, and when it was last said
       this.sceneId = null; this.sceneSince = 0; this.saidScene = {};   // the light and the background, as last sampled; each thing about it said once a set
+      this.offSince = 0; this.lastNudge = 0;   // seen but not at the start position: since when, and when the file's words about it were last said
       this.lastT = null; this.log = [];
       this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
@@ -408,6 +409,13 @@
         if (at) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
         else this.readySince = 0;
         if (!this.ready) {
+          /* seen, but not at the start position for a while: a move can say what the start
+             needs (ready.nudge), once, then on the slow clock */
+          if (at) this.offSince = 0; else if (!this.offSince) this.offSince = t;
+          if (this.offSince && this.cues.notready && t - this.offSince >= (cfg.nudgeSec == null ? 6 : cfg.nudgeSec) * 1000 && (!this.lastNudge || t - this.lastNudge >= (cfg.lostEverySec || 15) * 1000)) {
+            const cue = this.offer('notready', t, this.cues.notready.text);
+            if (cue) { this.lastNudge = t; return shape({ cue }); }
+          }
           /* the moment to fix the framing is now, before the set: a needed point close to
              the edge (inside it, still trusted) is said once, naming the part */
           const near = r && r.near && r.near.length ? r.near[0] : null;
@@ -599,7 +607,7 @@
          the default), through the rep (up and lowering), or at all times (between reps
          too, what `setup` used to say) */
       const W = this.move.when || {}, setup = this.move.setup || [];
-      const judged = (id) => { const w = W[id] || (setup.includes(id) ? 'always' : 'top'); return this.phase === 'up' ? true : this.phase === 'lower' ? w !== 'top' : this.phase === 'down' ? w === 'always' : false; };
+      const judged = (id) => { const w = W[id] || (setup.includes(id) ? 'always' : 'top'); return w === 'between' ? this.phase === 'down' : this.phase === 'up' ? true : this.phase === 'lower' ? w !== 'top' : this.phase === 'down' ? w === 'always' : false; };
       let on = {};
       if (this.phase === 'down') on.raise = 99;
       for (const id of Object.keys(v.faults || {})) if (judged(id)) on[id] = v.faults[id];
@@ -693,7 +701,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-01a';
+  const VER = '2026-10-01b';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

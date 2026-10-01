@@ -199,6 +199,7 @@
     cues.edge = { text: words.edge || Core.SHARED_CUES.edge.text };
     cues.framing = { text: words.framing || Core.SHARED_CUES.framing.text };
     for (const id of ['dark', 'backlit', 'blend']) cues[id] = { text: words[id] || Core.SHARED_CUES[id].text };
+    if (f.ready && f.ready.nudge) cues.notready = { text: f.ready.nudge };   // seen but not at the start for a while: what the start needs
     if (reps) { cues.lower = { text: words.lower || 'Lower slowly' }; cues.early = { text: words.early || 'Hold it at the top next time' }; }
     if (words.hold) cues.hold = { text: words.hold };
 
@@ -462,13 +463,13 @@
       }
     });
     for (const s of f.settings || []) if (typeof defaults[s.key] !== 'number') err('settings', `a setting with no default: ${s.key}`);
-    const ids = new Set(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend']);   // the coach's own cue ids, about the picture: no fault may take them
+    const ids = new Set(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready']);   // the coach's own cue ids, about the picture: no fault may take them
     (f.faults || []).forEach((x, i) => {
       const at = `faults[${i}]`;
       if (!x.id || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(x.id)) err(at + '.id', 'one word'); else if (ids.has(x.id)) err(at + '.id', 'used twice: ' + x.id); else ids.add(x.id);
       const m = ms.find((mm) => mm.key === x.measure);
       if (!m) err(at + '.measure', 'not a measurement: ' + x.measure); else if (!m.band) err(at + '.measure', `${x.measure} has no band, so nothing is above or below it`);
-      if (x.when != null && !['top', 'rep', 'always'].includes(x.when)) err(at + '.when', 'top, rep or always');
+      if (x.when != null && !['top', 'rep', 'always', 'between'].includes(x.when)) err(at + '.when', 'top, rep, always or between');
       if (!['above', 'below'].includes(x.side)) err(at + '.side', 'above or below the band');
       if (!x.text) err(at + '.text', 'the spoken words');
       if (!x.label) err(at + '.label', 'short words for the picture'); else if (x.label.length > 26) err(at + '.label', 'short means 26 characters at most');

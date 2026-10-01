@@ -113,18 +113,17 @@ tightening.
 
 The front leg is picked each frame as the one whose ankle is ahead of the hip.
 
-## Static quads (`quadset`) — quad sets
+## Static quads (`quadset`) — quad sets over a roll
 
 | standard | source | in the file |
 |---|---|---|
-| Lying with the leg straight, the other knee bent | NHS South Tees; Knee Guru | start words; the straighter leg is measured |
-| Pull the toes back toward you and press the back of the knee down; feel the thigh tighten; the heel may lift an inch | NHS South Tees; Knee Guru; PhysioAdvisor | the toes coming up is the marker the camera has: the foot angle at the heel falling below 98° starts the rep, rising past 110° ends it; the knee ≥ 170° while held (`kneeBend`) |
-| Hold for a count of five, relax fully, repeat | NHS South Tees; Physiobot | hold 5 s at the top, 3 s quiet after each |
-| Frequent, gentle: "every half hour while in bed" in the NHS handout | NHS South Tees | words; no load option |
+| Lying on the back, a rolled towel or foam roller under the working knee so the knee is bent a little; the other leg straight | NHS South Tees; Knee Guru ("inner range quads") | start words; the start is the knee under 160° at rest; the leg over the roll — the higher knee — is the one measured |
+| If the leg is nearly straight at rest the roll is too low: prop the knee higher | PhysioAdvisor | `propLow`, judged only between reps (`when: between`); before the first rep the start nudge says it when the person is seen but not at the start for six seconds |
+| Pull the toes back toward you and straighten the knee, lifting the heel off the floor until the leg is in one line | NHS South Tees; Knee Guru | the knee angle is the rep: under way past 165°, at the top at least 170° (`kneeBend`), with the foot angle at the heel 100° or less (`toesLoose`); it counts on the way back under 160° |
+| Hold for a count of five, lower, relax, repeat | NHS South Tees; Physiobot | hold 5 s at the top, 3 s quiet after each |
 
-What it cannot see: the contraction itself. It sees the two things that go
-with it. Honest, but it is the least camera-friendly of the eight; a towel
-under the knee and a strong "toes up" make it readable.
+What it cannot see: how hard the thigh is working. It sees the knee lock
+out, the heel leave the floor and the toes come up, which go with it.
 
 ## Dynamic quads (`kneeext`) — seated knee extension
 

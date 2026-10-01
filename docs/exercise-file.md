@@ -336,7 +336,10 @@ the toes pointed and got nothing for it). The prompt asks for the movement
 and is never red.
 
 `ready` is the start position: nothing is coached until it has been held for
-the set-up wait (`readyMs`). By default a rep move's start is being below
+the set-up wait (`readyMs`). `ready.nudge` is what the start needs, in words:
+when the person is seen but not at the start for six seconds the coach says
+it, then again on the slow clock — the quad set's "bend the knee over a
+rolled towel or a foam roller". By default a rep move's start is being below
 `downAt` and a hold's is being seen; `ranges` adds readings that must be in
 range (the bridge: lying with the knees bent).
 
@@ -362,7 +365,9 @@ said, whatever their sizes.
 `top`, the default, while the rep is up (the hold at the top); `rep`, from the
 lift to the return, lowering included; `always`, between reps as well, so the
 feet are coached before the lift is asked for (`setup: true` is the old
-spelling of `always`). A hold judges every fault all the time. Tones: `tick` (default), `plain`,
+spelling of `always`); `between`, only between reps, at rest — the quad set's
+roll under the knee is judged there and nowhere else. A hold judges every
+fault all the time. Tones: `tick` (default), `plain`,
 `up`, `down`, `walking in`, `walking out`, `hold`, `done`, `call`.
 
 ## Drawn on the picture
