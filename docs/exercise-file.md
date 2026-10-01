@@ -82,6 +82,7 @@ side: `L.knee`, `R.knee` (see Landmarks).
 | `lost` | said when nobody is in the frame (every 15 s) — default "Step into the camera, side on" |
 | `edge` | said when a needed landmark is at the picture's edge, on the same slow clock as `lost` and instead of it; `{joint}` is filled with the part — "left foot", "right hand" — default "Your {joint} is at the edge of the picture — move so all of you is in" |
 | `framing` | said once during the set-up wait when a needed landmark is inside the picture but within two margins of its edge — default "Your {joint} is close to the edge of the picture — move back a little, so there is room round you". Neither is one of the person's faults: not in the fault order, never in a rep's account |
+| `room` | said once during the set-up wait when the figure's travel from A to B, scaled to the person and turned the way they face, would take a needed point past the picture's margin — `{joint}` is filled in; default "Your {joint} will go out of the picture as you move — shuffle away from that edge, or move the phone back" |
 | `dark`, `backlit`, `blend` | the light and the background, said once a set during the set-up wait when the picture calls for it: too dark (mean brightness under 0.22, or half the picture crushed black); a window or lamp behind (a good share of the picture blown white round a dark body); the body within 0.07 of the rest in brightness and 0.08 in colour — defaults "It's dark here — turn a light on, or face one", "You're against the light — turn so the light falls on you", "You blend into the background — a plain wall behind you, or a different top, would help" |
 | `lower` | reps: the hold at the top is done — default "Lower slowly" |
 | `early` | reps: back down before the hold was done — default "Hold it at the top next time" |
@@ -300,9 +301,17 @@ raise's toe angle is gated on the foot's length against the shin, so it is
 read only when the foot is long enough in the picture to be in profile.
 `fromStart` reads the measurement against the start position: `"change"` is
 the reading less its value when the set-up wait ended, `"ratio"` is percent
-of that value, and `"peak"` is percent of the most it has been in the set, a
-reference that only climbs — the prone leg raise's foot length, which
-foreshortens when the leg swings out of the camera's plane. Until the wait ends the baseline follows the person, so the
+of that value, `"peak"` is percent of the most it has been in the set, a reference
+that only climbs — the prone leg raise's foot length, which foreshortens
+when the leg swings out of the camera's plane — and `"belowPeak"` is the
+reading less that most: the prone leg raise's lift, 0 at the flattest the
+body has lain and −7 a hand's width up, whatever the angle at rest, and
+following a rest that settles flatter as the set goes on — but one flat
+frame sets a bar the rest then sits under, so for a rest that wanders
+`"rest"` is better: the change from the rest position, a reference that
+follows the reading slowly (a twentieth a frame) and only while the reading
+is within `restNear` (6) of it, so a lift leaves it where it was and a rest
+that settles carries it along. The prone leg raise's lift reads this way. Until the wait ends the baseline follows the person, so the
 reading is no change and the start position can be held; then it is frozen
 for the set. A length seen by the camera shortens as the limb turns toward
 it, and `"ratio"` on a `distance` is how that turning is measured — an arm
@@ -405,7 +414,7 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 | `setCount` | 3 | sets in a session |
 | `lowerSec` | — | "lower slowly" is judged: a lowering quicker than this is remarked on |
 | `restSec` | 2 | the quiet after a rep is counted |
-| `readyMs` | 2000 | the start position held this long before coaching begins |
+| `readyMs` | 3000 | the start position held this long, still, before coaching begins; the picture is checked meanwhile |
 | `deepAt` | 18 | degrees past the band at which the stronger words are used |
 | `persistMs` | 500 | a fault holds this long before it is said |
 | `cooldownMs` | 4000 | the same cue not again inside this |

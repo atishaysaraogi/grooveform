@@ -19,10 +19,10 @@ function run(coach, script, from) {
 
 test('a hold says nothing but the opening words until the person has been seen for the set-up wait', () => {
   const c = new Core.Coach(HOLD);
-  const { said } = run(c, [[SEEN_BAD, 4000]]);
+  const { said } = run(c, [[SEEN_BAD, 5000]]);
   assert.ok(said.length >= 1 && said[0].id === 'bad', 'the fault is said in the end: ' + JSON.stringify(said));
-  assert.ok(said[0].at >= 2000 + 500, 'but not before the wait and the persist time: ' + said[0].at);
-  assert.ok(said[0].at < 3200, 'and not long after: ' + said[0].at);
+  assert.ok(said[0].at >= 3000 + 500, 'but not before the wait (three seconds, still) and the persist time: ' + said[0].at);
+  assert.ok(said[0].at < 4200, 'and not long after: ' + said[0].at);
   assert.equal(c.step(SEEN_BAD, 0).ready, true, 'the coach reports itself ready');
   const fresh = new Core.Coach(HOLD);
   assert.equal(fresh.step(SEEN_GOOD, 0).ready, false, 'and not before');
@@ -54,8 +54,8 @@ test('nobody in the frame: "I can\'t see you" once the frame has been empty a mo
   const d = new Core.Coach(HOLD);
   const first = run(d, [[UNSEEN, 1000], [SEEN_GOOD, 1500], [UNSEEN, 1000], [SEEN_GOOD, 1500]]);
   assert.ok(first.said.some((x) => x.id === 'lost'), 'said while getting set');
-  assert.equal(d.ready, false, 'a second and a half seen, twice, is not two seconds seen');
-  run(d, [[SEEN_GOOD, 600]], first.t);   // the clock carries on
+  assert.equal(d.ready, false, 'a second and a half seen, twice, is not three seconds seen');
+  run(d, [[SEEN_GOOD, 1600]], first.t);   // the clock carries on
   assert.equal(d.ready, true);
   /* once coaching, the same slow clock: a correction every few seconds, this only every fifteen */
   const e = new Core.Coach(HOLD, { readyMs: 0 });
@@ -71,14 +71,14 @@ test('a rep move waits at its start position, and a move can say what that posit
   let out = null;
   for (let t = 0; t < 1500; t += 33) out = c.step(UP, t);
   assert.equal(out.phase, 'setup', 'up in the air is not the start');
-  for (let t = 1500; t < 3600; t += 33) out = c.step(AT_START, t);
-  assert.equal(out.ready, true, 'two seconds at the start and the coaching begins');
+  for (let t = 1500; t < 4600; t += 33) out = c.step(AT_START, t);
+  assert.equal(out.ready, true, 'three seconds at the start and the coaching begins');
   /* a move's own idea of its start position */
   const M = Object.assign({}, REPS, { ready: (r, v) => v.atStart && r.kneeBent });
   const d = new Core.Coach(M);
   const straight = Object.assign({ kneeBent: false }, AT_START), bent = Object.assign({ kneeBent: true }, AT_START);
   for (let t = 0; t < 3000; t += 33) out = d.step(straight, t);
   assert.equal(out.ready, false, 'lying down with the legs straight is not the start');
-  for (let t = 3000; t < 5100; t += 33) out = d.step(bent, t);
+  for (let t = 3000; t < 6100; t += 33) out = d.step(bent, t);
   assert.equal(out.ready, true, 'knees bent, and it is');
 });

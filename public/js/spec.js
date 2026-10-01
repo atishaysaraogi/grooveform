@@ -198,7 +198,7 @@
     /* about the picture, not the person: {joint} is filled with the part — "left foot" */
     cues.edge = { text: words.edge || Core.SHARED_CUES.edge.text };
     cues.framing = { text: words.framing || Core.SHARED_CUES.framing.text };
-    for (const id of ['dark', 'backlit', 'blend']) cues[id] = { text: words[id] || Core.SHARED_CUES[id].text };
+    for (const id of ['dark', 'backlit', 'blend', 'room']) cues[id] = { text: words[id] || Core.SHARED_CUES[id].text };
     if (f.ready && f.ready.nudge) cues.notready = { text: f.ready.nudge };   // seen but not at the start for a while: what the start needs
     if (reps) { cues.lower = { text: words.lower || 'Lower slowly' }; cues.early = { text: words.early || 'Hold it at the top next time' }; }
     if (words.hold) cues.hold = { text: words.hold };
@@ -443,7 +443,7 @@
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
       if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
       if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
-      if (m.fromStart != null && !['change', 'ratio', 'peak'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position), "ratio" (percent of its value at the start) or "peak" (percent of the most it has been in the set)');
+      if (m.fromStart != null && !['change', 'ratio', 'peak', 'belowPeak', 'rest'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position), "ratio" (percent of its value at the start), "peak" (percent of the most it has been in the set), "belowPeak" (the reading less the most it has been) or "rest" (the change from the rest position, which follows the reading slowly while it is near)');
       if (m.gate != null) {
         const before = (f.measurements || []).slice(0, (f.measurements || []).indexOf(m)).map((q) => q.key);
         if (typeof m.gate !== 'object' || !before.includes(m.gate.measure)) err(at + '.gate', 'names a measurement listed before this one: ' + (before.join(', ') || 'none'));
@@ -463,7 +463,7 @@
       }
     });
     for (const s of f.settings || []) if (typeof defaults[s.key] !== 'number') err('settings', `a setting with no default: ${s.key}`);
-    const ids = new Set(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready']);   // the coach's own cue ids, about the picture: no fault may take them
+    const ids = new Set(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready', 'room']);   // the coach's own cue ids, about the picture: no fault may take them
     (f.faults || []).forEach((x, i) => {
       const at = `faults[${i}]`;
       if (!x.id || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(x.id)) err(at + '.id', 'one word'); else if (ids.has(x.id)) err(at + '.id', 'used twice: ' + x.id); else ids.add(x.id);

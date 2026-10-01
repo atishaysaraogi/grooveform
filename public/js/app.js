@@ -643,6 +643,14 @@ Moves.ready.then(function () {
   }
   /* a 64 × 36 thumbnail of the camera frame, for Core.scene: the light and the background */
   let sceneAt = 0, thumb = null;
+  /* room for the movement: the figure's travel from A to B, scaled to the person, must stay in the picture */
+  let figAB = null;
+  function roomFor(reading, aspect) {
+    try {
+      if (!figAB || figAB.id !== move.id) { const f = window.Figure ? Figure.figureOf(move) : null; figAB = { id: move.id, A: f && f.A, B: f && (f.B || null) }; }
+      return figAB.A && figAB.B ? Core.roomOf(figAB.A, figAB.B, reading, aspect, coach.cfg.edge) : null;
+    } catch { return null; }
+  }
   function sampleScene(lm, vis) {
     try {
       if (!thumb) { thumb = document.createElement('canvas'); thumb.width = 64; thumb.height = 36; }
@@ -819,9 +827,9 @@ Moves.ready.then(function () {
        a different shape entirely */
     const q = quarterTurn(), t = turned(q);
     const turnedLm = gate ? gate.apply(Core.rotateLandmarks(lm, q), now - t0) : Core.rotateLandmarks(lm, q);
-    /* the light and the background, looked at every so often while the person is getting set */
-    if (coach && !coach.ready && !between && !window.__poseSource && now - sceneAt > 700) { sceneAt = now; coach.scene(sampleScene(lm, coach.cfg.vis)); }
     const reading = smoother.apply(move.read(turnedLm, t.w / t.h, coach.cfg));
+    /* while the person is getting set: the light and the background, and the room for the movement, looked at every so often */
+    if (coach && !coach.ready && !between && now - sceneAt > 700) { sceneAt = now; if (!window.__poseSource) coach.scene(sampleScene(lm, coach.cfg.vis)); coach.room(roomFor(reading, t.w / t.h)); }
     let out;
     if (between) {
       /* the set is over and the next has not begun: the picture and the skeleton go
@@ -1191,7 +1199,7 @@ Moves.ready.then(function () {
     initAudio(); if (audio && audio.ac.state === 'suspended') audio.ac.resume();
     /* one call, not two: `fire` both says it and puts it on the picture, and a
        second `say` would cancel the first mid-word */
-    const opening = fresh ? move.start
+    const opening = fresh ? `${move.start} ${Core.SHARED_CUES.still.text}.`
       : `Set ${setNo} of ${cfg().setCount}${move.alternate ? ' \u2014 the other leg' : ''}. ${move.reps ? 'When you are ready.' : 'Into position when you are ready.'}`;
     fire({ id: 'start', text: opening, t: 0 });
     setsMeta.push({ t0Abs: t0, opening });

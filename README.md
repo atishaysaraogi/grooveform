@@ -472,6 +472,17 @@ the set. The review aid draws the margin and rings a joint at or past it; the
 rep lane marks the frames not trusted for it in the same colour, and Rep by
 rep says for how long, and which part.
 
+**The set-up wait.** A set opens with the file's start words and "Hold still
+in the start position for three seconds while I check the picture". During
+those three seconds the coach says what the picture needs, once each: a
+needed point at the edge or close to it (naming the part), too dark or
+against the light or blending in, and room for the movement — the figure's
+travel from start to end, scaled to the person's torso and turned the way
+they face, must keep every needed point inside the margin, or "Your left
+foot will go out of the picture as you move — shuffle away from that edge,
+or move the phone back". A move whose start is not met says what the start
+needs (`ready.nudge`). Nothing is judged until the three seconds are held.
+
 **Before anything is measured.** The model's tracker lets go of a lock on the
 background sooner (presence and tracking confidence 0.7). A landmark that
 leaps faster than `jump` body-diagonals a second has snapped to something in

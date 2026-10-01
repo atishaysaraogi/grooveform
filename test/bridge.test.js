@@ -14,7 +14,7 @@ const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, { footBias: 0 }, o
 const read = (lm, o) => M.read(lm, ASPECT, cfg(o));
 const judge = (r, o) => M.judge(r, cfg(o));
 /* and a coach on the rig is told the same */
-const Coach = (o) => new Core.Coach(M, Object.assign({ footBias: 0 }, o));
+const Coach = (o) => new Core.Coach(M, Object.assign({ footBias: 0, readyMs: 2000 }, o));   // the rep mechanics with a two-second wait; the wait itself has tests of its own
 
 /* A body on its back, side on, built backwards from the angles it should read.
      shin   the angle at the heel between the toe and the knee (90 = shin plumb)

@@ -198,7 +198,9 @@ Moves.ready.then(function () {
     if (pending) return; pending = requestAnimationFrame(() => { pending = 0; judge(); });
   }
   function judge() {
-    result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect) : null;
+    const fig = window.Figure ? Figure.figureOf(move) : null, edge = tuned.edge != null ? tuned.edge : Core.COMMON.edge;
+    const room = fig && fig.A && fig.B ? (r) => Core.roomOf(fig.A, fig.B, r, trace.aspect, edge) : null;
+    result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect, room ? { room } : undefined) : null;
     $('export-trace').disabled = !trace; $('add-take').disabled = !trace;
     const edgeMs = result ? result.rows.reduce((a, r, i) => a + (r.reading && r.reading.edge && i ? r.t - result.rows[i - 1].t : 0), 0) : 0;
     renderTracked();

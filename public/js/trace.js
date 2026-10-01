@@ -33,13 +33,16 @@
      frames: [{ t: ms, lm: landmarks }], aspect: the frame's width over its height.
      Returns one row per frame — the reading, the verdict and the coach's output —
      and the cues in order. */
-  function run(move, tuned, frames, aspect) {
+  /* opts.room: a function of a reading that says which joint the movement would take out of the picture (the page has the figure; this file does not) */
+  function run(move, tuned, frames, aspect, opts) {
     const coach = new Core.Coach(move, tuned || {});
+    const room = opts && opts.room;
     const smoother = new Core.Smoother(coach.cfg.smooth), gate = new Core.JumpGate(coach.cfg);
     const rows = frames.map((f) => {
       const lm = gate.apply(f.lm, f.t);
       if (f.scene) coach.scene(f.scene);
       const reading = smoother.apply(move.read(lm, aspect, coach.cfg));
+      if (room && !coach.ready) coach.room(room(reading));
       const out = coach.step(reading, f.t);
       return { t: f.t, reading, verdict: out.verdict, out, held: gate.held.length, scene: f.scene || null };
     });

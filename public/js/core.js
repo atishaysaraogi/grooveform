@@ -39,7 +39,7 @@
     returnMs: 400,        // how long back at the start before a rep is over: a frame or two of the model swapping the legs is not a return
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
-    readyMs: 2000,        // how long the start position is held before the coaching begins
+    readyMs: 3000,        // how long the start position is held, still, before the coaching begins: the picture is checked meanwhile
     lostEverySec: 15,     // how often "I can't see you" is said while nobody is in the frame
     setCount: 3,          // how many sets make the session
     callAtSec: [45, 30, 10, 5],   // seconds left at which the time is called
@@ -49,7 +49,7 @@
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   /* Said about the picture, not the exercise: never one of the person's faults. */
-  const SYSTEM = ['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready'];
+  const SYSTEM = ['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready', 'room'];
   const PART = { ear: 'head', shoulder: 'shoulder', elbow: 'elbow', wrist: 'hand', hip: 'hip', knee: 'knee', ankle: 'foot', heel: 'foot', toe: 'foot' };
   const partWords = (side, joint) => `${side === 'L' ? 'left ' : side === 'R' ? 'right ' : ''}${PART[joint] || joint}`;
   const fillPart = (text, side, joint) => String(text || '').replace(/\{joint\}/g, partWords(side, joint));
@@ -232,6 +232,8 @@
     dark: { text: 'It\u2019s dark here \u2014 turn a light on, or face one' },
     backlit: { text: 'You\u2019re against the light \u2014 turn so the light falls on you' },
     blend: { text: 'You blend into the background \u2014 a plain wall behind you, or a different top, would help' },
+    room: { text: 'Your {joint} will go out of the picture as you move \u2014 shuffle away from that edge, or move the phone back' },
+    still: { text: 'Hold still in the start position for three seconds while I check the picture' },
     fast: { text: 'slower on the way down' },
   };
 
@@ -307,6 +309,46 @@
     return null;
   }
 
+  /* Room for the movement. The figure says how far each joint travels from the start
+     (A) to the end (B); scaled to the person's size (the torso, figure units to picture
+     units) and turned the way they face, that is where each joint will be at the top.
+     A joint that would land nearer the picture's edge than the margin, or past it, is
+     the one to say — before the set, while there is time to move.
+       figA, figB  the figure's points by its keys (sh, hip, kn, an, ft, el, wr, h, *F; or
+                   shL/shR… for a front view)
+       r           a reading: points (the measured side, square space), other, facing, side
+       aspect, edge  the picture's shape and the margin, in shares of the picture */
+  const FIG_KEY = { sh: 'shoulder', hip: 'hip', kn: 'knee', an: 'ankle', he: 'heel', ft: 'toe', el: 'elbow', wr: 'wrist', h: 'ear' };
+  function roomOf(figA, figB, r, aspect, edge) {
+    if (!figA || !figB || !r || !r.ok || !r.points) return null;
+    const front = !!figA.hipL;
+    const fPt = (K, k) => (Array.isArray(K[k]) ? { x: K[k][0], y: K[k][1] } : null);
+    /* the figure's torso against the person's: figure units to picture units */
+    const fSh = fPt(figA, front ? 'shR' : 'sh'), fHip = fPt(figA, front ? 'hipR' : 'hip');
+    const pSh = r.points.shoulder, pHip = r.points.hip;
+    if (!fSh || !fHip || !pSh || !pHip) return null;
+    const fT = Math.hypot(fSh.x - fHip.x, fSh.y - fHip.y), pT = Math.hypot(pSh.x - pHip.x, pSh.y - pHip.y);
+    if (!fT || !pT) return null;
+    const s = pT / fT;
+    /* which way the figure faces at A against which way the person faces */
+    const fFace = front ? 1 : Math.sign(fSh.x - fHip.x) || 1, pFace = front ? 1 : (r.facing || 1);
+    const flip = fFace === pFace ? 1 : -1;
+    const m = (edge == null ? 0.03 : edge), x0 = m * aspect, x1 = aspect - m * aspect, y0 = m, y1 = 1 - m;
+    let worst = null;
+    for (const k of Object.keys(figB)) {
+      const a = fPt(figA, k), b = fPt(figB, k); if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y; if (Math.abs(dx) + Math.abs(dy) < 1) continue;
+      let name, side, P;
+      if (front) { const mm = /^(\w+?)([LR])$/.exec(k); if (!mm) continue; name = FIG_KEY[mm[1]]; side = mm[2]; P = side === r.side ? r.points : r.other; }
+      else { const far = /F$/.test(k); name = FIG_KEY[far ? k.slice(0, -1) : k]; side = far ? (r.side === 'L' ? 'R' : 'L') : r.side; P = far ? r.other : r.points; }
+      const p = P && name ? P[name] : null; if (!p || p.v != null && p.v < 0.5) continue;
+      const x = p.x + dx * s * flip, y = p.y + dy * s;
+      const over = Math.max(x0 - x, x - x1, y0 - y, y - y1);
+      if (over > 0 && (!worst || over > worst.over)) worst = { joint: name, side, over, x, y };
+    }
+    return worst;
+  }
+
   /* ---- what to say, and when ----
      A cue is an instruction, and an instruction given for a flicker is noise. So
      one is only offered when its condition has held for `persistMs`, the same one
@@ -331,6 +373,7 @@
       this.nearSince = 0; this.lastNear = 0;     // a needed point close to the picture's edge during the set-up wait: since when, and when it was last said
       this.sceneId = null; this.sceneSince = 0; this.saidScene = {};   // the light and the background, as last sampled; each thing about it said once a set
       this.offSince = 0; this.lastNudge = 0;   // seen but not at the start position: since when, and when the file's words about it were last said
+      this.roomAt = null; this.roomSince = 0; this.saidRoom = 0;   // a joint the movement would take out of the picture, as last checked
       this.lastT = null; this.log = [];
       this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
@@ -361,14 +404,20 @@
        movement. */
     relate(r) {
       const fs = this.move.fromStart; if (!fs || !fs.length || !r || !r.ok) return;
-      if (!this.ready || !this.base) { this.base = this.base || {}; for (const { key, how } of fs) if (how !== 'peak' || this.base[key] == null) this.base[key] = r[key]; }
+      if (!this.ready || !this.base) { this.base = this.base || {}; for (const { key, how } of fs) if ((how !== 'peak' && how !== 'belowPeak') || this.base[key] == null) this.base[key] = r[key]; }   // before ready the reference is the reading itself: no change, so the start can be held
       for (const { key, how } of fs) {
         const raw = r[key];
         /* peak: against the most it has been in the set, which only climbs — a length that
            foreshortens as the limb turns out of the camera's plane reads under 100 */
-        if (how === 'peak' && raw != null && (this.base[key] == null || raw > this.base[key])) this.base[key] = raw;
+        if ((how === 'peak' || how === 'belowPeak') && raw != null && (this.base[key] == null || raw > this.base[key])) this.base[key] = raw;
         const b = this.base[key];
-        r[key] = raw == null || b == null ? null : how === 'ratio' || how === 'peak' ? (b ? (100 * raw) / b : null) : raw - b;
+        /* belowPeak: how far under the most it has been. rest: the change from the rest
+           position, which the reference follows slowly, and only while the reading is near
+           it — a lift leaves it where it was, a rest that settles as the set goes on carries
+           it along, and one flat frame does not set a bar the rest then sits under */
+        if (how === 'rest' && raw != null && b != null && this.ready && Math.abs(raw - b) < (this.cfg.restNear == null ? 6 : this.cfg.restNear)) this.base[key] = b + (raw - b) * 0.05;
+        const bb = this.base[key];
+        r[key] = raw == null || bb == null ? null : how === 'ratio' || how === 'peak' ? (bb ? (100 * raw) / bb : null) : raw - bb;
       }
     }
 
@@ -428,6 +477,13 @@
           if (near && this.cues.framing && t - this.nearSince >= cfg.persistMs && (!this.lastNear || t - this.lastNear >= (cfg.lostEverySec || 15) * 1000)) {
             cue = this.offer('framing', t, fillPart(this.cues.framing.text, near.side, near.joint));
             if (cue) this.lastNear = t;
+          }
+          /* room for the movement: the joint the figure says will leave the picture, said once a set, once it has held */
+          const rm = this.roomAt;
+          if (rm) { if (!this.roomSince) this.roomSince = t; } else this.roomSince = 0;
+          if (!cue && rm && this.cues.room && !this.saidRoom && t - this.roomSince >= cfg.persistMs) {
+            cue = this.offer('room', t, fillPart(this.cues.room.text, rm.side, rm.joint));
+            if (cue) this.saidRoom = t;
           }
           /* the light and the background: said once a set, once it has held */
           const sc = this.sceneId;
@@ -646,6 +702,8 @@
       return cue;
     }
 
+    /* the page hands in the room check now and then: null, or the joint that would leave the picture */
+    room(x) { this.roomAt = x || null; }
     /* the page hands in what it sees of the light and the background, now and then */
     scene(s) { const id = sceneCue(s); if (id !== this.sceneId) this.sceneSince = 0; this.sceneId = id; this.sceneLast = s || null; }
 
@@ -705,7 +763,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-01c';
+  const VER = '2026-10-01d';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -730,6 +788,6 @@
     return lines;
   }
 
-  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
+  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, roomOf, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

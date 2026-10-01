@@ -34,7 +34,7 @@
     "hint": "Lying face down, one straight leg lifted a little off the floor.",
     "start": "Lay the phone on its side on the floor. Lie face down side on to it, legs straight, forehead on your hands.",
     "position": "Lie face down, side on to the phone, legs straight, forehead resting on your hands, hips pressed into the floor.",
-    "top": "One straight leg lifted about ten to twenty degrees — a hand's width off the floor — hips still on the floor.",
+    "top": "One straight leg lifted a hand's width off the floor — five to twelve degrees at the hip — hips still on the floor, toes pointed back, held a second.",
     "howto": [
       "Lie face down with your forehead on your hands and both legs straight.",
       "Tighten the buttock and lift one straight leg a hand's width off the floor — about six inches. Both hip bones stay on the floor.",
@@ -42,7 +42,7 @@
       "Lower slowly. The rep counts when the foot is back down."
     ],
     "cannot": "The pelvis rolling and the lower back muscles taking over: it sees the lift, the knee and the shoulders coming up. Lift from the buttock, not the back.",
-    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle, 150–170° at the top (a lift of 10–30°, a hand's width off the floor); the knee at least 165° so the leg stays straight; and the shoulders no more than 12° above the hips, which is the back arching. Through the rep: the hip no more than 6° above the shoulder (the hip coming off the floor), the toes pointed straight back (the foot angle at the heel at least 140°), and the foot's length as the camera sees it at least 85% of the most it has been — a leg swinging toward or away from the camera foreshortens it. Hold two seconds at the top, lower slowly, and the rep counts when the foot is down. Feet to shoulders must be in the picture.",
+    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle read as the change from the rest position, which the coach follows slowly while the leg is near it, so one person's 172 at rest and another's 180 both count as 0 and a rest that settles moves with it; a rep is under way past 7° of lift and counts when the leg is back within 3° of rest; at the top a lift of 5–25° (a hand's width is 5–12°); the knee at least 155° so the leg stays straight; the shoulders no more than 12° above the hips, which is the back arching; the hip no more than 6° above the shoulder (the hip coming off the floor); at the top the toes pointed back (the foot angle at the heel at least 100°) and the foot's length as the camera sees it at least 70% of the most it has been — a leg swinging toward or away from the camera foreshortens it. Hold a second at the top (the clock starts 0.3 s after the leg is up), lower slowly, and the rep counts when the foot is down. Feet to shoulders must be in the picture.",
     "lost": "Lie face down side on to the camera, feet to shoulders in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -154,7 +154,7 @@
   "measurements": [
     {
       "key": "lift",
-      "label": "shoulder, hip, ankle",
+      "label": "lift from rest",
       "hud": "LIFT",
       "note": "at the top",
       "kind": "angle",
@@ -166,24 +166,25 @@
         "hi": "liftMax"
       },
       "scale": [
-        120,
-        180
+        -50,
+        5
       ],
       "settings": [
         {
           "key": "liftMin",
-          "label": "Hip angle at the top, lowest (highest lift)",
-          "min": 130,
-          "max": 170
+          "label": "Lift at the top, most (degrees from rest)",
+          "min": -60,
+          "max": -8
         },
         {
           "key": "liftMax",
-          "label": "Hip angle at the top, highest (smallest lift)",
-          "min": 150,
-          "max": 178
+          "label": "Lift at the top, least (degrees from rest)",
+          "min": -30,
+          "max": -2
         }
       ],
-      "why": "The leg against the trunk: 180 flat, 165 a lift of 15°. A hand's width off the floor is 10–20°; past 30° the back is arching. Also the progress measurement."
+      "why": "The leg against the trunk, as the change from the rest position: 0 lying as the person lies, -7 a hand's width up (ten centimetres at the foot of an eighty-five centimetre leg is seven degrees at the hip). The rest reference follows the reading slowly and only while the leg is near it, because the angle at rest is 170-176 for one person and 180 for another, wanders a few degrees with the model, and settles as the set goes on. A hand's width is -5 to -12; past -25 the back is arching or the leg is far too high. Also the progress measurement.",
+      "fromStart": "rest"
     },
     {
       "key": "knee",
@@ -209,7 +210,7 @@
           "max": 179
         }
       ],
-      "why": "The knee kept straight: 180 is locked out. Below the band it is bending."
+      "why": "The knee kept straight: 180 is locked out, though lying face down the model reads a straight knee at 160-168. Below the band it is bending."
     },
     {
       "key": "back",
@@ -390,7 +391,7 @@
       "text": "Point the toes straight back, in line with the leg",
       "deep": "Toes pointed — the foot is pulled up",
       "tone": "plain",
-      "when": "rep"
+      "when": "top"
     },
     {
       "id": "legDiagonal",
@@ -400,7 +401,7 @@
       "text": "Lift the leg straight up, in line with your body — not out to the side",
       "deep": "The leg is swinging across — straight up, in line with the body",
       "tone": "plain",
-      "when": "rep"
+      "when": "top"
     }
   ],
   "draw": [
@@ -427,13 +428,13 @@
     }
   ],
   "defaults": {
-    "kneeMin": 165,
-    "liftMin": 150,
-    "liftMax": 170,
+    "kneeMin": 155,
+    "liftMin": -25,
+    "liftMax": -5,
     "backLift": 12,
-    "raiseAt": 172,
-    "downAt": 176,
-    "holdTargetSec": 2,
+    "raiseAt": -7,
+    "downAt": -3,
+    "holdTargetSec": 1,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
@@ -441,8 +442,9 @@
     "restSec": 2,
     "deepAt": 8,
     "hipLift": 6,
-    "footMin": 140,
-    "footlenMin": 85
+    "footMin": 100,
+    "footlenMin": 70,
+    "settleMs": 300
   },
   "settings": [
     {
@@ -453,9 +455,9 @@
     },
     {
       "key": "raiseAt",
-      "label": "Hip angle that counts as lifted",
-      "min": 150,
-      "max": 178
+      "label": "Lift that counts as under way (degrees from rest)",
+      "min": -20,
+      "max": -2
     },
     {
       "key": "lowerSec",

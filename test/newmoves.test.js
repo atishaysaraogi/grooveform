@@ -121,7 +121,7 @@ test('the side measured is held: level knees wobbling do not flip it, a real lif
   assert.deepEqual(seen.slice(0, 4), [first, first, first, first], 'four frames of lead are not yet a switch: ' + seen.join(''));
   assert.deepEqual(seen.slice(4), [other, other, other], 'the fifth is: ' + seen.join(''));
   /* a new coach starts the move afresh: the other knee a little higher is picked at once */
-  new Core.Coach(M);
+  new Core.Coach(M, { readyMs: 2000, readyMs: 2000 });
   const fresh = other === 'L' ? { thighF: -94 } : { thigh: -94, shin: -94 };
   assert.equal(sideOf(Object.assign({}, SUPINE, fresh)), first === 'L' ? 'R' : 'L', 'nothing held from before');
   assert.ok(M.spec.side.hold && M.spec.side.hold.frames === 5, 'from the file');
@@ -171,42 +171,47 @@ test('side-lying leg raise: forty five is the top, past it is too high, the knee
 
 test('prone leg raise: a hand\'s width is the top, higher is too high, the chest coming up is the back arching', () => {
   const M = Moves.proneraise;
-  /* one frame at a time: the foot's length against its peak needs a run, so its fault is left to the run below */
-  const single = (v) => M.faults.find((id) => v.faults[id] != null && id !== 'legDiagonal') || null;
+  /* the verdict holds every fault; the coach judges the rest ones between reps and the others at the top;
+     the lift is read from rest, so it is checked through a run below rather than a frame at a time */
+  const single = (v) => M.faults.find((id) => v.faults[id] != null && !['legDiagonal', 'liftLow', 'liftHigh'].includes(id)) || null;
   /* face down, head to the right; the toes pointed straight back along the floor (the foot's angle is absolute, so a lifted leg's toes stay pointed) */
   const PRONE = { torso: 90, thigh: -90, shin: -90, foot: -180, thighF: -90, shinF: -90, footF: -180, uarm: 140, farm: 60, hipAt: [1.0, 0.7] };
   let { r, v } = run(M, PRONE);
-  assert.ok(r.ok && v.atStart && !v.raised && M.ready(r, v), 'flat is the start');
+  assert.ok(r.ok && Math.abs(r.lift - 180) < 1 && Math.abs(r.knee - 180) < 1, 'flat: ' + r.lift);
+  assert.equal(single(v), null, 'nothing wrong lying flat');
   ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105 })));
   assert.ok(Math.abs(r.lift - 165) < 1, 'fifteen degrees reads 165: ' + r.lift);
-  assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(single(v), null);
-  ({ v } = run(M, Object.assign({}, PRONE, { thigh: -130, shin: -130 })));
-  assert.equal(single(v), 'liftHigh', 'forty is far too high');
+  assert.equal(single(v), null);
   /* the shoulders lifted 20 degrees above the hips with a good lift: arching */
   ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 70, thigh: -105, shin: -105 })));
   assert.ok(r.back > 12, 'the shoulders up: ' + r.back);
   assert.equal(single(v), 'archBack');
-  /* through the rep: the hip coming off the floor, the toes pulled up, the leg swinging out of the camera's plane */
-  const topOnly = (v) => M.faults.find((id) => v.faults[id] != null && M.when[id] !== 'between' && id !== 'legDiagonal') || null;
+  /* the hip coming off the floor; the toes pulled up */
   ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 100, thigh: -115, shin: -115 })));
   assert.ok(r.hip > 6, 'the hip above the shoulder: ' + r.hip);
   assert.ok(v.faults.hipLift != null, 'hip lifting'); assert.equal(M.when.hipLift, 'rep');
   ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105, foot: -90 })));
-  assert.ok(r.foot < 140, 'toes pulled up toward the shin: ' + r.foot);
-  assert.equal(topOnly(v), 'toesBent');
+  assert.ok(r.foot < 100, 'toes pulled up toward the shin: ' + r.foot);
+  assert.equal(single(v), 'toesBent'); assert.equal(M.when.toesBent, 'top');
   assert.deepEqual(M.needed, ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'], 'feet to shoulders in the picture');
   for (const id of ['slr', 'quadset']) assert.ok(Moves[id].needed.includes('shoulder') && Moves[id].needed.includes('toe'), id + ' needs feet to shoulders');
-  /* the foot's length against the most it has been: the same leg lifted with the toe pulled in toward the heel by a fifth reads 80% — the leg has gone diagonal */
+  /* through a run: the lift is the change from rest, whatever the angle at rest — a body lying at 172 lifts eight degrees to the top, a rep; forty is too high;
+     and the foot's length against the most it has been: the toe pulled in toward the heel by a third reads 67% — the leg has gone diagonal */
   const Trace = require('../public/js/trace.js');
   const frames = []; let t = 0;
   const push = (o, ms, shrink) => { for (const end = t + ms; t < end; t += 33) { const lm = body(o); if (shrink) { const he = lm[Core.SIDE.R.heel], to = lm[Core.SIDE.R.toe]; lm[Core.SIDE.R.toe] = Object.assign({}, to, { x: he.x + (to.x - he.x) * shrink, y: he.y + (to.y - he.y) * shrink }); } frames.push({ t, lm }); } };
-  push(PRONE, 3000); push(Object.assign({}, PRONE, { thigh: -105, shin: -105 }), 1500); push(Object.assign({}, PRONE, { thigh: -105, shin: -105 }), 1500, 0.8);
-  const res = Trace.run(M, {}, frames, 16 / 9);
-  const late = res.rows.filter((row) => row.t >= 5000 && row.reading && row.reading.ok);
-  assert.ok(late.length && late.every((row) => row.reading.footlen < 85), 'the foot four fifths of its longest: ' + late.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
-  assert.ok(late.some((row) => row.verdict.faults.legDiagonal != null), 'and the leg is called diagonal');
-  const early = res.rows.filter((row) => row.t > 500 && row.t < 4400 && row.reading && row.reading.ok);
-  assert.ok(early.every((row) => row.reading.footlen > 95), 'in line, the foot keeps its length: ' + early.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
+  const REST172 = Object.assign({}, PRONE, { torso: 86, thigh: -94, shin: -94 });   // the trunk and the leg both four degrees off the floor line: 172 at the hip
+  push(REST172, 4500); push(Object.assign({}, REST172, { thigh: -102, shin: -102 }), 2500); push(REST172, 2000); push(Object.assign({}, REST172, { thigh: -134, shin: -134 }), 1500); push(REST172, 2000); push(Object.assign({}, REST172, { thigh: -102, shin: -102 }), 2500, 0.67); push(REST172, 1500);
+  const res = Trace.run(M, {}, frames, 16 / 9), reps = Trace.reps(res, M);
+  const rest = res.rows.filter((row) => row.t > 4000 && row.t < 4400 && row.reading && row.reading.ok);
+  assert.ok(rest.every((row) => Math.abs(row.reading.lift) < 1.5), 'at rest the lift reads 0 whatever the angle: ' + rest.map((row) => row.reading.lift.toFixed(1)).slice(0, 3));
+  assert.ok(reps.length >= 3, 'three attempts: ' + reps.length);
+  assert.ok(reps[0].counted && reps[0].why.peak < -6 && reps[0].why.peak > -12, 'eight degrees up is a rep: ' + JSON.stringify(reps[0].why));
+  assert.ok(!reps[1].counted || reps[1].faults.some((f) => f.id === 'liftHigh'), 'forty degrees is too high');
+  assert.ok(res.rows.some((row) => row.t > 9000 && row.t < 10500 && row.verdict.faults.liftHigh != null), 'and called so');
+  const diag = res.rows.filter((row) => row.t > 13000 && row.t < 14900 && row.reading && row.reading.ok);
+  assert.ok(diag.length && diag.every((row) => row.reading.footlen < 70), 'the foot two thirds of its longest: ' + diag.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
+  assert.ok(diag.some((row) => row.verdict.faults.legDiagonal != null), 'and the leg is called diagonal');
 });
 
 test('inner thigh raise: the straight bottom leg is measured, a small lift is the top', () => {
@@ -349,7 +354,7 @@ test('a measurement read against the start: no change until the set-up wait ends
   assert.deepEqual(Spec.check(file).filter((p) => p.level === 'error'), [], 'a whole file');
   const M = Spec.compile(file, Core);
   assert.deepEqual(M.fromStart, [{ key: 'foot', how: 'ratio' }]);
-  const c = new Core.Coach(M), sm = new Core.Smoother(1);
+  const c = new Core.Coach(M, { readyMs: 2000, readyMs: 2000 }), sm = new Core.Smoother(1);
   const at = (o, t) => c.step(sm.apply(M.read(body(o), 16 / 9, c.cfg)), t);
   /* a long foot to begin with: the reading is 100 — no change — whatever the length, so the wait can end */
   let out; for (let t = 0; t < 2600; t += 33) out = at(Object.assign({}, SUPINE, { footLen: 0.06 }), t);
@@ -363,7 +368,7 @@ test('a measurement read against the start: no change until the set-up wait ends
   assert.equal(c.reps, 1, 'back to the start: a rep');
   /* "change" is the difference */
   file.measurements[0].fromStart = 'change'; file.defaults.raiseAt = 150; file.defaults.downAt = 30; file.defaults.footMin = 150; file.defaults.footMax = 300;
-  const M2 = Spec.compile(file, Core), c2 = new Core.Coach(M2), sm2 = new Core.Smoother(1);
+  const M2 = Spec.compile(file, Core), c2 = new Core.Coach(M2, { readyMs: 2000, readyMs: 2000 }), sm2 = new Core.Smoother(1);
   for (let t = 0; t < 2600; t += 33) out = c2.step(sm2.apply(M2.read(body(Object.assign({}, SUPINE, { footLen: 0.06 })), 16 / 9, c2.cfg)), t);
   assert.ok(Math.abs(out.reading.foot) < 0.01, 'no change at the start');
   for (let t = 2633; t < 2800; t += 33) out = c2.step(sm2.apply(M2.read(body(Object.assign({}, SUPINE, { footLen: 0.18 })), 16 / 9, c2.cfg)), t);   // three frames: the median of three needs them

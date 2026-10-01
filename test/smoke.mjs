@@ -198,8 +198,10 @@ const startSession = async () => {
   await page.waitForFunction(() => window.__app.session.inSet, null, { timeout: 20000 });
 };
 const sessionOver = () => page.waitForSelector('#screen-done:not([hidden])', { timeout: 15000 });
-/* a cue can wait on the opening words and the set-up wait, so the patience here is theirs plus the cue's */
-const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 14000 });
+/* a cue can wait on the opening words (up to twelve seconds, and the coach is quiet
+   while they are said) and the three-second set-up wait, so the patience here is
+   theirs plus the cue's */
+const saw = (re, ms) => page.waitForFunction((r) => new RegExp(r, 'i').test(document.getElementById('cue').textContent), re, { timeout: ms || 20000 });
 
 try {
   await step('the page comes up on the exercises: a list, a search, how it works', async () => {
@@ -807,7 +809,7 @@ try {
     /* the card is rebuilt when the exercise changes, so wait for the count rather
        than reading whatever happens to be in the DOM at this instant */
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '0', null, { timeout: 5000 });
-    /* the opening words, then two seconds standing at the start before the coach
+    /* the opening words, then three seconds standing at the start before the coach
        says anything more — then the prompt */
     assert.equal(await page.textContent('#state'), 'Getting set');
     await page.waitForFunction(() => window.__app.state && window.__app.state.ready === true, null, { timeout: 8000 });
@@ -884,10 +886,11 @@ try {
     assert.ok(Math.abs(Number(await page.textContent('#v-hip')) - 130) <= 1, 'lying there reads the hip angle');
     assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the knee');
     /* feet too far out — the shin angle over its band — said before the lift is
-       asked for, and only once the person has been at the start for two seconds */
+       asked for, and only once the opening words are done and the person has been
+       at the start for three seconds */
     assert.match(await cue(), /I will wait while you get set up/i, 'the opening words');
     await set({ bShin: 125 });                    // fifteen past the band, so the stronger words
-    await saw('walk your feet in', 10000);
+    await saw('walk your feet in', 18000);
     await heard('walk your feet in');
     await set({ bShin: 95 });
     await saw('lift your hips');
@@ -1030,7 +1033,7 @@ try {
     const traces = await page.evaluate(() => {
       const mk = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 66) { Object.assign(window.__pose, { move: 'bridge' }, pose); frames.push({ t, lm: window.__poseSource() }); } return frames; };
       const REST = { bShin: 95, dip: 50, hipAng: 130, bFoot: 0 }, TOP = { bShin: 95, dip: 5, hipAng: 170, bFoot: 0 }, HALF = { bShin: 95, dip: 25, hipAng: 145, bFoot: 0 };
-      return { clean: mk([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 3000], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]) };
+      return { clean: mk([[REST, 4500], [TOP, 3500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 4500], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]) };
     });
     await page.evaluate((f) => window.__review.loadTrace(f, document.getElementById('cam') ? 16 / 9 : 16 / 9, 'clean'), traces.clean);
     await page.waitForFunction(() => /1 reps/.test(document.getElementById('trace-note').textContent), null, { timeout: 5000 });

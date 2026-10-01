@@ -41,7 +41,7 @@ const cleanRep = [[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 1500]];
 
 test('a trace run gives a row per frame with the reading, the verdict and the coach\'s cue', () => {
   const frames = take(cleanRep);
-  const r = Trace.run(M, {}, frames, ASPECT);
+  const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
   assert.equal(r.rows.length, frames.length);
   assert.ok(Math.abs(r.rows[10].reading.hip - 130) < 0.5, 'the reading is there: ' + r.rows[10].reading.hip);
   assert.ok(r.cues.some((c) => c.id === 'raise') && r.cues.some((c) => c.id === 'count1'), JSON.stringify(r.cues.map((c) => c.text)));
@@ -52,7 +52,7 @@ test('a trace run gives a row per frame with the reading, the verdict and the co
 
 test('the numbers laid over the defaults change the verdicts, and the trace need not be read again', () => {
   const frames = take([[REST, 3000], [Object.assign({}, TOP, { dip: -4 }), 3500], [HALF, 1300], [REST, 1500]]);   // four above the knee
-  const strict = Trace.run(M, {}, frames, ASPECT);
+  const strict = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
   assert.ok(Trace.stretches(strict, 'hipHigh').length > 0, 'four is over three');
   const eased = Trace.run(M, { overMax: 6 }, frames, ASPECT);
   assert.equal(Trace.stretches(eased, 'hipHigh').length, 0, 'and under six');
@@ -83,7 +83,7 @@ test('a trace survives a trip through a file, and the settings list is the panel
   assert.equal(back.meta.move, 'bridge'); assert.equal(back.meta.aspect, ASPECT);
   assert.equal(back.frames.length, frames.length);
   assert.ok(Math.abs(back.frames[3].lm[24].x - frames[3].lm[24].x) < 1e-3);
-  const again = Trace.run(M, {}, back.frames, ASPECT);
+  const again = Trace.run(M, { readyMs: 2000 }, back.frames, ASPECT);
   assert.ok(Math.abs(again.rows[5].reading.hip - 130) < 0.5);
   assert.throws(() => Trace.unpack('{"v":2}'), /not a trace/);
   const keys = Trace.settingsOf(M).map((s) => s.key);
@@ -97,7 +97,7 @@ test('the reps are broken out one by one, with the faults inside each and when t
   const frames = take([[REST, 3000], [TOP, 1500], [Object.assign({}, TOP, { dip: -12 }), 1500], [TOP, 2500], [HALF, 1300], [REST, 2600],
     [TOP, 3500], [HALF, 1300], [REST, 2600],
     [TOP, 800], [REST, 1500]]);
-  const r = Trace.run(M, {}, frames, ASPECT);
+  const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
   const reps = Trace.reps(r, M);
   assert.equal(reps.length, 3, 'two reps and an attempt: ' + reps.map((x) => x.n).join(','));
   assert.deepEqual(reps.map((x) => x.counted), [true, true, false]);
@@ -112,11 +112,11 @@ test('the reps are broken out one by one, with the faults inside each and when t
   assert.ok(reps[0].lowerMs > 1000, 'and the lowering took its time: ' + reps[0].lowerMs);
   assert.ok(reps[2].cues.some((c) => c.id === 'early'), 'the dropped attempt was told so');
   /* the numbers moved: the fault leaves the rep */
-  const eased = Trace.reps(Trace.run(M, { overMax: 15 }, frames, ASPECT), M);
+  const eased = Trace.reps(Trace.run(M, { readyMs: 2000, overMax: 15 }, frames, ASPECT), M);
   assert.ok(!eased[0].faults.some((f) => f.id === 'hipHigh'));
   /* set-up faults in the pause before a rep */
   const feet = take([[Object.assign({}, REST, { shin: 125 }), 3000], [REST, 800], [TOP, 3500], [HALF, 1300], [REST, 1500]]);
-  const rr = Trace.reps(Trace.run(M, {}, feet, ASPECT), M);
+  const rr = Trace.reps(Trace.run(M, { readyMs: 2000 }, feet, ASPECT), M);
   assert.ok(rr[0].before.faults.some((f) => f.id === 'feetFar'), 'the feet out, before the first rep');
 });
 
@@ -137,7 +137,7 @@ test('a hold is cut into the stretches its clock ran', () => {
 test('an attempt is accounted for: how far it got, its hold against the target, and what fell short of a rep', () => {
   /* a rep, a half-hearted lift that never reaches the line, and an attempt put down before its hold */
   const frames = take([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 2600], [HALF, 1200], [REST, 2000], [TOP, 800], [REST, 1500]]);
-  const r = Trace.run(M, {}, frames, ASPECT);
+  const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
   const reps = Trace.reps(r, M);
   assert.equal(reps.length, 2, 'a rep and an attempt: ' + reps.length);
   const P = Trace.progressOf(M, r.cfg);

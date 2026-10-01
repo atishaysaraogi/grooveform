@@ -87,7 +87,7 @@ tightening.
 | standard | source | in the file |
 |---|---|---|
 | Face down, forehead on the hands, both legs straight | Wellen; Pritikin | start words |
-| Lift "about 6 inches or less"; both hip bones stay on the floor | Pritikin; Wellen; MelioGuide | the lift as the angle between trunk and leg, 150–170° (10–30°); too high is a fault |
+| Lift "about 6 inches or less"; both hip bones stay on the floor | Pritikin; Wellen; MelioGuide | the lift as the angle between trunk and leg read as the change from rest (`fromStart: rest`, a reference that follows the rest slowly), the top 5–25° of lift — a hand's width is 5–12° at the hip; too high is a fault; a one-second hold |
 | Do not arch the back; lift from the hip, not the foot; feel it in the hip not the back | Pritikin; Wellen | the shoulders' rise above the hips within ±12°: past it the chest is coming up and the back arching (`archBack`) |
 | Knee straight | Wellen | `kneeBend`, set-up |
 | Both hip bones stay on the floor through the rep | Pritikin; MelioGuide | the hip's rise above the shoulder at most 6° (`hipLift`), judged through the rep |

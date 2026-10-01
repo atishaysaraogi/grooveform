@@ -51,3 +51,18 @@ test('seen but not at the start for a while: the file\'s words about the start, 
   assert.ok(!quiet.includes('notready') && d.ready);
   assert.ok(Core.SYSTEM.includes('notready'), 'not a fault of the person\'s');
 });
+
+test('a reading from rest: the reference follows the rest slowly, and only while the reading is near it', () => {
+  const M = { id: 'fakerest', name: 'Fake', reps: true, prompts: ['raise'], faults: ['lost', 'raise'], when: {}, fromStart: [{ key: 'x', how: 'rest' }],
+    cues: { raise: { text: 'Lift' }, lower: { text: 'Lower' }, early: { text: 'Early' } }, bands: [], read: (v) => v, judge: (r) => ({ ok: true, inPosition: false, raised: false, atStart: true, faults: {}, good: {} }), defaults: { holdTargetSec: 0, repCount: 3 } };
+  const c = new Core.Coach(M); const seen = [];
+  const feed = (x, ms) => { for (const end = (seen.length ? seen[seen.length - 1].t : 0) + ms, t0 = seen.length ? seen[seen.length - 1].t + 33 : 0; ; ) { let t = seen.length ? seen[seen.length - 1].t + 33 : 0; if (t >= end) break; const r = { ok: true, angles: ['x'], x }; c.step(r, t); seen.push({ t, x: r.x }); } };
+  feed(172, 4000);                        // lying at 172: no change, so the start is held and the coaching begins
+  assert.ok(c.ready && Math.abs(seen[seen.length - 1].x) < 1e-9, 'at rest reads 0: ' + seen[seen.length - 1].x);
+  feed(158, 1000);                        // a lift: fourteen under rest, and the reference stays where it was
+  assert.ok(Math.abs(seen[seen.length - 1].x + 14) < 0.01, 'a lift of fourteen: ' + seen[seen.length - 1].x);
+  feed(176, 6000);                        // the rest settles four degrees flatter: the reference follows, slowly
+  assert.ok(Math.abs(seen[seen.length - 1].x) < 0.2, 'the settled rest reads 0 again: ' + seen[seen.length - 1].x);
+  feed(162, 500);
+  assert.ok(Math.abs(seen[seen.length - 1].x + 14) < 0.3, 'and a lift from the new rest is fourteen again: ' + seen[seen.length - 1].x);
+});
