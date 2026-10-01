@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-09-30b">
+<html lang="en" data-v="2026-10-01a">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-09-30b">
+<link rel="stylesheet" href="styles.css?v=2026-10-01a">
 </head>
 <body class="review">
 <header class="bar">
@@ -106,7 +106,20 @@
         <section class="panel lanes-panel">
           <h2>What was read <span class="tiny" id="trace-note">no recording yet</span></h2>
           <canvas id="lanes" height="10"></canvas>
-          <p class="tiny">The top lane is the rep: the reading a rep is judged on, the line a rep starts at (blue), the line it must come back to (amber) and the band the top must be inside (green). Behind it, what the coach was doing: grey — waiting for the start position, nothing counts yet; blue — between reps; green — up, with the thick green on the line where the hold clock ran; amber — lowering. A rep is marked where it began, an attempt that was not counted with ×, and a movement that fell short of the starting line with ?. Magenta at the top of the rep lane: frames not trusted because a needed point was at the picture's edge. Below, one lane per band, red marks where it was out, and the coach's cues. Tap anywhere to go to that moment.</p>
+          <div class="lane-legend" aria-label="What the lanes show">
+            <span><i style="background:rgba(232,237,244,.35)"></i>waiting for the start position</span>
+            <span><i style="background:rgba(90,169,255,.5)"></i>between reps</span>
+            <span><i style="background:rgba(53,208,127,.6)"></i>up</span>
+            <span><i class="mark" style="background:#35d07f"></i>hold clock running</span>
+            <span><i style="background:rgba(255,181,69,.6)"></i>lowering</span>
+            <span><i class="line" style="border-color:#5aa9ff"></i>a rep starts past this</span>
+            <span><i class="line" style="border-color:#ffb545"></i>back at the start past this</span>
+            <span><i style="background:rgba(53,208,127,.35)"></i>inside the band</span>
+            <span><i class="mark" style="background:rgba(255,92,108,.8)"></i>out of the band</span>
+            <span><i class="mark" style="background:#e879f9"></i>a point at the picture's edge</span>
+            <span><b>rep 1</b> counted · <b>×</b> not counted · <b>?</b> fell short</span>
+          </div>
+          <p class="tiny">The top lane is the reading the rep is judged on; below it one lane per band, each labelled with its reading, its band and its units, then the coach's cues at the moments they would have been said. Tap anywhere to go to that moment.</p>
           <ol class="log" id="cue-log"></ol>
         </section>
       </div>
@@ -164,19 +177,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-09-30b"></script>
-<script src="js/spec.js?v=2026-09-30b"></script>
-<script src="js/moves.js?v=2026-09-30b"></script>
-<script src="js/trace.js?v=2026-09-30b"></script>
-<script src="js/overlay.js?v=2026-09-30b"></script>
-<script src="js/sound.js?v=2026-09-30b"></script>
-<script src="js/codec.js?v=2026-09-30b"></script>
-<script src="js/mp4.js?v=2026-09-30b"></script>
-<script src="js/speech.js?v=2026-09-30b"></script>
-<script src="js/mixdown.js?v=2026-09-30b"></script>
-<script src="js/figure.js?v=2026-09-30b"></script>
-<script src="js/anatomy.js?v=2026-09-30b"></script>
-<script src="js/review.js?v=2026-09-30b"></script>
-<script src="js/builder.js?v=2026-09-30b"></script>
+<script src="js/core.js?v=2026-10-01a"></script>
+<script src="js/spec.js?v=2026-10-01a"></script>
+<script src="js/moves.js?v=2026-10-01a"></script>
+<script src="js/trace.js?v=2026-10-01a"></script>
+<script src="js/overlay.js?v=2026-10-01a"></script>
+<script src="js/sound.js?v=2026-10-01a"></script>
+<script src="js/codec.js?v=2026-10-01a"></script>
+<script src="js/mp4.js?v=2026-10-01a"></script>
+<script src="js/speech.js?v=2026-10-01a"></script>
+<script src="js/mixdown.js?v=2026-10-01a"></script>
+<script src="js/figure.js?v=2026-10-01a"></script>
+<script src="js/anatomy.js?v=2026-10-01a"></script>
+<script src="js/review.js?v=2026-10-01a"></script>
+<script src="js/builder.js?v=2026-10-01a"></script>
 </body>
 </html>

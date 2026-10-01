@@ -356,6 +356,23 @@ body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospac
 .mcard { position: relative; }
 .mcard.editing { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(90,169,255,.25) inset; }
 .chips.slots .btn { text-transform: none; }
+/* a rule written as a sentence: words, selects and numbers in a row */
+.sentence { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: .86rem; color: var(--muted); }
+.sentence .w { white-space: nowrap; }
+.sentence .inline, .chips.slots .inline { font: 700 .84rem var(--font-body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; min-height: 30px; max-width: 100%; }
+.sentence .inline.num { width: 5.2em; font-variant-numeric: tabular-nums; }
+.sentence .inline.wide { flex: 1 1 160px; min-width: 120px; }
+.sentence .inline:not(.num):not(.wide) { max-width: 22em; }
+.mhead .inline { font: 700 .8rem var(--font-body); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; }
+.mcard { gap: 6px; padding: 8px 10px; }
+.mcard .fault-row { padding: 6px 8px; }
+.mcard > .tiny-btn { justify-self: start; }
+/* the lanes' legend */
+.lane-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0 2px; font-size: .76rem; color: var(--muted); }
+.lane-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.lane-legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.lane-legend i.line { height: 0; border-top: 2px dashed; }
+.lane-legend i.mark { height: 4px; }
 .lm-pop { position: absolute; z-index: 5; left: 8px; right: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); display: grid; gap: 6px; }
 .lm-title { font-size: .78rem; color: var(--muted); }
 .lm-grid { display: flex; flex-wrap: wrap; gap: 6px; }

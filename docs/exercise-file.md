@@ -169,7 +169,8 @@ until edited, and a *use the template* link puts it back.
 
 Step 3, *What is measured*, works as the old Studio's did, and the drawing
 has no say in it: dragging the figure changes the demo and the values shown
-on the cards, nothing else. *Add a measurement* makes a card; on it, the
+on the cards, nothing else; the figure itself is not repeated in this step.
+*Add a measurement* makes a card; on it, the
 kind — angle at a joint, segment from vertical, segment from the floor,
 lifted from hanging, height of a point over another, distance as % of a
 segment, a point's offset from a line — and a slot for each of the kind's
@@ -181,7 +182,7 @@ tap on a joint fills all three slots from the limbs meeting there. Each
 finished measurement reads its value at A and at B off the drawing, for
 reference.
 
-*Read as* says what the reading is: the value itself; the change from where
+*Measured as* says what the reading is: the value as is; the change from where
 it stood at the start (`fromStart: "change"`); or a percentage of where it
 stood at the start (`fromStart: "ratio"`) — so a segment's length as seen by
 the camera can be judged against its own length at the start, which is how a
@@ -197,9 +198,11 @@ Each card carries a role:
 | a note | a band and faults, left out of `inPosition`: called, but the count goes on |
 | just a reading | no band: on the picture only |
 
-The band's shape is chosen — between two edges, at least, at most, within ±
-one number — and its edges are typed, as are the two thresholds of the rep;
-each starts from a default for the kind. *From the drawing* fills them from
+The rule is written as a sentence: *when* it is checked — at the top of the
+rep, through the whole rep, or at all times, before the rep too — then *it
+must be* between two edges, at least, at most, or within ± of zero, the
+numbers typed with their units (degrees, or percent for a length); the rep's
+two thresholds the same way. Each starts from a default for the kind. *From the drawing* fills them from
 the figure on request: the edges around the value at B, the thresholds
 between A and B. Every band comes with a fault a side, worded from a
 template and rewritten on the card; *Add a fault* adds another. Landmarks,
@@ -349,13 +352,17 @@ said, whatever their sizes.
   "label": "Feet too far out",                 // on the picture: 26 characters at most
   "text": "Walk your feet in",                 // said
   "deep": "Walk your feet in toward you — they are well out",   // said when far past the band (deepAt)
-  "setup": true,                               // coached at the start, before the movement is asked for
+  "when": "always",                            // top (default: judged while the rep is up) | rep (up and lowering) | always (between reps too)
   "requires": ["foot"],                        // only judged while these measurements are good
   "unless": ["liftHigh"],                      // not while these faults are on
   "tone": "walking in" }
 ```
 
-`side` is `above` or `below` the band. Tones: `tick` (default), `plain`,
+`side` is `above` or `below` the band. `when` says when the fault is judged:
+`top`, the default, while the rep is up (the hold at the top); `rep`, from the
+lift to the return, lowering included; `always`, between reps as well, so the
+feet are coached before the lift is asked for (`setup: true` is the old
+spelling of `always`). A hold judges every fault all the time. Tones: `tick` (default), `plain`,
 `up`, `down`, `walking in`, `walking out`, `hold`, `done`, `call`.
 
 ## Drawn on the picture

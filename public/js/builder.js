@@ -223,6 +223,11 @@ Moves.ready.then(function () {
   const bandedKeys = () => draft.measurements.filter((m) => m.band).map((m) => m.key);
   const progressKey = () => (draft.type === 'reps' && draft.progress ? draft.progress.measure : null);
   const roleOf = (m) => (m.key === progressKey() ? 'progress' : !m.band ? 'reading' : (draft.inPosition || bandedKeys()).includes(m.key) ? 'hold' : 'note');
+  /* the units a kind reads in: degrees, or percent for a length */
+  const unitOf = (m) => (m.fromStart === 'ratio' || m.kind === 'distance' ? '%' : '\u00b0');
+  /* when a measurement's faults are judged — kept on each of its faults */
+  const whenOf = (m) => { const f = (draft.faults || []).find((x) => x.measure === m.key); return f ? (f.when || (f.setup ? 'always' : 'top')) : 'top'; };
+  const setWhen = (m, w) => { for (const x of draft.faults || []) if (x.measure === m.key) { delete x.setup; if (w === 'top') delete x.when; else x.when = w; } };
   function derive() {
     const d = draft, a = d.auto || {};
     d.words = d.words || {}; d.phone = d.phone || {}; d.landmarks = d.landmarks || {}; d.measurements = d.measurements || []; d.faults = d.faults || []; d.defaults = d.defaults || {}; d.settings = d.settings || []; d.draw = d.draw || [];
@@ -377,7 +382,6 @@ Moves.ready.then(function () {
     const group = (title, names) => { pop.appendChild(el('div', 'lm-title', esc(title))); const g = el('div', 'lm-grid'); for (const n of names) { const b = btn(plain(n), () => { pop.remove(); fillSlot(m, slot, n); }, 'tiny-btn'); if (m[slot] === n) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } pop.appendChild(g); };
     if (figView() === 'front') { group('Left side', LM.map((n) => 'L.' + n)); group('Right side', LM.map((n) => 'R.' + n)); }
     else { group('The side being measured', LM); group('The other side', LM.map((n) => 'other.' + n)); }
-    pop.appendChild(el('p', 'tiny', 'Or tap the point on the figure below.'));
     anchor.parentNode.appendChild(pop);
     const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('pointerdown', close, true); } };
     setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
@@ -394,7 +398,7 @@ Moves.ready.then(function () {
   }
   /* a band of a shape, with default edges for its kind and a fault for each side, editable */
   function setBand(m, kind) {
-    const d = draft, base = m.key, L = m.short || m.label || m.key, def = bandDefault(m), span = def.range[1] - def.range[0];
+    const d = draft, base = m.key, L = m.short || m.label || m.key, def = bandDefault(m), span = def.range[1] - def.range[0], w = whenOf(m);
     clearBand(m);
     if (kind === 'none') return;
     m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? [0, 200] : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
@@ -402,7 +406,7 @@ Moves.ready.then(function () {
     else if (kind === 'min') { m.band = { min: base + 'Min' }; ensureSetting(m, base + 'Min', def.min, 'at least', def.min - span, def.min + span); }
     else if (kind === 'max') { m.band = { max: base + 'Max' }; ensureSetting(m, base + 'Max', def.max, 'at most', def.max - span, def.max + span); }
     else if (kind === 'sym') { m.band = { sym: base + 'Max' }; m.scale = [-45, 45]; ensureSetting(m, base + 'Max', def.sym, 'allowed either way', 1, 45); }
-    const f = (id, side, label, text, deep, tone) => d.faults.push({ id, measure: m.key, side, label: label.slice(0, 26), text, deep, tone });
+    const f = (id, side, label, text, deep, tone) => d.faults.push(Object.assign({ id, measure: m.key, side, label: label.slice(0, 26), text, deep, tone }, w !== 'top' ? { when: w } : {}));
     if (kind === 'min') f(base + 'Low', 'below', `${cap(L)} short`, `Keep the ${L} — it is dropping`, `More ${L} — it is well short`, 'plain');
     else if (kind === 'max') f(base + 'High', 'above', `${cap(L)} too far`, `Not so much ${L}`, `Less ${L} — it is well past`, 'plain');
     else if (kind === 'sym') { f(base + 'Over', 'above', `${cap(L)} off one way`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); f(base + 'Under', 'below', `${cap(L)} off the other`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); }
@@ -494,7 +498,7 @@ Moves.ready.then(function () {
       else { const a = P(m.a || m.base || m.from || m.at), b = P(m.b || m.top || m.to); if (a && b) { ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]); } }
     }
     /* the measurement being edited: its filled slots in amber, numbered in slot order */
-    const picks = editing ? slotsOf(editing.m.kind).filter(([k]) => editing.m[k]).map(([k]) => [k, editing.m[k]]) : [];
+    const picks = editing ? slotsOf(editing.m.kind).filter(([k]) => editing.m[k]).map(([k]) => [k, editing.m[k]]) : [];   // (the measuring canvas is no longer shown; kept for a tap on the figure)
     /* every landmark, a dot and a name: the near side's names above, the far side's below, the
        names along a row staggered so a lying body's do not run into each other */
     const fs = Math.max(9, Math.min(11, rr.width / 70));
@@ -639,16 +643,22 @@ Moves.ready.then(function () {
     host.appendChild(s);
 
     /* 3 — measured */
-    s = section('What is measured', 'A measurement is a kind and a landmark for each of its slots — pick from the list over a slot, or tap the point on the figure. Its role says what it is for: the one that tracks the rep, the ones that must be right at the top, a note that is called but does not stop the count, or just a reading. Edges and thresholds are yours to type; “From the drawing” fills them from the figure’s start and end.');
-    mcanvas = el('canvas', 'measure-fig'); mcanvas.setAttribute('aria-label', 'The figure, to tap what is measured');
-    mcanvas.addEventListener('pointerdown', (e) => { e.preventDefault(); tapped(hitAt(e)); });
-    s.appendChild(mcanvas);
+    s = section('What is measured', 'One card a measurement: its kind, its points (from the list over each slot), what it is for, when it must be right and between what. Degrees for angles, percent for lengths.');
+    mcanvas = null;
     s.appendChild(btn('Add a measurement', addMeasure, 'primary'));
     if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. Add one and make it the one that tracks the rep.' : 'Nothing measured yet. Add what has to be right for the hold.'));
+    /* bare controls for a sentence: a select, a number, words */
+    const pick = (value, options, onchange, title, structural) => { const sel = el('select', 'inline'); for (const [v, t] of options) { const it = el('option', null, esc(t)); it.value = v; sel.appendChild(it); } sel.value = value == null ? '' : String(value); if (title) sel.title = title; sel.onchange = () => { onchange(sel.value); commit(!!structural); }; return sel; };
+    const num = (value, onchange, defKey, title) => { const inp = el('input', 'inline num'); inp.type = 'number'; inp.step = 'any'; inp.value = value == null ? '' : value; if (defKey) inp.dataset.def = defKey; if (title) inp.title = title; inp.onchange = () => { const v = inp.value === '' ? null : Number(inp.value); onchange(v); commit(false); }; return inp; };
+    const words = (t, cls) => el('span', 'w ' + (cls || ''), esc(t));
+    const KIND_OPTS = Object.entries(KIND_WORDS);
+    const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the whole rep'], ['always', 'at all times, before the rep too']];
     d.measurements.forEach((m, i) => {
-      const card = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); const role = roleOf(m);
+      const card = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); const role = roleOf(m), u = unitOf(m);
+      /* the head: its name, its kind, its values at A and B, the tools */
       const head = el('div', 'mhead');
       head.appendChild(el('b', null, esc(m.label || m.key)));
+      head.appendChild(pick(m.kind, KIND_OPTS, (v) => { const keep = new Set(slotsOf(v).map(([k]) => k)); for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) if (!keep.has(k)) delete m[k]; if (v !== 'distance') { delete m.per; delete m.times; } else { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); } m.kind = v; if (m.band) setBand(m, Spec.bandKind(m.band)); nameIt(m); editing = { m, slot: slotsOf(v)[0][0] }; }, KIND_HELP[m.kind] || '', true));
       head.appendChild(el('span', 'mvals', '')); head.lastChild.dataset.val = m.key;
       const tools = el('span', 'rowtools');
       tools.appendChild(btn('↑', () => { if (i > 0) { [d.measurements[i - 1], d.measurements[i]] = [d.measurements[i], d.measurements[i - 1]]; commit(true); } }, 'tiny-btn'));
@@ -656,53 +666,57 @@ Moves.ready.then(function () {
       tools.appendChild(btn('✕', () => { removeMeasure(m); commit(true); }, 'tiny-btn'));
       head.appendChild(tools);
       card.appendChild(head);
-      /* the kind and its slots */
-      g = grid('tight');
-      g.appendChild(field('kind', m.kind, (v) => { const keep = new Set(slotsOf(v).map(([k]) => k)); for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) if (!keep.has(k)) delete m[k]; if (v !== 'distance') { delete m.per; delete m.times; } else { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); m.times = 100; } m.kind = v; nameIt(m); editing = { m, slot: nextEmpty(m) || slotsOf(v)[0][0] }; }, { options: Object.keys(SLOTS).map((k) => [k, KIND_WORDS[k]]), structural: true, title: KIND_HELP[m.kind] }));
-      g.appendChild(field('read as', m.fromStart || '', (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, { options: [['', 'the value'], ['change', 'change from the start position'], ['ratio', '% of its value at the start']], structural: true, title: 'against the start: the coach reads the value when the set-up wait ends and measures from it — a length seen by the camera shortens as the limb turns toward it' }));
-      card.appendChild(g);
+      /* the points, a slot each: the list opens over the slot */
       const slotRow = el('div', 'chips slots');
-      for (const [k, words] of slotsOf(m.kind)) {
-        const b = btn(`${words}: ${m[k] ? esc(plain(m[k])) + (side_(m[k]) ? ` (${side_(m[k]) === 'other' ? 'other side' : side_(m[k]) === 'l' ? 'left' : 'right'})` : '') : '…'}`, () => { editing = { m, slot: k }; drawMeasure(); document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('editing', c === card)); slotRow.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); landmarkPopup(b, m, k); });
+      for (const [k, w] of slotsOf(m.kind)) {
+        const b = btn(`${w}: ${m[k] ? esc(plain(m[k])) + (side_(m[k]) ? ` (${side_(m[k]) === 'other' ? 'other side' : side_(m[k]) === 'l' ? 'left' : 'right'})` : '') : '…'}`, () => { editing = { m, slot: k }; document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('editing', c === card)); slotRow.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); landmarkPopup(b, m, k); });
         b.setAttribute('aria-pressed', String(!!(editing && editing.m === m && editing.slot === k)));
         b.classList.add('slot'); slotRow.appendChild(b);
       }
-      if (m.kind === 'distance') { const per = m.per || []; for (const n of [0, 1]) { const b = btn(`${n ? 'to' : 'as % of'}: ${per[n] ? esc(plain(per[n])) : '…'}`, () => { const pk = 'per' + n; m.per = m.per || ['knee', 'ankle']; landmarkPopup(b, { get [pk]() { return m.per[n]; }, set [pk](v) { m.per[n] = v; }, kind: m.kind, key: m.key }, pk); }); slotRow.appendChild(b); } }
+      if (m.kind === 'distance') { const per = m.per || []; for (const n of [0, 1]) { const b = btn(`${n ? 'to' : 'as % of'}: ${per[n] ? esc(plain(per[n])) : '…'}`, () => { const pk = 'per' + n; m.per = m.per || ['knee', 'ankle']; landmarkPopup(b, { get [pk]() { return m.per[n]; }, set [pk](v) { m.per[n] = v; }, kind: m.kind, key: m.key }, pk); }); b.classList.add('slot'); slotRow.appendChild(b); } }
+      /* measured as: the value, or against where it stood at the start */
+      slotRow.appendChild(pick(m.fromStart || '', [['', 'measured as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, 'the coach reads the value when the set-up wait ends, and from then on gives the change from it, or the percentage of it: how a length seen by the camera is judged against its own start', true));
       card.appendChild(slotRow);
-      card.appendChild(el('p', 'tiny', esc(KIND_HELP[m.kind] || '')));
-      /* the role */
-      const roles = d.type === 'reps' ? [['progress', 'tracks the rep'], ['hold', 'must be right at the top'], ['note', 'a note — called, does not stop the count'], ['reading', 'just a reading']] : [['hold', 'must be right for the hold'], ['note', 'a note — called, does not stop the clock'], ['reading', 'just a reading']];
+      /* what it is for */
+      const roles = d.type === 'reps'
+        ? [['progress', 'tracks the rep', 'the count follows this one: a rep is under way past one line and counts when it is back past the other'], ['hold', 'must be right', 'the hold clock at the top runs only while this is inside its band; out of it is a fault'], ['note', 'a note', 'called when it is out, but the count goes on'], ['reading', 'just shown', 'on the picture only, never judged']]
+        : [['hold', 'must be right', 'the hold clock runs only while this is inside its band'], ['note', 'a note', 'called when it is out, but the clock goes on'], ['reading', 'just shown', 'on the picture only, never judged']];
       card.appendChild(chips(roles, role, (v) => { setRole(m, v); commit(true); }));
-      /* the numbers */
-      g = grid('tight');
+      /* the rule, as a sentence */
       if (role === 'progress') {
-        g.appendChild(field('it', d.progress.direction || 'up', (v) => { d.progress.direction = v; }, { options: [['up', 'rises during the rep'], ['down', 'falls during the rep']] }));
-        g.appendChild(field('under way past', d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, { type: 'number', title: 'the rep is under way once the reading passes this' }));
-        g.appendChild(field('counts back at', d.defaults.downAt, (v) => { d.defaults.downAt = v; }, { type: 'number', title: 'the rep counts once the reading is back past this' }));
+        const row = el('div', 'sentence');
+        row.appendChild(words('it')); row.appendChild(pick(d.progress.direction || 'up', [['up', 'rises'], ['down', 'falls']], (v) => { d.progress.direction = v; })); row.appendChild(words('during the rep; under way past'));
+        row.appendChild(num(d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, 'raiseAt', 'the rep is under way once the reading passes this')); row.appendChild(words(u));
+        row.appendChild(words('and counts once back past')); row.appendChild(num(d.defaults.downAt, (v) => { d.defaults.downAt = v; }, 'downAt', 'the rep counts once the reading is back past this')); row.appendChild(words(u));
+        card.appendChild(row);
       }
       if (role !== 'reading') {
         const kind = Spec.bandKind(m.band) || 'none';
-        g.appendChild(field(role === 'progress' ? 'at the top it must be' : 'it must be', kind, (v) => { setBand(m, v); }, { options: [['none', 'anything (not judged)'], ['range', 'between two edges'], ['min', 'at least'], ['max', 'at most'], ['sym', 'within ± one number']], structural: true }));
+        const row = el('div', 'sentence');
+        if (d.type === 'reps') row.appendChild(pick(whenOf(m), WHEN_OPTS, (v) => { setWhen(m, v); }, 'when the rule is checked and its faults called', true)); else row.appendChild(words('throughout the hold,'));
+        row.appendChild(words('it must be'));
+        row.appendChild(pick(kind, [['none', 'anything: not judged'], ['range', 'between'], ['min', 'at least'], ['max', 'at most'], ['sym', 'within ± of zero']], (v) => { setBand(m, v); }, '', true));
         if (m.band) {
-          const refs = kind === 'sym' ? [['sym', 'within ±']] : kind === 'min' ? [['min', 'at least']] : kind === 'max' ? [['max', 'at most']] : [['lo', 'at least'], ['hi', 'at most']];
-          for (const [rk, rl] of refs) { const key = m.band[rk]; const f = field(rl, d.defaults[key], (v) => { d.defaults[key] = v; }, { type: 'number' }); f.querySelector('input').dataset.def = key; g.appendChild(f); }
+          const n = (rk, title) => { const key = m.band[rk]; row.appendChild(num(d.defaults[key], (v) => { d.defaults[key] = v; }, key, title)); row.appendChild(words(u)); };
+          if (kind === 'range') { n('lo', 'the lower edge'); row.appendChild(words('and')); n('hi', 'the upper edge'); }
+          else if (kind === 'min') n('min', 'the edge'); else if (kind === 'max') n('max', 'the edge'); else n('sym', 'either side of zero');
+          if (role === 'progress') row.appendChild(words('at the top'));
         }
+        card.appendChild(row);
+        if (filled(m)) card.appendChild(btn('Numbers from the drawing', () => { fromDrawing(m); commit(true); }, 'tiny-btn'));
       }
-      card.appendChild(g);
-      if (role !== 'reading' && filled(m)) card.appendChild(btn('From the drawing — the edges around the end, the thresholds between start and end', () => { fromDrawing(m); commit(true); }));
-      /* the faults */
+      /* the faults: one line each */
       const fs = d.faults.filter((x) => x.measure === m.key);
       for (const x of fs) {
-        const row = el('div', 'fault-row grid tight');
-        row.appendChild(field('when', x.side, (v) => { x.side = v; }, { options: [['above', 'above the band'], ['below', 'below the band']] }));
-        row.appendChild(field('on the picture', x.label, (v) => { x.label = v; }));
-        row.appendChild(field('said', x.text, (v) => { x.text = v; }));
-        row.appendChild(field('said when well past', x.deep, (v) => { x.deep = v; }));
-        row.appendChild(field('coached before the first rep too', !!x.setup, (v) => { if (v) x.setup = true; else delete x.setup; }, { type: 'check' }));
+        const row = el('div', 'fault-row sentence');
+        row.appendChild(pick(x.side, [['above', 'above it'], ['below', 'below it']], (v) => { x.side = v; }));
+        row.appendChild(words('→ on the picture')); const lab = el('input', 'inline'); lab.value = x.label || ''; lab.maxLength = 26; lab.placeholder = 'short words'; lab.onchange = () => { x.label = lab.value; commit(false); }; row.appendChild(lab);
+        row.appendChild(words('said')); const tx = el('input', 'inline wide'); tx.value = x.text || ''; tx.placeholder = 'what the coach says'; tx.onchange = () => { x.text = tx.value; commit(false); }; row.appendChild(tx);
+        row.appendChild(words('well past')); const dp = el('input', 'inline wide'); dp.value = x.deep || ''; dp.placeholder = 'stronger words (optional)'; dp.onchange = () => { x.deep = dp.value; commit(false); }; row.appendChild(dp);
         const rm = btn('✕', () => { d.faults = d.faults.filter((q) => q !== x); commit(true); }, 'tiny-btn'); rm.title = 'remove this fault'; row.appendChild(rm);
         card.appendChild(row);
       }
-      if (m.band) card.appendChild(btn('Add a fault on this measurement', () => { d.faults.push({ id: m.key + 'Fault' + (fs.length + 1), measure: m.key, side: 'above', label: `${cap(m.short || m.key)}`, text: '', deep: '', tone: 'plain' }); commit(true); }));
+      if (m.band) card.appendChild(btn('Add a fault', () => { d.faults.push(Object.assign({ id: m.key + 'Fault' + (fs.length + 1), measure: m.key, side: 'above', label: `${cap(m.short || m.key)}`, text: '', deep: '', tone: 'plain' }, whenOf(m) !== 'top' ? { when: whenOf(m) } : {})); commit(true); }, 'tiny-btn'));
       more = details('More about this measurement');
       const gg = grid('tight');
       gg.appendChild(field('words for it', m.label, (v) => { m.label = v; m.named = true; }, { structural: true }));
@@ -717,7 +731,8 @@ Moves.ready.then(function () {
         gg.appendChild(field('read only while this earlier measurement…', gt.measure, (v) => { if (!v) delete m.gate; else m.gate = Object.assign({}, m.gate, { measure: v }); }, { options: [['', '— (always)']].concat(earlier.map((k) => [k, k])) }));
         gg.appendChild(field('…is at least', gt.min, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.min; else m.gate.min = isNaN(Number(v)) ? v : Number(v); } }));
         gg.appendChild(field('…and at most', gt.max, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.max; else m.gate.max = isNaN(Number(v)) ? v : Number(v); } })); }
-      if (m.band) { gg.appendChild(field('meter from', (m.scale || [])[0], (v) => { m.scale = [v, (m.scale || [])[1]]; }, { type: 'number' })); gg.appendChild(field('meter to', (m.scale || [])[1], (v) => { m.scale = [(m.scale || [])[0], v]; }, { type: 'number' })); gg.appendChild(field('note on the picture', m.note, (v) => { m.note = v; })); }
+      if (m.band) { gg.appendChild(field('meter from', (m.scale || [])[0], (v) => { m.scale = [v, (m.scale || [])[1]]; }, { type: 'number' })); gg.appendChild(field('meter to', (m.scale || [])[1], (v) => { m.scale = [(m.scale || [])[0], v]; }, { type: 'number' })); }
+      for (const x of fs) gg.appendChild(field(`tone of “${x.label || x.id}”`, x.tone || 'tick', (v) => { x.tone = v; }, { options: Spec.TONES.map((t) => [t, t]) }));
       gg.appendChild(field('why (a note for the file)', m.why, (v) => { m.why = v; }, { type: 'textarea', rows: 2, wide: true }));
       more.appendChild(gg); card.appendChild(more);
       s.appendChild(card);

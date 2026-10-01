@@ -595,12 +595,14 @@
          faults that are about the set-up — where the feet are — and those are
          coached at the start too, before the rep is asked for, because they decide
          what the rep can be. */
+      /* when each fault is judged (the file's `when`): at the top (while the rep is up —
+         the default), through the rep (up and lowering), or at all times (between reps
+         too, what `setup` used to say) */
+      const W = this.move.when || {}, setup = this.move.setup || [];
+      const judged = (id) => { const w = W[id] || (setup.includes(id) ? 'always' : 'top'); return this.phase === 'up' ? true : this.phase === 'lower' ? w !== 'top' : this.phase === 'down' ? w === 'always' : false; };
       let on = {};
-      if (this.phase === 'up') on = v.faults;
-      else if (this.phase === 'down') {
-        on = { raise: 99 };
-        for (const id of this.move.setup || []) if (v.faults[id] != null) on[id] = v.faults[id];
-      }
+      if (this.phase === 'down') on.raise = 99;
+      for (const id of Object.keys(v.faults || {})) if (judged(id)) on[id] = v.faults[id];
       /* the breath after a rep: for a moment after one is counted nothing is asked
          for and nothing is corrected, so the count is heard and the person can
          settle before the next is called */
@@ -691,7 +693,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-09-30b';
+  const VER = '2026-10-01a';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

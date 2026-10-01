@@ -630,6 +630,13 @@ becomes `draw`. The five exercises that were written by hand were written
 again as files, and the same tests held every number they act on to the
 same bodies before and after.
 
+**When a rule applies.** Each fault in a file says when it is judged:
+`top` (the default) while the rep is up, `rep` from the lift to the return,
+or `always`, between reps too, so the feet are coached before the lift is
+asked for. In the builder the rule reads as a sentence — *at the top of the
+rep it must be between 85° and 110°* — with the units on the numbers, and
+the figure is not repeated in that step.
+
 **A second angle.** The figure editor has three viewpoints: from the camera
 (the muscle figure, dragged as before), from above (x against depth, the
 camera at the bottom of the picture; a drag moves a joint toward or away

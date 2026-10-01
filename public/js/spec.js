@@ -184,8 +184,11 @@
 
     /* the fault order as the coach wants it: lost, the set-up faults, the prompt, the rest —
        kept in the file's order within each group */
-    const setupIds = faults.filter((x) => x.setup).map((x) => x.id);
-    const moveIds = faults.filter((x) => !x.setup).map((x) => x.id);
+    /* `when` a fault is judged: top (the default), rep, always; `setup: true` is the old spelling of always */
+    const whenOf = (x) => x.when || (x.setup ? 'always' : 'top');
+    const when = {}; for (const x of faults) when[x.id] = whenOf(x);
+    const setupIds = faults.filter((x) => whenOf(x) === 'always').map((x) => x.id);
+    const moveIds = faults.filter((x) => whenOf(x) !== 'always').map((x) => x.id);
     const order = ['lost'].concat(reps ? setupIds.concat([prompt.id], moveIds) : faults.map((x) => x.id));
 
     const cues = {};
@@ -389,7 +392,7 @@
       fromStart: ms.filter((m) => m.fromStart).map((m) => ({ key: nameOf(m), how: m.fromStart })),
       bones: lm.bones || [], dots: lm.dots || joints.slice(), limb: lm.limb || {},
       bands, measurements: ms,
-      faults: order, setup: setupIds, prompts: prompt ? [prompt.id] : [], cues,
+      faults: order, setup: setupIds, when, prompts: prompt ? [prompt.id] : [], cues,
       ready, read, judge, reset, draw: drawList.length ? draw : null,
       spec: f,
     };
@@ -465,6 +468,7 @@
       if (!x.id || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(x.id)) err(at + '.id', 'one word'); else if (ids.has(x.id)) err(at + '.id', 'used twice: ' + x.id); else ids.add(x.id);
       const m = ms.find((mm) => mm.key === x.measure);
       if (!m) err(at + '.measure', 'not a measurement: ' + x.measure); else if (!m.band) err(at + '.measure', `${x.measure} has no band, so nothing is above or below it`);
+      if (x.when != null && !['top', 'rep', 'always'].includes(x.when)) err(at + '.when', 'top, rep or always');
       if (!['above', 'below'].includes(x.side)) err(at + '.side', 'above or below the band');
       if (!x.text) err(at + '.text', 'the spoken words');
       if (!x.label) err(at + '.label', 'short words for the picture'); else if (x.label.length > 26) err(at + '.label', 'short means 26 characters at most');

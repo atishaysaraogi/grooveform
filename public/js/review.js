@@ -264,7 +264,7 @@ Moves.ready.then(function () {
     ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.textBaseline = 'top';
     if (!result) { ctx.fillStyle = C.dim; ctx.fillText('Load a video or a trace', 8, 8); return; }
     const rows = result.rows, dur = Math.max(1, trace.duration || rows[rows.length - 1].t);
-    const c = result.cfg, left = 74, span = W - left;
+    const c = result.cfg, left = 92, span = W - left;
     const x = (t) => left + (t / dur) * span, fw = Math.max(1, span / rows.length);
     const line = (Kf, y0, h, key, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.beginPath(); let pen = false; for (const r of rows) { const v = r.reading && r.reading.ok ? r.reading[key] : null; if (v == null) { pen = false; continue; } const px = x(r.t), py = Kf(v); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); } ctx.stroke(); };
     /* the rep lane: the reading a rep is judged on, its lines, its top, and the coach's phases behind it */
@@ -294,7 +294,7 @@ Moves.ready.then(function () {
       /* frames not trusted because a needed point was at the picture's edge */
       ctx.fillStyle = C.edge; for (const r of rows) if (r.reading && r.reading.edge) ctx.fillRect(x(r.t), 0, fw, 4);
       ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.ink; ctx.fillText('THE REP', 6, 4);
-      ctx.fillStyle = C.dim; ctx.fillText(P.label.slice(0, 12), 6, 18); ctx.fillText(`${fmtV(s1, P.unit)}`, 6, 32); ctx.fillText(`${fmtV(s0, P.unit)}`, 6, progH - 14);
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.dim; ctx.fillText(P.label.slice(0, 13), 6, 18); ctx.fillText(`${fmtV(s1, P.unit)} top`, 6, 32); ctx.fillText(`${fmtV(s0, P.unit)} bottom`, 6, progH - 14);
       /* the stretch before the coaching, said in words once */
       const readyAt = rows.find((r) => r.out && r.out.ready);
       if (!readyAt || readyAt.t > dur * 0.06) backed(readyAt ? 'waiting for the start position' : 'the start position was never held', left + 3, progH / 2, C.dim);
@@ -310,7 +310,10 @@ Moves.ready.then(function () {
       ctx.fillStyle = 'rgba(53,208,127,.22)'; ctx.fillRect(left, y(hi), span, y(lo) - y(hi));
       ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif';
       ctx.fillStyle = C.ink; ctx.fillText(b.hud, 6, y0 + 4);
-      ctx.fillStyle = C.dim; ctx.fillText(`${Math.round(lo)}–${Math.round(hi)}`, 6, y0 + 18);
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = C.dim;
+      ctx.fillText((b.label || '').slice(0, 13), 6, y0 + 17);
+      ctx.fillText(`band ${Math.round(lo)}–${Math.round(hi)}${unitOf(b.key)}`, 6, y0 + 29);
+      ctx.fillText(`${t1}${unitOf(b.key)} to ${t0}${unitOf(b.key)}`, 6, y0 + 41);
       line(y, y0, laneH, b.of, C.ink, 1.5);
       /* frames where this band was out */
       ctx.fillStyle = 'rgba(255,92,108,.55)';
@@ -330,7 +333,8 @@ Moves.ready.then(function () {
       ctx.fillStyle = good ? C.good : cue.id === 'raise' || cue.id === 'lower' ? C.accent : cue.id === 'edge' || cue.id === 'framing' ? C.edge : C.bad;
       ctx.fillRect(px, yb + 20, 2, 14);
       const words = (move.cues[cue.id] && move.cues[cue.id].label) || cue.id;
-      ctx.save(); ctx.translate(px + 4, yb + 36); ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 16), 0, 0); ctx.restore();
+      const rowN = result.cues.indexOf(cue) % 2;   // the words on two rows in turn, so neighbours do not run into each other
+      ctx.save(); ctx.translate(px + 4, yb + 34 + rowN * 11); ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif'; ctx.fillText(words.slice(0, 14), 0, 0); ctx.restore();
     }
     /* the reps, marked off */
     ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif';
@@ -346,7 +350,7 @@ Moves.ready.then(function () {
   }
   lanes.onclick = (e) => {
     if (!result) return;
-    const rect = lanes.getBoundingClientRect(), left = 74, W = rect.width;
+    const rect = lanes.getBoundingClientRect(), left = 92, W = rect.width;
     const t = Math.max(0, (e.clientX - rect.left - left) / (W - left)) * (trace.duration || 1);
     if (video.duration) video.currentTime = Math.min(video.duration, t / 1000);
     else { drawOverlay(t); drawLanes(); }
