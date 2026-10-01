@@ -140,10 +140,10 @@ test('side-lying leg raise: forty five is the top, past it is too high, the knee
   assert.equal(v.inPosition, true); assert.equal(firstFault(M, v), null);
   ({ v } = run(M, Object.assign({}, LYING, { thigh: -155, shin: -155 })));
   assert.equal(firstFault(M, v), 'liftHigh', 'sixty five is past the hip\'s own limit');
+  ({ v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -115 })));
+  assert.equal(firstFault(M, v), null, 'twenty off straight reads 160: the edge, and from the front the model reads this knee a few degrees under');
   ({ v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -110 })));
-  assert.equal(firstFault(M, v), null, 'twenty five off straight reads 155: the edge, and from the front the model reads this knee a few degrees under');
-  ({ v } = run(M, Object.assign({}, LYING, { thigh: -135, shin: -100 })));
-  assert.equal(firstFault(M, v), 'kneeBend', 'thirty five off straight is a bend');
+  assert.equal(firstFault(M, v), 'kneeBend', 'twenty five off straight is a bend');
   /* the toes, during a rep: judged by how long the foot shows against the shin — short is
      pointing at the phone (pulled back), long is laid along the leg (pointing away) */
   const UP = Object.assign({}, LYING, { thigh: -135, shin: -135 });
@@ -151,67 +151,58 @@ test('side-lying leg raise: forty five is the top, past it is too high, the knee
   assert.ok(Math.abs(r.footlen - 63) < 2, 'twelve over nineteen: ' + r.footlen);
   assert.ok(v.faults.toesAway > 0, 'long in the picture: toes away');
   assert.equal(v.inPosition, true, 'and the position is still the lift and the knee: the count goes on');
+  ({ r, v } = run(M, Object.assign({}, UP, { footLen: 0.09 })));
+  assert.ok(Math.abs(r.footlen - 47) < 2 && v.faults.toesAway > 0, 'forty seven is past forty');
   ({ r, v } = run(M, Object.assign({}, UP, { footLen: 0.07 })));
-  assert.ok(Math.abs(r.footlen - 37) < 2 && v.faults.toesAway > 0, 'thirty seven is past thirty');
+  assert.ok(Math.abs(r.footlen - 37) < 2 && v.faults.toesAway == null, 'thirty seven is under it: a foot only partly pulled back passes');
   ({ r, v } = run(M, UP));
-  assert.ok(r.footlen < 30 && v.faults.toesAway == null, 'a fifth of the shin: pointing at the phone, nothing called');
-  assert.equal(r.foot, null, 'the angle at the heel is drawn only once the foot is in profile');
-  ({ r } = run(M, Object.assign({}, UP, { footLen: 0.12 })));
-  assert.ok(r.foot != null, 'and then it is: ' + r.foot);
-  assert.ok(M.spec.defaults.footLenMax === 30 && M.spec.defaults.kneeMin === 155);
+  assert.ok(r.footlen < 40 && v.faults.toesAway == null, 'a fifth of the shin: pointing at the phone, nothing called');
+  assert.ok(M.spec.defaults.footLenMax === 40 && M.spec.defaults.kneeMin === 160);
   assert.deepEqual(M.setup, ['kneeBend'], 'the toes are a rep fault, not a set-up one');
-  assert.ok(!M.setup.includes('toesAway') && M.faults.includes('toesAway'));
-  /* through the smoothing, a closed gate is still null — the last value is not held — and it starts afresh when it opens */
+  assert.ok(!M.setup.includes('toesAway') && M.faults.includes('toesAway') && M.when.toesAway === 'rep');
+  /* through the smoothing, a closed gate is still null — the last value is not held — and it starts afresh when it opens:
+     the foot's length is read only while the leg is lifted */
   const sm = new Core.Smoother(0.35); const cfg2 = Object.assign({}, Core.COMMON, M.defaults);
-  const long = sm.apply(M.read(body(Object.assign({}, UP, { footLen: 0.12 })), 16 / 9, cfg2));
-  assert.ok(long.foot != null, 'read: ' + long.foot);
-  const short = sm.apply(M.read(body(UP), 16 / 9, cfg2));
-  assert.equal(short.foot, null, 'gate closed: null, not the last reading');
+  const lifted = sm.apply(M.read(body(Object.assign({}, UP, { footLen: 0.12 })), 16 / 9, cfg2));
+  assert.ok(lifted.footlen != null, 'read: ' + lifted.footlen);
+  const down = sm.apply(M.read(body(LYING), 16 / 9, cfg2));
+  assert.equal(down.footlen, null, 'gate closed: null, not the last reading');
 });
 
-test('prone leg raise: a hand\'s width is the top, higher is too high, the chest coming up is the back arching', () => {
+test('prone leg raise: a small lift is the top, higher is too high, the hip stays down, the toes stay pulled toward you', () => {
   const M = Moves.proneraise;
-  /* the verdict holds every fault; the coach judges the rest ones between reps and the others at the top;
-     the lift is read from rest, so it is checked through a run below rather than a frame at a time */
-  const single = (v) => M.faults.find((id) => v.faults[id] != null && !['legDiagonal', 'liftLow', 'liftHigh'].includes(id)) || null;
-  /* face down, head to the right; the toes pointed straight back along the floor (the foot's angle is absolute, so a lifted leg's toes stay pointed) */
-  const PRONE = { torso: 90, thigh: -90, shin: -90, foot: -180, thighF: -90, shinF: -90, footF: -180, uarm: 140, farm: 60, hipAt: [1.0, 0.7] };
+  /* the verdict holds every fault; the lift is read from rest, so it is checked through a run below rather than a frame at a time */
+  const single = (v) => M.faults.find((id) => v.faults[id] != null && !['liftLow', 'liftHigh'].includes(id)) || null;
+  /* face down, head to the right, the toes pulled toward you: the foot at a right angle to the shin (the foot's angle is absolute, so both legs are set) */
+  const PRONE = { torso: 90, thigh: -90, shin: -90, foot: -90, thighF: -90, shinF: -90, footF: -90, uarm: 140, farm: 60, hipAt: [1.0, 0.7] };
   let { r, v } = run(M, PRONE);
   assert.ok(r.ok && Math.abs(r.lift - 180) < 1 && Math.abs(r.knee - 180) < 1, 'flat: ' + r.lift);
+  assert.ok(r.foot < 100, 'the toes pulled toward you: ' + r.foot);
   assert.equal(single(v), null, 'nothing wrong lying flat');
-  ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105 })));
-  assert.ok(Math.abs(r.lift - 165) < 1, 'fifteen degrees reads 165: ' + r.lift);
-  assert.equal(single(v), null);
-  /* the shoulders lifted 20 degrees above the hips with a good lift: arching */
-  ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 70, thigh: -105, shin: -105 })));
-  assert.ok(r.back > 12, 'the shoulders up: ' + r.back);
-  assert.equal(single(v), 'archBack');
-  /* the hip coming off the floor; the toes pulled up */
+  /* the toes pointed away along the floor: the foot opens past a right angle */
+  ({ r, v } = run(M, Object.assign({}, PRONE, { foot: -180, footF: -180 })));
+  assert.ok(r.foot > 100, 'the toes pointed: ' + r.foot);
+  assert.equal(single(v), 'footHigh');
+  /* the hip coming off the floor */
   ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 100, thigh: -115, shin: -115 })));
-  assert.ok(r.hip > 6, 'the hip above the shoulder: ' + r.hip);
+  assert.ok(r.hip > 0, 'the hip above the shoulder: ' + r.hip);
   assert.ok(v.faults.hipLift != null, 'hip lifting'); assert.equal(M.when.hipLift, 'rep');
-  ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105, foot: -90 })));
-  assert.ok(r.foot < 100, 'toes pulled up toward the shin: ' + r.foot);
-  assert.equal(single(v), 'toesBent'); assert.equal(M.when.toesBent, 'top');
   assert.deepEqual(M.needed, ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'], 'feet to shoulders in the picture');
   for (const id of ['slr', 'quadset']) assert.ok(Moves[id].needed.includes('shoulder') && Moves[id].needed.includes('toe'), id + ' needs feet to shoulders');
-  /* through a run: the lift is the change from rest, whatever the angle at rest — a body lying at 172 lifts eight degrees to the top, a rep; forty is too high;
-     and the foot's length against the most it has been: the toe pulled in toward the heel by a third reads 67% — the leg has gone diagonal */
+  /* through a run: the lift is the change from rest, whatever the angle at rest — a body lying at 172 lifts three degrees, a rep (the top is up to five);
+     ten is too high. Lying still starts no attempt: the rep is under way past two degrees, not at rest's own value */
   const Trace = require('../public/js/trace.js');
   const frames = []; let t = 0;
-  const push = (o, ms, shrink) => { for (const end = t + ms; t < end; t += 33) { const lm = body(o); if (shrink) { const he = lm[Core.SIDE.R.heel], to = lm[Core.SIDE.R.toe]; lm[Core.SIDE.R.toe] = Object.assign({}, to, { x: he.x + (to.x - he.x) * shrink, y: he.y + (to.y - he.y) * shrink }); } frames.push({ t, lm }); } };
+  const push = (o, ms) => { for (const end = t + ms; t < end; t += 33) frames.push({ t, lm: body(o) }); };
   const REST172 = Object.assign({}, PRONE, { torso: 86, thigh: -94, shin: -94 });   // the trunk and the leg both four degrees off the floor line: 172 at the hip
-  push(REST172, 4500); push(Object.assign({}, REST172, { thigh: -102, shin: -102 }), 2500); push(REST172, 2000); push(Object.assign({}, REST172, { thigh: -134, shin: -134 }), 1500); push(REST172, 2000); push(Object.assign({}, REST172, { thigh: -102, shin: -102 }), 2500, 0.67); push(REST172, 1500);
+  push(REST172, 4500); push(Object.assign({}, REST172, { thigh: -97, shin: -97 }), 2500); push(REST172, 2000); push(Object.assign({}, REST172, { thigh: -104, shin: -104 }), 2000); push(REST172, 2000);
   const res = Trace.run(M, {}, frames, 16 / 9), reps = Trace.reps(res, M);
   const rest = res.rows.filter((row) => row.t > 4000 && row.t < 4400 && row.reading && row.reading.ok);
   assert.ok(rest.every((row) => Math.abs(row.reading.lift) < 1.5), 'at rest the lift reads 0 whatever the angle: ' + rest.map((row) => row.reading.lift.toFixed(1)).slice(0, 3));
-  assert.ok(reps.length >= 3, 'three attempts: ' + reps.length);
-  assert.ok(reps[0].counted && reps[0].why.peak < -6 && reps[0].why.peak > -12, 'eight degrees up is a rep: ' + JSON.stringify(reps[0].why));
-  assert.ok(!reps[1].counted || reps[1].faults.some((f) => f.id === 'liftHigh'), 'forty degrees is too high');
-  assert.ok(res.rows.some((row) => row.t > 9000 && row.t < 10500 && row.verdict.faults.liftHigh != null), 'and called so');
-  const diag = res.rows.filter((row) => row.t > 13000 && row.t < 14900 && row.reading && row.reading.ok);
-  assert.ok(diag.length && diag.every((row) => row.reading.footlen < 70), 'the foot two thirds of its longest: ' + diag.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
-  assert.ok(diag.some((row) => row.verdict.faults.legDiagonal != null), 'and the leg is called diagonal');
+  assert.equal(reps.length, 2, 'two attempts, none while lying still: ' + JSON.stringify(reps.map((x) => x.why && x.why.peak)));
+  assert.ok(reps[0].counted && reps[0].why.peak < -1 && reps[0].why.peak > -5, 'three degrees up is a rep: ' + JSON.stringify(reps[0].why));
+  assert.ok(!reps[1].counted || reps[1].faults.some((f) => f.id === 'liftHigh'), 'ten degrees is too high');
+  assert.ok(res.rows.some((row) => row.t > 9000 && row.t < 11000 && row.verdict.faults.liftHigh != null), 'and called so');
 });
 
 test('inner thigh raise: the straight bottom leg is measured, a small lift is the top', () => {
@@ -279,8 +270,8 @@ test('static quads over a roll: the knee bent at rest, straight with the heel up
   /* straight but the toes not pulled up; or not quite straight */
   ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -100, shin: -100, foot: 110 })));
   assert.equal(topFault(v), 'toesLoose');
-  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -102, shin: -90, foot: 65 })));
-  assert.ok(r.knee > 160 && r.knee < 170, 'not locked out: ' + r.knee);
+  ({ r, v } = run(M, Object.assign({}, SUPINE, { thigh: -101, shin: -93, foot: 65 })));
+  assert.ok(r.knee > 170 && r.knee < 175, 'not locked out: ' + r.knee);
   assert.equal(v.raised, true); assert.equal(topFault(v), 'kneeBend');
 });
 

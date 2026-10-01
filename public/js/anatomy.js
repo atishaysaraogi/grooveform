@@ -96,15 +96,26 @@
   };
   /* Which side of the hip→shoulder line the front of the body is on, for a figure that carries no
      belly sign of its own: in almost every side-on exercise the knee leads the front. The foot
-     stands in when the leg is straight under the hip and the knee says nothing. */
-  function bellySide(J, tvx, tvy) {
+     stands in when the leg is straight under the hip and the knee says nothing. bellyLean is the
+     signed distance of the leading point from the line (+ the side the hip→shoulder vector turns
+     toward anticlockwise on the canvas: with the torso pointing right, down); bellyOf decides for
+     a whole figure, once, from the keyframe where the leg leads more clearly — a leg lying almost
+     in line with the body at one end of the movement and lifted at the other would otherwise flip
+     the torso's muscles mid-animation. A figure may carry `belly` (1 or -1) and settle it. */
+  function bellyLean(J) {
+    if (!J || !J.hip || !J.sh) return 0;
+    var tdx = J.sh.x - J.hip.x, tdy = J.sh.y - J.hip.y, tL = Math.hypot(tdx, tdy) || 1e-6, tvx = -tdy / tL, tvy = tdx / tL;
     var pts = [J.kn, J.ft, J.an];
     for (var i = 0; i < pts.length; i++) {
-      if (!pts[i] || !J.hip) continue;
+      if (!pts[i]) continue;
       var d = (pts[i].x - J.hip.x) * tvx + (pts[i].y - J.hip.y) * tvy;
-      if (Math.abs(d) > 1e-3) return d > 0 ? 1 : -1;
+      if (Math.abs(d) > 1e-3) return d;
     }
-    return 1;
+    return 0;
+  }
+  function bellyOf(A, B) {
+    var a = bellyLean(A), b = B ? bellyLean(B) : 0, d = Math.abs(b) > Math.abs(a) ? b : a;
+    return d < 0 ? -1 : 1;
   }
   var REGIONS = ['shoulder','arm','forearm','thigh','ham','calf','chest','back','abs','oblique','neck','glute'];
   var REST = 0.07;
@@ -259,7 +270,7 @@
     if (view === 'side') {
       /* One body, two halves: the spine side and the belly side. Which is which comes from the move
          when it says so, and from the pose itself when it does not. */
-      var belly = cfg.belly != null ? cfg.belly : bellySide(J, tvx, tvy);
+      var belly = cfg.belly === 1 || cfg.belly === -1 ? cfg.belly : bellyOf(J, null);
       torsoBlob(TORSO_SHAPES.back, -belly, heats.back);
       torsoBlob(TORSO_SHAPES.chest, belly, heats.chest);
       torsoBlob(SIDE_TORSO.oblique, belly, heats.oblique);
@@ -311,6 +322,7 @@
     var view = reg ? reg.view : (FRONTP[id] ? 'front' : 'side'), data = reg || FRONTP[id] || SIDE[id];
     if (!data || !data.A) return;
     var A = unify(data.A, view), B = data.B ? unify(data.B, view) : null;
+    if (cfg.belly !== 1 && cfg.belly !== -1) cfg.belly = bellyOf(A, B);   // decided once, not frame by frame
     var wall = data.wall || null, props = data.props || [], ctx = canvas.getContext('2d');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var rec = { raf: 0, io: null, visible: true, t: reduce ? 1.4 : 0, last: null };
@@ -400,5 +412,5 @@
     stopAll();
     Array.prototype.forEach.call((rootEl || document).querySelectorAll('canvas[data-anat]'), mount);
   }
-  root.OnTrackAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, figure: function (id) { return REGISTERED[id] || null; }, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure };
+  root.OnTrackAnatomy = { demo: demo, mountAll: mountAll, stopAll: stopAll, work: WORK, register: register, figure: function (id) { return REGISTERED[id] || null; }, regions: REGIONS, tween: tween, unify: unify, drawFigure: drawFigure, bellyOf: bellyOf, bellyLean: bellyLean };
 })(typeof window !== 'undefined' ? window : globalThis);

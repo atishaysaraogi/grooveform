@@ -480,7 +480,7 @@ Moves.ready.then(function () {
   };
   const ROOTS = { side: ['hip'], front: ['hipL', 'hipR'] };
   const GHOST_CHAINS = { side: [['sh', 'hip', 'kn', 'an', 'ft'], ['sh', 'el', 'wr'], ['hip', 'knF', 'anF', 'ftF'], ['sh', 'elF', 'wrF'], ['an', 'he'], ['anF', 'heF']], front: [['shL', 'hipL', 'knL', 'anL'], ['shR', 'hipR', 'knR', 'anR'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR'], ['anL', 'heL', 'toL'], ['anR', 'heR', 'toR']] };
-  const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {}, second: null };
+  const fig = { view: 'side', A: null, B: null, hold: false, flip: false, side: 'both', wall: null, w: {}, second: null, belly: null };
   /* the editor's viewpoint: the camera's (editable, the muscle figure), from above (editable in
      depth only), isometric (a look) */
   let ev = 'camera';
@@ -496,8 +496,10 @@ Moves.ready.then(function () {
     fig.view = f.view === 'front' && f.A.hipL ? 'front' : 'side';
     fig.A = copyK(f.A, KEYS()); fig.B = copyK(f.B || f.A, KEYS());
     fig.hold = !!f.hold; fig.flip = !!f.flip; fig.side = f.side || 'both'; fig.wall = f.wall != null ? f.wall : null; fig.w = Object.assign({}, f.w || {}); fig.second = Figure.VIEWS.includes(f.second) && f.second !== 'camera' ? f.second : null;
+    fig.belly = f.belly === 1 || f.belly === -1 ? f.belly : null;
     orig = JSON.stringify({ A: fig.A, B: fig.B });   // for "Undo my edits"
     $('anim-hold').value = fig.hold ? 'yes' : 'no'; $('anim-flip').value = fig.flip ? 'yes' : 'no'; $('anim-side').value = fig.side; $('anim-wall').value = fig.wall == null ? '' : fig.wall; $('anim-second').value = fig.second || '';
+    $('anim-belly').value = fig.belly == null ? 'auto' : String(fig.belly);
     buildWeights(); quiet = true; animChanged(); quiet = false;
   }
   /* the selected exercise's figure into the editor */
@@ -515,8 +517,21 @@ Moves.ready.then(function () {
       lab.querySelector('input').oninput = (e) => { fig.w[k] = Number(e.target.value) / 100; $('w-' + k).textContent = fig.w[k].toFixed(2); if (!fig.w[k]) delete fig.w[k]; animChanged(); };
     }
   }
-  const figureJson = () => ({ view: fig.view, A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}), ...(fig.second ? { second: fig.second } : {}) });
+  const figureJson = () => ({ view: fig.view, A: fig.A, B: fig.hold ? undefined : fig.B, hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w, ...(fig.wall != null ? { wall: fig.wall } : {}), ...(fig.second ? { second: fig.second } : {}), ...(fig.belly != null ? { belly: fig.belly } : {}) });
+  /* The front of the body, in a side view: which side of the hip→shoulder line the belly is on. The
+     figure's own sign when it has one, otherwise the pose's (the knee leads), decided once for both
+     keyframes. The select says each side in the picture's terms at A — down toward the floor, up,
+     left, right — since a sign on a line means nothing to the eye. */
+  const bellyAuto = () => (fig.A ? A.bellyOf(A.unify(fig.A, fig.view), A.unify(fig.B || fig.A, fig.view)) : 1);
+  const bellyNow = () => (fig.belly != null ? fig.belly : bellyAuto());
+  function bellyWords() {
+    const sel = $('anim-belly'); if (!sel || !fig.A || fig.view !== 'side' || !fig.A.hip || !fig.A.sh) return;
+    const tdx = fig.A.sh[0] - fig.A.hip[0], tdy = fig.A.sh[1] - fig.A.hip[1], L = Math.hypot(tdx, tdy) || 1e-6, vx = -tdy / L, vy = tdx / L;
+    const dir = (sgn) => { const x = vx * sgn, y = vy * sgn; return Math.abs(y) >= Math.abs(x) ? (y > 0 ? 'down, toward the floor' : 'up, away from the floor') : (x > 0 ? 'to the right' : 'to the left'); };
+    for (const o of sel.options) o.textContent = o.value === 'auto' ? `From the pose — the knee leads the front (now ${dir(bellyAuto())})` : `Facing ${dir(Number(o.value))}`;
+  }
   function animChanged() {
+    bellyWords();
     drawEditor();
     const j = figureJson();
     $('anim-json').value = JSON.stringify(j);
@@ -562,7 +577,7 @@ Moves.ready.then(function () {
     };
     const drive = kf === 'B' || fig.hold ? 1 : 0.25, heats = {};
     for (const k of A.regions) heats[k] = 0.07 + (fig.w[k] || 0) * drive * 0.93;
-    try { A.drawFigure(ctx, A.unify(K, fig.view), P, heats, fig.view, { hold: fig.hold, side: fig.side, flip: fig.flip, w: fig.w }); } catch { }
+    try { A.drawFigure(ctx, A.unify(K, fig.view), P, heats, fig.view, { hold: fig.hold, side: fig.side, flip: fig.flip, belly: bellyNow(), w: fig.w }); } catch { }
     /* the feet, which the muscle figure does not draw: ankle to heel to toe */
     ctx.strokeStyle = 'rgba(232,237,244,.5)'; ctx.lineWidth = 2 / T.s;
     for (const [a, b] of fig.view === 'front' ? [['anL', 'heL'], ['heL', 'toL'], ['anR', 'heR'], ['heR', 'toR']] : [['an', 'he'], ['he', 'ft'], ['anF', 'heF'], ['heF', 'ftF']]) { if (K[a] && K[b]) { ctx.beginPath(); ctx.moveTo(K[a][0], K[a][1]); ctx.lineTo(K[b][0], K[b][1]); ctx.stroke(); } }
@@ -642,6 +657,7 @@ Moves.ready.then(function () {
   $('anim-undo').onclick = () => { if (!orig) return; const o = JSON.parse(orig); fig.A = o.A; fig.B = o.B; animChanged(); };
   $('anim-hold').onchange = (e) => { fig.hold = e.target.value === 'yes'; animChanged(); };
   $('anim-flip').onchange = (e) => { fig.flip = e.target.value === 'yes'; animChanged(); };
+  $('anim-belly').onchange = (e) => { fig.belly = e.target.value === 'auto' ? null : Number(e.target.value); animChanged(); };
   $('anim-side').onchange = (e) => { fig.side = e.target.value; animChanged(); };
   $('anim-wall').onchange = (e) => { fig.wall = e.target.value === '' ? null : Number(e.target.value); animChanged(); };
   $('anim-download').onclick = () => save(new Blob([JSON.stringify(figureJson(), null, 2)], { type: 'application/json' }), `${move.id}-figure.json`);

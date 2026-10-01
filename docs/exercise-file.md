@@ -119,8 +119,17 @@ Degrees: `torso` from vertical (+ leaning the way the body faces); `thigh`,
 `left`.
 
 ```jsonc
-"figure": { "points": { "A": { "h": [380, 144], "sh": [362, 150], ... }, "B": { ... }, "flip": true, "side": "both", "wall": 340, "props": [] } }
+"figure": { "points": { "A": { "h": [380, 144], "sh": [362, 150], ... }, "B": { ... }, "flip": true, "side": "both", "belly": 1, "wall": 340, "props": [] } }
 ```
+
+`belly` says which side of the hip→shoulder line the front of the body is
+on, so the chest and abdominals are drawn there and the back and glutes on
+the other: `1` or `-1` (with the torso pointing right in the picture, `1` is
+down). Left out, the pose says — the knee leads the front, the foot when the
+knee is in line — decided once for the figure from the keyframe where the leg
+leads more clearly. Lying face down with the leg in line with the body the
+knee can say wrong, so the editor's *Front of the body* sets it, in the
+picture's terms (facing down, toward the floor; up; left; right).
 
 A point may carry a third number, its depth: how far from the camera, + away,
 in the same units. The camera's view ignores it; the editor's *From above*
@@ -151,7 +160,9 @@ edited file is what shows.
    (or shift for one drag) moves the joint itself and changes the bone's
    length instead. *Copy this pose onto the other* and *Undo my edits* are
    there for the rest. The feet — heel and toe — are handles too, added to a
-   figure that lacked them. Set *Holds still*, *Faces*, *Working side*, the
+   figure that lacked them. Set *Holds still*, *Faces*, *Front of the body*
+   (where the belly is drawn — the knee usually says, but lying down it can
+   say wrong, or change as the leg lifts), *Working side*, the
    wall, and under *Muscles working* the sliders. Every drag goes straight
    into the draft; nothing has to be copied across.
 4. The problems list should stay clear. Each problem is marked on the form

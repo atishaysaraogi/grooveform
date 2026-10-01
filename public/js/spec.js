@@ -519,6 +519,7 @@
     for (const k of Object.keys(f.muscles || {})) if (!REGIONS.includes(k)) err('muscles', 'not a region the figure knows: ' + k);
     if (!f.muscles || !Object.keys(f.muscles).length) warn('muscles', 'what works, for the muscle figure');
     if (!f.figure || (!f.figure.pose && !f.figure.points)) warn('figure', 'no figure: the exercise page has nothing to animate');
+    if (f.figure && f.figure.points && f.figure.points.belly != null && f.figure.points.belly !== 1 && f.figure.points.belly !== -1) err('figure', 'belly is 1 or -1: which side of the hip→shoulder line the front of the body is on — or left out, and the pose says');
     return out;
   }
 

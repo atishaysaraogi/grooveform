@@ -20,7 +20,7 @@
   ],
   "type": "reps",
   "position": "prone",
-  "movement": "one straight leg lifted a hand's width off the floor and lowered",
+  "movement": "one straight leg lifted a little off the floor and lowered",
   "sides": "alternate",
   "load": "weight",
   "phone": {
@@ -34,15 +34,15 @@
     "hint": "Lying face down, one straight leg lifted a little off the floor.",
     "start": "Lay the phone on its side on the floor. Lie face down side on to it, legs straight, forehead on your hands.",
     "position": "Lie face down, side on to the phone, legs straight, forehead resting on your hands, hips pressed into the floor.",
-    "top": "One straight leg lifted a hand's width off the floor — five to twelve degrees at the hip — hips still on the floor, toes pointed back, held a second.",
+    "top": "One straight leg lifted a little off the floor — up to five degrees at the hip — hips still on the floor, toes pulled toward you, held a second.",
     "howto": [
-      "Lie face down with your forehead on your hands and both legs straight.",
-      "Tighten the buttock and lift one straight leg a hand's width off the floor — about six inches. Both hip bones stay on the floor.",
-      "Hold for the count without arching the lower back or lifting the chest.",
+      "Lie face down with your forehead on your hands and both legs straight, toes pulled toward you.",
+      "Tighten the buttock and lift one straight leg a little off the floor — a few centimetres at the foot. Both hip bones stay on the floor.",
+      "Hold for the count without lifting the hip or arching the lower back.",
       "Lower slowly. The rep counts when the foot is back down."
     ],
-    "cannot": "The pelvis rolling and the lower back muscles taking over: it sees the lift, the knee and the shoulders coming up. Lift from the buttock, not the back.",
-    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle read as the change from the rest position, which the coach follows slowly while the leg is near it, so one person's 172 at rest and another's 180 both count as 0 and a rest that settles moves with it; a rep is under way past 7° of lift and counts when the leg is back within 3° of rest; at the top a lift of 5–25° (a hand's width is 5–12°); the knee at least 155° so the leg stays straight; the shoulders no more than 12° above the hips, which is the back arching; the hip no more than 6° above the shoulder (the hip coming off the floor); at the top the toes pointed back (the foot angle at the heel at least 100°) and the foot's length as the camera sees it at least 70% of the most it has been — a leg swinging toward or away from the camera foreshortens it. Hold a second at the top (the clock starts 0.3 s after the leg is up), lower slowly, and the rep counts when the foot is down. Feet to shoulders must be in the picture.",
+    "cannot": "The pelvis rolling and the lower back muscles taking over: it sees the lift, the knee, the hip rising and the foot's angle. Lift from the buttock, not the back.",
+    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle read as the change from the rest position, which the coach follows slowly while the leg is near it, so one person's 172 at rest and another's 180 both count as 0 and a rest that settles moves with it; a rep is under way past 2° of lift and counts when the leg is back at rest; at the top a lift of up to 5°; the knee at least 165° so the leg stays straight; the hip no higher than the shoulder (the hip coming off the floor), judged through the rep; the toes pulled toward you (the angle at the heel between toe and knee at most 100°). Hold a second at the top (the clock starts 0.3 s after the leg is up), lower slowly, and the rep counts when the foot is down. Feet to shoulders must be in the picture.",
     "lost": "Lie face down side on to the camera, feet to shoulders in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -50,7 +50,7 @@
     "safety": "This is a small lift. Stop if the lower back pinches; lift less high next time.",
     "easier": "A smaller lift; a pillow under the hips.",
     "harder": "A longer hold; an ankle weight.",
-    "mistakes": "Lifting the hip off the floor to get height; arching the back; bending the knee; pulling the toes up; swinging the leg out to the side."
+    "mistakes": "Lifting the hip off the floor to get height; arching the back; bending the knee; letting the toes point away; swinging the leg out to the side."
   },
   "muscles": {
     "glute": 0.85,
@@ -60,6 +60,7 @@
   "figure": {
     "points": {
       "view": "side",
+      "belly": 1,
       "A": {
         "h": [
           362,
@@ -439,7 +440,7 @@
       "measure": "foot",
       "side": "above",
       "label": "Toe, heel, knee too far",
-      "text": "Pull toes towrds you",
+      "text": "Pull toes towards you",
       "deep": "",
       "tone": "plain"
     }
@@ -465,7 +466,7 @@
     "kneeMin": 165,
     "liftMin": -5,
     "liftMax": 0,
-    "raiseAt": 0,
+    "raiseAt": -2,
     "downAt": 0,
     "holdTargetSec": 1,
     "callAtSec": [],
@@ -476,7 +477,8 @@
     "deepAt": 8,
     "hipLift": 0,
     "settleMs": 300,
-    "footMax": 100
+    "footMax": 100,
+    "restNear": 1.5
   },
   "settings": [
     {

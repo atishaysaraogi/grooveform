@@ -293,7 +293,7 @@ Moves.ready.then(function () {
       const f = Figure.figureOf(move);
       if (f) A.register(move.id, Object.assign({ view: (move.figure && move.figure.view) || 'side', A: f.A, B: f.B || f.A, hold: !!f.hold, side: (move.figure && move.figure.side) || 'both',
         flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), w: move.muscles || {} },
-      f.wall != null ? { wall: f.wall } : {}, move.figure && move.figure.props ? { props: move.figure.props } : {}));
+      f.wall != null ? { wall: f.wall } : {}, f.belly === 1 || f.belly === -1 ? { belly: f.belly } : {}, move.figure && move.figure.props ? { props: move.figure.props } : {}));
     }
     c.setAttribute('data-anat', move.id);
     A.mountAll(opt('screen-ex'));
