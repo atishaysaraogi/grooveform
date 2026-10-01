@@ -55,6 +55,9 @@ Moves.ready.then(() => Plans.ready).then(function () {
   const bar = h('<a class="iconbtn" id="care-me" href="#/care" aria-label="My care page" title="My care page">☺</a>');
   const rep = h('<button class="iconbtn" id="care-report-btn" aria-label="Something is wrong" title="Something is wrong">!</button>');
   const how = $('btn-how'); how.parentNode.insertBefore(bar, how); how.parentNode.insertBefore(rep, how);
+  /* Back on a care screen goes to the care home, and from there to the app's */
+  const appBack = $('nav-back').onclick;
+  $('nav-back').onclick = (e) => { const hsh = location.hash || '#/'; if (/^#\/care\/./.test(hsh)) location.hash = '#/care'; else if (hsh === '#/care') location.hash = '#/'; else if (appBack) appBack(e); };
   function topbar() { bar.textContent = me ? (me.user.name || '☺').slice(0, 1).toUpperCase() : '☺'; bar.title = me ? `${me.user.name || me.user.phone} — my care page` : 'Sign in'; rep.hidden = !me; }
   const SCREEN = { title: '' };
   function render(title, html) { sec.hidden = false; sec.innerHTML = html; $('nav-title').textContent = title; SCREEN.title = title; window.scrollTo(0, 0); return sec; }
