@@ -42,7 +42,7 @@
     ],
     "cannot": "How hard the thigh is working: it sees the knee straighten and the toes come up, which go with the contraction. Press as hard as is comfortable.",
     "about": "Static quads over a roll — lying on your back side on: the knee angle between hip and ankle, 150 or so at rest over the roll and 180 straight; a rep is under way past 165 and counts when the knee is back under 160; at the top the knee at least 170 and the foot's angle at the heel, between toe and knee, 100 or less with the toes pulled up. Between reps the knee must rest under 160, or the roll is too low. Hold five seconds at the top.",
-    "lost": "Lie down side on to the camera, whole body in",
+    "lost": "Lie down side on to the camera, feet to shoulders in the picture",
     "lower": "And lower the heel",
     "early": "Hold it straight for the full count next time",
     "holdLabel": "Hold the leg straight for",
@@ -105,6 +105,7 @@
       "toe"
     ],
     "needed": [
+      "shoulder",
       "hip",
       "knee",
       "ankle",

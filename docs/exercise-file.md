@@ -300,7 +300,9 @@ raise's toe angle is gated on the foot's length against the shin, so it is
 read only when the foot is long enough in the picture to be in profile.
 `fromStart` reads the measurement against the start position: `"change"` is
 the reading less its value when the set-up wait ended, `"ratio"` is percent
-of that value. Until the wait ends the baseline follows the person, so the
+of that value, and `"peak"` is percent of the most it has been in the set, a
+reference that only climbs — the prone leg raise's foot length, which
+foreshortens when the leg swings out of the camera's plane. Until the wait ends the baseline follows the person, so the
 reading is no change and the start position can be held; then it is frozen
 for the set. A length seen by the camera shortens as the limb turns toward
 it, and `"ratio"` on a `distance` is how that turning is measured — an arm

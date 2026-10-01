@@ -361,10 +361,14 @@
        movement. */
     relate(r) {
       const fs = this.move.fromStart; if (!fs || !fs.length || !r || !r.ok) return;
-      if (!this.ready || !this.base) { this.base = {}; for (const { key } of fs) this.base[key] = r[key]; }
+      if (!this.ready || !this.base) { this.base = this.base || {}; for (const { key, how } of fs) if (how !== 'peak' || this.base[key] == null) this.base[key] = r[key]; }
       for (const { key, how } of fs) {
-        const raw = r[key], b = this.base[key];
-        r[key] = raw == null || b == null ? null : how === 'ratio' ? (b ? (100 * raw) / b : null) : raw - b;
+        const raw = r[key];
+        /* peak: against the most it has been in the set, which only climbs — a length that
+           foreshortens as the limb turns out of the camera's plane reads under 100 */
+        if (how === 'peak' && raw != null && (this.base[key] == null || raw > this.base[key])) this.base[key] = raw;
+        const b = this.base[key];
+        r[key] = raw == null || b == null ? null : how === 'ratio' || how === 'peak' ? (b ? (100 * raw) / b : null) : raw - b;
       }
     }
 
@@ -701,7 +705,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-01b';
+  const VER = '2026-10-01c';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

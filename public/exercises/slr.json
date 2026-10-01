@@ -42,8 +42,8 @@
       "Lower slowly, keeping the knee straight, until the heel is back on the floor. The rep counts there."
     ],
     "cannot": "Whether the lower back is flat on the floor and whether the thigh muscle is truly tight: it sees the knee angle, the lift against the other leg and the toes. Press the back down yourself.",
-    "about": "Straight leg raise — lying on your back side on, both legs straight: the lift, as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top — measured against the other leg rather than the floor, so a phone that is not quite level does not move it and the shoulders need not be in the picture (the model reads the two knees 8–15° apart even at rest, so the top allows 48 and the return counts under 15); the lifted knee at least 165° so the leg stays straight; the resting knee at least 160°; and the foot's angle at the heel, 60–105°, toes pulled up. The knee and the toes are coached before the lift is asked for. Hold two seconds at the top, lower slowly, and the rep counts when the heel is down. The toes pulled back and the resting leg straight are coached, but the rep is the knee and the lift: a rep with the toes pointed is counted and told about. With both legs down the far knee hides behind the near one; it then reads as lying on the floor, and the frame is not lost.",
-    "lost": "Lie down side on to the camera, hips and legs in the picture",
+    "about": "Straight leg raise — lying on your back side on, both legs straight: the lift, as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top — measured against the other leg rather than the floor, so a phone that is not quite level does not move it; feet to shoulders must be in the picture (the model reads the two knees 8–15° apart even at rest, so the top allows 48 and the return counts under 15); the lifted knee at least 165° so the leg stays straight; the resting knee at least 160°; and the foot's angle at the heel, 60–105°, toes pulled up. The knee and the toes are coached before the lift is asked for. Hold two seconds at the top, lower slowly, and the rep counts when the heel is down. The toes pulled back and the resting leg straight are coached, but the rep is the knee and the lift: a rep with the toes pointed is counted and told about. With both legs down the far knee hides behind the near one; it then reads as lying on the floor, and the frame is not lost.",
+    "lost": "Lie down side on to the camera, feet to shoulders in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
     "holdLabel": "Hold at the top for",
@@ -99,6 +99,7 @@
   },
   "landmarks": {
     "joints": [
+      "shoulder",
       "hip",
       "knee",
       "ankle",
@@ -108,6 +109,7 @@
       "other.ankle"
     ],
     "needed": [
+      "shoulder",
       "hip",
       "knee",
       "ankle",
@@ -115,6 +117,10 @@
       "toe"
     ],
     "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
       [
         "hip",
         "knee"
@@ -137,6 +143,7 @@
       ]
     ],
     "dots": [
+      "shoulder",
       "hip",
       "knee",
       "ankle",
@@ -210,7 +217,7 @@
           "max": 80
         }
       ],
-      "why": "The angle at the hip between the lifted knee and the resting knee: near 0 with both legs on the floor, 45 lifted forty five. The resting leg is the floor line, so the phone need not be level and the shoulders need not be seen. Also the progress measurement. Side on, the pose model sets the two knees a little apart even with both legs down — a recorded take read 8 to 15 at rest — so the return counts under 15, the lift is under way past 22, and the top allows three degrees past 45 for the same wobble. Side on with both legs down, the far knee is hidden behind the near one and the model stops trusting it (a recorded take read it at 23–43% for six seconds of lying still); a leg the camera cannot see beside its twin is lying on it, so the lift then reads 0 — the start — rather than the frame being lost. It has to be seen for a lift to count, and it is, once the legs part."
+      "why": "The angle at the hip between the lifted knee and the resting knee: near 0 with both legs on the floor, 45 lifted forty five. The resting leg is the floor line, so the phone need not be level; feet to shoulders have to be seen. Also the progress measurement. Side on, the pose model sets the two knees a little apart even with both legs down — a recorded take read 8 to 15 at rest — so the return counts under 15, the lift is under way past 22, and the top allows three degrees past 45 for the same wobble. Side on with both legs down, the far knee is hidden behind the near one and the model stops trusting it (a recorded take read it at 23–43% for six seconds of lying still); a leg the camera cannot see beside its twin is lying on it, so the lift then reads 0 — the start — rather than the frame being lost. It has to be seen for a lift to count, and it is, once the legs part."
     },
     {
       "key": "rest",

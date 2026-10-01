@@ -675,7 +675,7 @@ Moves.ready.then(function () {
       }
       if (m.kind === 'distance') { const per = m.per || []; for (const n of [0, 1]) { const b = btn(`${n ? 'to' : 'as % of'}: ${per[n] ? esc(plain(per[n])) : '…'}`, () => { const pk = 'per' + n; m.per = m.per || ['knee', 'ankle']; landmarkPopup(b, { get [pk]() { return m.per[n]; }, set [pk](v) { m.per[n] = v; }, kind: m.kind, key: m.key }, pk); }); b.classList.add('slot'); slotRow.appendChild(b); } }
       /* measured as: the value, or against where it stood at the start */
-      slotRow.appendChild(pick(m.fromStart || '', [['', 'measured as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, 'the coach reads the value when the set-up wait ends, and from then on gives the change from it, or the percentage of it: how a length seen by the camera is judged against its own start', true));
+      slotRow.appendChild(pick(m.fromStart || '', [['', 'measured as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been in the set']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, 'the coach reads the value when the set-up wait ends, and from then on gives the change from it, or the percentage of it: how a length seen by the camera is judged against its own start', true));
       card.appendChild(slotRow);
       /* what it is for */
       const roles = d.type === 'reps'

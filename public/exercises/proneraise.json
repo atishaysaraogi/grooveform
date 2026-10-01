@@ -42,15 +42,15 @@
       "Lower slowly. The rep counts when the foot is back down."
     ],
     "cannot": "The pelvis rolling and the lower back muscles taking over: it sees the lift, the knee and the shoulders coming up. Lift from the buttock, not the back.",
-    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle, 150–170° at the top (a lift of 10–30°, a hand's width off the floor); the knee at least 165° so the leg stays straight; and the shoulders no more than 12° above the hips, which is the back arching. Hold two seconds at the top, lower slowly, and the rep counts when the foot is down.",
-    "lost": "Lie face down, side on to the camera, whole body in",
+    "about": "Prone leg raise — lying face down side on: the lift, as the angle at the hip between shoulder and ankle, 150–170° at the top (a lift of 10–30°, a hand's width off the floor); the knee at least 165° so the leg stays straight; and the shoulders no more than 12° above the hips, which is the back arching. Through the rep: the hip no more than 6° above the shoulder (the hip coming off the floor), the toes pointed straight back (the foot angle at the heel at least 140°), and the foot's length as the camera sees it at least 85% of the most it has been — a leg swinging toward or away from the camera foreshortens it. Hold two seconds at the top, lower slowly, and the rep counts when the foot is down. Feet to shoulders must be in the picture.",
+    "lost": "Lie face down side on to the camera, feet to shoulders in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
     "holdLabel": "Hold at the top for",
     "safety": "This is a small lift. Stop if the lower back pinches; lift less high next time.",
     "easier": "A smaller lift; a pillow under the hips.",
     "harder": "A longer hold; an ankle weight.",
-    "mistakes": "Lifting too high; arching the lower back; the knee bending; the chest coming off the floor."
+    "mistakes": "Lifting the hip off the floor to get height; arching the back; bending the knee; pulling the toes up; swinging the leg out to the side."
   },
   "muscles": {
     "glute": 1,
@@ -107,7 +107,9 @@
       "shoulder",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "heel",
+      "toe"
     ],
     "bones": [
       [
@@ -233,6 +235,83 @@
         }
       ],
       "why": "The hip-to-shoulder line off level: the shoulders coming up is the chest lifting and the back arching to make height."
+    },
+    {
+      "key": "hip",
+      "label": "hip above the shoulder",
+      "hud": "HIP",
+      "note": "on the floor",
+      "kind": "rise",
+      "a": "shoulder",
+      "b": "hip",
+      "band": {
+        "max": "hipLift"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "hipLift",
+          "label": "Hip above the shoulder, at most (degrees)",
+          "min": 2,
+          "max": 25
+        }
+      ],
+      "why": "The shoulder-to-hip line off level, + with the hip the higher: the hip coming up off the floor to help the lift. Judged through the rep."
+    },
+    {
+      "key": "foot",
+      "label": "toe, heel, knee",
+      "hud": "TOES",
+      "note": "pointed back",
+      "kind": "angle",
+      "a": "toe",
+      "b": "heel",
+      "c": "knee",
+      "band": {
+        "min": "footMin"
+      },
+      "scale": [
+        60,
+        180
+      ],
+      "settings": [
+        {
+          "key": "footMin",
+          "label": "Foot angle, at least (180 is toes straight back)",
+          "min": 90,
+          "max": 175
+        }
+      ],
+      "why": "The foot against the shin at the heel: toes pointed straight back reads 150 or more, toes pulled up toward the shin 90 or so. Judged through the rep."
+    },
+    {
+      "key": "footlen",
+      "label": "foot length, % of the most seen",
+      "hud": "LINE",
+      "note": "leg in line",
+      "kind": "distance",
+      "a": "heel",
+      "b": "toe",
+      "fromStart": "peak",
+      "band": {
+        "min": "footlenMin"
+      },
+      "scale": [
+        40,
+        110
+      ],
+      "settings": [
+        {
+          "key": "footlenMin",
+          "label": "Foot length, % of the most seen, at least",
+          "min": 50,
+          "max": 98
+        }
+      ],
+      "why": "The heel-to-toe length as the camera sees it, against the longest it has been in the set: a leg lifted in line with the body keeps the foot side on, the same length; a leg swinging toward or away from the camera foreshortens it. Under 85% it has gone diagonal. Judged through the rep."
     }
   ],
   "progress": {
@@ -276,6 +355,16 @@
       "tone": "down"
     },
     {
+      "id": "hipLift",
+      "measure": "hip",
+      "side": "above",
+      "label": "Hip lifting",
+      "text": "Hips down on the floor — lift the leg, not the hip",
+      "deep": "Keep both hips flat on the floor — the hip is coming up",
+      "tone": "down",
+      "when": "rep"
+    },
+    {
       "id": "liftHigh",
       "measure": "lift",
       "side": "below",
@@ -292,6 +381,26 @@
       "text": "Lift a little higher",
       "deep": "Higher — a hand's width off the floor",
       "tone": "up"
+    },
+    {
+      "id": "toesBent",
+      "measure": "foot",
+      "side": "below",
+      "label": "Toes not straight",
+      "text": "Point the toes straight back, in line with the leg",
+      "deep": "Toes pointed — the foot is pulled up",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "legDiagonal",
+      "measure": "footlen",
+      "side": "below",
+      "label": "Leg going diagonal",
+      "text": "Lift the leg straight up, in line with your body — not out to the side",
+      "deep": "The leg is swinging across — straight up, in line with the body",
+      "tone": "plain",
+      "when": "rep"
     }
   ],
   "draw": [
@@ -330,7 +439,10 @@
     "setCount": 3,
     "lowerSec": 1,
     "restSec": 2,
-    "deepAt": 8
+    "deepAt": 8,
+    "hipLift": 6,
+    "footMin": 140,
+    "footlenMin": 85
   },
   "settings": [
     {
@@ -363,5 +475,10 @@
       "min": 1,
       "max": 10
     }
+  ],
+  "inPosition": [
+    "lift",
+    "knee",
+    "back"
   ]
 }

@@ -443,7 +443,7 @@
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
       if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
       if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
-      if (m.fromStart != null && !['change', 'ratio'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position) or "ratio" (percent of its value at the start)');
+      if (m.fromStart != null && !['change', 'ratio', 'peak'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position), "ratio" (percent of its value at the start) or "peak" (percent of the most it has been in the set)');
       if (m.gate != null) {
         const before = (f.measurements || []).slice(0, (f.measurements || []).indexOf(m)).map((q) => q.key);
         if (typeof m.gate !== 'object' || !before.includes(m.gate.measure)) err(at + '.gate', 'names a measurement listed before this one: ' + (before.join(', ') || 'none'));

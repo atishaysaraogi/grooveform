@@ -55,7 +55,7 @@ const SUPINE = { torso: 90, thigh: -90, shin: -90, foot: 90, thighF: -90, shinF:
 /* the foot turns with a lifted leg: toes toward the shin is 90 less the lift */
 const lifted = (deg, over) => Object.assign({}, SUPINE, { thigh: -90 - deg, shin: -90 - deg, foot: 90 - deg }, over);
 
-test('straight leg raise: both legs straight, the lift measured against the resting leg, hips and below enough', () => {
+test('straight leg raise: both legs straight, the lift measured against the resting leg, feet to shoulders in the picture', () => {
   const M = Moves.slr;
   let { r, v } = run(M, SUPINE);
   assert.ok(r.ok, 'read');
@@ -85,9 +85,9 @@ test('straight leg raise: both legs straight, the lift measured against the rest
   ({ r, v } = run(M, lifted(40, { thighF: -120, shinF: -60 })));
   assert.ok(r.rest < 160, 'the other knee bent: ' + r.rest);
   assert.equal(firstFault(M, v), 'restBend');
-  /* the top half of the body out of the picture: hips and legs are enough */
+  /* the shoulders out of the picture: feet to shoulders have to be in, so the frame is refused rather than judged */
   ({ r, v } = run(M, lifted(40, { hide: ['shoulder', 'ear', 'elbow', 'wrist'] })));
-  assert.ok(r.ok && v.inPosition && Math.abs(r.lift - 40) < 1, 'read and judged without the shoulders: ' + JSON.stringify({ ok: r.ok, lift: r.lift }));
+  assert.ok(!r.ok && !v.ok, 'not judged without the shoulders: ' + JSON.stringify({ ok: r.ok, why: r.why }));
   /* and the phone not level: the whole body turned ten degrees reads the same lift */
   ({ r, v } = run(M, lifted(40, { tilt: 10 })));
   assert.ok(Math.abs(r.lift - 40) < 1, 'the lift against the other leg does not move with the phone: ' + r.lift);
@@ -171,18 +171,42 @@ test('side-lying leg raise: forty five is the top, past it is too high, the knee
 
 test('prone leg raise: a hand\'s width is the top, higher is too high, the chest coming up is the back arching', () => {
   const M = Moves.proneraise;
-  const PRONE = { torso: 90, thigh: -90, shin: -90, foot: -90, thighF: -90, shinF: -90, footF: -90, uarm: 140, farm: 60, hipAt: [1.0, 0.7] };
+  /* one frame at a time: the foot's length against its peak needs a run, so its fault is left to the run below */
+  const single = (v) => M.faults.find((id) => v.faults[id] != null && id !== 'legDiagonal') || null;
+  /* face down, head to the right; the toes pointed straight back along the floor (the foot's angle is absolute, so a lifted leg's toes stay pointed) */
+  const PRONE = { torso: 90, thigh: -90, shin: -90, foot: -180, thighF: -90, shinF: -90, footF: -180, uarm: 140, farm: 60, hipAt: [1.0, 0.7] };
   let { r, v } = run(M, PRONE);
   assert.ok(r.ok && v.atStart && !v.raised && M.ready(r, v), 'flat is the start');
   ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105 })));
   assert.ok(Math.abs(r.lift - 165) < 1, 'fifteen degrees reads 165: ' + r.lift);
-  assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(firstFault(M, v), null);
+  assert.equal(v.raised, true); assert.equal(v.inPosition, true); assert.equal(single(v), null);
   ({ v } = run(M, Object.assign({}, PRONE, { thigh: -130, shin: -130 })));
-  assert.equal(firstFault(M, v), 'liftHigh', 'forty is far too high');
+  assert.equal(single(v), 'liftHigh', 'forty is far too high');
   /* the shoulders lifted 20 degrees above the hips with a good lift: arching */
   ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 70, thigh: -105, shin: -105 })));
   assert.ok(r.back > 12, 'the shoulders up: ' + r.back);
-  assert.equal(firstFault(M, v), 'archBack');
+  assert.equal(single(v), 'archBack');
+  /* through the rep: the hip coming off the floor, the toes pulled up, the leg swinging out of the camera's plane */
+  const topOnly = (v) => M.faults.find((id) => v.faults[id] != null && M.when[id] !== 'between' && id !== 'legDiagonal') || null;
+  ({ r, v } = run(M, Object.assign({}, PRONE, { torso: 100, thigh: -115, shin: -115 })));
+  assert.ok(r.hip > 6, 'the hip above the shoulder: ' + r.hip);
+  assert.ok(v.faults.hipLift != null, 'hip lifting'); assert.equal(M.when.hipLift, 'rep');
+  ({ r, v } = run(M, Object.assign({}, PRONE, { thigh: -105, shin: -105, foot: -90 })));
+  assert.ok(r.foot < 140, 'toes pulled up toward the shin: ' + r.foot);
+  assert.equal(topOnly(v), 'toesBent');
+  assert.deepEqual(M.needed, ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe'], 'feet to shoulders in the picture');
+  for (const id of ['slr', 'quadset']) assert.ok(Moves[id].needed.includes('shoulder') && Moves[id].needed.includes('toe'), id + ' needs feet to shoulders');
+  /* the foot's length against the most it has been: the same leg lifted with the toe pulled in toward the heel by a fifth reads 80% — the leg has gone diagonal */
+  const Trace = require('../public/js/trace.js');
+  const frames = []; let t = 0;
+  const push = (o, ms, shrink) => { for (const end = t + ms; t < end; t += 33) { const lm = body(o); if (shrink) { const he = lm[Core.SIDE.R.heel], to = lm[Core.SIDE.R.toe]; lm[Core.SIDE.R.toe] = Object.assign({}, to, { x: he.x + (to.x - he.x) * shrink, y: he.y + (to.y - he.y) * shrink }); } frames.push({ t, lm }); } };
+  push(PRONE, 3000); push(Object.assign({}, PRONE, { thigh: -105, shin: -105 }), 1500); push(Object.assign({}, PRONE, { thigh: -105, shin: -105 }), 1500, 0.8);
+  const res = Trace.run(M, {}, frames, 16 / 9);
+  const late = res.rows.filter((row) => row.t >= 5000 && row.reading && row.reading.ok);
+  assert.ok(late.length && late.every((row) => row.reading.footlen < 85), 'the foot four fifths of its longest: ' + late.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
+  assert.ok(late.some((row) => row.verdict.faults.legDiagonal != null), 'and the leg is called diagonal');
+  const early = res.rows.filter((row) => row.t > 500 && row.t < 4400 && row.reading && row.reading.ok);
+  assert.ok(early.every((row) => row.reading.footlen > 95), 'in line, the foot keeps its length: ' + early.map((row) => Math.round(row.reading.footlen)).slice(0, 3));
 });
 
 test('inner thigh raise: the straight bottom leg is measured, a small lift is the top', () => {
