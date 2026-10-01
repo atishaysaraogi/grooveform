@@ -254,6 +254,27 @@ try {
     await careShown(patient, /Notes for you.*Lovely progress/s);
   });
 
+  await step('the physio modifies the plan: a copy of their own, a step adjusted on its page, assigned as the next version', async () => {
+    const pid = Object.values(S.store.data.users).find((u) => u.name === 'Sunita').id;
+    await go(physio, '#/care/patient/' + pid);
+    await careShown(physio, /Modify this plan/);
+    await physio.click('#cpp-modify');
+    await physio.waitForFunction(() => /^#\/plan\/my-/.test(location.hash) && document.getElementById('care-assign-go'), null, { timeout: 8000 });
+    assert.match(await physio.textContent('#care-assign-go'), /Assign to Sunita/);
+    /* the second step's hold, through the app's own adjust form */
+    await physio.click('#plan-items .plan-item:nth-child(2) .rowtools button:nth-child(3)');
+    await physio.waitForSelector('#plan-items .plan-item:nth-child(2) .adj');
+    const holdInput = (await physio.$$('#plan-items .plan-item:nth-child(2) .adj .grid label input'))[1];
+    await holdInput.fill('8'); await holdInput.dispatchEvent('change');
+    await physio.waitForFunction(() => /1 × 8 s/.test(document.querySelector('#plan-items .plan-item:nth-child(2) .what').textContent), null, { timeout: 5000 });
+    await physio.click('#care-assign-go');
+    await physio.waitForFunction(() => /^#\/care\/patient\//.test(location.hash) && /version 3/.test(document.getElementById('screen-care').textContent), null, { timeout: 8000 });
+    const plan = Object.values(S.store.data.plans).sort((a, b) => b.v - a.v)[0];
+    assert.equal(plan.v, 3); assert.equal(plan.plan.items[1].hold, 8); assert.equal(plan.plan.items[0].reps, 3, 'the review\'s change is kept in the copy');
+    await go(patient, '#/care');
+    await careShown(patient, /1 × 8 s/);
+  });
+
   await step('reminders, a report from any screen, and the admin\'s view of it', async () => {
     await go(patient, '#/care/reminders');
     await careShown(patient, /Remind me/);

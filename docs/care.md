@@ -29,7 +29,11 @@ node scripts/care-server.js
 `CARE_DEMO_CODE=123456` makes every sign-in code that number (a demo, a
 test; never in production). `CARE_LOCAL=1` lets a person set their own role.
 `/health` answers with the version. Put it behind Caddy or nginx for HTTPS;
-the camera needs a secure origin.
+the camera needs a secure origin. The server sends a content security policy
+(its own files, the pose model and its runtime, the fonts, nothing else) in
+report-only mode; after a session on a real phone shows no violations in
+the browser's console, `CARE_CSP=enforce` turns it on. Codes are limited to
+five an hour per number and thirty an hour per address.
 
 **The sandbox.** On a static host (GitHub Pages) `care-config.js` says
 `api: 'local'` and the same logic runs inside the browser, its store in

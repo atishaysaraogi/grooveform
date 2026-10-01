@@ -539,7 +539,7 @@ Moves.ready.then(() => Plans.ready).then(function () {
       if (out && !out.between) lastReps[setNo] = out.reps;
     } else if (out && !out.between) {
       /* a hold: one item for the set, the faults as they came */
-      S.hold = S.hold || { set: setNo, n: 1, counted: true, t0: 0, t1: 0, faults: new Set(), holdMs: 0 };
+      S.hold = S.hold || { set: setNo, n: 1, counted: true, hold: true, t0: 0, t1: 0, faults: new Set(), holdMs: 0 };
       S.hold.t1 = Math.round(t); for (const x of faults) S.hold.faults.add(x); if (out.holding) S.hold.holdMs += 50;
     }
     if (phase != null) lastPhase[setNo] = phase;
@@ -567,7 +567,7 @@ Moves.ready.then(() => Plans.ready).then(function () {
     const reps = R ? repsOf(R) : [];
     const panel = h(`<section class="panel" id="care-done"><h2>Review with my ${PHYSIO_WORD}</h2>
       ${physios.length ? `<p class="muted">Tick what ${esc(physios[0].physio.name || 'your physio')} should look at. The clip of those reps and the skeleton go with it; nothing else does.</p>
-      <ul class="care-reps">${reps.map((r, i) => `<li><input type="checkbox" id="cd-rep-${i}" data-i="${i}"><label class="what" for="cd-rep-${i}"><b>${r.n != null ? `Rep ${r.n}` : 'An attempt'}${reps.length > 1 && Object.keys(R.sets).length > 1 ? ` (set ${r.set})` : ''}${r.holdSec != null ? ` · held ${r.holdSec} s` : ''}${!r.counted ? ' · not counted' : ''}</b>${r.faults.length ? `<span class="faults">${esc(r.faults.map((f) => faultLabel(m.id, f)).join(', '))}</span>` : '<span class="ok">nothing called</span>'}</label></li>`).join('') || '<li><span class="what">No reps were recorded in this session.</span></li>'}</ul>
+      <ul class="care-reps">${reps.map((r, i) => `<li><input type="checkbox" id="cd-rep-${i}" data-i="${i}"><label class="what" for="cd-rep-${i}"><b>${r.hold ? 'The hold' : r.n != null ? `Rep ${r.n}` : 'An attempt'}${reps.length > 1 && Object.keys(R.sets).length > 1 ? ` (set ${r.set})` : ''}${r.holdSec != null ? ` · held ${r.holdSec} s` : ''}${!r.counted ? ' · not counted' : ''}</b>${r.faults.length ? `<span class="faults">${esc(r.faults.map((f) => faultLabel(m.id, f)).join(', '))}</span>` : '<span class="ok">nothing called</span>'}</label></li>`).join('') || '<li><span class="what">No reps were recorded in this session.</span></li>'}</ul>
       <div class="row"><button class="btn small" id="cd-all" type="button">All</button><button class="btn small" id="cd-flagged" type="button">Only the ones with a fault</button></div>
       <textarea id="cd-line" rows="2" maxlength="500" placeholder="Anything to say — where it hurt, what felt odd"></textarea>
       <div class="row"><button class="btn primary" id="cd-send" type="button">Review with my ${PHYSIO_WORD}</button><span id="cd-note" class="care-note"></span></div>`
@@ -585,9 +585,11 @@ Moves.ready.then(() => Plans.ready).then(function () {
       send.disabled = true; note('cd-note', 'Making the clip…');
       try {
         const { clip, record, clipFrom, whole } = await clipFor(picked);
+        /* a browser without its own encoder can only offer the whole film; past a size it is not sent */
+        if (clip && clip.size > 25e6) { note('cd-note', `The film is ${(clip.size / 1e6).toFixed(0)} MB, too big to send from this browser; the skeleton goes without it.`); }
         note('cd-note', 'Sending…');
         const r = await api.call('sendReview', { sessionId: current.sessionId, setNo: picked[0].set, reps: picked.map((x) => x.n == null ? 0 : x.n), line: $('cd-line').value, verdicts: picked.map((x) => ({ rep: x.n == null ? 0 : x.n, counted: x.counted, faults: x.faults, peak: x.peak, holdSec: x.holdSec })),
-          clip: clip ? { b64: await b64(clip), type: clip.type } : null, record: record ? { b64: await b64(record), type: record.type } : null, specHash: Core.stampOf(m), appV: Core.VER, device: device(), clipFrom, whole });
+          clip: clip && clip.size <= 25e6 ? { b64: await b64(clip), type: clip.type } : null, record: record ? { b64: await b64(record), type: record.type } : null, specHash: Core.stampOf(m), appV: Core.VER, device: device(), clipFrom, whole });
         note('cd-note', `Sent to ${r.reviews.map((x) => x.physio.name || 'your physio').join(', ')}. The reply shows under Reviews.`);
         boxes().forEach((b) => { b.disabled = true; });
       } catch (e) { note('cd-note', fail(e), true); send.disabled = false; }

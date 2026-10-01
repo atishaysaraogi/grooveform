@@ -99,7 +99,13 @@ function make(env, log) {
   }
   const readBody = (req) => new Promise((res, rej) => { const chunks = []; let n = 0; req.on('data', (c) => { n += c.length; if (n > MAX_BODY) { rej(new CareError(413, 'too big')); req.destroy(); } else chunks.push(c); }); req.on('end', () => res(Buffer.concat(chunks))); req.on('error', rej); });
   const json = (res, status, body) => { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
-  const headers = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY' };
+  /* the page may load only its own files, the pose model and its runtime, and the fonts; no other script anywhere */
+  const CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob:; connect-src 'self' https://storage.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+  /* reported until a real session on a phone has shown the model loads under it (CARE_CSP=enforce then) */
+  const headers = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY', [env.CARE_CSP === 'enforce' ? 'content-security-policy' : 'content-security-policy-report-only']: CSP, 'permissions-policy': 'camera=(self), microphone=(self), geolocation=()' };
+  /* codes asked for from one address: thirty an hour, whatever the numbers */
+  const perIp = new Map();
+  const ipOk = (ip) => { const t = Date.now(); const l = (perIp.get(ip) || []).filter((x) => t - x < 3600 * 1000); l.push(t); perIp.set(ip, l); if (perIp.size > 10000) perIp.clear(); return l.length <= 30; };
   const tokenOf = (req, url) => { const h = req.headers.authorization || ''; const m = h.match(/^Bearer (\S+)$/); return m ? m[1] : url.searchParams.get('token') || null; };
 
   const server = http.createServer(async (req, res) => {
@@ -120,7 +126,9 @@ function make(env, log) {
         if (req.method !== 'POST') return json(res, 405, { error: 'POST' });
         const raw = await readBody(req);
         let args = {}; try { args = raw.length ? JSON.parse(raw.toString('utf8')) : {}; } catch { return json(res, 400, { error: 'not JSON' }); }
-        const out = await care.call(m[1], tokenOf(req, url), args, { ip: req.socket.remoteAddress });
+        const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+        if (m[1] === 'requestCode' && !ipOk(ip)) return json(res, 429, { error: 'too many codes asked for from here; try again in an hour' });
+        const out = await care.call(m[1], tokenOf(req, url), args, { ip });
         return json(res, 200, out);
       }
       /* the page's configuration: this server is the api, with a demo code if one is set */
