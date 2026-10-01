@@ -1,0 +1,56 @@
+{
+  "v": 1,
+  "id": "back-care",
+  "name": "Low back — gentle daily routine",
+  "for": "A sore or stiff lower back, after the first days have passed",
+  "order": 5,
+  "blurb": "Movement the back can tolerate, then a little stability. Daily, and gently: nothing here should be pushed into pain.",
+  "notes": [
+    "The cat–camel is motion, not stretch: five to eight easy cycles.",
+    "The press-up is for backs that ease with extension — pain moving toward the spine is good, pain moving down the leg is the sign to stop.",
+    "The bird dog and the bridge build the stability that keeps it away."
+  ],
+  "sources": [
+    {
+      "title": "McKenzie Method — Physiopedia",
+      "url": "https://www.physio-pedia.com/McKenzie_Method"
+    },
+    {
+      "title": "The McGill big three",
+      "url": "https://squatuniversity.com/2018/06/21/the-mcgill-big-3-for-core-stability/"
+    }
+  ],
+  "items": [
+    {
+      "move": "catcamel",
+      "sets": 2,
+      "reps": 8
+    },
+    {
+      "move": "pressup",
+      "sets": 3,
+      "reps": 10,
+      "rom": 70,
+      "note": "A smaller press at first."
+    },
+    {
+      "move": "kneechest",
+      "sets": 3,
+      "hold": 30
+    },
+    {
+      "move": "bridge",
+      "sets": 2,
+      "reps": 10,
+      "hold": 2
+    },
+    {
+      "move": "birddog",
+      "sets": 2,
+      "reps": 6,
+      "hold": 5,
+      "rom": 80,
+      "note": "The leg a little under level; the arm alone is fine on a bad day."
+    }
+  ]
+}

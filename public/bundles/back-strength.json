@@ -1,0 +1,48 @@
+{
+  "v": 1,
+  "id": "back-strength",
+  "name": "Low back — stability",
+  "for": "A back that is past the sore stage and needs to stay that way",
+  "order": 6,
+  "blurb": "The stability work behind most back programmes, plus the hinge that teaches bending without the back doing it. Three times a week.",
+  "notes": [
+    "Brace gently — a stiff waist, not a held breath.",
+    "Quality over count: stop a set when the form goes.",
+    "The hinge pattern is the one to carry into lifting, gardening and getting out of a car."
+  ],
+  "sources": [
+    {
+      "title": "The McGill big three",
+      "url": "https://squatuniversity.com/2018/06/21/the-mcgill-big-3-for-core-stability/"
+    }
+  ],
+  "items": [
+    {
+      "move": "birddog",
+      "sets": 3,
+      "reps": 8,
+      "hold": 8
+    },
+    {
+      "move": "bridge",
+      "sets": 3,
+      "reps": 12,
+      "hold": 2
+    },
+    {
+      "move": "plank",
+      "sets": 3,
+      "hold": 30
+    },
+    {
+      "move": "hinge",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "sitstand",
+      "sets": 2,
+      "reps": 10
+    }
+  ]
+}

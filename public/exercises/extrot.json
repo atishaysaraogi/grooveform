@@ -1,0 +1,531 @@
+{
+  "v": 1,
+  "id": "extrot",
+  "name": "Shoulder turn-out",
+  "order": 17,
+  "status": "ready",
+  "category": "Shoulder",
+  "tags": [
+    "standing",
+    "shoulder",
+    "frozen shoulder",
+    "rotator cuff",
+    "external rotation",
+    "band",
+    "reps",
+    "front"
+  ],
+  "equipment": [
+    "a resistance band, optional"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "elbow bent at the side, the forearm turned outward away from the body and back",
+  "sides": "alternate",
+  "load": "band",
+  "phone": {
+    "orientation": "tall",
+    "view": "front",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, facing you. Stand square to it."
+  },
+  "words": {
+    "hint": "Facing the phone, elbow tucked at the side and bent to a right angle, the forearm swung outward.",
+    "start": "Stand the phone up on the floor. Stand facing it, the working elbow tucked at your side, bent square, hand forward.",
+    "position": "Stand facing the phone. Tuck the working elbow in against your side and bend it to a right angle, the forearm pointing straight at the phone. A rolled towel between elbow and ribs helps keep it there.",
+    "top": "The forearm turned outward, away from the body, as far as is comfortable — the elbow still against the side, the chest still facing the phone.",
+    "howto": [
+      "Elbow against your side, bent to a right angle, hand pointing at the phone. Hold a band in both hands if you have one.",
+      "Keeping the elbow pinned, turn the forearm outward, away from your body, as far as is comfortable — a few inches at first.",
+      "Hold for the count with the chest still facing the phone.",
+      "Turn back slowly. The rep counts when the hand is pointing forward again."
+    ],
+    "cannot": "The shoulder joint itself: it reads the turn from how much of the forearm the camera sees, the elbow leaving the side and the chest turning. Keep the elbow pinned yourself.",
+    "about": "Shoulder turn-out — facing the phone: the turn, as the elbow-to-wrist length the camera sees against the upper arm, as a percent — a forearm pointing at the phone is foreshortened to almost nothing, one turned fully out to the side shows its whole length (about 100); the top is at least 50 (a quarter turn); a rep is under way past 30 and counts when back under 20. The elbow kept in, as the elbow-to-hip distance against the trunk at most 45%; the elbow bent to 70–110°; and the chest facing the phone, as the shoulder width at least 85% of what it was at the start — turning the body narrows it. Hold two seconds. A frozen shoulder manages a few inches: set the top low and raise it.",
+    "lost": "Stand facing the camera, both arms in the picture",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Gentle: this is the direction a frozen shoulder loses first. A band should be light.",
+    "easier": "A smaller turn; no band; a shorter hold.",
+    "harder": "A heavier band; a longer hold; a further turn.",
+    "mistakes": "The elbow drifting away from the side; turning the whole body instead of the arm; the elbow straightening; the shoulder hiking."
+  },
+  "muscles": {
+    "shoulder": 1,
+    "back": 0.4,
+    "forearm": 0.3
+  },
+  "figure": {
+    "points": {
+      "view": "front",
+      "A": {
+        "h": [
+          300,
+          38
+        ],
+        "shL": [
+          282,
+          60
+        ],
+        "shR": [
+          318,
+          60
+        ],
+        "hipL": [
+          289,
+          102
+        ],
+        "hipR": [
+          311,
+          102
+        ],
+        "knL": [
+          287,
+          132
+        ],
+        "knR": [
+          313,
+          132
+        ],
+        "anL": [
+          286,
+          160
+        ],
+        "anR": [
+          314,
+          160
+        ],
+        "heL": [
+          286,
+          163
+        ],
+        "heR": [
+          314,
+          163
+        ],
+        "toL": [
+          282,
+          164
+        ],
+        "toR": [
+          318,
+          164
+        ],
+        "elL": [
+          274,
+          86
+        ],
+        "elR": [
+          324,
+          88
+        ],
+        "wrL": [
+          268,
+          110
+        ],
+        "wrR": [
+          321,
+          84,
+          -22
+        ]
+      },
+      "B": {
+        "h": [
+          300,
+          38
+        ],
+        "shL": [
+          282,
+          60
+        ],
+        "shR": [
+          318,
+          60
+        ],
+        "hipL": [
+          289,
+          102
+        ],
+        "hipR": [
+          311,
+          102
+        ],
+        "knL": [
+          287,
+          132
+        ],
+        "knR": [
+          313,
+          132
+        ],
+        "anL": [
+          286,
+          160
+        ],
+        "anR": [
+          314,
+          160
+        ],
+        "heL": [
+          286,
+          163
+        ],
+        "heR": [
+          314,
+          163
+        ],
+        "toL": [
+          282,
+          164
+        ],
+        "toR": [
+          318,
+          164
+        ],
+        "elL": [
+          274,
+          86
+        ],
+        "elR": [
+          324,
+          88
+        ],
+        "wrL": [
+          268,
+          110
+        ],
+        "wrR": [
+          348,
+          86
+        ]
+      },
+      "hold": false,
+      "side": "R",
+      "flip": false,
+      "second": "top"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "measure",
+    "measure": "turn",
+    "hold": {
+      "margin": 15,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "other.shoulder",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip",
+      "other.hip"
+    ],
+    "needed": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "other.shoulder",
+        "other.hip"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "limb": {
+      "shoulder|elbow": "turn",
+      "elbow|wrist": "turn",
+      "shoulder|hip": "tuck",
+      "other.shoulder|other.hip": "chest"
+    }
+  },
+  "measurements": [
+    {
+      "key": "turn",
+      "label": "forearm seen, % of upper arm",
+      "hud": "TURN",
+      "note": "turned out",
+      "kind": "distance",
+      "a": "elbow",
+      "b": "wrist",
+      "per": [
+        "shoulder",
+        "elbow"
+      ],
+      "times": 100,
+      "band": {
+        "min": "turnMin"
+      },
+      "scale": [
+        0,
+        120
+      ],
+      "why": "The elbow-to-wrist length as the camera sees it, against the upper arm: pointing at the phone it is foreshortened to 10–30; turned fully out to the side it shows its whole length, about 100. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "turnMin",
+          "label": "Forearm seen at the top, % of the upper arm, at least",
+          "min": 20,
+          "max": 110
+        }
+      ]
+    },
+    {
+      "key": "tuck",
+      "label": "elbow from the hip, % of trunk",
+      "hud": "ELBOW",
+      "note": "tucked in",
+      "kind": "distance",
+      "a": "elbow",
+      "b": "hip",
+      "per": [
+        "shoulder",
+        "hip"
+      ],
+      "times": 100,
+      "band": {
+        "max": "elbowOut"
+      },
+      "scale": [
+        0,
+        100
+      ],
+      "why": "The elbow-to-hip distance against the trunk: an elbow against the ribs sits around 30; drifting out to the side it grows. Past 45 it has left the side.",
+      "settings": [
+        {
+          "key": "elbowOut",
+          "label": "Elbow from the hip, % of the trunk, at most",
+          "min": 20,
+          "max": 80
+        }
+      ]
+    },
+    {
+      "key": "bend",
+      "label": "elbow bent",
+      "hud": "BEND",
+      "note": "right angle",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "elbow",
+      "c": "wrist",
+      "band": {
+        "lo": "bendMin",
+        "hi": "bendMax"
+      },
+      "scale": [
+        30,
+        180
+      ],
+      "why": "The elbow at a right angle, 70–110: straighter and the band is being pushed rather than the shoulder turned.",
+      "settings": [
+        {
+          "key": "bendMin",
+          "label": "Elbow angle, at least",
+          "min": 40,
+          "max": 100
+        },
+        {
+          "key": "bendMax",
+          "label": "Elbow angle, at most",
+          "min": 90,
+          "max": 160
+        }
+      ]
+    },
+    {
+      "key": "chest",
+      "label": "shoulder width, % of start",
+      "hud": "CHEST",
+      "note": "facing the phone",
+      "kind": "distance",
+      "a": "shoulder",
+      "b": "other.shoulder",
+      "per": [
+        "hip",
+        "other.hip"
+      ],
+      "times": 100,
+      "fromStart": "ratio",
+      "band": {
+        "min": "chestMin"
+      },
+      "scale": [
+        50,
+        120
+      ],
+      "why": "The shoulder width against the hip width, as a percent of what it was at the start: turning the chest away from the phone narrows it. Under 85 the body is turning instead of the arm.",
+      "settings": [
+        {
+          "key": "chestMin",
+          "label": "Shoulder width, % of the start, at least",
+          "min": 60,
+          "max": 100
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "turn",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "bend": [
+        60,
+        120
+      ]
+    }
+  },
+  "inPosition": [
+    "turn",
+    "bend",
+    "tuck"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Turn the forearm out",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "bendOff",
+      "measure": "bend",
+      "side": "below",
+      "label": "Elbow too bent",
+      "text": "Elbow to a right angle",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    },
+    {
+      "id": "bendOpen",
+      "measure": "bend",
+      "side": "above",
+      "label": "Elbow opening",
+      "text": "Keep the elbow bent to a right angle",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    },
+    {
+      "id": "turnLow",
+      "measure": "turn",
+      "side": "below",
+      "label": "Turn short",
+      "text": "Turn the forearm out a little further",
+      "deep": "Further out if you can, to the point of stretch",
+      "tone": "up"
+    },
+    {
+      "id": "elbowOut",
+      "measure": "tuck",
+      "side": "above",
+      "label": "Elbow leaving the side",
+      "text": "Keep the elbow tucked in at your side",
+      "deep": "The elbow has come away from your side — pin it to your ribs",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "chestTurn",
+      "measure": "chest",
+      "side": "below",
+      "label": "Body turning",
+      "text": "Keep the chest facing the phone — turn the arm, not your body",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "readout",
+      "measure": "turn",
+      "at": "wrist",
+      "side": 1
+    },
+    {
+      "kind": "arc",
+      "measure": "bend",
+      "size": 0.7
+    }
+  ],
+  "defaults": {
+    "turnMin": 50,
+    "elbowOut": 45,
+    "bendMin": 70,
+    "bendMax": 110,
+    "chestMin": 85,
+    "raiseAt": 30,
+    "downAt": 20,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Forearm seen that counts as under way (%)",
+      "min": -10,
+      "max": 70
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

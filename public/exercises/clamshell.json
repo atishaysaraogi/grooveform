@@ -1,0 +1,453 @@
+{
+  "v": 1,
+  "id": "clamshell",
+  "name": "Clamshell",
+  "order": 20,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "side",
+    "glutes",
+    "hip",
+    "knee",
+    "patellofemoral",
+    "reps",
+    "band"
+  ],
+  "equipment": [
+    "a mat",
+    "a band round the knees, optional"
+  ],
+  "type": "reps",
+  "position": "sidelying",
+  "movement": "lying on the side facing the phone, knees bent, the top knee opened and closed with the feet together",
+  "sides": "alternate",
+  "load": "band",
+  "phone": {
+    "orientation": "wide",
+    "view": "front",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, facing where your front will be."
+  },
+  "words": {
+    "hint": "Lying on your side facing the phone, knees bent, the top knee lifted open like a clam and lowered.",
+    "start": "Lay the phone on its side on the floor. Lie on your side facing it, hips stacked, knees bent, feet together.",
+    "position": "Lie on your side facing the phone, head on your arm, hips stacked one above the other, both knees bent to about forty five degrees, heels together and in line with your bottom.",
+    "top": "The top knee lifted open — thirty to forty five degrees — with the heels still together and the hips still stacked, not rolled back.",
+    "howto": [
+      "Lie on your side facing the phone, knees bent, heels together in line with your bottom, hips stacked.",
+      "Keeping the heels together, lift the top knee open like a clam — only as far as the hips stay still. Thirty to forty five degrees is plenty.",
+      "Hold for the count. The top hip stays stacked over the bottom one; nothing rolls back.",
+      "Lower the knee slowly. The rep counts when the knees are together."
+    ],
+    "cannot": "Whether the outer hip is working or the hip flexors have taken over: it sees the knee opening, the hips rolling back and the feet parting. Feel for the outer hip.",
+    "about": "Clamshell — lying on the side facing the phone: the opening, as how far the top knee has risen from where it started (the hip-to-knee line off level, read as the change from the start), 25–60° at the top; a rep is under way past 12 and counts when the knee is back under 5; the hips rolling back, as the top hip rising above the bottom one from where it started, at most 10°; and the feet together, the heel-to-heel distance at most 35% of the thigh. Hold two seconds at the top. A smaller honest range beats a big cheated one: if the hips roll, lift less.",
+    "lost": "Lie on your side facing the camera, whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the front of the hip pinches — roll a little forward and lift less.",
+    "easier": "A smaller opening; a shorter hold; no band.",
+    "harder": "A band above the knees; a longer hold; the feet lifted off the floor together.",
+    "mistakes": "Rolling the hips back to open the knee higher; the feet parting; lifting too high; rushing; a band that is too heavy."
+  },
+  "muscles": {
+    "glute": 1,
+    "thigh": 0.3,
+    "oblique": 0.3
+  },
+  "figure": {
+    "points": {
+      "view": "front",
+      "A": {
+        "h": [
+          200,
+          148
+        ],
+        "shL": [
+          220,
+          166
+        ],
+        "shR": [
+          220,
+          130
+        ],
+        "hipL": [
+          262,
+          159
+        ],
+        "hipR": [
+          262,
+          137
+        ],
+        "knL": [
+          284,
+          167
+        ],
+        "knR": [
+          284,
+          151
+        ],
+        "anL": [
+          304,
+          170
+        ],
+        "anR": [
+          304,
+          156
+        ],
+        "heL": [
+          304,
+          173
+        ],
+        "heR": [
+          304,
+          159
+        ],
+        "toL": [
+          309,
+          173
+        ],
+        "toR": [
+          309,
+          159
+        ],
+        "elL": [
+          180,
+          160
+        ],
+        "wrL": [
+          166,
+          158
+        ],
+        "elR": [
+          232,
+          128
+        ],
+        "wrR": [
+          246,
+          150
+        ]
+      },
+      "B": {
+        "h": [
+          200,
+          148
+        ],
+        "shL": [
+          220,
+          166
+        ],
+        "shR": [
+          220,
+          130
+        ],
+        "hipL": [
+          262,
+          159
+        ],
+        "hipR": [
+          262,
+          137
+        ],
+        "knL": [
+          284,
+          167
+        ],
+        "knR": [
+          281,
+          121
+        ],
+        "anL": [
+          304,
+          170
+        ],
+        "anR": [
+          304,
+          156
+        ],
+        "heL": [
+          304,
+          173
+        ],
+        "heR": [
+          304,
+          159
+        ],
+        "toL": [
+          309,
+          173
+        ],
+        "toR": [
+          309,
+          159
+        ],
+        "elL": [
+          180,
+          160
+        ],
+        "wrL": [
+          166,
+          158
+        ],
+        "elR": [
+          232,
+          128
+        ],
+        "wrR": [
+          246,
+          150
+        ]
+      },
+      "hold": false,
+      "side": "R",
+      "flip": false
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "knee",
+    "hold": {
+      "margin": 0.3,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "hip",
+      "other.hip",
+      "knee",
+      "heel",
+      "other.heel"
+    ],
+    "needed": [
+      "hip",
+      "knee"
+    ],
+    "bones": [
+      [
+        "hip",
+        "knee"
+      ]
+    ],
+    "dots": [
+      "hip",
+      "knee",
+      "heel"
+    ],
+    "limb": {
+      "hip|knee": "open"
+    }
+  },
+  "measurements": [
+    {
+      "key": "open",
+      "label": "knee opened from the start",
+      "hud": "OPEN",
+      "note": "at the top",
+      "kind": "rise",
+      "a": "hip",
+      "b": "knee",
+      "fromStart": "change",
+      "band": {
+        "lo": "openMin",
+        "hi": "openMax"
+      },
+      "scale": [
+        -10,
+        80
+      ],
+      "why": "How far the top knee has risen: the hip-to-knee line off level, as the change from where it stood at the start. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "openMin",
+          "label": "Knee opened at the top, at least (degrees from the start)",
+          "min": 10,
+          "max": 60
+        },
+        {
+          "key": "openMax",
+          "label": "Knee opened at the top, at most",
+          "min": 30,
+          "max": 90
+        }
+      ]
+    },
+    {
+      "key": "roll",
+      "label": "top hip rising from the start",
+      "hud": "HIPS",
+      "note": "stacked",
+      "kind": "rise",
+      "a": "other.hip",
+      "b": "hip",
+      "fromStart": "change",
+      "band": {
+        "max": "rollMax"
+      },
+      "scale": [
+        -20,
+        40
+      ],
+      "why": "The hips rolling back: the top hip comes up and back relative to the bottom one, read as the change from the start. Past 10 the pelvis is doing the opening.",
+      "settings": [
+        {
+          "key": "rollMax",
+          "label": "Top hip risen from the start, at most (degrees)",
+          "min": 3,
+          "max": 30
+        }
+      ]
+    },
+    {
+      "key": "feet",
+      "label": "heels apart, % of thigh",
+      "hud": "FEET",
+      "note": "together",
+      "kind": "distance",
+      "a": "heel",
+      "b": "other.heel",
+      "per": [
+        "hip",
+        "knee"
+      ],
+      "times": 100,
+      "optional": true,
+      "band": {
+        "max": "feetMax"
+      },
+      "scale": [
+        0,
+        100
+      ],
+      "why": "The heel-to-heel distance against the thigh: together they read near 0; a top foot lifting away grows it.",
+      "settings": [
+        {
+          "key": "feetMax",
+          "label": "Heels apart, % of the thigh, at most",
+          "min": 10,
+          "max": 80
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "open",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "open",
+    "roll"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Open the top knee",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "openLow",
+      "measure": "open",
+      "side": "below",
+      "label": "Open short",
+      "text": "Lift the knee a little higher",
+      "deep": "Open the knee further — thirty to forty five degrees",
+      "tone": "up"
+    },
+    {
+      "id": "openHigh",
+      "measure": "open",
+      "side": "above",
+      "label": "Too high",
+      "text": "Not so high — only as far as the hips stay still",
+      "deep": "",
+      "tone": "down"
+    },
+    {
+      "id": "rolling",
+      "measure": "roll",
+      "side": "above",
+      "label": "Hips rolling back",
+      "text": "Keep the hips stacked — don’t roll back",
+      "deep": "The hips are rolling back — roll forward a little and lift the knee less",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "feetApart",
+      "measure": "feet",
+      "side": "above",
+      "label": "Feet parting",
+      "text": "Keep the feet together",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "open",
+      "size": 0.8
+    }
+  ],
+  "defaults": {
+    "openMin": 25,
+    "openMax": 60,
+    "rollMax": 10,
+    "feetMax": 35,
+    "raiseAt": 12,
+    "downAt": 5,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Opening that counts as under way",
+      "min": -28,
+      "max": 52
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

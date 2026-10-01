@@ -122,7 +122,7 @@ Degrees: `torso` from vertical (+ leaning the way the body faces); `thigh`,
 "figure": { "points": { "A": { "h": [380, 144], "sh": [362, 150], ... }, "B": { ... }, "flip": true, "side": "both", "belly": 1, "wall": 340, "props": [] } }
 ```
 
-`belly` says which side of the hip→shoulder line the front of the body is
+`belly` (in `points` or in `pose`) says which side of the hip→shoulder line the front of the body is
 on, so the chest and abdominals are drawn there and the back and glutes on
 the other: `1` or `-1` (with the torso pointing right in the picture, `1` is
 down). Left out, the pose says — the knee leads the front, the foot when the

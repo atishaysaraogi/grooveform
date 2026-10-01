@@ -683,6 +683,20 @@ the Recordings tab judges videos with it and hands the tuned numbers back,
 and *Try it live* opens it in the coach, listed with a draft badge. Download
 the file, drop it into the folder, push.
 
+**Programmes and plans.** Exercises bundled for a condition — frozen shoulder
+(freezing and thawing), the knee (early rehab, strength and control), the low
+back (a gentle daily routine, stability) — each a JSON file in `public/bundles`
+with its notes and sources, and each step an exercise with what a physio
+would change for one person: the sets, the reps or the hold, the range of
+motion (a percent of the full movement, scaled from the return line), the
+faults to leave alone, any setting by name, a note. The home page lists them;
+a step opens the exercise with the changes applied and a banner saying so,
+and the session's end offers the next step. A programme copied to *My plans*
+can be changed step by step on its page; any exercise page's *Adjust* panel
+sets the range and the faults for that person and can add the exercise to a
+plan. A plan travels as a link, the plan itself in the address, or as a file
+(`docs/plans.md`).
+
 `docs/exercise-template.xlsx` is the same brief as a spreadsheet, for working
 an exercise out away from the page; `scripts/exercise-template.py` builds it.
 

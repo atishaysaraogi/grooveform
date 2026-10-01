@@ -1,19 +1,34 @@
 {
   "v": 1,
   "files": [
+    "abduction.json",
+    "birddog.json",
     "bridge.json",
+    "calfraise.json",
+    "catcamel.json",
+    "clamshell.json",
+    "crossbody.json",
     "donkeykick.json",
+    "extrot.json",
+    "heelslide.json",
+    "hinge.json",
     "innerraise.json",
+    "kneechest.json",
     "kneeext.json",
     "kneeraise.json",
     "lunge.json",
+    "minisquat.json",
+    "pendulum.json",
     "plank.json",
+    "pressup.json",
     "proneraise.json",
     "quadset.json",
     "sideraise.json",
+    "sitstand.json",
     "slr.json",
     "stepup.json",
-    "wallsit.json"
+    "wallsit.json",
+    "wallwalk.json"
   ],
-  "written": "2026-09-26"
+  "written": "2026-10-01"
 }

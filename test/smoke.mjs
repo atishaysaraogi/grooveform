@@ -208,7 +208,7 @@ try {
     await page.goto(base + '/');
     await page.waitForSelector('#picker .item');
     const rows = await page.$$eval('#picker .item', (l) => l.map((c) => ({ id: c.dataset.move, text: c.textContent.replace(/\s+/g, ' ').trim() })));
-    assert.equal(rows.length, 13, 'one row per exercise: ' + rows.map((c) => c.id).join(','));
+    assert.equal(rows.length, 28, 'one row per exercise: ' + rows.map((c) => c.id).join(','));
     const bridge = rows.find((c) => c.id === 'bridge');
     assert.match(bridge.text, /^Glute bridge/); assert.match(bridge.text, /glutes/i, 'the name and what it works, nothing more: ' + bridge.text);
     assert.doesNotMatch(bridge.text, /phone|reps/i, bridge.text);
@@ -220,7 +220,7 @@ try {
     await page.fill('#nav-q', 'four way');
     await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 4, null, { timeout: 3000 });
     await page.fill('#nav-q', '');
-    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 13, null, { timeout: 3000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('#picker .item')].filter((c) => !c.hidden).length === 28, null, { timeout: 3000 });
     /* how it works: five steps, each with its icon */
     await page.click('#btn-how');
     assert.equal(await page.isVisible('#how'), true);
@@ -268,7 +268,7 @@ try {
     assert.match(await page.textContent('#cannot'), /nothing is uploaded/i);
     assert.match(await page.textContent('#about-text'), /^Glute bridge/, 'the numbers are this exercise\'s, from its file');
     /* the library is the folder of files: thirteen loaded, none failed */
-    assert.deepEqual(await page.evaluate(() => window.__app.library.list.map((m) => m.id)), ['wallsit', 'plank', 'kneeraise', 'bridge', 'donkeykick', 'slr', 'sideraise', 'proneraise', 'innerraise', 'lunge', 'quadset', 'kneeext', 'stepup']);
+    assert.deepEqual(await page.evaluate(() => window.__app.library.list.map((m) => m.id)), ['wallsit', 'plank', 'kneeraise', 'bridge', 'donkeykick', 'slr', 'sideraise', 'proneraise', 'innerraise', 'lunge', 'quadset', 'kneeext', 'stepup', 'pendulum', 'wallwalk', 'abduction', 'extrot', 'crossbody', 'heelslide', 'clamshell', 'calfraise', 'minisquat', 'sitstand', 'birddog', 'pressup', 'kneechest', 'hinge', 'catcamel']);
     assert.deepEqual(await page.evaluate(() => window.__app.library.problems), []);
     /* back to the wall sit, the way the rest of the suite expects to find the page */
     await pick('wallsit');
@@ -1121,6 +1121,49 @@ try {
     assert.match(d.note, /the voice on \d+ of \d+ cues and every tone|silent \u2014 this browser cannot encode sound/, d.note);
     await page.goto(base + '/');
     await page.waitForSelector('#picker .item');
+  });
+
+  await step('programmes: a bundle lists its steps, a step opens with its range and its faults left alone, a copy is adjusted and travels as a link', async () => {
+    await page.goto(base + '/');
+    await page.waitForFunction(() => document.querySelectorAll('#plan-list .plan').length >= 6, null, { timeout: 8000 });
+    assert.equal(await page.$$eval('#my-plans .plan', (l) => l.length), 1, 'nothing of the person\'s own yet: only New plan');
+    await page.evaluate(() => { location.hash = '#/plan/knee-early'; });
+    await page.waitForSelector('#screen-plan:not([hidden])');
+    assert.equal(await page.textContent('#plan-title'), 'Knee — early rehab');
+    const whats = await page.$$eval('#plan-items .plan-item .what', (l) => l.map((x) => x.textContent));
+    assert.equal(whats.length, 5, 'five steps');
+    assert.equal(whats[2], '3 × 10 · range 70% · leaving alone: Toes pointing away', 'what a step asks for, in words');
+    /* the third step: the straight leg raise at seventy percent, the toes left alone */
+    await page.click('#plan-items .plan-item:nth-child(3) a.btn');
+    await page.waitForFunction(() => location.hash === '#/plan/knee-early/3' && document.getElementById('ex-title').textContent === 'Straight leg raise', null, { timeout: 5000 });
+    assert.match(await page.textContent('#plan-banner'), /Step 3 of 5.*range 70%.*Next: Clamshell/s, 'the banner: the step, the changes, the next');
+    assert.equal(await page.textContent('#band-lift'), '25.5–38.1', 'the top band seven tenths of the way out from the return line (15, 30–48)');
+    assert.deepEqual(await page.$$eval('#coaches li.off', (l) => l.map((x) => x.textContent)), ['Toes pointing away — left alone']);
+    assert.equal(await page.$eval('#adj-rom', (i) => i.disabled), true, 'a library programme is not changed in place');
+    /* copied, it is the person's: a step adjusted, and the plan in a link */
+    await page.evaluate(() => { location.hash = '#/plan/knee-early'; }); await page.waitForSelector('#screen-plan:not([hidden])');
+    await page.click('#plan-actions button.primary');
+    await page.waitForFunction(() => /^#\/plan\/my-/.test(location.hash) && /my copy/.test(document.getElementById('plan-title').textContent), null, { timeout: 5000 });
+    await page.click('#plan-items .plan-item:nth-child(1) .rowtools button:nth-child(3)');
+    await page.waitForSelector('#plan-items .plan-item:nth-child(1) .adj');
+    await page.$eval('#plan-items .plan-item:nth-child(1) .adj .adj-faults input', (i) => { i.checked = false; i.dispatchEvent(new Event('change')); });
+    await page.$eval('#plan-items .plan-item:nth-child(1) .adj input[type=range]', (i) => { i.value = 60; i.dispatchEvent(new Event('change')); });
+    assert.equal(await page.$eval('#plan-items .plan-item:nth-child(1) .what', (x) => x.textContent), '3 × 10 · hold 5 s · range 60% · leaving alone: Prop the knee higher');
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ontrack.plans')).plans[0].items[0]);
+    assert.deepEqual(kept, { move: 'quadset', sets: 3, reps: 10, hold: 5, ignore: ['propLow'], rom: 60 }, 'kept in this browser');
+    const code = await page.evaluate(() => Plans.encode(Plans.mine[0]));
+    await page.evaluate((c) => { location.hash = '#/plan/~' + c; }, code);
+    await page.waitForFunction(() => /sent to you/.test(document.getElementById('plan-kind').textContent), null, { timeout: 5000 });
+    assert.equal(await page.$$eval('#plan-items .plan-item', (l) => l.length), 5, 'the plan is in the address');
+    /* an exercise's own adjustments, outside any plan: the range scales the band, a fault is left alone */
+    await page.evaluate(() => { location.hash = '#/ex/bridge'; });
+    /* (the bridge is a draft here, from the Review page's step: the title carries the badge) */
+    await page.waitForFunction(() => /^Glute bridge/.test(document.getElementById('ex-title').textContent) && document.getElementById('plan-banner').hidden, null, { timeout: 5000 });
+    await page.$eval('#adj-rom', (i) => { i.value = 80; i.dispatchEvent(new Event('change')); });
+    assert.equal(await page.textContent('#band-hip'), '≥ 156', 'eighty percent of the way from 140 to 160');
+    await page.$eval('#adj-rom', (i) => { i.value = 100; i.dispatchEvent(new Event('change')); });
+    assert.equal(await page.textContent('#band-hip'), '≥ 160', 'and back');
+    await page.evaluate(() => { localStorage.removeItem('ontrack.plans'); });
   });
 
   await step('the builder: a copy of an exercise becomes a draft that the coach runs, and the file downloads whole', async () => {

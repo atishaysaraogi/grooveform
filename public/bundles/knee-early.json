@@ -1,0 +1,54 @@
+{
+  "v": 1,
+  "id": "knee-early",
+  "name": "Knee — early rehab",
+  "for": "The first weeks after a knee injury or surgery: swelling down, the quad awake, the bend returning",
+  "order": 3,
+  "blurb": "Range of motion and the thigh muscle switched back on, within the range your surgeon or physio has set. Two or three times a day.",
+  "notes": [
+    "The first goal after surgery is a knee that straightens fully and bends to ninety degrees; most of daily life needs ninety to one hundred and ten.",
+    "Ice after, if it swells.",
+    "The heel slide’s target is the number to move: ninety first, then on toward one hundred and twenty."
+  ],
+  "sources": [
+    {
+      "title": "Range of motion after knee replacement",
+      "url": "https://plancherortho.com/how-much-mobility-returns-after-knee-replacement-surgery-setting-realistic-expectations/"
+    }
+  ],
+  "items": [
+    {
+      "move": "quadset",
+      "sets": 3,
+      "reps": 10,
+      "hold": 5
+    },
+    {
+      "move": "heelslide",
+      "sets": 3,
+      "reps": 10,
+      "note": "To ninety degrees first; the setting goes down as it frees."
+    },
+    {
+      "move": "slr",
+      "sets": 3,
+      "reps": 10,
+      "rom": 70,
+      "ignore": [
+        "toesDown"
+      ],
+      "note": "A lower lift; the toes are left alone for now."
+    },
+    {
+      "move": "clamshell",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "calfraise",
+      "sets": 3,
+      "reps": 10,
+      "rom": 70
+    }
+  ]
+}

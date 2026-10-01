@@ -1,0 +1,338 @@
+{
+  "v": 1,
+  "id": "calfraise",
+  "name": "Heel raise",
+  "order": 21,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "standing",
+    "calf",
+    "ankle",
+    "knee",
+    "balance",
+    "reps"
+  ],
+  "equipment": [
+    "something to steady a hand on"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "standing, both heels raised onto the balls of the feet and lowered",
+  "sides": "both",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "Standing tall, both heels raised onto the balls of the feet and lowered slowly.",
+    "start": "Stand the phone up on the floor. Stand side on to it, feet hip-width apart, a hand resting on something for balance.",
+    "position": "Stand tall side on to the phone, feet hip-width apart and pointing forward, a hand resting lightly on a wall or chair back for balance.",
+    "top": "Up on the balls of both feet, heels as high as they go, knees straight, the body tall and still over the toes.",
+    "howto": [
+      "Stand tall, feet hip-width apart, a hand resting on something for balance — not pulling on it.",
+      "Rise up onto the balls of both feet, slowly, heels as high as they will go. Keep the knees straight and the body tall.",
+      "Hold at the top for the count.",
+      "Lower slowly, taking a slow count, until the heels touch the floor. The rep counts there."
+    ],
+    "cannot": "The ankle rolling outward and how much weight the hand takes: it sees the heel rising, the knee and the lean.",
+    "about": "Heel raise — standing side on: the rise, as the angle of the toe-to-heel line off level, at least 35° at the top (flat reads near 0); a rep is under way past 15 and counts when the heel is back under 8; the knee at least 165°, straight but not locked; and the body within 10° of upright. Hold one second at the top, lower on a slow count.",
+    "lost": "Stand side on to the camera, the whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Keep a hand near something to steady yourself. Stop if the Achilles tendon or the calf sharpens.",
+    "easier": "Both hands on support; a smaller rise; fewer reps.",
+    "harder": "One leg at a time; a longer hold; a slower lowering; a weight in the free hand.",
+    "mistakes": "Bending the knees to get height; leaning forward onto the support; rolling onto the outside of the foot; dropping the heels."
+  },
+  "muscles": {
+    "calf": 1,
+    "thigh": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 0,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 40,
+        "farm": 60
+      },
+      "B": {
+        "torso": 0,
+        "thigh": 0,
+        "shin": 0,
+        "foot": -45,
+        "uarm": 40,
+        "farm": 60
+      },
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "lean",
+      "hip|knee": "knee",
+      "knee|ankle": "knee",
+      "heel|toe": "heel"
+    }
+  },
+  "measurements": [
+    {
+      "key": "heel",
+      "label": "heel raised",
+      "hud": "HEEL",
+      "note": "at the top",
+      "kind": "rise",
+      "a": "toe",
+      "b": "heel",
+      "band": {
+        "min": "heelMin"
+      },
+      "scale": [
+        -10,
+        70
+      ],
+      "why": "The toe-to-heel line off level: flat on the floor it reads near 0, up on the ball of the foot 40–60. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "heelMin",
+          "label": "Heel raised at the top, at least (degrees)",
+          "min": 10,
+          "max": 65
+        }
+      ]
+    },
+    {
+      "key": "knee",
+      "label": "knee straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        120,
+        180
+      ],
+      "why": "The knee straight but not locked: bending it is the usual way to fake height.",
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ]
+    },
+    {
+      "key": "lean",
+      "label": "trunk upright",
+      "hud": "LEAN",
+      "note": "tall",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "leanMax"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "why": "The trunk off vertical, + forward: leaning onto the support takes the weight off the calves.",
+      "settings": [
+        {
+          "key": "leanMax",
+          "label": "Trunk within ± of upright (degrees)",
+          "min": 4,
+          "max": 30
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "heel",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "heel",
+    "knee"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Up onto your toes",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeBend",
+      "measure": "knee",
+      "side": "below",
+      "label": "Knees bending",
+      "text": "Keep the knees straight",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "heelLow",
+      "measure": "heel",
+      "side": "below",
+      "label": "Rise short",
+      "text": "Up higher onto the balls of the feet",
+      "deep": "Higher — heels as high as they go",
+      "tone": "up"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "lean",
+      "side": "above",
+      "label": "Leaning forward",
+      "text": "Stay tall — don’t lean onto your hand",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "leanBack",
+      "measure": "lean",
+      "side": "below",
+      "label": "Leaning back",
+      "text": "Stay tall",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "heel",
+      "size": 0.6
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.5
+    }
+  ],
+  "defaults": {
+    "heelMin": 35,
+    "kneeMin": 165,
+    "leanMax": 10,
+    "raiseAt": 15,
+    "downAt": 8,
+    "holdTargetSec": 1,
+    "lowerSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Heel angle that counts as under way",
+      "min": -25,
+      "max": 55
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

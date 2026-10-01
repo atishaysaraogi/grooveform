@@ -1,0 +1,320 @@
+{
+  "v": 1,
+  "id": "sitstand",
+  "name": "Sit to stand",
+  "order": 23,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "chair",
+    "knee",
+    "quads",
+    "glutes",
+    "function",
+    "osteoarthritis",
+    "reps"
+  ],
+  "equipment": [
+    "a firm chair"
+  ],
+  "type": "reps",
+  "position": "seated",
+  "movement": "standing up from a chair without the hands and sitting back down slowly",
+  "sides": "both",
+  "load": "none",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to the chair."
+  },
+  "words": {
+    "hint": "From a firm chair: stand up without using the hands, then sit back down slowly.",
+    "start": "Stand the phone up on the floor. Sit on the front half of a firm chair, side on to it, feet flat and arms folded.",
+    "position": "Sit on the front half of a firm chair, side on to the phone, feet flat and a little back under the knees, arms folded across the chest.",
+    "top": "Standing fully upright — knees and hips straight, the trunk tall — before sitting back down under control.",
+    "howto": [
+      "Sit toward the front of the chair, feet flat and slightly back, arms folded.",
+      "Lean forward — nose over toes — and stand up, pushing through the heels, without using your hands.",
+      "Stand all the way up, tall, and hold for the count.",
+      "Sit back down slowly, taking a slow count, reaching the hips back to the seat. The rep counts when you are sitting."
+    ],
+    "cannot": "How much the hands or the momentum help: it sees the knee straightening, the trunk at the top and the shins. Keep the arms folded yourself.",
+    "about": "Sit to stand — side on to the chair: the knee angle, from about 90 sitting; a rep is under way past 140 and counts once the knee is back under 110 on the seat; at the top at least 165° — standing fully up; the trunk at the top within 15° of upright; and the shins no further forward than 60° from the floor through the rep. Hold one second standing, sit on a slow count. A quick test of leg strength and the most useful exercise for stairs and getting about.",
+    "lost": "Sit side on to the camera, the whole body in",
+    "lower": "Sit down slowly",
+    "early": "Stand all the way up next time",
+    "holdLabel": "Stand for",
+    "safety": "A firm chair that will not slide. Use the hands if you need them, and a higher seat makes it easier.",
+    "easier": "A higher seat or a cushion; a hand on the thigh; fewer reps.",
+    "harder": "A lower seat; a slower sit; a weight held at the chest; one leg doing more.",
+    "mistakes": "Pushing off with the hands; dropping into the seat; not standing fully upright; knees caving inward; feet too far forward."
+  },
+  "muscles": {
+    "thigh": 1,
+    "glute": 0.8,
+    "calf": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 12,
+        "neck": -5,
+        "thigh": 88,
+        "shin": -5,
+        "foot": 0,
+        "uarm": 70,
+        "farm": -70
+      },
+      "B": {
+        "torso": 0,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 70,
+        "farm": -70
+      },
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "limb": {
+      "shoulder|hip": "lean",
+      "hip|knee": "knee",
+      "knee|ankle": "knee"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee straight",
+      "hud": "KNEE",
+      "note": "standing",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        60,
+        180
+      ],
+      "why": "The knee angle: about 90 sitting, 180 standing. Also the progress measurement: under way past raiseAt, sitting again under downAt.",
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle standing, at least (180 is straight)",
+          "min": 140,
+          "max": 179
+        }
+      ]
+    },
+    {
+      "key": "lean",
+      "label": "trunk at the top",
+      "hud": "TRUNK",
+      "note": "tall",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "leanMax"
+      },
+      "scale": [
+        -20,
+        80
+      ],
+      "why": "The trunk off vertical, + forward. Leaning forward is right on the way up; at the top the body should be tall.",
+      "settings": [
+        {
+          "key": "leanMax",
+          "label": "Trunk within ± of upright at the top (degrees)",
+          "min": 5,
+          "max": 40
+        }
+      ]
+    },
+    {
+      "key": "shin",
+      "label": "shin from the floor",
+      "hud": "SHIN",
+      "note": "feet back",
+      "kind": "floor",
+      "at": "ankle",
+      "to": "knee",
+      "band": {
+        "min": "shinMin"
+      },
+      "scale": [
+        30,
+        90
+      ],
+      "why": "The ankle-to-knee line from the floor: feet too far forward lay the shin down and make standing harder on the knees.",
+      "settings": [
+        {
+          "key": "shinMin",
+          "label": "Shin angle from the floor, at least",
+          "min": 30,
+          "max": 88
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "knee",
+    "lean"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Stand up",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeLow",
+      "measure": "knee",
+      "side": "below",
+      "label": "Not fully up",
+      "text": "Stand all the way up — straighten the knees",
+      "deep": "",
+      "tone": "up"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "lean",
+      "side": "above",
+      "label": "Still leaning",
+      "text": "Stand tall at the top",
+      "deep": "",
+      "tone": "plain"
+    },
+    {
+      "id": "leanBack",
+      "measure": "lean",
+      "side": "below",
+      "label": "Leaning back",
+      "text": "Stand tall",
+      "deep": "",
+      "tone": "plain"
+    },
+    {
+      "id": "feetFwd",
+      "measure": "shin",
+      "side": "below",
+      "label": "Feet too far forward",
+      "text": "Bring the feet back under the knees",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.8
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.5
+    }
+  ],
+  "defaults": {
+    "kneeMin": 165,
+    "leanMax": 15,
+    "shinMin": 60,
+    "raiseAt": 140,
+    "downAt": 110,
+    "holdTargetSec": 1,
+    "lowerSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Knee angle that counts as under way",
+      "min": 0,
+      "max": 180
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

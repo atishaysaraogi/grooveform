@@ -1,0 +1,336 @@
+{
+  "v": 1,
+  "id": "heelslide",
+  "name": "Heel slide",
+  "order": 19,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "floor",
+    "lying",
+    "supine",
+    "knee",
+    "flexion",
+    "range of motion",
+    "after surgery",
+    "reps"
+  ],
+  "equipment": [
+    "a mat",
+    "a smooth floor or a towel under the heel"
+  ],
+  "type": "reps",
+  "position": "lying",
+  "movement": "lying on the back, one heel slid toward the buttock and back out",
+  "sides": "alternate",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where your legs will be."
+  },
+  "words": {
+    "hint": "Lying on your back, one heel slid along the floor toward you, bending the knee, then back out.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, both legs straight.",
+    "position": "Lie on your back, side on to the phone, both legs straight, the working leg nearest the camera. A towel under the heel helps it slide.",
+    "top": "The heel slid in toward the buttock as far as is comfortable — the knee bent to about a right angle — the heel and the hips on the floor.",
+    "howto": [
+      "Lie on your back, legs straight, hips and shoulders on the floor.",
+      "Slide the heel of the working leg along the floor toward your buttock, bending the knee as far as is comfortable. Keep the heel on the floor.",
+      "Hold at the deepest point for the count. Hips still on the floor.",
+      "Slide the heel back out until the leg is straight. The rep counts there."
+    ],
+    "cannot": "The feel inside the knee and the stretch at the front of the thigh: it sees the knee angle, the hips and the heel.",
+    "about": "Heel slide — lying on the back side on: the knee angle, from 180 straight; the rep is under way once it is under 150 and counts when the leg is back past 165; the target at the deepest point is at most 90° (a right angle), which is the first goal after knee surgery — most daily life needs 90–110, a bike 110–120 — and the setting to move as the knee frees; the hips on the floor, as the hip no more than 8° above the shoulder; and the heel on the floor, no more than 10° above the other heel. Hold two seconds at the deepest point.",
+    "lost": "Lie down side on to the camera, hips to feet in the picture",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Go to firm stretch, not sharp pain. After surgery, follow the range your surgeon or physio has set.",
+    "easier": "A shallower bend; a shorter hold; a slippery surface under the heel.",
+    "harder": "A deeper bend; a longer hold; a strap round the ankle to help the last few degrees.",
+    "mistakes": "Lifting the heel off the floor; lifting the hip to help the knee bend; rushing the slide back out; holding the breath."
+  },
+  "muscles": {
+    "ham": 0.6,
+    "thigh": 0.4,
+    "calf": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 90,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 90,
+        "uarm": -60,
+        "farm": -60
+      },
+      "B": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -135,
+        "shin": -45,
+        "foot": 90,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 90,
+        "uarm": -60,
+        "farm": -60
+      },
+      "anchor": "h",
+      "belly": -1
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "knee",
+    "hold": {
+      "margin": 0.25,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "other.heel"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel"
+    ],
+    "limb": {
+      "shoulder|hip": "hip",
+      "hip|knee": "knee",
+      "knee|ankle": "knee"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee bend",
+      "hud": "KNEE",
+      "note": "at the deepest",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "max": "kneeMax"
+      },
+      "scale": [
+        40,
+        180
+      ],
+      "why": "The knee angle: 180 straight, 90 a right angle. Also the progress measurement: under way under raiseAt, back out past downAt. The target falls as the knee frees.",
+      "settings": [
+        {
+          "key": "kneeMax",
+          "label": "Knee angle at the deepest point, at most (90 is a right angle)",
+          "min": 40,
+          "max": 160
+        }
+      ]
+    },
+    {
+      "key": "hip",
+      "label": "hip above the shoulder",
+      "hud": "HIP",
+      "note": "on the floor",
+      "kind": "rise",
+      "a": "shoulder",
+      "b": "hip",
+      "band": {
+        "max": "hipLift"
+      },
+      "scale": [
+        -20,
+        30
+      ],
+      "why": "The shoulder-to-hip line off level: the hip coming up to help the knee bend.",
+      "settings": [
+        {
+          "key": "hipLift",
+          "label": "Hip above the shoulder, at most (degrees)",
+          "min": 2,
+          "max": 25
+        }
+      ]
+    },
+    {
+      "key": "heel",
+      "label": "heel above the other heel",
+      "hud": "HEEL",
+      "note": "on the floor",
+      "kind": "rise",
+      "a": "other.heel",
+      "b": "heel",
+      "optional": true,
+      "unseen": 0,
+      "band": {
+        "max": "heelLift"
+      },
+      "scale": [
+        -20,
+        60
+      ],
+      "why": "The heel lifting off the floor as it slides, against the other heel. Not read when the other heel is hidden.",
+      "settings": [
+        {
+          "key": "heelLift",
+          "label": "Heel above the other heel, at most (degrees)",
+          "min": 3,
+          "max": 40
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "knee",
+    "hip"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Slide the heel in",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeShallow",
+      "measure": "knee",
+      "side": "above",
+      "label": "Slide further",
+      "text": "Slide the heel further toward you",
+      "deep": "Further in if you can — bend the knee a little more",
+      "tone": "up"
+    },
+    {
+      "id": "hipLift",
+      "measure": "hip",
+      "side": "above",
+      "label": "Hip lifting",
+      "text": "Keep the hips on the floor",
+      "deep": "The hip is coming up — press it down and slide the heel less far",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "heelLift",
+      "measure": "heel",
+      "side": "above",
+      "label": "Heel lifting",
+      "text": "Keep the heel on the floor as it slides",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.8
+    },
+    {
+      "kind": "floor",
+      "at": "hip",
+      "dir": -1
+    }
+  ],
+  "defaults": {
+    "kneeMax": 90,
+    "hipLift": 8,
+    "heelLift": 10,
+    "raiseAt": 150,
+    "downAt": 165,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Knee angle that counts as under way",
+      "min": 0,
+      "max": 190
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

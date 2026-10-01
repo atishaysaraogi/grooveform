@@ -1,0 +1,384 @@
+{
+  "v": 1,
+  "id": "minisquat",
+  "name": "Mini squat",
+  "order": 22,
+  "status": "ready",
+  "category": "Knee and hip",
+  "tags": [
+    "standing",
+    "knee",
+    "quads",
+    "glutes",
+    "osteoarthritis",
+    "quarter squat",
+    "reps"
+  ],
+  "equipment": [
+    "something to steady a hand on, optional"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "standing, a quarter squat — the knees bent to about forty five degrees — and back up",
+  "sides": "both",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "Standing, a quarter squat — knees bent to about forty five degrees — and back up.",
+    "start": "Stand the phone up on the floor. Stand side on to it, feet hip-width apart, arms out in front for balance.",
+    "position": "Stand tall side on to the phone, feet hip-width apart and pointing forward, arms out in front or a hand on a chair back.",
+    "top": "The knees bent to about forty five degrees — a quarter squat, no deeper — the hips back, the knees behind the toes, the heels down and the chest up.",
+    "howto": [
+      "Stand tall, feet hip-width apart, weight through the heels.",
+      "Send the hips back and bend the knees to about forty five degrees — a quarter of the way down. Knees behind the toes, heels on the floor, chest up.",
+      "Hold for the count.",
+      "Push through the heels to stand tall again. The rep counts there."
+    ],
+    "cannot": "The knees collapsing inward and the weight shifting to one leg: it sees the knee bend from the side, the shin lean, the trunk and the heels. Keep the knees over the second toes yourself.",
+    "about": "Mini squat — standing side on: the knee angle, 125–150° at the bottom (180 is straight; 135 is a quarter squat), and deeper than 125 is called — depth is not the aim with a sore knee; a rep is under way under 165 and counts when the knee is back past 172; the shin kept upright, as its angle from the floor at least 65° — knees past the toes — and the trunk no more than 35° forward; the heels down, no more than 10° above the toes. Hold two seconds at the bottom. Physios take knee arthritis to 30 or 45° of bend and no further; the setting is the bottom edge.",
+    "lost": "Stand side on to the camera, the whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Shallow and slow. Stop if the knee sharpens or clicks painfully; a smaller bend is still an exercise.",
+    "easier": "A smaller bend; a hand on a chair back; fewer reps.",
+    "harder": "A deeper bend (within what the knee allows); a longer hold; a slow count down; a weight held at the chest.",
+    "mistakes": "Going too deep; knees drifting past the toes; heels lifting; the chest falling forward; knees collapsing inward."
+  },
+  "muscles": {
+    "thigh": 1,
+    "glute": 0.7,
+    "calf": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 0,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 20,
+        "farm": 20
+      },
+      "B": {
+        "torso": 25,
+        "thigh": 38,
+        "shin": -8,
+        "foot": 0,
+        "uarm": 80,
+        "farm": 90
+      },
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "lean",
+      "hip|knee": "knee",
+      "knee|ankle": "knee",
+      "heel|toe": "heel"
+    }
+  },
+  "measurements": [
+    {
+      "key": "knee",
+      "label": "knee bend",
+      "hud": "KNEE",
+      "note": "at the bottom",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "lo": "kneeMin",
+        "hi": "kneeMax"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The knee angle: 180 standing, 135 a quarter squat, 90 a full one. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle at the bottom, lowest (deepest allowed)",
+          "min": 90,
+          "max": 165
+        },
+        {
+          "key": "kneeMax",
+          "label": "Knee angle at the bottom, highest (shallowest that counts)",
+          "min": 120,
+          "max": 178
+        }
+      ]
+    },
+    {
+      "key": "shin",
+      "label": "shin from the floor",
+      "hud": "SHIN",
+      "note": "knees back",
+      "kind": "floor",
+      "at": "ankle",
+      "to": "knee",
+      "band": {
+        "min": "shinMin"
+      },
+      "scale": [
+        30,
+        90
+      ],
+      "why": "The angle the ankle-to-knee line makes with the floor: 90 plumb. Under 65 the knees are well past the toes.",
+      "settings": [
+        {
+          "key": "shinMin",
+          "label": "Shin angle from the floor, at least (90 is upright)",
+          "min": 40,
+          "max": 88
+        }
+      ]
+    },
+    {
+      "key": "lean",
+      "label": "trunk forward",
+      "hud": "LEAN",
+      "note": "chest up",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "max": "leanMax"
+      },
+      "scale": [
+        -10,
+        70
+      ],
+      "why": "The trunk off vertical, + forward: some lean is right; past 35 the chest is falling.",
+      "settings": [
+        {
+          "key": "leanMax",
+          "label": "Trunk forward, at most (degrees)",
+          "min": 10,
+          "max": 70
+        }
+      ]
+    },
+    {
+      "key": "heel",
+      "label": "heel raised",
+      "hud": "HEEL",
+      "note": "down",
+      "kind": "rise",
+      "a": "toe",
+      "b": "heel",
+      "band": {
+        "max": "heelLift"
+      },
+      "scale": [
+        -10,
+        50
+      ],
+      "why": "The heel coming off the floor as the knees go forward.",
+      "settings": [
+        {
+          "key": "heelLift",
+          "label": "Heel above the toes, at most (degrees)",
+          "min": 3,
+          "max": 40
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "knee",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "knee",
+    "shin",
+    "heel"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Sit back into a quarter squat",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "kneeDeep",
+      "measure": "knee",
+      "side": "below",
+      "label": "Too deep",
+      "text": "Not so deep — a quarter bend is enough",
+      "deep": "That is a full squat — come up to a quarter bend",
+      "tone": "up"
+    },
+    {
+      "id": "kneeShallow",
+      "measure": "knee",
+      "side": "above",
+      "label": "Bend short",
+      "text": "Bend a little more",
+      "deep": "",
+      "tone": "down"
+    },
+    {
+      "id": "kneeOver",
+      "measure": "shin",
+      "side": "below",
+      "label": "Knees past toes",
+      "text": "Sit back — keep the knees behind the toes",
+      "deep": "The knees are well past the toes — hips back, weight in the heels",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "lean",
+      "side": "above",
+      "label": "Chest falling",
+      "text": "Chest up",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "heelLift",
+      "measure": "heel",
+      "side": "above",
+      "label": "Heels lifting",
+      "text": "Heels down",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 0.8
+    },
+    {
+      "kind": "plumb",
+      "at": "knee",
+      "share": 0.4
+    }
+  ],
+  "defaults": {
+    "kneeMin": 125,
+    "kneeMax": 150,
+    "shinMin": 65,
+    "leanMax": 35,
+    "heelLift": 10,
+    "raiseAt": 165,
+    "downAt": 172,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Knee angle that counts as under way",
+      "min": 0,
+      "max": 205
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

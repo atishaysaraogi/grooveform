@@ -1,0 +1,291 @@
+{
+  "v": 1,
+  "id": "pendulum",
+  "name": "Pendulum swing",
+  "order": 14,
+  "status": "ready",
+  "category": "Shoulder",
+  "tags": [
+    "standing",
+    "shoulder",
+    "frozen shoulder",
+    "mobility",
+    "hold",
+    "pendulum"
+  ],
+  "equipment": [
+    "a table or chair back to lean on"
+  ],
+  "type": "hold",
+  "position": "standing",
+  "movement": "bent forward with the arm hanging, swung gently in small circles",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to you, the arm you are swinging nearest the camera."
+  },
+  "words": {
+    "hint": "Bent forward with one hand on a table, the other arm hanging loose and swinging in small circles.",
+    "start": "Stand the phone up on the floor. Lean forward with one hand on a table, side on to it, and let the other arm hang.",
+    "position": "Stand side on to the phone, bend forward from the hips with the good hand on a table or chair back, and let the stiff arm hang straight down, relaxed.",
+    "top": "The trunk leaning forward about sixty degrees, the arm hanging straight and loose, swinging small circles a foot across from the body, not the shoulder.",
+    "howto": [
+      "Lean forward from the hips with your good hand on a table, so the stiff arm hangs clear of your body.",
+      "Let the arm hang heavy. Rock your body gently so the arm swings in small circles, about a foot across — the shoulder muscles do nothing.",
+      "Keep it going for the count. Ten circles each way, then the other direction.",
+      "As it eases over the weeks, widen the circles a little or hold a light weight. Never force it."
+    ],
+    "cannot": "Whether the shoulder muscles are truly relaxed: it sees the lean, the arm hanging and the elbow. The arm should feel heavy, like a rope.",
+    "about": "Pendulum swing — standing side on, bent forward: the lean, as the hip-to-shoulder line off vertical, 40–80° (bent enough for the arm to clear the body); the arm, as how far the shoulder-to-wrist line is lifted from hanging straight down, at most 35° — a swing a foot across is well inside it, and more than that is the shoulder lifting the arm rather than the body swinging it; the elbow at least 150°, the arm hanging straight. The clock runs while all three are right. Thirty seconds a set, three sets.",
+    "lost": "Stand side on to the camera, bent forward, the whole body in",
+    "holdLabel": "Swing for",
+    "hold": "That is it — let it swing",
+    "safety": "Pain-free only: the pendulum is the gentlest frozen-shoulder exercise and should stay that way. Stop if it sharpens.",
+    "easier": "Smaller circles; a shorter time.",
+    "harder": "Wider circles; a light weight (one to two kilos) in the hand; a longer time.",
+    "mistakes": "Using the shoulder muscles to swing the arm; standing too upright so the arm rubs the body; bending the elbow; holding the breath."
+  },
+  "muscles": {
+    "shoulder": 0.5,
+    "arm": 0.2,
+    "back": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 55,
+        "neck": -20,
+        "thigh": 5,
+        "shin": -5,
+        "foot": 0,
+        "uarm": 10,
+        "farm": 10,
+        "uarmF": 80,
+        "farmF": 40
+      },
+      "B": {
+        "torso": 55,
+        "neck": -20,
+        "thigh": 5,
+        "shin": -5,
+        "foot": 0,
+        "uarm": -15,
+        "farm": -15,
+        "uarmF": 80,
+        "farmF": 40
+      },
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "needed": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "limb": {
+      "shoulder|elbow": "elbow",
+      "elbow|wrist": "elbow",
+      "shoulder|hip": "lean"
+    }
+  },
+  "measurements": [
+    {
+      "key": "lean",
+      "label": "trunk lean",
+      "hud": "LEAN",
+      "note": "bent forward",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "lo": "leanMin",
+        "hi": "leanMax"
+      },
+      "scale": [
+        0,
+        90
+      ],
+      "why": "The hip-to-shoulder line off vertical, + forward: 0 upright, 90 flat. Bent 40–80 the arm hangs clear of the body.",
+      "settings": [
+        {
+          "key": "leanMin",
+          "label": "Trunk lean, at least (degrees from upright)",
+          "min": 20,
+          "max": 70
+        },
+        {
+          "key": "leanMax",
+          "label": "Trunk lean, at most",
+          "min": 50,
+          "max": 90
+        }
+      ]
+    },
+    {
+      "key": "arm",
+      "label": "arm off hanging",
+      "hud": "ARM",
+      "note": "hanging",
+      "kind": "down",
+      "from": "shoulder",
+      "to": "wrist",
+      "band": {
+        "max": "armMax"
+      },
+      "scale": [
+        0,
+        90
+      ],
+      "why": "How far the shoulder-to-wrist line is lifted from straight down: 0 hanging plumb. A pendulum swing a foot across stays under 20; past 35 the arm is being lifted by the shoulder.",
+      "settings": [
+        {
+          "key": "armMax",
+          "label": "Arm off hanging straight down, at most (degrees)",
+          "min": 10,
+          "max": 70
+        }
+      ]
+    },
+    {
+      "key": "elbow",
+      "label": "elbow straight",
+      "hud": "ELBOW",
+      "note": "loose",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "elbow",
+      "c": "wrist",
+      "band": {
+        "min": "elbowMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The arm hanging straight: 180 is straight; under 150 the elbow is bent and the arm is being held.",
+      "settings": [
+        {
+          "key": "elbowMin",
+          "label": "Elbow angle, at least (180 is straight)",
+          "min": 120,
+          "max": 179
+        }
+      ]
+    }
+  ],
+  "faults": [
+    {
+      "id": "leanLow",
+      "measure": "lean",
+      "side": "below",
+      "label": "Lean further",
+      "text": "Lean forward a little more, hand on the table",
+      "deep": "Bend further forward from the hips — the arm has to hang clear of your body",
+      "tone": "plain"
+    },
+    {
+      "id": "leanHigh",
+      "measure": "lean",
+      "side": "above",
+      "label": "Too far forward",
+      "text": "Come up a little — about sixty degrees",
+      "deep": "",
+      "tone": "plain"
+    },
+    {
+      "id": "armHigh",
+      "measure": "arm",
+      "side": "above",
+      "label": "Arm lifting",
+      "text": "Let the arm hang — swing it with your body, not your shoulder",
+      "deep": "The arm is being lifted — drop it, let it hang heavy, and rock your body instead",
+      "tone": "plain"
+    },
+    {
+      "id": "elbowBent",
+      "measure": "elbow",
+      "side": "below",
+      "label": "Elbow bending",
+      "text": "Let the arm hang straight",
+      "deep": "",
+      "tone": "plain"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "plumb",
+      "at": "shoulder",
+      "share": 0.5
+    },
+    {
+      "kind": "arc",
+      "measure": "lean",
+      "size": 0.7
+    },
+    {
+      "kind": "arc",
+      "measure": "arm",
+      "size": 0.6
+    }
+  ],
+  "defaults": {
+    "leanMin": 40,
+    "leanMax": 80,
+    "armMax": 35,
+    "elbowMin": 150,
+    "holdTargetSec": 30,
+    "callAtSec": [
+      10
+    ],
+    "setCount": 3,
+    "repCount": 10,
+    "deepAt": 10
+  },
+  "settings": [
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

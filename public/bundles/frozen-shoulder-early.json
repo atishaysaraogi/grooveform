@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "id": "frozen-shoulder-early",
+  "name": "Frozen shoulder — freezing stage",
+  "for": "Frozen shoulder (adhesive capsulitis), the painful first months",
+  "order": 1,
+  "blurb": "Gentle range of motion, pain-free, twice a day. The range is set low on purpose; a little more each week is the aim, never force.",
+  "notes": [
+    "Warm the shoulder first — a shower or a warm pack for ten minutes.",
+    "Every movement to the point of stretch, not pain. Pain that lasts more than an hour after means it was too much.",
+    "Twice a day. Little and often beats one long session.",
+    "Freezing can last two to nine months; the thawing programme follows when the pain settles and only stiffness is left."
+  ],
+  "sources": [
+    {
+      "title": "Harvard Health — stretching exercises for frozen shoulder",
+      "url": "https://www.health.harvard.edu/stretching-exercises-frozen-shoulder"
+    },
+    {
+      "title": "AAOS — frozen shoulder",
+      "url": "https://orthoinfo.aaos.org/en/diseases--conditions/frozen-shoulder/"
+    }
+  ],
+  "items": [
+    {
+      "move": "pendulum",
+      "sets": 2,
+      "hold": 30,
+      "note": "Small circles; let the body do the swinging."
+    },
+    {
+      "move": "crossbody",
+      "sets": 3,
+      "hold": 20
+    },
+    {
+      "move": "wallwalk",
+      "sets": 2,
+      "reps": 10,
+      "rom": 65,
+      "note": "As high as is comfortable; the range is set low."
+    },
+    {
+      "move": "extrot",
+      "sets": 2,
+      "reps": 10,
+      "rom": 60,
+      "note": "A few inches of turn. No band yet."
+    },
+    {
+      "move": "abduction",
+      "sets": 2,
+      "reps": 10,
+      "rom": 65,
+      "ignore": [
+        "shrug"
+      ],
+      "note": "The shoulder will hike a little while it is sore: not called here."
+    }
+  ]
+}

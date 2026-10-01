@@ -1,0 +1,388 @@
+{
+  "v": 1,
+  "id": "wallwalk",
+  "name": "Wall walk",
+  "order": 15,
+  "status": "ready",
+  "category": "Shoulder",
+  "tags": [
+    "standing",
+    "shoulder",
+    "frozen shoulder",
+    "flexion",
+    "finger walk",
+    "reps",
+    "mobility"
+  ],
+  "equipment": [
+    "a wall"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "facing a wall, the fingers walked up it as high as is comfortable and back down",
+  "sides": "alternate",
+  "load": "none",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to you, the arm on the wall nearest the camera."
+  },
+  "words": {
+    "hint": "Facing a wall, the fingers of one hand walked up it as high as is comfortable, then down.",
+    "start": "Stand the phone up on the floor. Face a wall an arm’s length away, side on to the phone, fingertips on it at waist height.",
+    "position": "Stand facing a wall about three-quarters of an arm’s length away, side on to the phone, the working arm nearest it. Fingertips on the wall at waist height, elbow a little bent.",
+    "top": "The arm walked up the wall as high as is comfortable — aim for the arm level with the shoulder or above — the trunk tall and still, the shoulder down away from the ear.",
+    "howto": [
+      "Face the wall, fingertips on it at waist height, elbow slightly bent.",
+      "Walk the fingers up the wall like a spider, slowly, as high as is comfortable. The fingers do the work, not the shoulder muscles.",
+      "Hold at the top for the count. Keep the trunk tall — no leaning back — and the shoulder down, away from the ear.",
+      "Walk the fingers back down slowly. The rep counts when the hand is back at waist height."
+    ],
+    "cannot": "Whether the fingers or the shoulder muscles are doing the lifting, and whether the shoulder blade is moving well: it sees how high the arm goes, the trunk, the elbow and the shoulder rising toward the ear.",
+    "about": "Wall walk — standing side on: the reach, as the angle at the shoulder between the hip and the wrist, at least 120° at the top (the arm level with the shoulder is 90; a healthy shoulder reaches 170); a rep is under way past 90 and counts when the hand is back under 40; the trunk within 12° of upright either way, so leaning back to gain height is called; the elbow at least 150°; and the shoulder kept down, as the ear-to-shoulder distance against the trunk at least 85% of what it was at the start — a shrug shortens it. Hold two seconds at the top. The top is the setting to move as the shoulder frees: a physio lowers it to 100 in the early weeks and raises it as the range returns.",
+    "lost": "Stand side on to the camera facing the wall, the whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Go to the point of stretch, not pain. Height is not the goal; a little more each week is.",
+    "easier": "A lower top; a shorter hold; stand closer to the wall.",
+    "harder": "A higher top; a longer hold at the top; a slow count on the way down.",
+    "mistakes": "Leaning back to gain height; shrugging the shoulder up to the ear; bending the elbow and pushing with it; rushing."
+  },
+  "muscles": {
+    "shoulder": 1,
+    "back": 0.4,
+    "arm": 0.3
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 2,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 25,
+        "farm": 35,
+        "uarmF": 0,
+        "farmF": 0
+      },
+      "B": {
+        "torso": 2,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": 150,
+        "farm": 165,
+        "uarmF": 0,
+        "farmF": 0
+      },
+      "wall": "ahead",
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "wrist",
+    "hold": {
+      "margin": 0.3,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "needed": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "bones": [
+      [
+        "ear",
+        "shoulder"
+      ],
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ]
+    ],
+    "dots": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "limb": {
+      "ear|shoulder": "shrug",
+      "shoulder|elbow": "elbow",
+      "elbow|wrist": "elbow",
+      "shoulder|hip": "flex"
+    }
+  },
+  "measurements": [
+    {
+      "key": "flex",
+      "label": "arm raised",
+      "hud": "REACH",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "hip",
+      "b": "shoulder",
+      "c": "wrist",
+      "band": {
+        "min": "flexMin"
+      },
+      "scale": [
+        0,
+        180
+      ],
+      "why": "The angle at the shoulder between the hip and the wrist: the arm by the side is about 15, level with the shoulder 90, straight up 170. Also the progress measurement: under way past raiseAt, back when under downAt.",
+      "settings": [
+        {
+          "key": "flexMin",
+          "label": "Arm raised at the top, at least (90 is level with the shoulder)",
+          "min": 60,
+          "max": 175
+        }
+      ]
+    },
+    {
+      "key": "lean",
+      "label": "trunk upright",
+      "hud": "TRUNK",
+      "note": "tall",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "sym": "leanMax"
+      },
+      "scale": [
+        -40,
+        40
+      ],
+      "why": "The hip-to-shoulder line off vertical, + toward the wall. Leaning back (negative) is the classic cheat for height.",
+      "settings": [
+        {
+          "key": "leanMax",
+          "label": "Trunk within ± of upright (degrees)",
+          "min": 5,
+          "max": 30
+        }
+      ]
+    },
+    {
+      "key": "elbow",
+      "label": "elbow nearly straight",
+      "hud": "ELBOW",
+      "note": "long arm",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "elbow",
+      "c": "wrist",
+      "band": {
+        "min": "elbowMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The arm long on the wall: under 150 the elbow is bent and pushing.",
+      "settings": [
+        {
+          "key": "elbowMin",
+          "label": "Elbow angle, at least",
+          "min": 120,
+          "max": 179
+        }
+      ]
+    },
+    {
+      "key": "shrug",
+      "label": "shoulder down, % of start",
+      "hud": "SHRUG",
+      "note": "shoulder down",
+      "kind": "distance",
+      "a": "ear",
+      "b": "shoulder",
+      "per": [
+        "shoulder",
+        "hip"
+      ],
+      "times": 100,
+      "fromStart": "ratio",
+      "band": {
+        "min": "shrugMin"
+      },
+      "scale": [
+        50,
+        120
+      ],
+      "why": "The ear-to-shoulder distance against the trunk, as a percent of what it was at the start: a shrug brings the shoulder up toward the ear and shortens it. Under 85 is a shrug.",
+      "settings": [
+        {
+          "key": "shrugMin",
+          "label": "Ear-to-shoulder distance, % of the start, at least",
+          "min": 60,
+          "max": 100
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "flex",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "elbow": [
+        150,
+        180
+      ]
+    }
+  },
+  "inPosition": [
+    "flex",
+    "elbow"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Walk the fingers up the wall",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "elbowBent",
+      "measure": "elbow",
+      "side": "below",
+      "label": "Elbow bending",
+      "text": "Keep the arm long — elbow nearly straight",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    },
+    {
+      "id": "flexLow",
+      "measure": "flex",
+      "side": "below",
+      "label": "Reach short",
+      "text": "A little higher — walk the fingers up",
+      "deep": "Higher if you can, to the point of stretch",
+      "tone": "up"
+    },
+    {
+      "id": "leanBack",
+      "measure": "lean",
+      "side": "below",
+      "label": "Leaning back",
+      "text": "Don’t lean back — stand tall and let the shoulder do the reach",
+      "deep": "You are leaning back for height — come upright, even if the hand comes down",
+      "tone": "down",
+      "when": "rep"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "lean",
+      "side": "above",
+      "label": "Leaning in",
+      "text": "Stand tall — don’t lean into the wall",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "shrug",
+      "measure": "shrug",
+      "side": "below",
+      "label": "Shoulder shrugging",
+      "text": "Shoulder down, away from the ear",
+      "deep": "The shoulder is up by your ear — let it drop, and come down the wall if you have to",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "flex",
+      "size": 0.8
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.5
+    }
+  ],
+  "defaults": {
+    "flexMin": 120,
+    "leanMax": 12,
+    "elbowMin": 150,
+    "shrugMin": 85,
+    "raiseAt": 90,
+    "downAt": 40,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Arm angle that counts as under way",
+      "min": 0,
+      "max": 130
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

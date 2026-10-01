@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "files": [
+    "back-care.json",
+    "back-strength.json",
+    "frozen-shoulder-early.json",
+    "frozen-shoulder-thawing.json",
+    "knee-early.json",
+    "knee-strength.json"
+  ]
+}

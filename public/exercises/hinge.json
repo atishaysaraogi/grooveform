@@ -1,0 +1,408 @@
+{
+  "v": 1,
+  "id": "hinge",
+  "name": "Hip hinge",
+  "order": 27,
+  "status": "ready",
+  "category": "Back",
+  "tags": [
+    "standing",
+    "back",
+    "glutes",
+    "hamstrings",
+    "hinge",
+    "movement pattern",
+    "low back pain",
+    "disc",
+    "reps"
+  ],
+  "equipment": [
+    "a dowel or broom handle along the spine, optional"
+  ],
+  "type": "reps",
+  "position": "standing",
+  "movement": "standing, the hips pushed back and the trunk tipped forward with a flat back and soft knees, and back up",
+  "sides": "both",
+  "load": "none",
+  "phone": {
+    "orientation": "tall",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "Standing: hips pushed back, trunk tipped forward with a flat back and soft knees, and back up.",
+    "start": "Stand the phone up on the floor. Stand tall side on to it, feet hip-width apart, hands on your hips.",
+    "position": "Stand tall side on to the phone, feet hip-width apart, knees soft, hands on the hips or a dowel held along the spine touching the head, upper back and tailbone.",
+    "top": "The trunk tipped forward to fifty to ninety degrees with the back flat and long, the hips pushed back, the knees soft and the shins upright.",
+    "howto": [
+      "Stand tall, knees soft, weight through the heels.",
+      "Push the hips straight back — as if closing a drawer with your bottom — and let the trunk tip forward. The back stays flat and long; the shins stay upright.",
+      "Go as far as the back stays flat, to around horizontal, and hold for the count.",
+      "Drive the hips forward to stand tall again. The rep counts there."
+    ],
+    "cannot": "The lower back rounding a little under a flat-looking trunk: it sees the trunk angle, the knees, the shins and the head dropping. A dowel along the spine tells you what it cannot.",
+    "about": "Hip hinge — standing side on: the hinge, as the hip-to-shoulder line off vertical, 50–90° at the bottom; a rep is under way past 25 and counts when the trunk is back under 12; the knees soft, 150–178° — more bend is a squat; the back long, as the angle at the shoulder between the ear and the hip at least 140° — the head dropping is the back rounding; and the shins upright, at least 75° from the floor. Hold two seconds at the bottom. The pattern behind lifting safely, and the first thing a physio reteaches a back that hurts bending.",
+    "lost": "Stand side on to the camera, the whole body in",
+    "lower": "Stand up slowly",
+    "early": "Hold it at the bottom next time",
+    "holdLabel": "Hold at the bottom for",
+    "safety": "Only as far as the back stays flat. If the back rounds or the hamstrings pull hard, stop higher.",
+    "easier": "A smaller hinge; hands on the hips; a shorter hold.",
+    "harder": "A longer hold; a slower return; a light weight held at the shins.",
+    "mistakes": "Squatting — bending the knees instead of pushing the hips back; rounding the back; letting the head drop; the shins tipping forward."
+  },
+  "muscles": {
+    "glute": 0.8,
+    "ham": 0.8,
+    "back": 0.6
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 0,
+        "neck": 0,
+        "thigh": 0,
+        "shin": 0,
+        "foot": 0,
+        "uarm": -20,
+        "farm": 60
+      },
+      "B": {
+        "torso": 70,
+        "neck": 0,
+        "thigh": -18,
+        "shin": 0,
+        "foot": 0,
+        "uarm": -20,
+        "farm": 60
+      },
+      "anchor": "ft"
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "ear",
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "needed": [
+      "ear",
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "ear",
+        "shoulder"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ]
+    ],
+    "dots": [
+      "ear",
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "limb": {
+      "ear|shoulder": "back",
+      "shoulder|hip": "hinge",
+      "hip|knee": "knee",
+      "knee|ankle": "knee"
+    }
+  },
+  "measurements": [
+    {
+      "key": "hinge",
+      "label": "trunk tipped forward",
+      "hud": "HINGE",
+      "note": "at the bottom",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "lo": "hingeMin",
+        "hi": "hingeMax"
+      },
+      "scale": [
+        0,
+        100
+      ],
+      "why": "The hip-to-shoulder line off vertical, + forward: 0 upright, 90 flat. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "hingeMin",
+          "label": "Trunk tipped at the bottom, at least (degrees from upright)",
+          "min": 20,
+          "max": 85
+        },
+        {
+          "key": "hingeMax",
+          "label": "Trunk tipped at the bottom, at most",
+          "min": 50,
+          "max": 110
+        }
+      ]
+    },
+    {
+      "key": "knee",
+      "label": "knees soft",
+      "hud": "KNEE",
+      "note": "soft",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "lo": "kneeMin",
+        "hi": "kneeMax"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The knee: 180 locked, under 150 a squat. Soft is 15–25° of bend.",
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (less is a squat)",
+          "min": 110,
+          "max": 175
+        },
+        {
+          "key": "kneeMax",
+          "label": "Knee angle, at most (180 is locked)",
+          "min": 160,
+          "max": 180
+        }
+      ]
+    },
+    {
+      "key": "back",
+      "label": "back long",
+      "hud": "BACK",
+      "note": "flat",
+      "kind": "angle",
+      "a": "ear",
+      "b": "shoulder",
+      "c": "hip",
+      "band": {
+        "min": "backMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The angle at the shoulder between the ear and the hip: the head in line with the back reads 160–180; it falls as the head and upper back round forward.",
+      "settings": [
+        {
+          "key": "backMin",
+          "label": "Ear–shoulder–hip angle, at least",
+          "min": 110,
+          "max": 175
+        }
+      ]
+    },
+    {
+      "key": "shin",
+      "label": "shin from the floor",
+      "hud": "SHIN",
+      "note": "upright",
+      "kind": "floor",
+      "at": "ankle",
+      "to": "knee",
+      "band": {
+        "min": "shinMin"
+      },
+      "scale": [
+        40,
+        90
+      ],
+      "why": "The ankle-to-knee line from the floor: a hinge keeps it near 90; the knees travelling forward lays it down, which is a squat.",
+      "settings": [
+        {
+          "key": "shinMin",
+          "label": "Shin angle from the floor, at least",
+          "min": 50,
+          "max": 89
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "hinge",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "knee": [
+        140,
+        180
+      ]
+    }
+  },
+  "inPosition": [
+    "hinge",
+    "knee",
+    "back"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Hips back — hinge forward",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "hingeLow",
+      "measure": "hinge",
+      "side": "below",
+      "label": "Hinge short",
+      "text": "Hinge a little further — hips back",
+      "deep": "",
+      "tone": "up"
+    },
+    {
+      "id": "hingeHigh",
+      "measure": "hinge",
+      "side": "above",
+      "label": "Too far",
+      "text": "Not below horizontal",
+      "deep": "",
+      "tone": "down"
+    },
+    {
+      "id": "squat",
+      "measure": "knee",
+      "side": "below",
+      "label": "Squatting",
+      "text": "Don’t squat — hips back, knees only soft",
+      "deep": "The knees are bending too much — push the hips straight back",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "locked",
+      "measure": "knee",
+      "side": "above",
+      "label": "Knees locked",
+      "text": "Soften the knees",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    },
+    {
+      "id": "rounding",
+      "measure": "back",
+      "side": "below",
+      "label": "Back rounding",
+      "text": "Long spine — chest forward, eyes a little ahead",
+      "deep": "The back is rounding — come up to where it stays flat",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "shinsFwd",
+      "measure": "shin",
+      "side": "below",
+      "label": "Shins tipping",
+      "text": "Shins upright — push the hips back",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "hinge",
+      "size": 0.7
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.6
+    },
+    {
+      "kind": "line",
+      "from": "hip",
+      "to": "ear",
+      "good": "back"
+    }
+  ],
+  "defaults": {
+    "hingeMin": 50,
+    "hingeMax": 90,
+    "kneeMin": 150,
+    "kneeMax": 178,
+    "backMin": 140,
+    "shinMin": 75,
+    "raiseAt": 25,
+    "downAt": 12,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Trunk angle that counts as under way",
+      "min": -15,
+      "max": 65
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

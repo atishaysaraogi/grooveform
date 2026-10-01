@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "id": "knee-strength",
+  "name": "Knee — strength and control",
+  "for": "A knee past the early weeks, or knee arthritis: the thigh and hip strong, the knee tracking well",
+  "order": 4,
+  "blurb": "Closed-chain strength in a range the knee likes: shallow, slow and controlled. Three times a week, with a rest day between.",
+  "notes": [
+    "Depth is not the aim: a quarter squat worked well beats a deep one that hurts.",
+    "Knees over the second toe, never collapsing inward.",
+    "Add a step height, a slower lowering or a light weight before adding depth."
+  ],
+  "sources": [
+    {
+      "title": "Royal Orthopaedic Hospital — exercises for osteoarthritis of the knee",
+      "url": "https://roh.nhs.uk/services-information/therapy/exercises-for-osteoarthritis-of-the-knee"
+    }
+  ],
+  "items": [
+    {
+      "move": "minisquat",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "sitstand",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "stepup",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "kneeext",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "calfraise",
+      "sets": 3,
+      "reps": 12
+    },
+    {
+      "move": "lunge",
+      "sets": 2,
+      "reps": 8,
+      "rom": 70,
+      "note": "A shallow lunge; skip it on a sore day."
+    }
+  ]
+}

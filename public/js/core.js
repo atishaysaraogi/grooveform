@@ -756,6 +756,34 @@
 
   /* the shape of what the app remembers in the browser; the Review page writes
      tuned numbers into the same store, so both have to agree on it */
+  /* A plan's adjustments laid over a cfg — what a coach or a physio changes for one
+     person: the count, the sets, the hold, any setting by name, the faults to ignore,
+     and the range of motion. The range is a percent of the full movement, measured
+     from the return line (downAt, where a rep counts) to the top band and the
+     under-way line: at 70% the top band and the under-way line sit seven tenths of the
+     way out, so a lift seven tenths as far is the top and counts, and the far edge
+     comes in with it, so going the full way is now too far. A hold's position is not
+     scaled. `ignore` keeps only the ids the move has. The cfg keeps `rom` and `ignore`. */
+  function adjust(move, cfg, adj) {
+    const c = Object.assign({}, cfg);
+    if (!adj) { c.ignore = []; c.rom = 100; return c; }
+    if (typeof adj.reps === 'number' && adj.reps > 0) c.repCount = Math.round(adj.reps);
+    if (typeof adj.sets === 'number' && adj.sets > 0) c.setCount = Math.round(adj.sets);
+    if (typeof adj.hold === 'number' && adj.hold >= 0) c.holdTargetSec = adj.hold;
+    for (const [k, v] of Object.entries(adj.settings || {})) if (typeof v === 'number' && Number.isFinite(v)) c[k] = v;
+    c.ignore = (adj.ignore || []).filter((id) => move.faults.includes(id) && !(move.prompts || []).includes(id) && id !== 'lost');
+    const rom = typeof adj.rom === 'number' && adj.rom > 0 ? adj.rom : 100;
+    const p = move.reps && move.spec && move.spec.progress;
+    if (p && rom !== 100) {
+      const k = rom / 100, d = c[p.downAt], band = move.bands.find((b) => b.key === p.measure);
+      const scale = (key) => { if (key && typeof c[key] === 'number' && typeof d === 'number') c[key] = Math.round((d + (c[key] - d) * k) * 10) / 10; };
+      scale(p.raiseAt);
+      if (band && !band.sym) for (const key of [band.lo, band.hi, band.min, band.max]) scale(key);
+    }
+    c.rom = rom;
+    return c;
+  }
+
   const SETTINGS_V = 7;
   /* Numbers a browser keeps for an exercise carry a stamp of the file they were kept
      under: its version and its defaults. A stamp that no longer matches drops them —
@@ -763,7 +791,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-01f';
+  const VER = '2026-10-01g';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -788,6 +816,6 @@
     return lines;
   }
 
-  return { VER, SETTINGS_V, stampOf, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, roomOf, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
+  return { VER, SETTINGS_V, stampOf, adjust, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, roomOf, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
     lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

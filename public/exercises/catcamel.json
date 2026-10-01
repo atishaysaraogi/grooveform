@@ -1,0 +1,383 @@
+{
+  "v": 1,
+  "id": "catcamel",
+  "name": "Cat–camel",
+  "order": 28,
+  "status": "ready",
+  "category": "Back",
+  "tags": [
+    "floor",
+    "kneeling",
+    "quadruped",
+    "back",
+    "mobility",
+    "low back pain",
+    "McGill",
+    "reps"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "reps",
+  "position": "kneeling",
+  "movement": "on all fours, the back rounded up with the head tucked and let down with the head lifted, slowly, as motion not stretch",
+  "sides": "both",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "On all fours, the back rounded up with the chin tucked, then let down with the head lifted, slowly.",
+    "start": "Lay the phone on its side on the floor. Kneel on all fours side on to it, hands under the shoulders, knees under the hips.",
+    "position": "Kneel on all fours side on to the phone, hands under the shoulders, knees under the hips, back in a comfortable middle.",
+    "top": "The back rounded up toward the ceiling with the chin tucked and the head hanging — the cat — then let down into a gentle dip with the head lifted — the camel — without pushing either end.",
+    "howto": [
+      "On all fours, hands under shoulders, knees under hips, arms straight.",
+      "Breathe out and round the back up toward the ceiling, tucking the chin and letting the head hang. Easy — no pushing at the end.",
+      "Breathe in and let the back dip down, lifting the head gently.",
+      "Keep cycling slowly. It is a motion exercise, not a stretch: five to eight cycles are enough."
+    ],
+    "cannot": "The curve of the spine itself: it reads the head dropping and lifting with the shoulders, the arms and the hips staying over the knees. Move the whole spine, not just the neck.",
+    "about": "Cat–camel — on all fours side on: the round, as the shoulder-to-ear line off level read against where it was at the start, −45 to −15° at the cat (the head tucked and hanging); a cycle is under way once the head has dropped 10 past the start and counts when it is back within 4; the arms straight, the elbow at least 160°; and the hips over the knees, the knee-to-hip line 75–105° from the floor — rocking back onto the heels is a different stretch. No hold: this is motion, the gentlest thing a sore back can do.",
+    "lost": "Kneel on all fours side on to the camera, the whole body in",
+    "lower": "And let it down — head up",
+    "early": "Round up a little further next time",
+    "holdLabel": "Pause at the top for",
+    "safety": "Gentle and slow, inside the pain-free range. No pushing at either end.",
+    "easier": "A smaller movement; fewer cycles.",
+    "harder": "Nothing — it is a warm-up. Move on to the bird dog.",
+    "mistakes": "Pushing hard into the end of either curve; moving only the neck; rocking back onto the heels; rushing."
+  },
+  "muscles": {
+    "back": 0.6,
+    "abs": 0.5,
+    "neck": 0.3
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 60,
+        "neck": 20,
+        "thigh": 0,
+        "shin": -90,
+        "foot": 180,
+        "uarm": 2,
+        "farm": 2,
+        "thighF": 0,
+        "shinF": -90,
+        "footF": 180,
+        "uarmF": 2,
+        "farmF": 2
+      },
+      "B": {
+        "torso": 66,
+        "neck": -75,
+        "thigh": 0,
+        "shin": -90,
+        "foot": 180,
+        "uarm": 2,
+        "farm": 2,
+        "thighF": 0,
+        "shinF": -90,
+        "footF": 180,
+        "uarmF": 2,
+        "farmF": 2
+      },
+      "anchor": "ft",
+      "belly": 1
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip",
+      "knee"
+    ],
+    "needed": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip",
+      "knee"
+    ],
+    "bones": [
+      [
+        "ear",
+        "shoulder"
+      ],
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ]
+    ],
+    "dots": [
+      "ear",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip",
+      "knee"
+    ],
+    "limb": {
+      "ear|shoulder": "round",
+      "shoulder|elbow": "elbow",
+      "elbow|wrist": "elbow",
+      "hip|knee": "hips"
+    }
+  },
+  "measurements": [
+    {
+      "key": "round",
+      "label": "head dropped from the start",
+      "hud": "ROUND",
+      "note": "at the cat",
+      "kind": "rise",
+      "a": "shoulder",
+      "b": "ear",
+      "fromStart": "change",
+      "band": {
+        "lo": "roundMin",
+        "hi": "roundMax"
+      },
+      "scale": [
+        -60,
+        40
+      ],
+      "why": "The shoulder-to-ear line off level, as the change from the start: the head tucking and hanging as the back rounds reads negative, lifting with the dip positive. Also the progress measurement, read downward.",
+      "settings": [
+        {
+          "key": "roundMin",
+          "label": "Head dropped at the cat, furthest (degrees from the start)",
+          "min": -70,
+          "max": -20
+        },
+        {
+          "key": "roundMax",
+          "label": "Head dropped at the cat, at least",
+          "min": -40,
+          "max": -5
+        }
+      ]
+    },
+    {
+      "key": "elbow",
+      "label": "arms straight",
+      "hud": "ARMS",
+      "note": "straight",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "elbow",
+      "c": "wrist",
+      "band": {
+        "min": "elbowMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The elbow: the arms stay straight under the shoulders.",
+      "settings": [
+        {
+          "key": "elbowMin",
+          "label": "Elbow angle, at least",
+          "min": 130,
+          "max": 179
+        }
+      ]
+    },
+    {
+      "key": "hips",
+      "label": "hips over the knees",
+      "hud": "HIPS",
+      "note": "over knees",
+      "kind": "floor",
+      "at": "knee",
+      "to": "hip",
+      "band": {
+        "lo": "hipsMin",
+        "hi": "hipsMax"
+      },
+      "scale": [
+        30,
+        120
+      ],
+      "why": "The knee-to-hip line from the floor: 90 with the hips over the knees; rocking back toward the heels lays it down.",
+      "settings": [
+        {
+          "key": "hipsMin",
+          "label": "Knee-to-hip line from the floor, at least",
+          "min": 50,
+          "max": 89
+        },
+        {
+          "key": "hipsMax",
+          "label": "Knee-to-hip line from the floor, at most",
+          "min": 91,
+          "max": 130
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "round",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "down"
+  },
+  "ready": {
+    "atStart": true,
+    "ranges": {
+      "elbow": [
+        150,
+        180
+      ]
+    }
+  },
+  "inPosition": [
+    "round",
+    "elbow"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Round the back up — chin tucked",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "elbowBent",
+      "measure": "elbow",
+      "side": "below",
+      "label": "Arms bending",
+      "text": "Arms straight, hands under the shoulders",
+      "deep": "",
+      "tone": "plain",
+      "when": "always"
+    },
+    {
+      "id": "roundLow",
+      "measure": "round",
+      "side": "above",
+      "label": "Round further",
+      "text": "Tuck the chin and round the back up a little more",
+      "deep": "",
+      "tone": "up"
+    },
+    {
+      "id": "roundHigh",
+      "measure": "round",
+      "side": "below",
+      "label": "Pushing too far",
+      "text": "Easy — don’t push the round",
+      "deep": "",
+      "tone": "down"
+    },
+    {
+      "id": "rocking",
+      "measure": "hips",
+      "side": "below",
+      "label": "Rocking back",
+      "text": "Hips over the knees — don’t rock back",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "rockFwd",
+      "measure": "hips",
+      "side": "above",
+      "label": "Hips too far forward",
+      "text": "Hips over the knees",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "line",
+      "from": "shoulder",
+      "to": "ear",
+      "good": "round"
+    },
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": 0.5
+    }
+  ],
+  "defaults": {
+    "roundMin": -45,
+    "roundMax": -15,
+    "elbowMin": 160,
+    "hipsMin": 75,
+    "hipsMax": 105,
+    "raiseAt": -10,
+    "downAt": -4,
+    "holdTargetSec": 0,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Head drop that counts as under way",
+      "min": -50,
+      "max": 30
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

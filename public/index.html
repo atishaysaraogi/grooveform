@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-v="2026-10-01f">
+<html lang="en" data-v="2026-10-01g">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -49,6 +49,15 @@
   <!-- ============ home: the exercises ============ -->
   <section class="screen" id="screen-home">
     <p class="lede">Pick an exercise. Prop up the phone. Turn the sound on. Move.</p>
+    <section class="plans-home" id="plans-home">
+      <h2>Programmes</h2>
+      <p class="tiny">Exercises bundled for a condition, with the numbers set the way a physio would start. Copy one and change it, or build your own.</p>
+      <nav class="plans" id="plan-list" aria-label="Programmes"></nav>
+      <h2 class="gap">My plans</h2>
+      <nav class="plans" id="my-plans" aria-label="My plans"></nav>
+      <p class="tiny"><label class="linkbtn file">Load a plan file<input type="file" id="plan-file" accept=".json,application/json" hidden></label> <span id="plan-file-note"></span></p>
+      <h2 class="gap">All exercises</h2>
+    </section>
     <nav class="list" id="picker" aria-label="Exercises"></nav>
     <p class="tiny" id="no-match" hidden>Nothing by that name yet.</p>
     <p class="tiny" id="lib-note" hidden></p>
@@ -59,6 +68,7 @@
   <!-- ============ the exercise: what it is, how many, start ============ -->
   <section class="screen" id="screen-ex" hidden>
     <div class="ex-top">
+      <p class="plan-banner" id="plan-banner" hidden></p>
       <h1 class="ex-title" id="ex-title">Wall sit</h1>
       <p class="tiny" id="draft-note" hidden>A draft from the builder, here for a trial run. <button class="linkbtn" id="draft-drop" type="button">Drop the draft</button></p>
       <div class="fig-wrap"><canvas class="demo-fig muscle" id="ex-fig" role="img" aria-label="The exercise, animated"></canvas></div>
@@ -86,6 +96,14 @@
         <ul class="ticks" id="coaches"></ul>
         <h2 class="gap">What it can’t see</h2>
         <p class="muted" id="cannot"></p>
+      </section>
+      <section class="panel" id="adjust-panel">
+        <h2>Adjust</h2>
+        <p class="tiny" id="adjust-note"></p>
+        <label class="rom" id="adj-rom-row"><span>Range of motion <b id="adj-rom-v">100%</b></span><input type="range" id="adj-rom" min="40" max="130" step="5" value="100"></label>
+        <p class="tiny">Coached — untick a fault to leave it alone:</p>
+        <div class="adj-faults" id="adj-faults"></div>
+        <div class="row" id="adj-add-row"><select id="adj-plan" aria-label="Add to a plan"></select><button class="btn" id="adj-add" type="button">Add</button><span class="tiny" id="adj-saved"></span></div>
       </section>
       <section class="panel" id="last-panel" hidden>
         <h2>Last time</h2>
@@ -175,6 +193,26 @@
     </div>
   </section>
 
+  <!-- ============ a plan: its steps, and the changes to them ============ -->
+  <section class="screen" id="screen-plan" hidden>
+    <div class="plan-head">
+      <h1 class="ex-title" id="plan-title">Plan</h1>
+      <p class="muted" id="plan-for"></p>
+      <p id="plan-blurb"></p>
+      <p class="tiny" id="plan-kind"></p>
+    </div>
+    <ol class="plan-items" id="plan-items" aria-label="The exercises, in order"></ol>
+    <section class="panel cream" id="plan-notes-panel" hidden>
+      <h2>Notes</h2>
+      <ul class="ticks" id="plan-notes"></ul>
+      <ul class="sources" id="plan-sources"></ul>
+    </section>
+    <section class="panel" id="plan-actions-panel">
+      <div id="plan-actions"></div>
+      <p class="tiny" id="plan-note"></p>
+    </section>
+  </section>
+
   <!-- ============ done: that session ============ -->
   <section class="screen" id="screen-done" hidden>
     <section class="panel" id="result">
@@ -212,6 +250,7 @@
       <details><summary class="tiny">Every cue, with its time</summary><ol class="log" id="log"></ol></details>
     </section>
     <div class="row">
+      <a class="btn primary" id="plan-next" href="#/" hidden>Next</a>
       <button class="btn primary" id="again">Do it again</button>
       <a class="btn link" href="#/">Another exercise</a>
       <a class="btn link" href="review.html?tab=review">Review the recording</a>
@@ -219,17 +258,18 @@
   </section>
 </main>
 
-<script src="js/core.js?v=2026-10-01f"></script>
-<script src="js/spec.js?v=2026-10-01f"></script>
-<script src="js/moves.js?v=2026-10-01f"></script>
-<script src="js/mp4.js?v=2026-10-01f"></script>
-<script src="js/overlay.js?v=2026-10-01f"></script>
-<script src="js/sound.js?v=2026-10-01f"></script>
-<script src="js/codec.js?v=2026-10-01f"></script>
-<script src="js/speech.js?v=2026-10-01f"></script>
-<script src="js/mixdown.js?v=2026-10-01f"></script>
-<script src="js/figure.js?v=2026-10-01f"></script>
-<script src="js/anatomy.js?v=2026-10-01f"></script>
-<script src="js/app.js?v=2026-10-01f"></script>
+<script src="js/core.js?v=2026-10-01g"></script>
+<script src="js/spec.js?v=2026-10-01g"></script>
+<script src="js/moves.js?v=2026-10-01g"></script>
+<script src="js/plans.js?v=2026-10-01g"></script>
+<script src="js/mp4.js?v=2026-10-01g"></script>
+<script src="js/overlay.js?v=2026-10-01g"></script>
+<script src="js/sound.js?v=2026-10-01g"></script>
+<script src="js/codec.js?v=2026-10-01g"></script>
+<script src="js/speech.js?v=2026-10-01g"></script>
+<script src="js/mixdown.js?v=2026-10-01g"></script>
+<script src="js/figure.js?v=2026-10-01g"></script>
+<script src="js/anatomy.js?v=2026-10-01g"></script>
+<script src="js/app.js?v=2026-10-01g"></script>
 </body>
 </html>

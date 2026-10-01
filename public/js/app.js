@@ -118,8 +118,18 @@ Moves.ready.then(function () {
     c.rotate = $('cfg-rotate').value;
     c.angles = opt('cfg-angles').value === 'on';
     c.voice = voice.kind;
-    return c;
+    /* the adjustments — the range of motion, the faults left alone, a setting by name — laid
+       over: a plan's while an exercise is a step of one, otherwise the person's own for it.
+       A plan's counts are on the page's inputs already (put there when the step was opened). */
+    return Core.adjust(move, c, currentAdjust());
   }
+  /* ---- plans: an exercise done as a step of one, and the adjustments ----
+     planCtx is { plan, i, item } while a step is open: the exercise page, the camera and the
+     session after it. It is let go by opening an exercise plainly or going home. */
+  let planCtx = null, curPlan = null;
+  const myAdjust = () => (saved.bands[move.id] && saved.bands[move.id].adjust) || null;
+  const currentAdjust = () => (planCtx ? Plans.adjustOf(planCtx.item, { counts: false }) : myAdjust());
+  const planHref = (p, n) => '#/plan/' + encodeURIComponent(p.id) + (n ? '/' + n : '');
 
   /* every number a move owns: the band edges, plus anything else it declares */
   const settingsOf = (m) => m.bands.reduce((a, b) => a.concat(b.set), []).concat(m.extra || []);
@@ -140,6 +150,7 @@ Moves.ready.then(function () {
       const kept = { stamp: stampOf(m) };
       if (mine.load != null) kept.load = mine.load;
       if (mine.band != null) kept.band = mine.band;
+      if (mine.adjust) kept.adjust = mine.adjust;
       saved.bands[m.id] = kept; store.set(saved);
     }
     /* and a kept number outside the range its setting declares is not a tuning of
@@ -216,13 +227,13 @@ Moves.ready.then(function () {
   };
   const MUSCLE = { thigh: 'thighs', calf: 'calves', glute: 'glutes', abs: 'abs', oblique: 'obliques', shoulder: 'shoulders', back: 'back', ham: 'hamstrings', chest: 'chest', arm: 'arms', forearm: 'forearms', neck: 'neck' };
   const muscleWords = (m) => Object.entries(m.muscles || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => MUSCLE[k] || k).join(', ');
-  const SCREENS = ['home', 'ex', 'live', 'done'];
+  const SCREENS = ['home', 'ex', 'live', 'done', 'plan'];
   let screen = 'home', starting = false;   // starting: the camera is being asked for, so the live route holds
   function show(name) {
     screen = name;
     for (const k of SCREENS) { opt('screen-' + k).hidden = k !== name; document.body.classList.toggle('at-' + k, k === name); }
     opt('nav-back').hidden = name === 'home';
-    opt('nav-title').textContent = name === 'done' ? 'That session' : '';
+    opt('nav-title').textContent = name === 'done' ? 'That session' : name === 'plan' ? 'Programme' : '';
     opt('state').hidden = name !== 'live';
     if (name === 'ex' && window.OnTrackAnatomy) mountFigure();
     else if (window.OnTrackAnatomy) OnTrackAnatomy.stopAll();
@@ -235,13 +246,28 @@ Moves.ready.then(function () {
        camera, the coach and the voice stop with it: nothing is said to a page
        that is not the camera's */
     if (h !== '#/live' && (running || inSet)) leaveLive();
-    if ((m = h.match(/^#\/ex\/([a-z0-9]+)/)) && Moves[m[1]]) { if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
-    else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = '#/ex/' + move.id; return; } show('live'); }
-    else if (h === '#/done') { if (!setsDone.length) { location.hash = '#/ex/' + move.id; return; } show('done'); }
-    else show('home');
+    if ((m = h.match(/^#\/ex\/([a-z0-9]+)/)) && Moves[m[1]]) { planCtx = null; if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
+    else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = exHref(); return; } show('live'); }
+    else if (h === '#/done') { if (!setsDone.length) { location.hash = exHref(); return; } show('done'); }
+    else if (h === '#/plans/new') { const p = Plans.create({ name: 'My plan', items: [] }); buildPlansHome(); location.hash = planHref(p); return; }
+    else if ((m = h.match(/^#\/plan\/([^/]+)(?:\/(\d+))?$/))) {
+      const id = decodeURIComponent(m[1]);
+      let p = Plans.get(id);
+      /* a plan in the address: decoded, and held as the shared one until it is saved */
+      if (!p && id.startsWith('~')) { p = Plans.decode(id.slice(1)); if (p) Plans.shared = p; }
+      if (!p) { if (!plansLoaded) return; location.hash = '#/'; return; }
+      if (m[2]) {
+        const i = Number(m[2]) - 1, it = p.items[i];
+        if (!it || !Moves[it.move]) { location.hash = planHref(p); return; }
+        enterPlanItem(p, i); show('ex');
+      } else { planCtx = null; showPlan(p); show('plan'); }
+    }
+    else { planCtx = null; show('home'); }
   }
+  /* the exercise page to go back to: the step of the plan, or the exercise itself */
+  const exHref = () => (planCtx ? planHref(planCtx.plan, planCtx.i + 1) : '#/ex/' + move.id);
   window.addEventListener('hashchange', route);
-  opt('nav-back').onclick = () => { location.hash = screen === 'ex' ? '#/' : '#/ex/' + move.id; };
+  opt('nav-back').onclick = () => { location.hash = screen === 'ex' ? (planCtx ? planHref(planCtx.plan) : '#/') : screen === 'plan' ? '#/' : exHref(); };
 
   /* home: the list — each exercise's name and what it works — and a search over it.
      The search also knows the position and where the phone goes, though the row
@@ -275,6 +301,7 @@ Moves.ready.then(function () {
     let n = 0;
     document.querySelectorAll('#picker .item').forEach((c) => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) n += 1; });
     opt('no-match').hidden = n > 0;
+    opt('plans-home').hidden = !!q;
   }
   opt('nav-q').oninput = searchCards;
 
@@ -346,6 +373,12 @@ Moves.ready.then(function () {
           if (customOpen) { const kg = Number(mine().customKg) || 0; setLoad(kg); }
           else setLoad(next);
         } else if (b.key === 'band') { mine().band = next; store.set(saved); }
+        else if (planCtx) {
+          /* a step of a plan: the page's number, and the plan's when it is the person's own */
+          $(b.input).value = next;
+          if (planCtx.plan.custom) { planCtx.item[b.key === 'reps' ? 'reps' : b.key === 'sets' ? 'sets' : 'hold'] = Number(next); Plans.save(); }
+          syncBands(); if (coach) Object.assign(coach.cfg, cfg()); planBanner();
+        }
         else { $(b.input).value = next; saveSettings(); }
         buildBubbles();
       };
@@ -373,8 +406,9 @@ Moves.ready.then(function () {
     opt('setup-place').textContent = placement(move);
     opt('setup-position').textContent = move.position || move.hint || '';
     opt('howto').innerHTML = (move.howto || []).map((t) => `<li>${esc(t)}</li>`).join('');
-    const coached = move.faults.filter((id) => id !== 'lost' && !(move.prompts || []).includes(id)).map((id) => (move.cues[id] && (move.cues[id].label || move.cues[id].text)) || id);
-    opt('coaches').innerHTML = coached.map((t) => `<li>${esc(t)}</li>`).join('') + (move.reps ? '<li>Each rep counted on the way back down, the hold at the top timed</li>' : '<li>The hold timed only while the position is right</li>');
+    const ign = new Set(Core.adjust(move, {}, currentAdjust()).ignore);
+    const coached = move.faults.filter((id) => id !== 'lost' && !(move.prompts || []).includes(id)).map((id) => ({ t: (move.cues[id] && (move.cues[id].label || move.cues[id].text)) || id, off: ign.has(id) }));
+    opt('coaches').innerHTML = coached.map((c) => `<li${c.off ? ' class="off"' : ''}>${esc(c.t)}${c.off ? ' <i>— left alone</i>' : ''}</li>`).join('') + (move.reps ? '<li>Each rep counted on the way back down, the hold at the top timed</li>' : '<li>The hold timed only while the position is right</li>');
     opt('cannot').textContent = (move.cannot || '') + ' Everything runs on this device; nothing is uploaded.';
     const last = lastSession(move.id);
     opt('last-panel').hidden = !last;
@@ -382,8 +416,180 @@ Moves.ready.then(function () {
     $('veil-title').textContent = move.name;
     customOpen = false;
     buildBubbles();
+    planBanner(); buildAdjust();
     if (screen === 'ex' && window.OnTrackAnatomy) mountFigure();
   }
+
+  /* ---- a step of a plan, opened: the plan's counts onto the page, the banner over it ---- */
+  function enterPlanItem(p, i) {
+    const it = p.items[i];
+    planCtx = { plan: p, i, item: it };
+    if (move.id !== it.move) selectMove(it.move);
+    const d = Object.assign({}, Core.COMMON, move.defaults);
+    if (move.reps && $('cfg-repCount')) $('cfg-repCount').value = it.reps || d.repCount;
+    if ($('cfg-setCount')) $('cfg-setCount').value = it.sets || d.setCount;
+    $('cfg-target').value = it.hold != null ? it.hold : d.holdTargetSec;
+    syncBands(); if (coach) Object.assign(coach.cfg, cfg());
+    showMove();
+  }
+  function planBanner() {
+    const b = opt('plan-banner'); if (!b.setAttribute) return;
+    if (!planCtx) { b.hidden = true; return; }
+    const { plan, i, item } = planCtx, n = plan.items.length, next = plan.items[i + 1];
+    b.hidden = false;
+    b.innerHTML = `<a class="plan-link" href="${planHref(plan)}">‹ ${esc(plan.name)}</a><span class="step">Step ${i + 1} of ${n}</span><span class="what">${esc(Plans.words(item, move))}${item.note ? ' — ' + esc(item.note) : ''}</span>` +
+      (next && Moves[next.move] ? `<a class="next" href="${planHref(plan, i + 2)}">Next: ${esc(Moves[next.move].name)} ›</a>` : '');
+  }
+  /* ---- Adjust: the range of motion and the faults to leave alone, for this person — kept on
+     this phone, or in the plan when the exercise is a step of the person's own plan ---- */
+  const btn = (txt, fn, cls) => { const b = el('button', cls || 'btn tiny-btn', txt); b.type = 'button'; b.onclick = fn; return b; };
+  function buildAdjust() {
+    const host = opt('adj-faults'); if (!host.appendChild) return;
+    const a = currentAdjust() || {};
+    const custom = !planCtx || !!planCtx.plan.custom;
+    const rom = a.rom || 100;
+    opt('adj-rom-row').hidden = !(move.reps && move.spec && move.spec.progress);
+    $('adj-rom').value = rom; $('adj-rom-v').textContent = rom + '%'; $('adj-rom').disabled = !custom;
+    host.innerHTML = '';
+    for (const id of move.faults) {
+      if (id === 'lost' || (move.prompts || []).includes(id)) continue;
+      const c = move.cues[id] || {};
+      const lab = el('label', 'check', `<input type="checkbox"${(a.ignore || []).includes(id) ? '' : ' checked'}${custom ? '' : ' disabled'}> ${esc(c.label || id)}`);
+      lab.querySelector('input').onchange = (e) => setIgnore(id, !e.target.checked);
+      host.appendChild(lab);
+    }
+    opt('adjust-note').textContent = planCtx
+      ? (custom ? `Changes here are kept in “${planCtx.plan.name}”.` : `As set in “${planCtx.plan.name}”. Copy the programme to your plans to change it.`)
+      : 'For you, or as your physio set it: a smaller range, a fault to leave alone. Kept on this phone, for this exercise.';
+    const sel = opt('adj-plan');
+    if (sel.appendChild) sel.innerHTML = '<option value="">Add to a plan…</option>' + Plans.mine.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') + '<option value="new">A new plan</option>';
+    opt('adj-add-row').hidden = !!planCtx;
+    opt('adj-saved').textContent = '';
+  }
+  function writeAdjust(fn) {
+    if (planCtx) { if (!planCtx.plan.custom) return; fn(planCtx.item); Plans.save(); }
+    else { const m = mine(); m.adjust = m.adjust || {}; fn(m.adjust); if (!m.adjust.rom && !(m.adjust.ignore && m.adjust.ignore.length)) delete m.adjust; store.set(saved); }
+    syncBands(); if (coach) Object.assign(coach.cfg, cfg());
+    showMove();   // the coaches list, the banner and the panel follow
+  }
+  function setIgnore(id, off) { writeAdjust((a) => { const s2 = new Set(a.ignore || []); if (off) s2.add(id); else s2.delete(id); a.ignore = [...s2]; if (!a.ignore.length) delete a.ignore; }); }
+  if ($('adj-rom')) {
+    $('adj-rom').oninput = () => { $('adj-rom-v').textContent = $('adj-rom').value + '%'; };
+    $('adj-rom').onchange = () => { const v = Number($('adj-rom').value); writeAdjust((a) => { if (v === 100) delete a.rom; else a.rom = v; }); };
+  }
+  opt('adj-add').onclick = () => {
+    const v = opt('adj-plan').value; if (!v) return;
+    const p = v === 'new' ? Plans.create({ name: 'My plan', items: [] }) : Plans.get(v);
+    if (!p || !p.custom) return;
+    const a = myAdjust() || {};
+    const it = Plans.cleanItem({ move: move.id, sets: num('cfg-setCount', null), reps: move.reps ? num('cfg-repCount', null) : null, hold: num('cfg-target', null), rom: a.rom, ignore: a.ignore });
+    p.items.push(it); Plans.save(); buildPlansHome();
+    opt('adj-saved').innerHTML = `Added to <a href="${planHref(p)}">${esc(p.name)}</a>.`;
+    if (v === 'new') buildAdjust(), opt('adj-saved').innerHTML = `Added to a new plan — <a href="${planHref(p)}">open it</a> to name it.`;
+  };
+
+  /* ---- home: the programmes, and the person's own plans ---- */
+  let plansLoaded = false;
+  function buildPlansHome() {
+    const host = opt('plan-list'); if (!host.appendChild) return;
+    const tile = (p) => { const n = p.items.length; return `<a class="plan" href="${planHref(p)}"><span class="name">${esc(p.name)}</span><span class="for">${esc(p.for || '')}</span><span class="n">${n} exercise${n === 1 ? '' : 's'}</span></a>`; };
+    host.innerHTML = Plans.list.map(tile).join('');
+    opt('my-plans').innerHTML = Plans.mine.map(tile).join('') + '<a class="plan new" href="#/plans/new"><span class="name">New plan</span><span class="for">Your own: add exercises from their pages, or copy a programme and change it.</span></a>';
+  }
+  opt('plan-file').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { const p = Plans.create(JSON.parse(await f.text())); buildPlansHome(); location.hash = planHref(p); }
+    catch (err) { opt('plan-file-note').textContent = 'Not a plan file: ' + (err.message || err); }
+    e.target.value = '';
+  };
+
+  /* ---- a plan's page: its steps, and for the person's own, the changes ---- */
+  const note = (t) => { opt('plan-note').textContent = t; };
+  function showPlan(p) {
+    curPlan = p;
+    opt('plan-title').textContent = p.name; opt('plan-for').textContent = p.for || ''; opt('plan-blurb').textContent = p.blurb || '';
+    opt('plan-kind').textContent = p.shared ? 'A plan sent to you — save it to keep it.' : p.custom ? 'Your plan, kept on this phone.' : 'A programme from the library. Copy it to change it.';
+    opt('plan-notes').innerHTML = (p.notes || []).map((n) => `<li>${esc(n)}</li>`).join('');
+    opt('plan-sources').innerHTML = (p.sources || []).map((x) => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></li>`).join('');
+    opt('plan-notes-panel').hidden = !((p.notes && p.notes.length) || (p.sources && p.sources.length));
+    const host = opt('plan-items'); host.innerHTML = '';
+    p.items.forEach((it, i) => {
+      const m = Moves[it.move]; const li = el('li', 'plan-item' + (m ? '' : ' missing'));
+      if (!m) { li.innerHTML = `<span class="txt"><span class="name">${i + 1}. ${esc(it.move)}</span><span class="what">Not in this library</span></span>`; }
+      else {
+        let fig = ''; try { fig = window.Figure ? Figure.svg(m, '', 'camera', { still: true }) : ''; } catch (e2) { fig = ''; }
+        li.innerHTML = `<span class="fig" aria-hidden="true">${fig}</span><span class="txt"><span class="name">${i + 1}. ${esc(m.name)}</span><span class="what">${esc(Plans.words(it, m))}</span><span class="step-note">${esc(it.note || '')}</span></span><a class="btn primary small" href="${planHref(p, i + 1)}">Start</a>`;
+      }
+      if (p.custom) {
+        const tools = el('span', 'rowtools');
+        tools.appendChild(btn('↑', () => { if (i > 0) { [p.items[i - 1], p.items[i]] = [p.items[i], p.items[i - 1]]; Plans.save(); showPlan(p); } }));
+        tools.appendChild(btn('↓', () => { if (i < p.items.length - 1) { [p.items[i + 1], p.items[i]] = [p.items[i], p.items[i + 1]]; Plans.save(); showPlan(p); } }));
+        if (m) tools.appendChild(btn('Adjust', () => { const open = li.querySelector('.adj'); if (open) open.remove(); else li.appendChild(adjustForm(p, it, m, li)); }));
+        tools.appendChild(btn('✕', () => { p.items.splice(i, 1); Plans.save(); showPlan(p); buildPlansHome(); }));
+        li.appendChild(tools);
+      }
+      host.appendChild(li);
+    });
+    if (!p.items.length) host.innerHTML = '<li class="plan-item empty"><span class="txt"><span class="what">Nothing in it yet. Add an exercise below, or from any exercise page under Adjust.</span></span></li>';
+    const acts = opt('plan-actions'); acts.innerHTML = '';
+    if (p.custom) {
+      const nm = el('div', 'grid');
+      const name = el('label', null, 'Name<input type="text" maxlength="80">'); name.querySelector('input').value = p.name; name.querySelector('input').onchange = (e) => { p.name = e.target.value.trim().slice(0, 80) || 'My plan'; Plans.save(); showPlan(p); buildPlansHome(); }; nm.appendChild(name);
+      const who = el('label', null, 'Who it is for<input type="text" maxlength="200">'); who.querySelector('input').value = p.for || ''; who.querySelector('input').onchange = (e) => { p.for = e.target.value.trim().slice(0, 200); Plans.save(); buildPlansHome(); }; nm.appendChild(who);
+      const bl = el('label', 'wide', 'A line about it<input type="text" maxlength="600">'); bl.querySelector('input').value = p.blurb || ''; bl.querySelector('input').onchange = (e) => { p.blurb = e.target.value.trim().slice(0, 600); Plans.save(); opt('plan-blurb').textContent = p.blurb; }; nm.appendChild(bl);
+      acts.appendChild(nm);
+      const add = el('div', 'row add-ex'); const sel = el('select'); sel.setAttribute('aria-label', 'Exercise to add'); sel.innerHTML = Moves.list.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join(''); add.appendChild(sel);
+      add.appendChild(btn('Add this exercise', () => { p.items.push({ move: sel.value }); Plans.save(); showPlan(p); buildPlansHome(); }, 'btn')); acts.appendChild(add);
+    }
+    const row = el('div', 'row');
+    if (p.shared) row.appendChild(btn('Save to my plans', () => { const c = Plans.create({ name: p.name, for: p.for, blurb: p.blurb, notes: p.notes, sources: p.sources, items: p.items }); buildPlansHome(); location.hash = planHref(c); }, 'btn primary'));
+    else if (!p.custom) row.appendChild(btn('Copy to my plans and change it', () => { const c = Plans.copy(p); buildPlansHome(); location.hash = planHref(c); }, 'btn primary'));
+    row.appendChild(btn('Copy a link', async () => { const url = location.origin + location.pathname + '#/plan/~' + Plans.encode(p); try { await navigator.clipboard.writeText(url); note('Link copied. The plan is in the address itself: whoever opens it can save it.'); } catch (e2) { window.prompt('Copy this link', url); } }, 'btn'));
+    row.appendChild(btn('Download the plan', () => save(new Blob([JSON.stringify(Plans.clean(p, false), null, 2) + '\n'], { type: 'application/json' }), `${p.id.replace(/^~.*/, 'plan')}.json`), 'btn'));
+    if (p.custom) row.appendChild(btn('Delete this plan', () => { if (window.confirm(`Delete “${p.name}”?`)) { Plans.remove(p.id); buildPlansHome(); location.hash = '#/'; } }, 'btn stop'));
+    acts.appendChild(row);
+    note('');
+  }
+  /* the changes to one step of the person's own plan: the counts, the range, the faults, a note, every number */
+  function adjustForm(p, it, m, li) {
+    const f = el('div', 'adj');
+    const d = Object.assign({}, Core.COMMON, m.defaults);
+    const refresh = () => { li.querySelector('.what').textContent = Plans.words(it, m); li.querySelector('.step-note').textContent = it.note || ''; };
+    const numF = (label, key, val, min, max) => { const lab = el('label', null, `${label}<input type="number" min="${min}" max="${max}" step="1">`); const inp = lab.querySelector('input'); inp.value = val == null ? '' : val; inp.onchange = () => { const v = inp.value === '' ? null : Number(inp.value); if (v == null || !Number.isFinite(v)) delete it[key]; else it[key] = v; Plans.save(); refresh(); }; return lab; };
+    const g = el('div', 'grid tight');
+    g.appendChild(numF('Sets', 'sets', it.sets != null ? it.sets : d.setCount, 1, 20));
+    if (m.reps) g.appendChild(numF('Reps', 'reps', it.reps != null ? it.reps : d.repCount, 1, 100));
+    g.appendChild(numF(m.reps ? 'Hold at the top, s' : 'Hold, s', 'hold', it.hold != null ? it.hold : d.holdTargetSec, 0, 600));
+    f.appendChild(g);
+    if (m.reps && m.spec && m.spec.progress) {
+      const lab = el('label', 'rom', `<span>Range of motion <b>${it.rom || 100}%</b></span><input type="range" min="40" max="130" step="5" value="${it.rom || 100}">`);
+      const r = lab.querySelector('input'); r.oninput = () => { lab.querySelector('b').textContent = r.value + '%'; };
+      r.onchange = () => { const v = Number(r.value); if (v === 100) delete it.rom; else it.rom = v; Plans.save(); refresh(); };
+      f.appendChild(lab);
+    }
+    const fl = el('div', 'adj-faults'); fl.appendChild(el('span', 'tiny', 'Coached — untick to leave alone:'));
+    for (const id of m.faults) {
+      if (id === 'lost' || (m.prompts || []).includes(id)) continue;
+      const c = m.cues[id] || {};
+      const lab = el('label', 'check', `<input type="checkbox"${(it.ignore || []).includes(id) ? '' : ' checked'}> ${esc(c.label || id)}`);
+      lab.querySelector('input').onchange = (e) => { const s2 = new Set(it.ignore || []); if (e.target.checked) s2.delete(id); else s2.add(id); it.ignore = [...s2]; if (!it.ignore.length) delete it.ignore; Plans.save(); refresh(); };
+      fl.appendChild(lab);
+    }
+    f.appendChild(fl);
+    const nt = el('label', 'wide', 'A note for whoever does it<input type="text" maxlength="200">'); const ni = nt.querySelector('input'); ni.value = it.note || '';
+    ni.onchange = () => { it.note = ni.value.trim().slice(0, 200); if (!it.note) delete it.note; Plans.save(); refresh(); }; f.appendChild(nt);
+    const det = el('details'); det.innerHTML = '<summary class="tiny">Every number of this exercise, by name</summary>'; const sg = el('div', 'grid tight');
+    for (const st of settingsOf(m)) {
+      if (['repCount', 'setCount'].includes(st.key)) continue;
+      const lab = el('label', null, `${esc(st.label)}<input type="number" min="${st.min}" max="${st.max}" step="any" placeholder="${d[st.key]}">`); const inp = lab.querySelector('input');
+      inp.value = it.settings && it.settings[st.key] != null ? it.settings[st.key] : '';
+      inp.onchange = () => { it.settings = it.settings || {}; if (inp.value === '') delete it.settings[st.key]; else it.settings[st.key] = Number(inp.value); if (!Object.keys(it.settings).length) delete it.settings; Plans.save(); refresh(); };
+      sg.appendChild(lab);
+    }
+    det.appendChild(sg); f.appendChild(det);
+    return f;
+  }
+  Plans.ready.then(() => { plansLoaded = true; buildPlansHome(); route(); });
   function selectMove(id) { $('move').value = id; $('move').dispatchEvent(new Event('change')); }
 
   /* ---------- that session: what to watch for, how it felt ---------- */
@@ -432,7 +638,7 @@ Moves.ready.then(function () {
     try { localStorage.setItem(HISTORY, JSON.stringify(h.slice(-200))); opt('feel-saved').textContent = 'Saved — it shows under Last time on the exercise.'; }
     catch { opt('feel-saved').textContent = 'Could not save on this device.'; }
   };
-  opt('again').onclick = () => { location.hash = '#/ex/' + move.id; };
+  opt('again').onclick = () => { location.hash = exHref(); };
   function saveSettings() {
     saved.move = move.id;
     for (const k of COMMON_KEYS) saved.common[k] = $('cfg-' + k).value;
@@ -1275,6 +1481,15 @@ Moves.ready.then(function () {
     opt('watch').innerHTML = watchList(sets);
     resetFeel();
     buttons();
+    /* the plan's next step, when this was one */
+    const pn = opt('plan-next');
+    if (pn.setAttribute) {
+      if (planCtx) {
+        const { plan, i } = planCtx, next = plan.items[i + 1];
+        pn.hidden = false; pn.href = next ? planHref(plan, i + 2) : planHref(plan);
+        pn.textContent = next && Moves[next.move] ? `Next: ${Moves[next.move].name} (${i + 2} of ${plan.items.length})` : 'Plan done — back to the plan';
+      } else pn.hidden = true;
+    }
     /* the session's own screen — unless it was ended by picking another exercise,
        in which case that exercise's page is where the person already is */
     if (quietly) return;   // the person has gone elsewhere: nothing more is said

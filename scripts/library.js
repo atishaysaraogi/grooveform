@@ -22,6 +22,13 @@ function index() {
   /* only the list matters: the date is not a reason to rewrite the file */
   const same = before && (() => { try { return JSON.stringify(JSON.parse(before).files) === JSON.stringify(list); } catch { return false; } })();
   if (!same) fs.writeFileSync(file, after);
+  /* the bundles' folder, the same way */
+  const BDIR = path.join(DIR, '..', 'bundles');
+  if (fs.existsSync(BDIR)) {
+    const blist = fs.readdirSync(BDIR).filter((f) => /\.json$/.test(f) && f !== 'index.json').sort();
+    const bfile = path.join(BDIR, 'index.json'), btext = JSON.stringify({ v: 1, files: blist }, null, 2) + '\n';
+    if (!fs.existsSync(bfile) || fs.readFileSync(bfile, 'utf8') !== btext) fs.writeFileSync(bfile, btext);
+  }
   /* the version running, for a page to check itself against a fresh copy of it */
   const vfile = path.join(DIR, '..', 'version.json'), vtext = JSON.stringify({ v: Core.VER }) + '\n';
   if (!fs.existsSync(vfile) || fs.readFileSync(vfile, 'utf8') !== vtext) fs.writeFileSync(vfile, vtext);

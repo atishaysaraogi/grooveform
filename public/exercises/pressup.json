@@ -1,0 +1,281 @@
+{
+  "v": 1,
+  "id": "pressup",
+  "name": "Prone press-up",
+  "order": 25,
+  "status": "ready",
+  "category": "Back",
+  "tags": [
+    "floor",
+    "lying",
+    "prone",
+    "back",
+    "extension",
+    "McKenzie",
+    "low back pain",
+    "disc",
+    "reps"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "reps",
+  "position": "prone",
+  "movement": "lying face down, the chest pressed up on the hands with the hips kept on the floor, and lowered",
+  "sides": "both",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "Lying face down, the chest pressed up on the hands while the hips stay on the floor.",
+    "start": "Lay the phone on its side on the floor. Lie face down side on to it, hands under the shoulders, legs relaxed.",
+    "position": "Lie face down, side on to the phone, hands flat under the shoulders, legs and hips relaxed on the floor.",
+    "top": "The chest pressed up on the hands, the back curved and the hips still on the floor — only as far as is comfortable — held a moment and lowered.",
+    "howto": [
+      "Lie face down, hands flat under the shoulders, legs relaxed. Let the back and hips go loose.",
+      "Press the hands into the floor and push the chest up, letting the back sag between the hips and the shoulders. The arms do the work; the back muscles stay relaxed.",
+      "Keep the hips on the floor. Go only as far as is comfortable, and hold a moment.",
+      "Lower slowly. The rep counts when the chest is back on the floor."
+    ],
+    "cannot": "Whether the back muscles are relaxed and where the pain is moving: it sees the chest rising and the hips lifting. Let the arms do all of it.",
+    "about": "Prone press-up — face down side on: the press, as the hip-to-shoulder line off level, at least 30° at the top (flat reads near 0; a full press with straight arms about 45); a rep is under way past 15 and counts when the chest is back under 8; and the hips on the floor, as the knee-to-hip line off level at most 8° — the hips coming up turns it into a push-up. Hold two seconds at the top. A McKenzie extension: ten reps, repeated through the day, with the range growing as it eases; pain that moves toward the spine is the sign to keep going, pain that moves down the leg the sign to stop.",
+    "lost": "Lie face down side on to the camera, the whole body in",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "Stop if the pain spreads further down the leg. The back muscles stay relaxed; the arms press.",
+    "easier": "Up onto the elbows rather than the hands; a smaller press; a shorter hold.",
+    "harder": "Straight arms; a longer hold; a breath out at the top to let the hips sink.",
+    "mistakes": "Lifting the hips off the floor; tensing the back to lift; holding the breath; pushing into sharp pain."
+  },
+  "muscles": {
+    "back": 0.5,
+    "arm": 0.5,
+    "shoulder": 0.3
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 180,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 180,
+        "uarm": -150,
+        "farm": 30,
+        "uarmF": -150,
+        "farmF": 30
+      },
+      "B": {
+        "torso": 55,
+        "neck": -10,
+        "thigh": -90,
+        "shin": -90,
+        "foot": 180,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 180,
+        "uarm": -170,
+        "farm": 5,
+        "uarmF": -170,
+        "farmF": 5
+      },
+      "anchor": "ft",
+      "belly": 1
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "clearest"
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee"
+    ],
+    "limb": {
+      "shoulder|hip": "press",
+      "hip|knee": "hip"
+    }
+  },
+  "measurements": [
+    {
+      "key": "press",
+      "label": "chest raised",
+      "hud": "PRESS",
+      "note": "at the top",
+      "kind": "rise",
+      "a": "hip",
+      "b": "shoulder",
+      "band": {
+        "min": "pressMin"
+      },
+      "scale": [
+        -10,
+        70
+      ],
+      "why": "The hip-to-shoulder line off level: flat near 0, pressed up on straight arms about 45. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "pressMin",
+          "label": "Chest raised at the top, at least (degrees)",
+          "min": 10,
+          "max": 60
+        }
+      ]
+    },
+    {
+      "key": "hip",
+      "label": "hip above the knee",
+      "hud": "HIPS",
+      "note": "on the floor",
+      "kind": "rise",
+      "a": "knee",
+      "b": "hip",
+      "band": {
+        "max": "hipLift"
+      },
+      "scale": [
+        -20,
+        40
+      ],
+      "why": "The knee-to-hip line off level: the hips coming up with the press, which is a push-up, not an extension.",
+      "settings": [
+        {
+          "key": "hipLift",
+          "label": "Hip above the knee, at most (degrees)",
+          "min": 3,
+          "max": 30
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "press",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "press",
+    "hip"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Press the chest up",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "pressLow",
+      "measure": "press",
+      "side": "below",
+      "label": "Press short",
+      "text": "Press up a little higher — only as far as is comfortable",
+      "deep": "",
+      "tone": "up"
+    },
+    {
+      "id": "hipLift",
+      "measure": "hip",
+      "side": "above",
+      "label": "Hips lifting",
+      "text": "Keep the hips on the floor — let the back sag",
+      "deep": "The hips are up — this is a push-up; lower them and press less",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "press",
+      "size": 0.7
+    },
+    {
+      "kind": "floor",
+      "at": "hip",
+      "dir": -1
+    }
+  ],
+  "defaults": {
+    "pressMin": 30,
+    "hipLift": 8,
+    "raiseAt": 15,
+    "downAt": 8,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Chest angle that counts as under way",
+      "min": -25,
+      "max": 55
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

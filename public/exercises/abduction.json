@@ -1,0 +1,460 @@
+{
+  "v": 1,
+  "id": "abduction",
+  "name": "Arm raise to the side",
+  "order": 16,
+  "status": "ready",
+  "category": "Shoulder",
+  "tags": [
+    "standing",
+    "shoulder",
+    "frozen shoulder",
+    "abduction",
+    "reps",
+    "front"
+  ],
+  "equipment": [],
+  "type": "reps",
+  "position": "standing",
+  "movement": "facing the phone, one straight arm raised out to the side to shoulder height and lowered",
+  "sides": "alternate",
+  "load": "weight",
+  "phone": {
+    "orientation": "tall",
+    "view": "front",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Stand the phone up on the floor, two or three metres away, facing you. Stand square to it, both arms in the picture."
+  },
+  "words": {
+    "hint": "Facing the phone, one straight arm raised out to the side to shoulder height.",
+    "start": "Stand the phone up on the floor. Stand facing it, arms by your sides, whole body in the picture.",
+    "position": "Stand facing the phone, feet hip-width apart, both arms hanging by your sides, palms forward or thumbs up.",
+    "top": "One straight arm raised out to the side to shoulder height — level, not above — the shoulder down, the trunk upright and still.",
+    "howto": [
+      "Stand facing the phone, arms by your sides, thumb pointing up on the working hand.",
+      "Raise the arm out to the side, slowly, to shoulder height — or as high as is comfortable. Keep the elbow straight.",
+      "Hold for the count with the shoulder down, away from the ear, and the trunk still.",
+      "Lower slowly. The rep counts when the arm is back by your side."
+    ],
+    "cannot": "Whether the shoulder blade is turning as it should or the trunk is leaning to the other side: it sees the arm’s angle from the front, the shoulder rising and the elbow. Keep the body still yourself.",
+    "about": "Arm raise to the side — facing the phone: the raise, as the angle at the shoulder between the hip and the wrist, 80–110° at the top (90 is level); a rep is under way past 45 and counts when the arm is back under 25; the working shoulder no more than 8° above the other, which is a shrug; and the elbow at least 150°. Hold two seconds at the top. A frozen shoulder may stop well short of 90 — set the top where it comfortably reaches and raise it as it frees.",
+    "lost": "Stand facing the camera, both arms in the picture",
+    "lower": "Lower slowly",
+    "early": "Hold it at the top next time",
+    "holdLabel": "Hold at the top for",
+    "safety": "To the point of stretch, not pain. If the shoulder catches on the way up, turn the thumb up and try a little lower.",
+    "easier": "A lower top; a shorter hold; no weight.",
+    "harder": "A light weight; a longer hold; a slow count down.",
+    "mistakes": "Hiking the shoulder toward the ear; leaning the trunk away to gain height; bending the elbow; swinging the arm up."
+  },
+  "muscles": {
+    "shoulder": 1,
+    "neck": 0.3,
+    "back": 0.3
+  },
+  "figure": {
+    "points": {
+      "view": "front",
+      "A": {
+        "h": [
+          300,
+          38
+        ],
+        "shL": [
+          282,
+          60
+        ],
+        "shR": [
+          318,
+          60
+        ],
+        "hipL": [
+          289,
+          102
+        ],
+        "hipR": [
+          311,
+          102
+        ],
+        "knL": [
+          287,
+          132
+        ],
+        "knR": [
+          313,
+          132
+        ],
+        "anL": [
+          286,
+          160
+        ],
+        "anR": [
+          314,
+          160
+        ],
+        "heL": [
+          286,
+          163
+        ],
+        "heR": [
+          314,
+          163
+        ],
+        "toL": [
+          282,
+          164
+        ],
+        "toR": [
+          318,
+          164
+        ],
+        "elL": [
+          274,
+          86
+        ],
+        "elR": [
+          326,
+          86
+        ],
+        "wrL": [
+          268,
+          110
+        ],
+        "wrR": [
+          332,
+          110
+        ]
+      },
+      "B": {
+        "h": [
+          300,
+          38
+        ],
+        "shL": [
+          282,
+          60
+        ],
+        "shR": [
+          318,
+          60
+        ],
+        "hipL": [
+          289,
+          102
+        ],
+        "hipR": [
+          311,
+          102
+        ],
+        "knL": [
+          287,
+          132
+        ],
+        "knR": [
+          313,
+          132
+        ],
+        "anL": [
+          286,
+          160
+        ],
+        "anR": [
+          314,
+          160
+        ],
+        "heL": [
+          286,
+          163
+        ],
+        "heR": [
+          314,
+          163
+        ],
+        "toL": [
+          282,
+          164
+        ],
+        "toR": [
+          318,
+          164
+        ],
+        "elL": [
+          274,
+          86
+        ],
+        "elR": [
+          344,
+          58
+        ],
+        "wrL": [
+          268,
+          110
+        ],
+        "wrR": [
+          368,
+          56
+        ]
+      },
+      "hold": false,
+      "side": "R",
+      "flip": false
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "wrist",
+    "hold": {
+      "margin": 0.3,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "other.shoulder",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "needed": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "elbow"
+      ],
+      [
+        "elbow",
+        "wrist"
+      ],
+      [
+        "shoulder",
+        "hip"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "elbow",
+      "wrist",
+      "hip"
+    ],
+    "limb": {
+      "shoulder|elbow": "elbow",
+      "elbow|wrist": "elbow",
+      "shoulder|hip": "abd"
+    }
+  },
+  "measurements": [
+    {
+      "key": "abd",
+      "label": "arm out to the side",
+      "hud": "RAISE",
+      "note": "at the top",
+      "kind": "angle",
+      "a": "hip",
+      "b": "shoulder",
+      "c": "wrist",
+      "band": {
+        "lo": "abdMin",
+        "hi": "abdMax"
+      },
+      "scale": [
+        0,
+        180
+      ],
+      "why": "The angle at the shoulder between the hip and the wrist, seen from the front: by the side about 15, level 90. Also the progress measurement.",
+      "settings": [
+        {
+          "key": "abdMin",
+          "label": "Arm angle at the top, at least (90 is level)",
+          "min": 30,
+          "max": 120
+        },
+        {
+          "key": "abdMax",
+          "label": "Arm angle at the top, at most",
+          "min": 60,
+          "max": 170
+        }
+      ]
+    },
+    {
+      "key": "shrug",
+      "label": "shoulder above the other",
+      "hud": "SHRUG",
+      "note": "shoulder down",
+      "kind": "rise",
+      "a": "other.shoulder",
+      "b": "shoulder",
+      "band": {
+        "max": "shrugMax"
+      },
+      "scale": [
+        -20,
+        30
+      ],
+      "why": "How far the working shoulder sits above the other, as the shoulder line’s angle off level: a shrug lifts it. Past 8 is a hike.",
+      "settings": [
+        {
+          "key": "shrugMax",
+          "label": "Working shoulder above the other, at most (degrees)",
+          "min": 3,
+          "max": 25
+        }
+      ]
+    },
+    {
+      "key": "elbow",
+      "label": "elbow straight",
+      "hud": "ELBOW",
+      "note": "straight",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "elbow",
+      "c": "wrist",
+      "band": {
+        "min": "elbowMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The arm straight: under 150 the elbow is bending to shorten the lever.",
+      "settings": [
+        {
+          "key": "elbowMin",
+          "label": "Elbow angle, at least",
+          "min": 120,
+          "max": 179
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "measure": "abd",
+    "raiseAt": "raiseAt",
+    "downAt": "downAt",
+    "direction": "up"
+  },
+  "ready": {
+    "atStart": true
+  },
+  "inPosition": [
+    "abd",
+    "elbow"
+  ],
+  "prompt": {
+    "id": "raise",
+    "text": "Raise the arm out to the side",
+    "tone": "up"
+  },
+  "faults": [
+    {
+      "id": "elbowBent",
+      "measure": "elbow",
+      "side": "below",
+      "label": "Elbow bending",
+      "text": "Keep the arm straight",
+      "deep": "",
+      "tone": "plain",
+      "when": "rep"
+    },
+    {
+      "id": "abdLow",
+      "measure": "abd",
+      "side": "below",
+      "label": "Raise short",
+      "text": "Lift a little higher",
+      "deep": "Higher — toward shoulder height",
+      "tone": "up"
+    },
+    {
+      "id": "abdHigh",
+      "measure": "abd",
+      "side": "above",
+      "label": "Too high",
+      "text": "Not above the shoulder",
+      "deep": "",
+      "tone": "down"
+    },
+    {
+      "id": "shrug",
+      "measure": "shrug",
+      "side": "above",
+      "label": "Shoulder hiking",
+      "text": "Shoulder down — don’t hike it toward the ear",
+      "deep": "The shoulder is up by your ear — let it drop and lower the arm a little",
+      "tone": "plain",
+      "when": "rep"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "abd",
+      "size": 0.8
+    },
+    {
+      "kind": "line",
+      "from": "other.shoulder",
+      "to": "shoulder",
+      "good": "shrug"
+    }
+  ],
+  "defaults": {
+    "abdMin": 80,
+    "abdMax": 110,
+    "shrugMax": 8,
+    "elbowMin": 150,
+    "raiseAt": 45,
+    "downAt": 25,
+    "holdTargetSec": 2,
+    "callAtSec": [],
+    "repCount": 10,
+    "setCount": 3,
+    "deepAt": 10,
+    "lowerSec": 1,
+    "restSec": 2
+  },
+  "settings": [
+    {
+      "key": "repCount",
+      "label": "Reps in a set",
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "raiseAt",
+      "label": "Arm angle that counts as under way",
+      "min": 0,
+      "max": 85
+    },
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "lowerSec",
+      "label": "Lowering takes at least, seconds",
+      "min": 0,
+      "max": 10
+    },
+    {
+      "key": "restSec",
+      "label": "Quiet after a rep, seconds",
+      "min": 0,
+      "max": 10
+    }
+  ]
+}

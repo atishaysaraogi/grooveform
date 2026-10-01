@@ -83,7 +83,7 @@
       const behindIsLeft = (rawA.dir || 1) > 0;
       wall = (pose.wall === 'behind') === behindIsLeft ? Math.min(...xs) - 6 : Math.max(...xs) + 6;
     }
-    return { A, B, wall, anchor, hold: !!pose.hold };
+    return Object.assign({ A, B, wall, anchor, hold: !!pose.hold }, pose.belly === 1 || pose.belly === -1 ? { belly: pose.belly } : {});
   }
   /* what a move gives: angles, or points outright */
   function figureOf(move) {

@@ -310,7 +310,11 @@
         const { lo, hi } = bandEdges(m.band, cfg);
         good[m.key] = inside(x, lo, hi);
       }
+      /* the faults a plan ignores (cfg.ignore): never on, and a band every fault of which is
+         ignored no longer holds the position either — the measurement is only shown */
+      const ignore = cfg.ignore && cfg.ignore.length ? new Set(cfg.ignore) : null;
       for (const x of faults) {
+        if (ignore && ignore.has(x.id)) continue;
         const m = byKey[x.measure]; if (!m) continue;
         const v = r[nameOf(m)]; if (v == null) continue;
         if (x.requires && !x.requires.every((k) => good[k])) continue;
@@ -322,14 +326,15 @@
         else if (x.side === 'below') { if (v < lo - EDGE) on[x.id] = lo - v; }
       }
       const v = { ok: true, good, faults: on };
+      const holds = ignore ? positionKeys.filter((k) => !faults.some((x) => x.measure === k) || faults.some((x) => x.measure === k && !ignore.has(x.id))) : positionKeys;
       if (reps) {
         const p = f.progress || {}, pm = byKey[p.measure], x = pm ? r[nameOf(pm)] : null;
         const upAt = cfg[p.raiseAt], downAt = cfg[p.downAt];
         const dir = p.direction === 'down' ? -1 : 1;
         v.raised = x != null && (dir > 0 ? x >= upAt - EDGE : x <= upAt + EDGE);
         v.atStart = x != null && (dir > 0 ? x <= downAt + EDGE : x >= downAt - EDGE);
-        v.inPosition = v.raised && positionKeys.every((k) => good[k] !== false);
-      } else v.inPosition = positionKeys.every((k) => good[k] !== false);
+        v.inPosition = v.raised && holds.every((k) => good[k] !== false);
+      } else v.inPosition = holds.every((k) => good[k] !== false);
       return v;
     }
 
@@ -519,7 +524,7 @@
     for (const k of Object.keys(f.muscles || {})) if (!REGIONS.includes(k)) err('muscles', 'not a region the figure knows: ' + k);
     if (!f.muscles || !Object.keys(f.muscles).length) warn('muscles', 'what works, for the muscle figure');
     if (!f.figure || (!f.figure.pose && !f.figure.points)) warn('figure', 'no figure: the exercise page has nothing to animate');
-    if (f.figure && f.figure.points && f.figure.points.belly != null && f.figure.points.belly !== 1 && f.figure.points.belly !== -1) err('figure', 'belly is 1 or -1: which side of the hip→shoulder line the front of the body is on — or left out, and the pose says');
+    for (const fig of [f.figure && f.figure.points, f.figure && f.figure.pose]) if (fig && fig.belly != null && fig.belly !== 1 && fig.belly !== -1) err('figure', 'belly is 1 or -1: which side of the hip→shoulder line the front of the body is on — or left out, and the pose says');
     return out;
   }
 

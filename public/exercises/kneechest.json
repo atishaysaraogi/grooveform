@@ -1,0 +1,241 @@
+{
+  "v": 1,
+  "id": "kneechest",
+  "name": "Knee to chest",
+  "order": 26,
+  "status": "ready",
+  "category": "Back",
+  "tags": [
+    "floor",
+    "lying",
+    "supine",
+    "back",
+    "stretch",
+    "hip",
+    "low back pain",
+    "hold"
+  ],
+  "equipment": [
+    "a mat"
+  ],
+  "type": "hold",
+  "position": "lying",
+  "movement": "lying on the back, one knee hugged to the chest and held, the other leg flat",
+  "sides": "alternate",
+  "load": "none",
+  "phone": {
+    "orientation": "wide",
+    "view": "side",
+    "distance": "two or three metres",
+    "height": "on the floor",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to you."
+  },
+  "words": {
+    "hint": "Lying on your back, one knee hugged in to the chest and held, the other leg flat.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it and hug one knee in to your chest.",
+    "position": "Lie on your back side on to the phone, the working leg nearest it. Hug that knee in toward the chest with both hands behind the thigh; the other leg stays flat on the floor.",
+    "top": "The knee drawn in close to the chest, the other leg flat and straight, the head and shoulders down, held.",
+    "howto": [
+      "Lie on your back, both legs straight.",
+      "Bring one knee up and hug it in toward the chest with both hands behind the thigh, until a stretch is felt in the lower back and the buttock.",
+      "Hold for the count, breathing, with the other leg flat on the floor and the head down.",
+      "Lower the leg slowly, then the other side."
+    ],
+    "cannot": "How the lower back feels and whether the shoulders are relaxed: it sees how close the knee is and whether the other leg stays down.",
+    "about": "Knee to chest — lying on the back side on: the hug, as the angle at the hip between the shoulder and the knee, at most 60° (the knee drawn in close; the leg flat is 180); and the other leg flat, its knee at least 160°. The clock runs while both are right. Thirty seconds a hold, three holds each side.",
+    "lost": "Lie on your back side on to the camera, the whole body in",
+    "holdLabel": "Hold the stretch for",
+    "hold": "That is it — hold and breathe",
+    "safety": "A stretch, not a strain: hold behind the thigh, not over the kneecap. Stop if the pain travels down the leg.",
+    "easier": "The other knee bent with the foot flat; a shorter hold; less pull.",
+    "harder": "A longer hold; the knee drawn a little closer; both knees together.",
+    "mistakes": "The other leg lifting or bending; pulling on the shin or kneecap; lifting the head; holding the breath."
+  },
+  "muscles": {
+    "glute": 0.6,
+    "back": 0.5,
+    "ham": 0.2
+  },
+  "figure": {
+    "pose": {
+      "A": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": 150,
+        "shin": -150,
+        "foot": 90,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 90,
+        "uarm": 120,
+        "farm": 150,
+        "uarmF": 120,
+        "farmF": 150
+      },
+      "hold": true,
+      "anchor": "h",
+      "belly": -1
+    }
+  },
+  "facing": {
+    "from": "hip",
+    "to": "shoulder"
+  },
+  "side": {
+    "pick": "highest",
+    "joint": "knee",
+    "hold": {
+      "margin": 0.25,
+      "frames": 5
+    }
+  },
+  "landmarks": {
+    "joints": [
+      "shoulder",
+      "hip",
+      "other.hip",
+      "knee",
+      "other.knee",
+      "other.ankle"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "other.hip",
+        "other.knee"
+      ],
+      [
+        "other.knee",
+        "other.ankle"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee"
+    ],
+    "limb": {
+      "shoulder|hip": "hug",
+      "hip|knee": "hug",
+      "other.hip|other.knee": "other",
+      "other.knee|other.ankle": "other"
+    }
+  },
+  "measurements": [
+    {
+      "key": "hug",
+      "label": "knee to chest",
+      "hud": "HUG",
+      "note": "in close",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "knee",
+      "band": {
+        "max": "hugMax"
+      },
+      "scale": [
+        20,
+        180
+      ],
+      "why": "The angle at the hip between the shoulder and the knee: 180 with the leg flat, under 60 with the knee hugged in close.",
+      "settings": [
+        {
+          "key": "hugMax",
+          "label": "Hip angle with the knee hugged in, at most",
+          "min": 30,
+          "max": 120
+        }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "other leg straight",
+      "hud": "OTHER",
+      "note": "flat",
+      "kind": "angle",
+      "a": "other.hip",
+      "b": "other.knee",
+      "c": "other.ankle",
+      "optional": true,
+      "band": {
+        "min": "otherMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "why": "The resting leg’s knee: it bends and lifts to let the hugged knee come in. Not read when hidden behind the near leg.",
+      "settings": [
+        {
+          "key": "otherMin",
+          "label": "Other knee, at least (180 is straight)",
+          "min": 130,
+          "max": 179
+        }
+      ]
+    }
+  ],
+  "inPosition": [
+    "hug",
+    "other"
+  ],
+  "faults": [
+    {
+      "id": "hugLoose",
+      "measure": "hug",
+      "side": "above",
+      "label": "Draw closer",
+      "text": "Hug the knee in a little closer",
+      "deep": "Closer to the chest, to the point of stretch",
+      "tone": "plain"
+    },
+    {
+      "id": "otherBent",
+      "measure": "other",
+      "side": "below",
+      "label": "Other leg lifting",
+      "text": "Keep the other leg flat and straight",
+      "deep": "",
+      "tone": "plain"
+    }
+  ],
+  "draw": [
+    {
+      "kind": "arc",
+      "measure": "hug",
+      "size": 0.8
+    }
+  ],
+  "defaults": {
+    "hugMax": 60,
+    "otherMin": 160,
+    "holdTargetSec": 30,
+    "callAtSec": [
+      10
+    ],
+    "setCount": 3,
+    "repCount": 10,
+    "deepAt": 10
+  },
+  "settings": [
+    {
+      "key": "setCount",
+      "label": "Sets",
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

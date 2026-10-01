@@ -1,0 +1,48 @@
+{
+  "v": 1,
+  "id": "frozen-shoulder-thawing",
+  "name": "Frozen shoulder — thawing stage",
+  "for": "Frozen shoulder once the pain has settled and stiffness remains",
+  "order": 2,
+  "blurb": "The same movements with the range opened up and a light band on the turn-out. Three times a week is enough once the range is back; daily while it is returning.",
+  "notes": [
+    "Hold each stretch for the count, breathing.",
+    "Raise the top of the wall walk and the arm raise a notch a week as they come.",
+    "Strength comes last: the band on the turn-out, then a light weight on the arm raise."
+  ],
+  "sources": [
+    {
+      "title": "Harvard Health — stretching exercises for frozen shoulder",
+      "url": "https://www.health.harvard.edu/stretching-exercises-frozen-shoulder"
+    }
+  ],
+  "items": [
+    {
+      "move": "pendulum",
+      "sets": 1,
+      "hold": 45,
+      "note": "Wider circles, or a light weight in the hand."
+    },
+    {
+      "move": "wallwalk",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "abduction",
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "move": "extrot",
+      "sets": 3,
+      "reps": 12,
+      "note": "A light band."
+    },
+    {
+      "move": "crossbody",
+      "sets": 3,
+      "hold": 30
+    }
+  ]
+}
