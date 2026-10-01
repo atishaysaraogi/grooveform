@@ -252,6 +252,11 @@ test('exercise reminders at the person\'s time on their days, once, not after a 
   /* off at the physio's say-so */
   await R.call('setPatientReminders', R.physio, { patientId: R.patientId, off: true });
   assert.deepEqual(await R.srv.tick(at('2026-10-14', '19:30')), []);
+  /* a person on their own, no physio and no assigned plan, is reminded all the same */
+  const solo = await R.signIn('9000000040');
+  await R.call('setReminders', solo, { on: true, days: [0, 1, 2, 3, 4, 5, 6], time: '07:00' });
+  const m4 = await R.srv.tick(at('2026-10-06', '07:10'));
+  assert.equal(m4.length, 1); assert.equal(m4[0].text, 'Time for your exercises.', 'and a new account has missed nothing');
 });
 
 test('a report lands with the admin and its reply with the person; export has everything; deletion leaves only the research labels, nameless', async () => {

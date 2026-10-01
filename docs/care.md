@@ -117,3 +117,16 @@ the patient's home, the visit set, booked and marked with a measurement, a
 shared note, reminders, a report and its reply, My data with the audit log,
 a reload keeping the sign-in, the plain page untouched, and the sandbox mode
 on the static server with one phone as both roles.
+
+## The flows, recorded
+
+`node test/care-journeys.mjs` walks the people from the product plan through
+the page against the care server, each flow recorded as a video in
+`docs/videos` with a caption on the picture saying what is being done: Dr.
+Meera signing in and inviting Sunita, Sunita opening the invitation, the plan
+built from the exercise pages and assigned with a visit interval, Sunita's
+session and the rep sent for review, Dr. Meera judging it on the clinic
+laptop, the reply and the visit booked, Arjun on his own with no physio,
+Rohan the coach and Priya his client with a new fault named, and one phone as
+every role in the sandbox. The videos are what the flows look like; the smoke
+is what holds them.

@@ -464,12 +464,15 @@
         const r = p.reminders; if (!r || !r.on || r.channel === 'off' || !p.createdAt) continue;
         if (lt.hour >= 22 || lt.hour < 7) continue;
         if (!(r.days || []).includes(lt.day) || lt.hm < (r.time || '19:00')) continue;
-        const plan = myPlanOf(p.id); if (!plan) continue;
-        const link = Object.values(D.links).find((l) => l.patient === p.id && l.state === 'accepted' && l.physio === plan.physio);
+        /* a person on their own, with no physio's plan, is reminded too: the plan is theirs, on the phone */
+        const plan = myPlanOf(p.id);
+        const link = plan ? Object.values(D.links).find((l) => l.patient === p.id && l.state === 'accepted' && l.physio === plan.physio) : null;
         if (link && link.remindersOff) continue;
         if (sessionsOf(p.id).some((s) => dateOf(s.at, tz) === lt.date)) continue;
-        const missed = (() => { let n = 0; for (let i = 1; i <= 3; i++) { if (sessionsOf(p.id).some((s) => dateOf(s.at, tz) === addDays(lt.date, -i))) break; n++; } return n; })();
-        once(`ex:${p.id}:${lt.date}`, () => notify(p, 'exercise', (missed >= 2 ? 'Two minutes counts. ' : '') + `Time for your exercises: ${plan.plan.name}.` + (link && link.reminderLine ? ' ' + link.reminderLine : ''), { date: lt.date }));
+        /* days missed in a row, counted only since the account began: a new person has missed nothing */
+        const since = dateOf(p.createdAt, tz);
+        const missed = (() => { let n = 0; for (let i = 1; i <= 3; i++) { const d = addDays(lt.date, -i); if (d < since || sessionsOf(p.id).some((s) => dateOf(s.at, tz) === d)) break; n++; } return n; })();
+        once(`ex:${p.id}:${lt.date}`, () => notify(p, 'exercise', (missed >= 2 ? 'Two minutes counts. ' : '') + (plan ? `Time for your exercises: ${plan.plan.name}.` : 'Time for your exercises.') + (link && link.reminderLine ? ' ' + link.reminderLine : ''), { date: lt.date }));
       }
       /* visit reminders: a week before, two days before, and once when it is overdue */
       for (const l of Object.values(D.links)) {

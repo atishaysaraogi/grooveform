@@ -32,6 +32,9 @@ Moves.ready.then(() => Plans.ready).then(function () {
   const faultLabel = (mid, fid) => { const m = Moves[mid]; const c = m && m.cues[fid]; return (c && (c.label || c.text)) || fid; };
   const randomId = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('');
   const PHYSIO_WORD = 'physio';
+  /* a rep by number; an attempt that was not counted is sent as 0 */
+  const repName = (n) => (n === 0 || n == null ? 'An attempt (not counted)' : 'Rep ' + n);
+  const repsWords = (reps) => { const c = reps.filter((n) => n > 0), a = reps.length - c.length; const bits = []; if (c.length) bits.push((c.length === 1 ? 'rep ' : 'reps ') + c.join(', ')); if (a) bits.push(a === 1 ? 'an attempt not counted' : a + ' attempts not counted'); return bits.join(' and ') || 'nothing'; };
 
   let me = null;             // the person signed in, as the server sees them (me())
   const isPhysio = () => !!me && (me.user.role === 'physio' || me.user.role === 'admin');
@@ -322,16 +325,16 @@ Moves.ready.then(() => Plans.ready).then(function () {
     const reps = rv.reps.length ? rv.reps : [1];
     render(`${esc(moveName(rv.move))} — ${mine ? 'your review' : esc(rv.patient ? rv.patient.name || rv.patient.phone : '')}`, `
       <section class="panel">
-        <p class="muted">${mine ? 'Sent' : esc(rv.patient ? rv.patient.name || '' : '') + ' sent this'} ${when(rv.sentAt)} · ${reps.length === 1 ? 'rep ' + reps[0] : 'reps ' + reps.join(', ')} of set ${rv.setNo}${rv.line ? ' · “' + esc(rv.line) + '”' : ''}</p>
+        <p class="muted">${mine ? 'Sent' : esc(rv.patient ? rv.patient.name || '' : '') + ' sent this'} ${when(rv.sentAt)} · ${repsWords(reps)} of set ${rv.setNo}${rv.line ? ' · “' + esc(rv.line) + '”' : ''}</p>
         <div class="care-player" id="cr-player">${rv.clip ? '<video id="cr-video" playsinline controls></video><canvas id="cr-canvas"></canvas>' : '<p class="muted" style="padding:20px;color:#fff">No clip came with this review (the phone could not film).</p>'}</div>
         <div class="care-strip" id="cr-strip" title="where the app called a fault (red), the reps (green)"></div>
         <div class="care-reads" id="cr-reads"></div>
         <div class="row" style="margin-top:6px"><button class="btn small" id="cr-slow" type="button">Half speed</button><button class="btn small" id="cr-skel" type="button" aria-pressed="true">Skeleton on</button><span class="tiny" id="cr-note"></span></div>
         <h2 class="gap">What the app said</h2>
-        <ul class="ticks">${(rv.verdicts || []).map((v) => `<li>Rep ${v.rep}: ${v.counted === false ? 'not counted' : 'counted'}${v.faults && v.faults.length ? ' — ' + esc(v.faults.map((f) => faultLabel(rv.move, f)).join(', ')) : ' — nothing called'}${v.holdSec ? ` · held ${v.holdSec} s` : ''}</li>`).join('') || '<li>Nothing recorded per rep.</li>'}</ul>
+        <ul class="ticks">${(rv.verdicts || []).map((v) => `<li>${repName(v.rep)}: ${v.counted === false ? 'not counted' : 'counted'}${v.faults && v.faults.length ? ' — ' + esc(v.faults.map((f) => faultLabel(rv.move, f)).join(', ')) : ' — nothing called'}${v.holdSec ? ` · held ${v.holdSec} s` : ''}</li>`).join('') || '<li>Nothing recorded per rep.</li>'}</ul>
       </section>
       ${rv.state === 'answered' ? `<section class="care-panel"><h2>${mine ? (rv.physio ? esc(rv.physio.name) + ' says' : 'Your physio says') : 'Your verdict'}</h2>
-        <ul class="ticks">${(rv.labels || []).map((l) => `<li>${l.rep == null ? 'The set' : 'Rep ' + l.rep}: ${l.verdict === 'fine' ? 'looks fine' : esc(l.label || faultLabel(rv.move, l.faultId)) + (l.severity && l.severity !== 'clear' ? ' (' + l.severity + ')' : '')}${l.note ? ' — ' + esc(l.note) : ''}</li>`).join('') || '<li>Looked at.</li>'}</ul>
+        <ul class="ticks">${(rv.labels || []).map((l) => `<li>${l.rep == null ? 'The set' : repName(l.rep)}: ${l.verdict === 'fine' ? 'looks fine' : esc(l.label || faultLabel(rv.move, l.faultId)) + (l.severity && l.severity !== 'clear' ? ' (' + l.severity + ')' : '')}${l.note ? ' — ' + esc(l.note) : ''}</li>`).join('') || '<li>Looked at.</li>'}</ul>
         ${rv.message ? `<p>“${esc(rv.message)}”</p>` : ''}${rv.change ? `<p class="care-ok">The step was changed: ${esc(rv.change.what)}${rv.change.reason ? ' — ' + esc(rv.change.reason) : ''}</p>` : ''}
         <p class="tiny">Answered ${when(rv.answeredAt)}.</p></section>` : ''}
       ${judging ? judgeForm(rv, r.faults, r.newFaults, reps) : ''}
@@ -383,7 +386,7 @@ Moves.ready.then(() => Plans.ready).then(function () {
     return new Response(ds.readable).text();
   }
   function judgeForm(rv, faults, newFaults, reps) {
-    const one = (rep) => `<div class="care-judge" data-rep="${rep == null ? '' : rep}"><b>${rep == null ? 'The set' : 'Rep ' + rep}</b>
+    const one = (rep) => `<div class="care-judge" data-rep="${rep == null ? '' : rep}"><b>${rep == null ? 'The set' : repName(rep)}</b>
       <div class="seg" role="radiogroup"><button class="btn small" type="button" data-v="fine" aria-pressed="true">Looks fine</button><button class="btn small" type="button" data-v="fault" aria-pressed="false">A fault the app knows</button><button class="btn small" type="button" data-v="new" aria-pressed="false">Something else</button></div>
       <div class="j-fault" hidden>${faults.map((f) => `<label class="check"><input type="checkbox" value="${esc(f.id)}"> ${esc(f.label)}</label>`).join('')}</div>
       <div class="j-new care-form" hidden><label>Name it<input class="j-name" maxlength="80" list="j-known" placeholder="Hip hiking"></label><datalist id="j-known">${newFaults.map((f) => `<option value="${esc(f.label)}">`).join('')}</datalist><label>What you see<input class="j-desc" maxlength="400" placeholder="the pelvis lifts with the leg"></label><label>Where<input class="j-part" maxlength="40" placeholder="hip"></label></div>
@@ -415,8 +418,8 @@ Moves.ready.then(() => Plans.ready).then(function () {
         const v = j.querySelector('.seg[role=radiogroup] .btn[aria-pressed=true]').dataset.v;
         const sev = (j.querySelector('.j-sev .btn[aria-pressed=true]') || {}).dataset ? j.querySelector('.j-sev .btn[aria-pressed=true]').dataset.s : 'clear';
         if (v === 'fine') labels.push({ rep, verdict: 'fine' });
-        else if (v === 'fault') { const ids = [...j.querySelectorAll('.j-fault input:checked')].map((i) => i.value); if (!ids.length) { note('j-note', `Pick the fault for ${rep == null ? 'the set' : 'rep ' + rep}.`, true); return; } for (const fid of ids) labels.push({ rep, verdict: 'fault', faultId: fid, severity: sev }); }
-        else { const name = j.querySelector('.j-name').value.trim(); if (!name) { note('j-note', `Name what you see on ${rep == null ? 'the set' : 'rep ' + rep}.`, true); return; } labels.push({ rep, verdict: 'new', newFault: { name, desc: j.querySelector('.j-desc').value, part: j.querySelector('.j-part').value }, severity: sev }); }
+        else if (v === 'fault') { const ids = [...j.querySelectorAll('.j-fault input:checked')].map((i) => i.value); if (!ids.length) { note('j-note', `Pick the fault for ${rep == null ? 'the set' : repName(rep).toLowerCase()}.`, true); return; } for (const fid of ids) labels.push({ rep, verdict: 'fault', faultId: fid, severity: sev }); }
+        else { const name = j.querySelector('.j-name').value.trim(); if (!name) { note('j-note', `Name what you see on ${rep == null ? 'the set' : repName(rep).toLowerCase()}.`, true); return; } labels.push({ rep, verdict: 'new', newFault: { name, desc: j.querySelector('.j-desc').value, part: j.querySelector('.j-part').value }, severity: sev }); }
       }
       const num = (id) => { const el = $(id); if (!el || el.value === '') return undefined; const n = Number(el.value); return Number.isFinite(n) ? n : undefined; };
       const change = {}; if (num('j-rom') != null) change.rom = num('j-rom'); if (num('j-sets') != null) change.sets = num('j-sets'); if (num('j-reps-n') != null) change.reps = num('j-reps-n'); if (num('j-hold') != null) change.hold = num('j-hold');
@@ -519,11 +522,21 @@ Moves.ready.then(() => Plans.ready).then(function () {
   /* every measurement the exercise makes, by the name the reading carries it under (not only the ones with a readout card) */
   const measuresOf = (m) => (m && m.spec && Array.isArray(m.spec.measurements) ? m.spec.measurements.map((x) => ({ key: x.of || x.key, label: x.label || x.key })) : (m ? m.bands.map((b) => ({ key: b.key, label: b.label })) : []));
   const newRecord = () => ({ move: __app.move ? __app.move.id : '', sets: {}, bands: measuresOf(__app.move) });
-  let lastPhase = {}, lastReps = {};
+  let lastPhase = {}, lastReps = {}, since = {};
+  /* a fault counts once it has held for the coach's own moment (persistMs), as the coach does before
+     saying it: a knee passing through "too open" for three frames on its way to a right angle is not a fault */
+  const persisted = (out, t) => {
+    const now = new Set(out && out.active ? out.active : []), keep = [];
+    for (const id of Object.keys(since)) if (!now.has(id)) delete since[id];
+    const hold = (__app.coach && __app.coach.cfg && __app.coach.cfg.persistMs) || 500;
+    for (const id of now) { if (since[id] == null) since[id] = t; if (t - since[id] >= hold) keep.push(id); }
+    if (out && out.cue && __app.move && __app.move.faults.includes(out.cue.id) && !keep.includes(out.cue.id)) keep.push(out.cue.id);
+    return keep;
+  };
   window.__careFrame = function (lm, reading, out, t, setNo) {
     if (!current.record) current.record = newRecord();
     const R = current.record; const S = R.sets[setNo] || (R.sets[setNo] = { frames: [], reps: [], open: null, attempts: 0 });
-    const faults = out && out.verdict && out.verdict.faults ? Object.keys(out.verdict.faults) : [];
+    const faults = out && !out.between ? persisted(out, t) : [];
     const f = { t: Math.round(t), p: out && out.between ? 'between' : (out && out.phase) || (out && out.holding ? 'hold' : ''), h: !!(out && out.holding), f: faults, m: R.bands.map((b) => (reading && typeof reading[b.key] === 'number' ? Math.round(reading[b.key] * 10) / 10 : null)) };
     if (lm && lm.length === 33) { const a = new Array(132); for (let i = 0; i < 33; i++) { const p = lm[i]; a[i * 4] = Math.round(p.x * 1000) / 1000; a[i * 4 + 1] = Math.round(p.y * 1000) / 1000; a[i * 4 + 2] = Math.round((p.z || 0) * 1000) / 1000; a[i * 4 + 3] = Math.round((p.visibility == null ? 1 : p.visibility) * 100) / 100; } f.lm = a; }
     /* at most twenty frames a second kept: enough to draw, a quarter of the size */
@@ -535,7 +548,7 @@ Moves.ready.then(() => Plans.ready).then(function () {
     const move = __app.move;
     if (move && move.reps) {
       if (prev && prev !== 'up' && phase === 'up') { S.open = { set: setNo, t0: Math.round(t), faults: new Set(), peak: null }; S.attempts += 1; }
-      if (S.open) { for (const x of faults) S.open.faults.add(x); if (out && out.cue && move.faults.includes(out.cue.id)) S.open.faults.add(out.cue.id); const prog = move.spec && move.spec.progress && reading ? reading[move.spec.progress.measure] : null; if (typeof prog === 'number') S.open.peak = S.open.peak == null ? prog : Math.max(S.open.peak, prog); }
+      if (S.open) { for (const x of faults) S.open.faults.add(x); const prog = move.spec && move.spec.progress && reading ? reading[move.spec.progress.measure] : null; if (typeof prog === 'number') S.open.peak = S.open.peak == null ? prog : Math.max(S.open.peak, prog); }
       const reps = out && !out.between ? out.reps : lastReps[setNo];
       if (S.open && prev === 'lower' && (phase === 'down' || phase === 'done')) { S.reps.push({ set: setNo, n: reps, counted: true, t0: S.open.t0, t1: Math.round(t), faults: [...S.open.faults], peak: S.open.peak }); S.open = null; }
       else if (S.open && prev === 'up' && phase === 'down') { S.reps.push({ set: setNo, n: null, counted: false, t0: S.open.t0, t1: Math.round(t), faults: [...S.open.faults], peak: S.open.peak }); S.open = null; }
@@ -628,7 +641,7 @@ Moves.ready.then(() => Plans.ready).then(function () {
   /* ---------- the app's own screens, with the layer's additions ---------- */
   let wasLive = false;
   function afterApp(hsh) {
-    if (hsh === '#/live') { if (!wasLive) { current.sessionId = null; current.record = null; current.saved = false; lastPhase = {}; lastReps = {}; } wasLive = true; }
+    if (hsh === '#/live') { if (!wasLive) { current.sessionId = null; current.record = null; current.saved = false; lastPhase = {}; lastReps = {}; since = {}; } wasLive = true; }
     else if (wasLive && hsh !== '#/done') wasLive = false;
     if (hsh === '#/done') { wasLive = false; onDone(); }
     if (hsh === '#/' || hsh === '') homePanel();
