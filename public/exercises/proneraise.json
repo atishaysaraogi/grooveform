@@ -53,32 +53,144 @@
     "mistakes": "Lifting the hip off the floor to get height; arching the back; bending the knee; pulling the toes up; swinging the leg out to the side."
   },
   "muscles": {
-    "glute": 1,
+    "glute": 0.85,
     "ham": 0.6,
-    "back": 0.3
+    "back": 0.05
   },
   "figure": {
-    "pose": {
+    "points": {
+      "view": "side",
       "A": {
-        "torso": 90,
-        "neck": 0,
-        "thigh": -90,
-        "shin": -90,
-        "foot": -90,
-        "uarm": 140,
-        "farm": 60
+        "h": [
+          362,
+          135
+        ],
+        "sh": [
+          341,
+          144
+        ],
+        "hip": [
+          297,
+          144
+        ],
+        "kn": [
+          268,
+          135
+        ],
+        "an": [
+          240,
+          126
+        ],
+        "he": [
+          240,
+          125
+        ],
+        "ft": [
+          236,
+          140
+        ],
+        "el": [
+          362,
+          159
+        ],
+        "wr": [
+          372,
+          136
+        ],
+        "knF": [
+          263,
+          147
+        ],
+        "anF": [
+          233,
+          147
+        ],
+        "heF": [
+          233,
+          146
+        ],
+        "ftF": [
+          233,
+          161
+        ],
+        "elF": [
+          359,
+          132
+        ],
+        "wrF": [
+          360,
+          155
+        ]
       },
       "B": {
-        "torso": 90,
-        "neck": 0,
-        "thigh": -108,
-        "shin": -108,
-        "foot": -90,
-        "uarm": 140,
-        "farm": 60,
-        "thighF": -90,
-        "shinF": -90,
-        "footF": -90
+        "h": [
+          362,
+          136
+        ],
+        "sh": [
+          341,
+          144
+        ],
+        "hip": [
+          297,
+          144
+        ],
+        "kn": [
+          267,
+          144
+        ],
+        "an": [
+          237,
+          144
+        ],
+        "he": [
+          237,
+          143
+        ],
+        "ft": [
+          237,
+          158
+        ],
+        "el": [
+          362,
+          160
+        ],
+        "wr": [
+          372,
+          137
+        ],
+        "knF": [
+          263,
+          147
+        ],
+        "anF": [
+          233,
+          147
+        ],
+        "heF": [
+          233,
+          146
+        ],
+        "ftF": [
+          233,
+          161
+        ],
+        "elF": [
+          359,
+          133
+        ],
+        "wrF": [
+          360,
+          156
+        ]
+      },
+      "hold": false,
+      "side": "both",
+      "flip": false,
+      "w": {
+        "glute": 0.85,
+        "ham": 0.6,
+        "back": 0.05
       }
     }
   },
@@ -146,7 +258,6 @@
       "toe"
     ],
     "limb": {
-      "shoulder|hip": "back",
       "hip|knee": "lift",
       "knee|ankle": "knee"
     }
@@ -213,35 +324,10 @@
       "why": "The knee kept straight: 180 is locked out, though lying face down the model reads a straight knee at 160-168. Below the band it is bending."
     },
     {
-      "key": "back",
-      "label": "shoulders above hips",
-      "hud": "BACK",
-      "note": "flat",
-      "kind": "rise",
-      "a": "hip",
-      "b": "shoulder",
-      "band": {
-        "sym": "backLift"
-      },
-      "scale": [
-        -30,
-        30
-      ],
-      "settings": [
-        {
-          "key": "backLift",
-          "label": "Shoulders above the hips, at most",
-          "min": 3,
-          "max": 30
-        }
-      ],
-      "why": "The hip-to-shoulder line off level: the shoulders coming up is the chest lifting and the back arching to make height."
-    },
-    {
       "key": "hip",
       "label": "hip above the shoulder",
       "hud": "HIP",
-      "note": "on the floor",
+      "note": "keep",
       "kind": "rise",
       "a": "shoulder",
       "b": "hip",
@@ -266,53 +352,27 @@
       "key": "foot",
       "label": "toe, heel, knee",
       "hud": "TOES",
-      "note": "pointed back",
       "kind": "angle",
       "a": "toe",
       "b": "heel",
       "c": "knee",
-      "band": {
-        "min": "footMin"
-      },
+      "why": "The foot against the shin at the heel: toes pointed straight back reads 150 or more, toes pulled up toward the shin 90 or so. Judged through the rep.",
       "scale": [
-        60,
+        0,
         180
       ],
-      "settings": [
-        {
-          "key": "footMin",
-          "label": "Foot angle, at least (180 is toes straight back)",
-          "min": 90,
-          "max": 175
-        }
-      ],
-      "why": "The foot against the shin at the heel: toes pointed straight back reads 150 or more, toes pulled up toward the shin 90 or so. Judged through the rep."
-    },
-    {
-      "key": "footlen",
-      "label": "foot length, % of the most seen",
-      "hud": "LINE",
-      "note": "leg in line",
-      "kind": "distance",
-      "a": "heel",
-      "b": "toe",
-      "fromStart": "peak",
       "band": {
-        "min": "footlenMin"
+        "max": "footMax"
       },
-      "scale": [
-        40,
-        110
-      ],
       "settings": [
         {
-          "key": "footlenMin",
-          "label": "Foot length, % of the most seen, at least",
-          "min": 50,
-          "max": 98
+          "key": "footMax",
+          "label": "Toe, heel, knee, at most",
+          "min": -70,
+          "max": 110
         }
       ],
-      "why": "The heel-to-toe length as the camera sees it, against the longest it has been in the set: a leg lifted in line with the body keeps the foot side on, the same length; a leg swinging toward or away from the camera foreshortens it. Under 85% it has gone diagonal. Judged through the rep."
+      "note": "keep"
     }
   ],
   "progress": {
@@ -347,15 +407,6 @@
       "tone": "plain"
     },
     {
-      "id": "archBack",
-      "measure": "back",
-      "side": "above",
-      "label": "Back arching",
-      "text": "Chest down — lift from the hip, not the back",
-      "deep": "Lower the chest — the back is arching to make height",
-      "tone": "down"
-    },
-    {
       "id": "hipLift",
       "measure": "hip",
       "side": "above",
@@ -384,24 +435,13 @@
       "tone": "up"
     },
     {
-      "id": "toesBent",
+      "id": "footHigh",
       "measure": "foot",
-      "side": "below",
-      "label": "Toes not straight",
-      "text": "Point the toes straight back, in line with the leg",
-      "deep": "Toes pointed — the foot is pulled up",
-      "tone": "plain",
-      "when": "top"
-    },
-    {
-      "id": "legDiagonal",
-      "measure": "footlen",
-      "side": "below",
-      "label": "Leg going diagonal",
-      "text": "Lift the leg straight up, in line with your body — not out to the side",
-      "deep": "The leg is swinging across — straight up, in line with the body",
-      "tone": "plain",
-      "when": "top"
+      "side": "above",
+      "label": "Toe, heel, knee too far",
+      "text": "Pull toes towrds you",
+      "deep": "",
+      "tone": "plain"
     }
   ],
   "draw": [
@@ -419,21 +459,14 @@
       "kind": "arc",
       "measure": "knee",
       "size": 0.7
-    },
-    {
-      "kind": "readout",
-      "measure": "back",
-      "at": "shoulder",
-      "side": -1
     }
   ],
   "defaults": {
-    "kneeMin": 155,
-    "liftMin": -25,
-    "liftMax": -5,
-    "backLift": 12,
-    "raiseAt": -7,
-    "downAt": -3,
+    "kneeMin": 165,
+    "liftMin": -5,
+    "liftMax": 0,
+    "raiseAt": 0,
+    "downAt": 0,
     "holdTargetSec": 1,
     "callAtSec": [],
     "repCount": 10,
@@ -441,10 +474,9 @@
     "lowerSec": 1,
     "restSec": 2,
     "deepAt": 8,
-    "hipLift": 6,
-    "footMin": 100,
-    "footlenMin": 70,
-    "settleMs": 300
+    "hipLift": 0,
+    "settleMs": 300,
+    "footMax": 100
   },
   "settings": [
     {
@@ -477,10 +509,5 @@
       "min": 1,
       "max": 10
     }
-  ],
-  "inPosition": [
-    "lift",
-    "knee",
-    "back"
   ]
 }

@@ -97,6 +97,22 @@
           315,
           133
         ],
+        "heL": [
+          315,
+          167
+        ],
+        "heR": [
+          315,
+          137
+        ],
+        "toL": [
+          318,
+          172
+        ],
+        "toR": [
+          318,
+          142
+        ],
         "elL": [
           180,
           160
@@ -151,6 +167,22 @@
           300,
           100
         ],
+        "heL": [
+          315,
+          167
+        ],
+        "heR": [
+          300,
+          104
+        ],
+        "toL": [
+          312,
+          172
+        ],
+        "toR": [
+          303,
+          109
+        ],
         "elL": [
           180,
           160
@@ -168,8 +200,9 @@
           150
         ]
       },
-      "flip": false,
+      "hold": false,
       "side": "R",
+      "flip": false,
       "w": {
         "glute": 1,
         "thigh": 0.4,
@@ -308,7 +341,7 @@
       "key": "footlen",
       "label": "foot length, percent of the shin",
       "hud": "FOOT",
-      "note": "toward you",
+      "note": "keep",
       "kind": "distance",
       "a": "toe",
       "b": "heel",
@@ -338,25 +371,6 @@
         }
       ],
       "why": "How long the foot is in the picture, as a percent of the shin. Lying face on to the phone, a foot pulled back toward you points its toes at the camera and shows short; a foot pointed along the leg lies in profile and shows long. Past 30 during a rep it is toes pointing away. In a recorded take the raised foot showed 30–45% in most reps and 60–80% when plainly laid along the leg, so 30 calls most of a pointed foot and some of a foot only partly pulled back; the number is a setting. Read only while the leg is lifted (the gate on lift, under raiseAt): at rest the foot lies however it lies, and the rule is for the rep."
-    },
-    {
-      "key": "foot",
-      "label": "toe, heel, knee",
-      "hud": "TOES",
-      "kind": "angle",
-      "a": "toe",
-      "b": "heel",
-      "c": "knee",
-      "optional": true,
-      "gate": {
-        "measure": "footlen",
-        "min": "footLenMax"
-      },
-      "scale": [
-        60,
-        180
-      ],
-      "why": "The angle at the heel between the toe and the knee, drawn for the eye once the foot is long enough in the picture to be in profile (the gate on footlen): about 90 with the toes pulled back, toward 180 pointed along the leg. Not judged — from the front, pulled-back and pointed feet read alike here (143–177 in a recorded take) — the length is what is judged."
     }
   ],
   "progress": {
@@ -365,10 +379,6 @@
     "downAt": "downAt",
     "direction": "down"
   },
-  "inPosition": [
-    "lift",
-    "knee"
-  ],
   "ready": {
     "atStart": true,
     "ranges": {
@@ -417,9 +427,10 @@
       "measure": "footlen",
       "side": "above",
       "label": "Toes pointing away",
-      "text": "Pull your toes back toward you",
-      "deep": "Toes toward you — the foot is pointing away along the leg",
-      "tone": "plain"
+      "text": "Toes toward the camera",
+      "deep": "Toes towards the camera",
+      "tone": "plain",
+      "when": "rep"
     }
   ],
   "draw": [
@@ -438,15 +449,10 @@
       "kind": "arc",
       "measure": "knee",
       "size": 0.7
-    },
-    {
-      "kind": "arc",
-      "measure": "foot",
-      "size": 0.5
     }
   ],
   "defaults": {
-    "kneeMin": 155,
+    "kneeMin": 160,
     "liftMin": 130,
     "liftMax": 150,
     "raiseAt": 160,
@@ -458,7 +464,7 @@
     "lowerSec": 1,
     "restSec": 2,
     "deepAt": 10,
-    "footLenMax": 30
+    "footLenMax": 40
   },
   "settings": [
     {
