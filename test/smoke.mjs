@@ -749,11 +749,11 @@ try {
     /* leaving the camera screen for an exercise's page — the plank's set is still
        running from the step before — ends the session where it is and stops the
        camera, the coach and the voice with it */
-    const said = (await spoken()).length;
     await set({ move: 'wallsit' });
     await pick('wallsit');
     await page.waitForFunction(() => !window.__app.live && !window.__app.session.inSet, null, { timeout: 8000 });
     assert.equal(await page.evaluate(() => document.getElementById('cam').srcObject), null, 'the camera is off once the camera screen is left');
+    const said = (await spoken()).length;    // counted once the set is over: a correction can land up to the moment it ends
     await set({ vis: 0.1 }); await wait(2500);
     assert.equal((await spoken()).length, said, 'and nothing more is said');
     await set({ vis: 0.95 });
@@ -1129,6 +1129,17 @@ try {
     await page.click('#build-copy');
     await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     assert.deepEqual(await page.$$eval('#problems li.error', (l) => l.length), 0, 'the library\'s own file has no errors');
+    /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose
+       lists are its own and not rebuilt — so nothing is left pointing at it */
+    assert.ok(JSON.parse(await page.inputValue('#build-json')).draw.some((g) => g.measure === 'over'), 'the bridge draws its hips-over-knees reading');
+    await page.evaluate(() => { const c = [...document.querySelectorAll('.mcard')].find((x) => /hip above knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
+    await page.waitForFunction(() => !JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
+    const less = JSON.parse(await page.inputValue('#build-json'));
+    assert.ok(!less.draw.some((g) => g.measure === 'over' || g.good === 'over'), 'its drawing went with it: ' + JSON.stringify(less.draw));
+    assert.ok(!less.faults.some((f) => f.measure === 'over'), 'and its fault');
+    assert.equal(await page.$$eval('#problems li.error', (l) => l.length), 0, 'and nothing is left dangling');
+    await page.click('#build-drop'); await page.evaluate(() => window.__builder.fromLibrary('bridge'));   // the library's bridge back, and a fresh copy of it for the rest
+    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent) && JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
     /* the form writes the file: the opening words change, and the draft stands in for the bridge */
     await page.evaluate(() => {
       const i = [...document.querySelectorAll('#build-form textarea')].find((x) => /I will wait while you get set up/.test(x.value));
@@ -1144,6 +1155,21 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 1, null, { timeout: 5000 });
     assert.match(await page.textContent('#problems li.error'), /26 characters/);
     assert.equal(await page.evaluate(() => document.getElementById('try-live').disabled), true, 'and cannot be tried until it is fixed');
+    /* the problem is marked where it is: on the label's own field */
+    assert.equal(await page.$eval('#problems li.error', (l) => l.classList.contains('goes') && l.dataset.at), 'faults[0].label', 'the problem knows where it is');
+    assert.equal(await page.evaluate(() => { const n = document.querySelector('#build-form .bad-at'); return n && n.value; }), 'A label that is far too long for the picture', 'and that field is the one outlined');
+    /* one inside a closed section: the section says so, and clicking the problem opens it and goes there */
+    const biasInput = () => document.querySelector('#build-form [data-at$=".bias"] input');   // the first card's, inside its closed More
+    await page.evaluate(`(() => { const i = (${biasInput})(); i.value = 'nosuch'; i.dispatchEvent(new Event('change')); })()`);
+    await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 2, null, { timeout: 5000 });
+    const closed = await page.evaluate(() => { const n = [...document.querySelectorAll('#build-form .bad-at')].find((x) => /bias/.test(x.textContent)); const d = n.closest('details'); return { open: d.open, says: getComputedStyle(d.querySelector('summary'), '::after').content, msg: n.querySelector('.at-msg').textContent }; });
+    assert.equal(closed.open, false, 'the section it is in is closed');
+    assert.match(closed.says, /something to fix inside/, 'and says there is something inside: ' + closed.says);
+    assert.match(closed.msg, /not in defaults: nosuch/, 'the words are on the field');
+    await page.click('#problems li.error[data-at$=".bias"]');
+    await page.waitForFunction(() => { const n = [...document.querySelectorAll('#build-form .bad-at')].find((x) => /bias/.test(x.textContent)); return n && n.closest('details').open && n.classList.contains('flash') && document.activeElement === n.querySelector('input'); }, null, { timeout: 3000 });
+    await page.evaluate(`(() => { const i = (${biasInput})(); i.value = ''; i.dispatchEvent(new Event('change')); })()`);
+    await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 1, null, { timeout: 5000 });
     await page.evaluate(() => { const i = [...document.querySelectorAll('#build-form input')].find((x) => /far too long/.test(x.value)); i.value = 'Heels lifting'; i.dispatchEvent(new Event('change')); });
     await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 0, null, { timeout: 5000 });
     /* the coach's page picks the draft up: it is the bridge there now, and its opening words are the draft's */

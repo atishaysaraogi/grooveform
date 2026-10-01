@@ -674,8 +674,11 @@ which the file's `band`, `progress` and `faults` are written; the phone and the 
 under *More words*; and the numbers. Landmarks, bones, the skeleton's colours
 and the drawing on the picture are derived from the measurements. Every field
 the file has is still reachable under *More*. A copy of a library exercise or
-a loaded file opens the same way. The draft is checked on every change with
-the problems listed; when whole it stands in the library on that browser —
+a loaded file opens the same way; removing a measurement takes every mention
+of it with it (its drawing, its faults, its bone colours, the landmarks only
+it used), and renaming one carries them along. The draft is checked on every
+change with the problems listed, each marked on the form where it is and a
+click away; when whole it stands in the library on that browser —
 the Recordings tab judges videos with it and hands the tuned numbers back,
 and *Try it live* opens it in the coach, listed with a draft badge. Download
 the file, drop it into the folder, push.

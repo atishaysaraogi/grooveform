@@ -323,6 +323,17 @@ body.review .panel h2 .tiny { font-weight: 500; margin-left: 8px; }
 .problems .warn { color: var(--warn); }
 .problems .ok { color: var(--good); }
 .problems b { font-weight: 700; margin-right: 4px; }
+.problems li.goes { cursor: pointer; }
+.problems li.goes:hover b, .problems li.goes:focus-visible b { text-decoration: underline; }
+/* a problem, where it is on the form: an error outlined, a warning only worded; a closed section says what is inside */
+.build-form .bad-at { outline: 2px solid var(--bad); outline-offset: 3px; border-radius: 8px; }
+.build-form .at-msg { display: block; flex-basis: 100%; grid-column: 1 / -1; font-size: .78rem; font-weight: 700; font-style: normal; line-height: 1.3; }
+.build-form .at-msg.bad { color: var(--bad); }
+.build-form .at-msg.warn { color: var(--warn); }
+.build-form details.has-bad > summary::after { content: ' · something to fix inside'; color: var(--bad); font-weight: 700; }
+.build-form details.has-warn > summary::after { content: ' · something to look at inside'; color: var(--warn); font-weight: 700; }
+.build-form .flash { animation: flash-at 1.6s ease-out; }
+@keyframes flash-at { 0%, 35% { box-shadow: 0 0 0 6px rgba(224,36,94,.25); } 100% { box-shadow: 0 0 0 6px rgba(224,36,94,0); } }
 body.review textarea { width: 100%; background: #0b0f16; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 500 .85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
 body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
 

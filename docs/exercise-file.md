@@ -154,7 +154,10 @@ edited file is what shows.
    figure that lacked them. Set *Holds still*, *Faces*, *Working side*, the
    wall, and under *Muscles working* the sliders. Every drag goes straight
    into the draft; nothing has to be copied across.
-4. The problems list should stay clear. *Try it live* opens the exercise's
+4. The problems list should stay clear. Each problem is marked on the form
+   where it is — the field outlined, its words under it, and a closed section
+   round it saying there is something inside — and clicking a problem in the
+   list goes there, opening what is closed. *Try it live* opens the exercise's
    page in the coach with the new figure animating over the top half.
 5. *Download the file* and replace `public/exercises/<id>.json` with it, then
    commit and push. Then *Drop the draft* on either page, so the browser uses
