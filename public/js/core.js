@@ -791,7 +791,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-01g';
+  const VER = '2026-10-02a';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

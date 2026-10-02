@@ -25,6 +25,21 @@ Moves.ready.then(function () {
   const A = window.OnTrackAnatomy;
 
   let move = Moves.bridge || Moves.list[0], tuned = {}, trace = null, result = null, takes = [];
+  /* what the person said of each rep of this recording: kept by time, with the recording in
+     this browser, and in the trace file when it is saved */
+  let labels = [];
+  const LABELS = 'ontrack.labels';
+  const labelKey = () => (trace ? `${move.id}|${trace.name}|${trace.frames.length}` : null);
+  const loadLabels = () => { labels = []; const k = labelKey(); if (!k) return; try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (Array.isArray(all[k])) labels = all[k]; } catch { } if (trace && Array.isArray(trace.labels) && !labels.length) labels = trace.labels.slice(); };
+  const saveLabels = () => { const k = labelKey(); if (!k) return; try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (labels.length) all[k] = labels; else delete all[k]; const keys = Object.keys(all); for (const old of keys.slice(0, Math.max(0, keys.length - 40))) delete all[old]; localStorage.setItem(LABELS, JSON.stringify(all)); } catch { } };
+  /* a rep's label set: the whole stretch replaced, since a label is by time */
+  function setLabel(seg, fn) {
+    const cur = Trace.labelOf(labels, seg);
+    const next = fn(cur ? Object.assign({}, cur, { faults: (cur.faults || []).slice() }) : { t0: seg.t0, t1: seg.t1, tag: 'clean', faults: [] });
+    labels = labels.filter((l) => l !== cur);
+    if (next) { next.t0 = seg.t0; next.t1 = seg.t1; labels.push(next); }
+    saveLabels(); renderReps(); renderRecommend();
+  }
   const video = $('clip'), overlay = $('overlay'), lanes = $('lanes');
 
   /* ---------- the move and its numbers ---------- */
@@ -172,6 +187,7 @@ Moves.ready.then(function () {
     } catch (e) { note('Could not read the video: ' + (e.message || e)); return; }
     note('');
     trace = { frames, aspect, name: file.name, source: 'video', fps, duration: dur * 1000, file };
+    loadLabels();
     $('render-demo').disabled = false;
     await seekTo(0);
     sizeOverlay();
@@ -182,13 +198,14 @@ Moves.ready.then(function () {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     try {
       const { meta, frames } = Trace.unpack(await f.text());
-      trace = { frames, aspect: meta.aspect || 16 / 9, name: f.name, source: 'trace', duration: frames.length ? frames[frames.length - 1].t : 0 };
+      trace = { frames, aspect: meta.aspect || 16 / 9, name: f.name, source: 'trace', duration: frames.length ? frames[frames.length - 1].t : 0, labels: Array.isArray(meta.labels) ? meta.labels : [] };
       if (meta.move && Moves[meta.move]) pickMove(meta.move); else rerun();
+      loadLabels(); renderReps(); renderRecommend();
     } catch (err) { $('progress').textContent = 'Not a trace: ' + (err.message || err); $('progress').hidden = false; }
   };
   $('export-trace').onclick = () => {
     if (!trace) return;
-    save(new Blob([JSON.stringify(Trace.pack({ move: move.id, aspect: trace.aspect, name: trace.name, source: trace.source, fps: trace.fps || null }, trace.frames))], { type: 'application/json' }),
+    save(new Blob([JSON.stringify(Trace.pack({ move: move.id, aspect: trace.aspect, name: trace.name, source: trace.source, fps: trace.fps || null, labels }, trace.frames))], { type: 'application/json' }),
       `${move.id}-trace-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`);
   };
 
@@ -205,7 +222,7 @@ Moves.ready.then(function () {
     const edgeMs = result ? result.rows.reduce((a, r, i) => a + (r.reading && r.reading.edge && i ? r.t - result.rows[i - 1].t : 0), 0) : 0;
     renderTracked();
     $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') + (edgeMs ? ` · ${(edgeMs / 1000).toFixed(1)} s with a point at the picture's edge` : '') : '') : 'no recording yet';
-    drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts();
+    drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts(); renderRecommend();
   }
   /* ---------- the reps, one by one ---------- */
   let focusRep = null;
@@ -240,8 +257,9 @@ Moves.ready.then(function () {
       const why = move.reps ? `<div class="rep-why">${whyOf(r)}</div>` : '';
       const before = r.before.faults.length ? `<div class="rep-before">before it: ${r.before.faults.map(faultLine).join('; ')}</div>` : '';
       const inside = r.faults.length ? `<ul>${r.faults.map((f) => `<li>${faultLine(f)}</li>`).join('')}</ul>` : '<div class="clean">clean</div>';
-      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${why}${before}${inside}</li>`;
-    })() })).concat(misses.map((m) => ({ t: m.t0, html: `<li class="miss" data-t="${m.tPeak}"><div class="rep-head"><b>Short of a rep</b> <span class="muted">${sec(m.t0)} to ${sec(m.t1)}</span></div><div class="rep-why">reached ${fmtV(m.peak, m.unit)} at ${sec(m.tPeak)}, ${Math.round(m.share * 100)}% of the way to the ${fmtV(m.raiseAt, m.unit)} a rep starts at — nothing began</div></li>` })));
+      const lb = Trace.labelOf(labels, r);
+      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}${lb && lb.tag === 'skip' ? ' skipped' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${why}${before}${inside}${labelRow(i, lb, 'rep')}</li>`;
+    })() })).concat(misses.map((m, j) => ({ t: m.t0, html: `<li class="miss" data-t="${m.tPeak}" data-j="${j}"><div class="rep-head"><b>Short of a rep</b> <span class="muted">${sec(m.t0)} to ${sec(m.t1)}</span></div><div class="rep-why">reached ${fmtV(m.peak, m.unit)} at ${sec(m.tPeak)}, ${Math.round(m.share * 100)}% of the way to the ${fmtV(m.raiseAt, m.unit)} a rep starts at — nothing began</div>${labelRow(j, Trace.labelOf(labels, m), 'miss')}</li>` })));
     items.sort((x, y) => x.t - y.t);
     const readyAt = result.rows.find((r) => r.out && r.out.ready);
     const setup = move.reps ? `<li class="setup"><div class="rep-head"><b>Before the coaching</b> <span class="muted">${readyAt ? `${sec(result.rows[0].t)} to ${sec(readyAt.t)}` : 'the whole recording'}</span></div><div class="rep-why">${readyAt ? `the start position was held for ${sec(result.cfg.readyMs)} and the coaching began` : `the start position was never held for ${sec(result.cfg.readyMs)} — no rep can begin until it is`}</div></li>` : '';
@@ -249,7 +267,48 @@ Moves.ready.then(function () {
     if (move.reps && !items.length) host.insertAdjacentHTML('beforeend', '<li class="muted">No attempt at a rep seen.</li>');
     host.querySelectorAll('li.rep[data-i]').forEach((li) => { li.onclick = () => { const i = Number(li.dataset.i); focusRep = i; const r = reps[i]; if (video.duration) video.currentTime = r.t0 / 1000; else drawOverlay(r.t0); drawLanes(); renderReps(); }; });
     host.querySelectorAll('li.miss[data-t]').forEach((li) => { li.onclick = () => { const t = Number(li.dataset.t); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } }; });
+    /* the label chips: a tap classifies and does not open the rep */
+    host.querySelectorAll('.rep-label .btn').forEach((b) => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const row = b.closest('.rep-label'), kind = row.dataset.kind, seg = kind === 'rep' ? reps[Number(row.dataset.i)] : misses[Number(row.dataset.i)];
+        const v = b.dataset.v;
+        setLabel(seg, (l) => {
+          if (v === 'clean') return { tag: 'clean', faults: [] };
+          if (v === 'skip') return l.tag === 'skip' ? null : { tag: 'skip', faults: [] };
+          if (v === 'rep') return l.tag === 'rep' ? null : { tag: 'rep', faults: [] };
+          const set = new Set(l.tag === 'faults' ? l.faults : []); if (set.has(v)) set.delete(v); else set.add(v);
+          return set.size ? { tag: 'faults', faults: [...set] } : { tag: 'clean', faults: [] };
+        });
+      };
+    });
     lanesReps = reps; lanesMisses = misses;
+  }
+  /* the chips under a rep: clean, each fault the exercise knows, not a rep; under a short movement: this was a rep */
+  function labelRow(i, lb, kind) {
+    const label = (id) => (move.cues[id] && move.cues[id].label) || id;
+    const pressed = (on) => ` aria-pressed="${on ? 'true' : 'false'}"`;
+    if (kind === 'miss') return `<div class="rep-label" data-kind="miss" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean" type="button" data-v="rep"${pressed(lb && lb.tag === 'rep')}>This was a rep</button></div>`;
+    const faults = Trace.faultIds(move).map((id) => `<button class="btn fault" type="button" data-v="${esc(id)}"${pressed(lb && lb.tag === 'faults' && lb.faults.includes(id))}>${esc(label(id))}</button>`).join('');
+    return `<div class="rep-label" data-kind="rep" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean" type="button" data-v="clean"${pressed(lb && lb.tag === 'clean')}>Clean</button>${faults}<button class="btn" type="button" data-v="skip"${pressed(lb && lb.tag === 'skip')}>Not a rep</button>${lb ? '' : '<span class="tiny">not yet classified</span>'}</div>`;
+  }
+  /* the numbers recommended from the verdicts */
+  function renderRecommend() {
+    const table = $('recommend'), note = $('recommend-note'), all = $('recommend-all'); if (!table) return;
+    if (!result) { table.innerHTML = ''; note.textContent = ''; all.style.display = 'none'; return; }
+    const reps = lanesReps || [], misses = lanesMisses || [];
+    const rec = Trace.recommend(move, result, reps, labels, misses);
+    const words = (f) => f.status === 'fine' ? 'fine as it is' : f.status === 'move' ? `move to ${fmtV(f.value, f.unit)}` : `best cut ${fmtV(f.value, f.unit)} — ${f.afterFalse + f.afterMiss} rep${f.afterFalse + f.afterMiss === 1 ? '' : 's'} still on the wrong side`;
+    const range = (x, u) => (x.n ? `${x.n}: ${x.lo === x.hi ? fmtV(x.lo, u) : fmtV(x.lo, u) + ' to ' + fmtV(x.hi, u)}` : '—');
+    if (!rec.labelled) { table.innerHTML = ''; note.textContent = reps.length ? `nothing classified yet — ${reps.length} rep${reps.length === 1 ? '' : 's'} to look at` : ''; all.style.display = 'none'; return; }
+    note.textContent = `from ${rec.labelled} classified rep${rec.labelled === 1 ? '' : 's'}${rec.unlabelled ? `, ${rec.unlabelled} not yet` : ''}${rec.skipped ? `, ${rec.skipped} left out` : ''}`;
+    const rows = rec.faults.map((f) => `<tr><td><b>${esc(f.label)}</b><br><span class="range">${esc(f.setting)}</span></td><td>${fmtV(f.now, f.unit)}</td><td class="range">${range(f.clean, f.unit)}</td><td class="range">${range(f.bad, f.unit)}</td><td class="range">${f.nowFalse} false alarm${f.nowFalse === 1 ? '' : 's'}, ${f.nowMiss} missed</td><td class="${f.status}">${words(f)}</td><td>${f.status === 'fine' ? '' : `<button class="btn tiny-btn" data-key="${esc(f.key)}" data-value="${f.value}">Apply</button>`}</td></tr>`)
+      .concat(rec.lines.map((l) => `<tr><td><b>A rep starts past</b><br><span class="range">${esc(l.setting)}</span></td><td>${fmtV(l.now, l.unit)}</td><td class="range" colspan="2">the reps you called reps reach ${fmtV(l.nearest, l.unit)} at the least (${l.n})</td><td class="range">${l.status === 'move' ? 'one falls short of the line' : 'all cross it'}</td><td class="${l.status}">${l.status === 'fine' ? 'fine as it is' : `move to ${fmtV(l.value, l.unit)}`}</td><td>${l.status === 'fine' ? '' : `<button class="btn tiny-btn" data-key="${esc(l.key)}" data-value="${l.value}">Apply</button>`}</td></tr>`));
+    table.innerHTML = rows.length ? '<tr><th>fault · its number</th><th>now</th><th>clean reps reach</th><th>marked reps reach</th><th>now</th><th>recommended</th><th></th></tr>' + rows.join('') : '<tr><td class="muted">No fault\'s edge can be read from these labels yet.</td></tr>';
+    const moves = rec.faults.filter((f) => f.status !== 'fine').concat(rec.lines.filter((l) => l.status !== 'fine'));
+    all.style.display = moves.length < 2 ? 'none' : '';   // the button's own display rule would override `hidden`
+    table.querySelectorAll('button[data-key]').forEach((b) => { b.onclick = () => setTuned(b.dataset.key, Number(b.dataset.value)); });
+    all.onclick = () => { for (const m of moves) { tuned[m.key] = m.value; const i = $('cfg-' + m.key); if (i) i.value = m.value; } setTuned(moves[0].key, moves[0].value); };
   }
   let lanesReps = [], lanesMisses = [];
   const bandColour = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
@@ -435,7 +494,7 @@ Moves.ready.then(function () {
   $('add-take').onclick = () => {
     if (!trace) return;
     const tag = $('take-tag').value, name = $('take-name').value.trim() || trace.name || `take ${takes.length + 1}`;
-    takes.push({ name, tag, move: move.id, frames: trace.frames, aspect: trace.aspect });
+    takes.push({ name, tag, move: move.id, frames: trace.frames, aspect: trace.aspect, labels: labels.slice() });
     $('take-name').value = '';
     renderVerdicts();
   };
@@ -454,7 +513,7 @@ Moves.ready.then(function () {
     }).join('');
   }
   $('export-takes').onclick = () => {
-    const out = { v: 1, kind: 'takes', takes: takes.map((t) => Trace.pack({ move: t.move, aspect: t.aspect, name: t.name, tag: t.tag }, t.frames)) };
+    const out = { v: 1, kind: 'takes', takes: takes.map((t) => Trace.pack({ move: t.move, aspect: t.aspect, name: t.name, tag: t.tag, labels: t.labels || [] }, t.frames)) };
     save(new Blob([JSON.stringify(out)], { type: 'application/json' }), `takes-${new Date().toISOString().slice(0, 10)}.json`);
   };
   $('takes-file').onchange = async (e) => {
@@ -462,7 +521,7 @@ Moves.ready.then(function () {
     try {
       const d = JSON.parse(await f.text());
       if (!d || d.kind !== 'takes' || !Array.isArray(d.takes)) throw new Error('not a takes file');
-      for (const tk of d.takes) { const { meta, frames } = Trace.unpack(tk); takes.push({ name: meta.name || 'take', tag: meta.tag || 'clean', move: meta.move || move.id, frames, aspect: meta.aspect || 16 / 9 }); }
+      for (const tk of d.takes) { const { meta, frames } = Trace.unpack(tk); takes.push({ name: meta.name || 'take', tag: meta.tag || 'clean', move: meta.move || move.id, frames, aspect: meta.aspect || 16 / 9, labels: Array.isArray(meta.labels) ? meta.labels : [] }); }
       renderVerdicts();
     } catch (err) { $('progress').textContent = String(err.message || err); $('progress').hidden = false; }
   };
@@ -760,7 +819,8 @@ Moves.ready.then(function () {
     get demo() { return demo; },
     get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
     get fig() { return figureJson(); }, get move() { return move; }, get ev() { return ev; }, editBox: fitBox, editTransform, pickMove, refreshMoves, setTuned, showTab, setFig, animLoad, animChanged,
-    loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; judge(); },
+    loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; loadLabels(); judge(); },
+    get labels() { return labels; }, recommend() { return result ? Trace.recommend(move, result, lanesReps || [], labels, lanesMisses || []) : null; },
   };
   const q = new URLSearchParams(location.search);
   pickMove(q.get('move') || 'bridge');

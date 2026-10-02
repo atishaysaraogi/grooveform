@@ -431,3 +431,17 @@ body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospac
 .lm-title { font-size: .78rem; color: var(--muted); }
 .lm-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .lm-grid .btn { min-height: 30px; font-size: .8rem; padding: 3px 9px; }
+
+/* ---- the review page: a rep classified, and the numbers recommended ---- */
+.reps .rep-label { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.reps .rep-label .lbl { font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
+.reps .rep-label .btn { padding: 3px 10px; font-size: .8rem; min-height: 0; border-radius: 999px; }
+.reps .rep-label .btn[aria-pressed="true"] { border-color: var(--accent); background: rgba(90,169,255,.18); color: var(--ink); }
+.reps .rep-label .btn.fault[aria-pressed="true"] { border-color: var(--bad); background: rgba(255,92,108,.18); }
+.reps .rep-label .btn.clean[aria-pressed="true"] { border-color: var(--good); background: rgba(53,208,127,.18); }
+.reps .rep.skipped { opacity: .55; }
+.recommend td.move { color: var(--warn); font-weight: 700; } .recommend td.fine { color: var(--good); } .recommend td.overlap { color: var(--bad); font-weight: 700; }
+.recommend .btn.tiny-btn { padding: 2px 8px; font-size: .78rem; min-height: 0; }
+.recommend .range { color: var(--muted); font-size: .82rem; }
+.scroll-x { overflow-x: auto; max-width: 100%; }
+#lanes { max-width: 100%; }

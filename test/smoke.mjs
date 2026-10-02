@@ -1042,12 +1042,21 @@ try {
     assert.ok((await page.evaluate(() => document.getElementById('lanes').height)) > 100, 'the lanes are drawn');
     const reps = await page.$$eval('#reps li.rep', (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     assert.equal(reps.length, 1, 'one rep broken out');
-    assert.match(reps[0], /^Rep 1 .*held .*clean$/, 'counted, held, clean: ' + reps[0]);
+    assert.match(reps[0], /^Rep 1 .*held .*clean/, 'counted, held, clean: ' + reps[0]);
     await page.fill('#take-name', 'clean 1'); await page.click('#add-take');
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
     await page.waitForFunction(() => /Hips above knees/.test(document.getElementById('reps').textContent), null, { timeout: 5000 });
     const rep1 = await page.$eval('#reps li.rep', (x) => x.textContent.replace(/\s+/g, ' ').trim());
     assert.match(rep1, /Hips above knees \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
+    /* the person classifies the rep: with the hips past the knees. The allowance of three already
+       divides it from the clean take's rep, so the number is recommended as it is */
+    assert.match(await page.textContent('#recommend-note'), /nothing classified yet — 1 rep/);
+    await page.click('#reps li.rep .rep-label .btn[data-v="hipHigh"]');
+    await page.waitForFunction(() => /from 1 classified rep/.test(document.getElementById('recommend-note').textContent), null, { timeout: 5000 });
+    const recRow = async () => (await page.$$eval('#recommend tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /^Hips above knees/.test(t));
+    assert.match(await recRow(), /\| 3 \| — \| 1: \d+°? \| 0 false alarms, 0 missed \| fine as it is/, 'the marked rep reaches past the edge, nothing to move: ' + await recRow());
+    assert.equal(await page.$eval('#reps li.rep .rep-label .btn[data-v="hipHigh"]', (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
+    assert.deepEqual(await page.evaluate(() => window.__review.labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time');
     await page.selectOption('#take-tag', 'hipHigh'); await page.fill('#take-name', 'high'); await page.click('#add-take');
     await wait(200);
     const row = async () => (await page.$$eval('#verdicts tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /Hips above knees/.test(t));
@@ -1057,6 +1066,16 @@ try {
     await wait(200);
     assert.match(await row(), /0 of 1 \| fails/, 'with the allowance at fifteen the fault never fires: ' + await row());
     assert.match(await page.$eval('#reps li.rep', (x) => x.textContent), /clean/, 'and the rep reads clean under the new number');
+    /* the recommendation disagrees: the rep the person marked is missed at fifteen, and Apply brings the edge back under it */
+    assert.match(await recRow(), /0 false alarms, 1 missed \| move to \d+/, 'the marked rep is missed at fifteen: ' + await recRow());
+    const suggested = Number((await recRow()).match(/move to ([\d.]+)/)[1]);
+    assert.ok(suggested < 12 && suggested >= 3, 'under the marked rep, over the clean one: ' + suggested);
+    await page.click('#recommend button[data-key="overMax"]');
+    await page.waitForFunction((v) => Number(document.getElementById('cfg-overMax').value) === v, suggested, { timeout: 5000 });
+    assert.match(await page.$eval('#reps li.rep', (x) => x.textContent), /Hips above knees/, 'and the rep flags again');
+    assert.match(await recRow(), /fine as it is/);
+    await page.evaluate(() => window.__review.setTuned('overMax', 15));
+    await wait(200);
     await page.click('#apply');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wallsit')).bands.bridge.overMax), '15', 'the number went into the coach\'s own store');
     assert.match(await page.textContent('#apply-note'), /Saved for the Glute bridge/);
