@@ -1066,9 +1066,11 @@ try {
     assert.match(await recLine(), /^rec fine \| ✓ 3° agrees with your verdicts/, 'and the fault\'s own row says so, under the number: ' + await recLine());
     assert.equal(await page.$eval(`${high} .rep-label .btn[data-v="hipHigh"]`, (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
     assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time, with its recording');
-    /* a number moved on the card: every recording judged again at once, and the row disagrees */
+    /* a number moved on the card: every recording judged again, and the row disagrees */
     await page.evaluate(() => window.__builder.setNumber('overMax', 15));
-    await wait(300);
+    /* the recordings are judged again on the next frame, not at once: wait for the redraw */
+    const rowSays = (re) => page.waitForFunction((src) => [...document.querySelectorAll('#recommend tr')].some((r) => /^Hips above knees/.test(r.textContent.trim()) && new RegExp(src).test([...r.cells].map((c) => c.textContent.trim()).join(' | '))), re.source, { timeout: 5000 });
+    await rowSays(/\| 15° \|.*move to \d+/);
     assert.match(await page.$eval(high, (x) => x.textContent), /clean/, 'the rep reads clean under the new number');
     assert.match(await recRow(), /0 false alarms, 1 missed \| move to \d+/, 'the marked rep is missed at fifteen: ' + await recRow());
     assert.match(await recLine(), /^rec move \| .*1 missed\. Move the number to \d+°/, await recLine());
@@ -1077,6 +1079,7 @@ try {
     /* Apply writes the draft's own number: the input in the sentence, the file, the coach's copy */
     await page.click('#measures .rec[data-fault="hipHigh"] button[data-key="overMax"]');
     await page.waitForFunction((v) => Number(document.getElementById('def-overMax').value) === v, suggested, { timeout: 5000 });
+    await rowSays(/fine as it is/);
     assert.match(await page.$eval(high, (x) => x.textContent), /Hips above knees/, 'and the rep flags again');
     assert.match(await recRow(), /fine as it is/);
     assert.equal(await page.evaluate(() => Moves.bridge.draft === true && Moves.bridge.defaults.overMax), suggested, 'the draft laid over the library carries it');
