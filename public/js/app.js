@@ -280,7 +280,7 @@ Moves.ready.then(function () {
     sel.innerHTML = Moves.list.map((mv) => `<option value="${mv.id}">${mv.name}</option>`).join('');
     buildPicker();
     imported = file.id;
-    history.replaceState(null, '', location.pathname + '#/ex/' + file.id);   // the long address goes; a reload does not import again
+    window.history.replaceState(null, '', location.pathname + '#/ex/' + file.id);   // the long address goes; a reload does not import again
     route();
   }
   /* the exercise page to go back to: the step of the plan, or the exercise itself */
