@@ -1139,7 +1139,7 @@ try {
     const saved = JSON.parse(await (await import('node:fs/promises')).readFile(await (await dl).path(), 'utf8'));
     assert.equal(saved.kind, 'takes'); assert.equal(saved.takes.length, 3); assert.equal(saved.draft.id, 'bridge');
     assert.equal(saved.takes[1].tag, 'hipHigh'); assert.equal(saved.takes[0].labels[0].tag, 'clean');
-    assert.ok(saved.draft.measurements.length === before, 'the draft in the file is the one on the page');
+    assert.ok(saved.draft.measurements.length === before + 1, 'the draft in the file is the one on the page');
     await page.evaluate(() => { for (const r of [...window.__review.recordings]) window.__review.remove(r.id); });
     assert.equal(await page.$$eval('#rec-list li', (l) => l.length), 0);
     await page.setInputFiles('#trace-file', { name: 'session.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(saved)) });

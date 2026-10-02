@@ -206,7 +206,7 @@ Moves.ready.then(function () {
     loadLabels(rec);
     judgeOne(rec);
     /* an old takes file tagged the whole take: its reps start with that verdict, dashed, until a tap confirms it */
-    if (rec.tag && !rec.labels.length) { for (const r of rec.reps) if (r.counted) rec.labels.push({ t0: r.t0, t1: r.t1, tag: rec.tag === 'clean' ? 'clean' : 'faults', faults: rec.tag === 'clean' ? [] : [rec.tag], provisional: true }); saveLabels(rec); }
+    if (rec.tag && !rec.labels.length) { for (const r of rec.reps) rec.labels.push({ t0: r.t0, t1: r.t1, tag: rec.tag === 'clean' ? 'clean' : 'faults', faults: rec.tag === 'clean' ? [] : [rec.tag], provisional: true }); saveLabels(rec); }
     $('save-all').disabled = false;
     if (!shown) show(rec); else { renderRecList(); renderReps(); renderRecommend(); renderSuggest(); }
     return rec;
@@ -215,7 +215,7 @@ Moves.ready.then(function () {
   function setTag(rec, tag) {
     rec.tag = tag;
     rec.labels = rec.labels.filter((l) => !l.provisional);
-    if (tag) for (const r of rec.reps) if (r.counted && !Trace.labelOf(rec.labels, r)) rec.labels.push({ t0: r.t0, t1: r.t1, tag: tag === 'clean' ? 'clean' : 'faults', faults: tag === 'clean' ? [] : [tag], provisional: true });
+    if (tag) for (const r of rec.reps) if (!Trace.labelOf(rec.labels, r)) rec.labels.push({ t0: r.t0, t1: r.t1, tag: tag === 'clean' ? 'clean' : 'faults', faults: tag === 'clean' ? [] : [tag], provisional: true });
     saveLabels(rec); renderRecList(); renderReps(); renderRecommend(); renderSuggest();
   }
   function removeRecording(id) {
