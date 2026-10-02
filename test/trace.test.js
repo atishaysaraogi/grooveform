@@ -4,40 +4,12 @@
    trip through a file. Run: npm test */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const Core = require('../public/js/core.js');
 const Trace = require('../public/js/trace.js');
 const Moves = require('../public/js/moves.js');
 const M = Moves.bridge;
 
-const D = Math.PI / 180;
-const ASPECT = 16 / 9;
-/* the bridge rig from bridge.test.js, enough of it for a trace */
-function body({ shin = 95, dip = 50, hipAng = 130, foot = 0, facing = 1, vis = 0.95 } = {}) {
-  const heelAt = [0.64, 0.68], footLen = 0.07, shinLen = 0.15, thighLen = 0.17, torso = 0.2;
-  const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
-  const heel = { x: heelAt[0], y: heelAt[1] };
-  const toeDir = { x: facing * Math.cos(foot * D), y: Math.sin(foot * D) };
-  const toe = { x: heel.x + footLen * toeDir.x, y: heel.y + footLen * toeDir.y };
-  const sd = rot(toeDir, -facing * shin * D);
-  const knee = { x: heel.x + shinLen * sd.x, y: heel.y + shinLen * sd.y };
-  const ankle = { x: heel.x + shinLen * 0.12 * sd.x, y: heel.y + shinLen * 0.12 * sd.y };
-  const td = { x: -facing * Math.cos(dip * D), y: Math.sin(dip * D) };
-  const hip = { x: knee.x + thighLen * td.x, y: knee.y + thighLen * td.y };
-  const bd = rot({ x: -td.x, y: -td.y }, -facing * hipAng * D);
-  const shoulder = { x: hip.x + torso * bd.x, y: hip.y + torso * bd.y };
-  const P = { heel, toe, knee, ankle, hip, shoulder, ear: { x: shoulder.x - facing * 0.05, y: shoulder.y - 0.01 } };
-  const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
-  for (const side of ['L', 'R']) for (const [name, i] of Object.entries(Core.SIDE[side])) { const p = P[name]; if (p) lm[i] = { x: p.x / ASPECT, y: p.y, z: 0, visibility: vis }; }
-  return lm;
-}
-/* a take: a list of [pose, ms] stretches at 30 frames a second */
-function take(script) {
-  const frames = []; let t = 0;
-  for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 33) frames.push({ t, lm: body(pose) });
-  return frames;
-}
-const REST = { shin: 95, dip: 50, hipAng: 130 }, TOP = { shin: 95, dip: 5, hipAng: 170 }, HALF = { shin: 95, dip: 25, hipAng: 145 };
-const cleanRep = [[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 1500]];
+/* the bridge rig: a body posed to known angles, and a take of poses held for stretches of time */
+const { ASPECT, body, take, REST, TOP, HALF, cleanRep } = require('./fixtures/rig.js');
 
 test('a trace run gives a row per frame with the reading, the verdict and the coach\'s cue', () => {
   const frames = take(cleanRep);
@@ -223,4 +195,34 @@ test('the lift line: a movement the person called a rep has to cross it', () => 
   assert.ok(line.value < misses[0].peak && line.value > 140, `the line comes down to ${line.value}, under the small rep's ${misses[0].peak}`);
   const rec2 = Trace.recommend(M, r, reps, [{ t0: reps[0].t0, t1: reps[0].t1, tag: 'clean' }], misses);
   assert.equal(rec2.lines[0].status, 'fine', 'without the person\'s word the line stands');
+});
+
+test('several recordings are judged together: the clean rep in one, the marked rep in the other, one recommendation', () => {
+  const clean = take([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 2600], [TOP, 3500], [HALF, 1300], [REST, 2600]]);
+  const high = take([[REST, 3000], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 2600]]);
+  const r1 = Trace.run(M, { readyMs: 2000, overMax: 15 }, clean, ASPECT), r2 = Trace.run(M, { readyMs: 2000, overMax: 15 }, high, ASPECT);
+  const reps1 = Trace.reps(r1, M), reps2 = Trace.reps(r2, M);
+  assert.equal(reps1.length, 2); assert.equal(reps2.length, 1);
+  /* a label may name a fault the file does not have, as '+' and the words: there is no edge to move for it, so it is passed over */
+  const runs = [
+    { name: 'clip 1', result: r1, reps: reps1, labels: [{ t0: reps1[0].t0, t1: reps1[0].t1, tag: 'clean' }, { t0: reps1[1].t0, t1: reps1[1].t1, tag: 'faults', faults: ['+Feet sliding'] }], misses: [] },
+    { name: 'clip 2', result: r2, reps: reps2, labels: [{ t0: reps2[0].t0, t1: reps2[0].t1, tag: 'faults', faults: ['hipHigh', '+Feet sliding'] }], misses: [] },
+  ];
+  const rec = Trace.recommend(M, runs);
+  assert.equal(rec.recordings, 2); assert.equal(rec.labelled, 3);
+  assert.ok(!rec.faults.some((f) => f.id === '+Feet sliding'), rec.faults.map((f) => f.id).join(','));
+  const high2 = rec.faults.find((f) => f.id === 'hipHigh');
+  assert.equal(high2.clean.n, 2); assert.equal(high2.bad.n, 1); assert.equal(high2.recordings, 2);
+  assert.equal(high2.nowMiss, 1, 'at fifteen the marked rep is missed');
+  assert.equal(high2.status, 'move'); assert.ok(high2.value > high2.clean.hi && high2.value < high2.bad.lo, `recommended ${high2.value} between ${high2.clean.hi} and ${high2.bad.lo}`);
+  assert.deepEqual(high2.wrong, [], 'and the new edge gets every rep right');
+  assert.deepEqual(high2.by.map((x) => [x.take, x.n, x.marked]), [['clip 1', 1, false], ['clip 1', 2, false], ['clip 2', 1, true]]);
+  assert.ok(high2.by.every((x) => typeof x.v === 'number' && typeof x.t0 === 'number'));
+  /* the same answer as the one-recording form, when there is one recording */
+  const one = Trace.recommend(M, r2, reps2, runs[1].labels, []);
+  assert.equal(one.recordings, 1); assert.equal(one.faults.find((f) => f.id === 'hipHigh').bad.n, 1);
+  /* the reps a cut gets wrong are named: the person calls the high rep clean */
+  const rec3 = Trace.recommend(M, [runs[0], Object.assign({}, runs[1], { labels: [{ t0: reps2[0].t0, t1: reps2[0].t1, tag: 'faults', faults: ['hipHigh'] }] }), Object.assign({}, runs[1], { name: 'clip 3', labels: [{ t0: reps2[0].t0, t1: reps2[0].t1, tag: 'clean' }] })]);
+  const high3 = rec3.faults.find((f) => f.id === 'hipHigh');
+  assert.equal(high3.status, 'overlap'); assert.equal(high3.wrong.length, 1); assert.ok(['false', 'miss'].includes(high3.wrong[0].kind)); assert.ok(['clip 2', 'clip 3'].includes(high3.wrong[0].take));
 });

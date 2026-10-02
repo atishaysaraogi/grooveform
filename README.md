@@ -441,12 +441,17 @@ it is measured, the lines each is judged against, the readings, the countdown an
 the cue banner are all painted onto it, so the file you download is the picture
 you watched.
 
-## Review: recordings judged after the fact, and the numbers tuned
+## The studio: the exercise on the left, the recordings on the right
 
-`review.html` (the ◔ button in the bar) is the tuning bench and the builder, carrying the
-OnTrack Studio's method over to this app's moves.
+`review.html` (the ◔ button in the bar) is one page: the exercise being built
+or refined on the left — its animation, the measurements as cards, the words,
+the numbers, the file — and the recordings on the right, read into reps and
+judged with the exercise as it stands. Picking a library exercise opens an
+untouched copy; the first edit makes it the draft, kept in the browser and
+laid over the library, so the recordings and the coach run it. The numbers
+being tuned have one home, the draft's own.
 
-**What was read**, under the video on the Recordings tab: the top lane is
+**What was read**, under the video: the top lane is
 the rep — the reading the rep is judged on against the line a rep starts at,
 the line it must come back to and the band its top must be inside, over the
 coach's phases (waiting for the start position, between reps, up with the
@@ -563,7 +568,7 @@ preview runs beside it. The figure downloads as the JSON a move carries.
 `trace.js` is the pure part — run a move over a trace, the fault stretches, the
 takes' verdicts, a trace to and from a file — and `trace.test.js` holds it.
 
-**Classify, and the numbers follow.** Under each rep the Recordings tab lists,
+**Classify, and the numbers follow.** Under each rep of each recording the studio lists
 a row of chips: *Clean*, each fault the exercise knows, *Not a rep*; under a
 movement that fell short of a rep, *This was a rep*. Mark the reps as you see
 them on the video and the panel below recommends, for every fault, the edge
@@ -609,7 +614,8 @@ public/
   js/core.js       geometry, the hold clock, the countdown, the cue rules — no move knows
   js/spec.js       an exercise's file read into the move the coach runs, and checked
   js/moves.js      the library loaded: the folder in node, the index and the files in the browser, a draft laid over
-  js/builder.js    the Build tab: the file on a form, checked as it is written
+  js/builder.js    the exercise on the studio page: the file as cards and sentences, checked as it is written
+  js/share.js      an exercise file in a link, gzipped and base64url-encoded, for the phone
   js/app.js        camera, drawing, voice, recording
   js/overlay.js    the drawing over the picture: skeleton, counters, words, cue, mark — the coach's and the Review page's
   js/sound.js      the tones, and the rule for which cue gets which
@@ -673,31 +679,54 @@ both). A point that has been given a depth carries it as a third number.
 isometric one under the muscle figure, as a plain stick figure, for a
 movement the camera's view alone cannot show.
 
-**The Build page** (`review.html`, the Build tab) makes the file from a
-pose, in five steps: the exercise (a name, reps or a hold, sides, load); the
-movement drawn (the old Studio's figure builder: a starting pose — side on or
+**Building an exercise** on the studio page: *New* offers a pose — side on or
 facing the phone × standing, seated, kneeling, on the back, on the front, on
-all fours, on the side — dragged into a start and an end, a drag turning the
-bone above the joint and carrying everything below it); what is measured, as
-the Studio did it and apart from the drawing — a card a measurement, its
-kind, a slot for each point filled from a landmark list or by a tap on the
-figure, read as the value, the change from the start or a percentage of the
-start (a length seen by the camera against its own length at the start), a
-role — tracks the rep, must be right, a note, just a reading — with the
-band's shape and edges and the rep's thresholds typed, *From the drawing*
-filling them from the figure on request, and a fault a side to reword — from
-which the file's `band`, `progress` and `faults` are written; the phone and the words, templated from the pose with the long tail
-under *More words*; and the numbers. Landmarks, bones, the skeleton's colours
-and the drawing on the picture are derived from the measurements. Every field
-the file has is still reachable under *More*. A copy of a library exercise or
-a loaded file opens the same way; removing a measurement takes every mention
-of it with it (its drawing, its faults, its bone colours, the landmarks only
-it used), and renaming one carries them along. The draft is checked on every
-change with the problems listed, each marked on the form where it is and a
-click away; when whole it stands in the library on that browser —
-the Recordings tab judges videos with it and hands the tuned numbers back,
-and *Try it live* opens it in the coach, listed with a draft badge. Download
-the file, drop it into the folder, push.
+all fours, on the side — and the figure editor under the animation drags it
+into a start and an end (a drag turns the bone above the joint and carries
+everything below it; *This frame is the pose* takes a keyframe from the frame
+the video is on). A measurement is one card, read as a physio would say it:
+*Measure an angle at a joint, at the knee between the hip and the ankle, read
+as is*, with the meaning under it (*180° is straight; smaller is more bent*),
+then what it is for (tracks the rep, must be right to hold, a note, just
+shown), then the rule — *at the top of the rep it must be between 160° and
+183°* — a start-position rule if wanted, and a fault row a side, each opening
+with what crossing the edge looks like (*Over 10° (the heel up) → ‘Heels
+lifting’, said as ‘Keep your heels down’*). The shapes on offer are every one
+the file can express: an angle at a joint, a line's lean from upright, a line's
+angle from the floor, a line lifted from hanging, how high one point is over
+another (as an angle), the height of one point over another and how far one
+point is ahead of another (as lengths, a share of a limb — new, `axis` on a
+`distance`), the distance between two points, a point off a line; read as is,
+as the change since the start, as a percentage of the start or of the peak,
+or from the rest position. The words come from the geometry (`Spec.words`),
+never typed, so a card never says *Foot off the floor, at most* again.
+*Numbers from the drawing* and *Numbers from the recording* fill the edges
+and the rep's lines. Landmarks, bones, the skeleton's colours and the drawing
+on the picture are derived from the measurements; every field the file has is
+still reachable under *More*. The draft is checked on every change with the
+problems listed, each marked on the form where it is and a click away.
+
+**Several recordings, pooled.** Load videos together; each is read once and
+listed, one on the stage, the reps of all of them grouped under their names
+and classified where they are watched. Every fault's row says where its number
+should sit from the reps classified across every recording, with the reps it
+was made from a click away, and *Measures you have not built* lists what the
+exercise does not measure that would tell the marked reps from the clean ones
+— every measurement the language can write over the landmarks the recordings
+trust, read with the coach's own `Spec.measure`, ranked by the gap between the
+groups in units of the model's wobble on that geometry, with the count that
+would split so few reps by luck said plainly. A fault the exercise does not
+know yet is named on the chip row and found a measure the same way; one click
+writes the measurement and the fault into the draft. *Save all traces* writes
+the session — every recording, its verdicts and the draft — and an old takes
+file loads as recordings whose tag is the verdict their reps start with.
+
+**On the phone.** *Try it* opens the draft in this device's coach, or makes a
+link that carries the whole file (gzipped, in the address: 3.5–4.2 KB) to
+paste into a message and open on the phone, where the coach keeps it as its
+draft and says where it came from; the file itself, loaded on the phone's
+studio page, is the other road. Download the file, drop it into the folder,
+push.
 
 **Programmes and plans.** Exercises bundled for a condition — frozen shoulder
 (freezing and thawing), the knee (early rehab, strength and control), the low

@@ -445,3 +445,71 @@ body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospac
 .recommend .range { color: var(--muted); font-size: .82rem; }
 .scroll-x { overflow-x: auto; max-width: 100%; }
 #lanes { max-width: 100%; }
+
+/* ---- the studio: one page, the exercise on the left and the recordings on the right ---- */
+body.studio main, body.studio .bar { max-width: 1400px; }
+body.studio .bar .spacer { flex: 1 1 auto; }
+body.studio .bar .note { font-size: .82rem; color: var(--muted); max-width: 32ch; line-height: 1.2; }
+body.studio .bar .note.bad { color: var(--bad); }
+.studio-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.studio-grid .col { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.studio-grid .col > * { min-width: 0; }
+@media (min-width: 900px) {
+  .studio-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  #stage-wrap { position: sticky; top: 8px; z-index: 5; background: var(--bg); padding-bottom: 6px; }
+  .stage.small { max-height: 34vh; }
+}
+@media (max-width: 899px) {
+  /* the columns dissolve into one, in the owner's order: the drawing, the recordings and the stage, the reps, then the builder */
+  .studio-grid .col { display: contents; }
+  #fig-panel { order: 1; } #recordings-panel { order: 2; } #stage-wrap { order: 3; } #reps-panel { order: 4; }
+  #measures-panel { order: 5; } #suggest-panel { order: 6; } #exercise-panel { order: 7; } #numbers-panel { order: 8; } #problems-panel { order: 9; } #file-panel { order: 10; }
+  .stage.small { max-height: 40vh; }
+}
+#fig-demo { max-width: none; }
+#fig-editor { display: grid; gap: 10px; margin-top: 8px; }
+.build-form .build-sec { margin: 0; }
+.tiny-h { font: 800 .8rem var(--font-body); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 4px; }
+.strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .86rem; color: var(--muted); padding: 6px 0 10px; }
+.strip:empty { display: none; }
+/* a recommendation under the fault row it concerns */
+.mcard .rec { font-size: .84rem; line-height: 1.4; padding: 4px 8px 4px 12px; border-left: 3px solid var(--line); color: var(--muted); margin: 2px 0 6px; }
+.mcard .rec.fine { border-color: var(--good); } .mcard .rec.move { border-color: var(--warn); } .mcard .rec.overlap { border-color: var(--bad); }
+.mcard .rec b { color: var(--ink); } .mcard .rec .btn { margin-left: 6px; }
+.mcard .rec details { display: inline; } .mcard .rec summary { display: inline; cursor: pointer; color: var(--accent); }
+.mcard .rec ul { margin: 4px 0 0; padding-left: 18px; }
+.mcard .meaning { color: var(--muted); font-size: .82rem; line-height: 1.4; margin: 2px 0 6px; }
+.mcard .mhead b.what { font-size: .98rem; }
+.mcard .fault-row .edge { color: var(--muted); font-size: .82rem; flex-basis: 100%; }
+.mcard .fault-row .more-f { display: grid; gap: 6px; flex-basis: 100%; padding: 6px 0 2px 8px; border-left: 2px solid var(--line); }
+.mcard .sentence .ghost { color: var(--muted); font-size: .82rem; }
+/* the recordings list and the stage bar */
+.rec-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.rec-list li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #0b0f16; font-size: .86rem; }
+.rec-list li[aria-current="true"] { border-color: var(--accent); }
+.rec-list li b { color: var(--ink); } .rec-list li .meta { color: var(--muted); flex: 1 1 auto; }
+.rec-list li select { font-size: .8rem; }
+.stage-bar { align-items: center; margin: 6px 0 0; }
+.stage-bar .tiny { color: var(--muted); }
+#stage-verdict:empty { display: none; }
+#stage-verdict .rep-label { margin: 6px 0 0; padding: 0; border: 0; }
+#lanes { margin-top: 6px; }
+.reps .rec-group { list-style: none; }
+.reps .rec-group > .group-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin: 10px 0 6px; color: var(--ink); font-weight: 700; }
+.reps .rec-group > .group-head .meta { color: var(--muted); font-weight: 500; font-size: .84rem; }
+.reps .rec-group > ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.rep-label .btn.provisional[aria-pressed="true"] { border-style: dashed; opacity: .8; }
+.rep-label .btn.other[aria-pressed="true"] { border-color: var(--warn); background: rgba(255,181,69,.18); }
+/* measures not yet built */
+.suggest-group h3 { font: 800 .9rem var(--font-body); margin: 10px 0 4px; }
+.suggest-group h3 .tiny { font-weight: 500; margin-left: 6px; }
+.suggest-row { background: #0b0f16; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 6px 0; font-size: .9rem; display: grid; gap: 6px; }
+.suggest-row .dots { width: 100%; max-width: 360px; height: 22px; display: block; }
+.suggest-row .why { color: var(--muted); font-size: .82rem; }
+.suggest-row.existing { border-style: dashed; }
+/* the try sheet */
+.sheet[hidden] { display: none; }
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 40; display: grid; place-items: center; padding: 16px; }
+.sheet-box { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; display: grid; gap: 6px; }
+.sheet-box h2 { margin: 0 0 4px; }
+.sheet-box .spacer { flex: 1 1 auto; }

@@ -291,7 +291,8 @@ Each is a named number read every frame and smoothed.
 | `bend` | `a`, `b`, `c` | how far b sits off the straight line a→c, as the bend at b, + above |
 | `rise` | `a`, `b` | how far b sits above a, as the angle of the line off level, signed |
 | `down` | `from`, `to` | how far from→to is lifted from straight down: 0 hanging, 90 level |
-| `distance` | `a`, `b`, `per` | the distance a→b as a share of the distance per[0]→per[1] (unitless) |
+| `distance` | `a`, `b`, `per` | the distance a→b as a share of the distance per[0]→per[1] (unitless; `times: 100` for percent) |
+| `distance` + `axis` | `a`, `b`, `per`, `axis: "y"` or `"x"` | the height of b over a (`y`, + above) or how far b is ahead of a the way the body faces (`x`), as a share of per — a small lift far from its reference wants a length, not an angle |
 | `sum` | `terms` | other measurements added: `[{ "measure": "back" }, { "kind": "rise", "a": "hip", "b": "knee", "times": -1 }]` |
 
 `to` may be a list (`["heel", "ankle"]`): the first the model trusts is
@@ -330,6 +331,21 @@ reading is no change and the start position can be held; then it is frozen
 for the set. A length seen by the camera shortens as the limb turns toward
 it, and `"ratio"` on a `distance` is how that turning is measured — an arm
 raised toward the phone, a thigh drawn up in a front view.
+
+**The words.** The studio does not show a measurement by its `label`; it
+says what the geometry is (`Spec.words.describe`): *the foot line off the
+floor (heel over toe) — 0° is flat on the floor; + the heel up, − the toes
+up*, *the knee angle (hip–knee–ankle) — 180° is straight*, *the shin line
+(ankle to knee) from the floor — 90° is upright; over 90° the knee is forward
+of the ankle*. The rule and each fault read as sentences from the same source
+(*At the top of the rep, the hip angle must be at least 160°*; *Over 10° at all
+times (the heel up) → ‘Heels lifting’, said as ‘Keep your heels down’*), and so
+does every setting's label in the studio. Two optional fields feed them:
+`facing.words` (`["forward", "back"]`, the two direction words for + and −;
+derived from `position` and the phone's view when absent — *toward the feet*
+and *toward the head* for a body on its back) and `words.atTop` (*at the
+bottom of the squat*, *at the cat*: the phrase for the top of the rep). The
+file's own `label` stays what the live page and the HUD show.
 
 A **band** makes the measurement judged, gives it a lane on the Review page,
 a card on the live page and a line on the HUD: `{lo, hi}` between two edges,
@@ -479,3 +495,45 @@ its page (a band's edges are offered by the measurement):
 - **A per-rep alternation** (lunges swapping legs each rep) and two-phase
   movements are not in the coach yet; the file has no field for them, so a
   file cannot ask for them by mistake.
+
+## The studio: one page, the exercise and the recordings
+
+`review.html` is one page. The exercise is on the left — its animation, the
+measurements as cards (what is measured and how it is read, what it is for,
+when it must be right and between what, the faults on either side), the
+words, the numbers, the problems, the file — and the recordings are on the
+right: videos read into reps and judged with the exercise as it stands, one on
+the stage, the reps of every one listed and classified. Picking a library
+exercise opens an untouched copy; the first edit makes it the draft, kept in
+the browser (`localStorage` `ontrack.draft`), laid over the library so the
+recordings and the coach run it, listed as *(draft)*. The numbers have one
+home, the draft's `defaults`.
+
+Under each fault's row the studio says where its number should sit, from the
+reps classified across every recording (`Trace.recommend(move, runs)`), and
+under the cards it lists the measures the exercise does not have that would
+tell the marked reps from the clean ones (`Trace.discover`): every
+measurement the file's language can write over the landmarks the recordings
+trust, read with the same `Spec.measure` the coach will run, each rep's level
+held for the persist time, ranked by the gap between the two groups in units
+of the model's own wobble on that geometry, with the count of measures that
+would split so few reps by luck alone said out loud. A fault the exercise
+does not know yet is named on a rep's chip row (`+ another fault…`) and kept
+in the labels as `"+Feet sliding"`; one click writes the suggested
+measurement and a fault for it into the draft, and the labels follow the new
+id.
+
+Files: a trace (`Trace.pack`, one recording with its labels and tag), and the
+session — the old takes format, `{ v: 1, kind: "takes", move, draft, takes:
+[…] }` — holding every recording, its verdicts and the draft, written by
+*Save all traces* and read back by *Load traces*. An old takes file loads
+too: a take's tag becomes the verdict its reps start with, dashed until a
+tap confirms it.
+
+To try the draft on another device, *Try it* makes a link:
+`index.html#/ex/~` and the whole file, gzipped and base64url-encoded
+(`Share.encode`, 3.5–4.2 KB for the library's files). The coach decodes it,
+checks it, keeps it as its draft, shortens the address to `#/ex/<id>` and
+opens it with a note saying where it came from. A QR code cannot hold a whole
+exercise (2.9 KB at most), so the link is pasted into a message or a note; the
+file itself, loaded on the other device's studio page, is the other road.

@@ -1,101 +1,76 @@
 /* ---------------------------------------------------------------------------
-   The Review page: a recording judged after the fact, the numbers tuned against
-   it, and the move's animation edited by hand.
+   The studio's right-hand side: recordings read into reps and judged with the
+   exercise as it stands, the reps classified, the numbers recommended, and the
+   measures not yet built that would tell the marked reps from the clean ones.
+   builder.js owns the exercise (the draft, its cards, its numbers) and tells this
+   file which compiled move to judge with (setMove); this file owns the recordings,
+   the stage, the lanes, the rep list and the figure editor's canvas.
 
    Recordings. A video is read once by the pose model, frame by frame, into a
-   trace (trace.js). Every band edge is then a slider: move one and the whole
-   recording is judged again at once, lanes redrawn, cues relisted. Traces are
-   tagged as takes — clean, or showing one fault — and held to the tuning rule.
-   The tuned numbers go into the coach's own settings on this device, or into a
-   file to carry into the move's defaults.
-
-   Animation. The muscle figure from the OnTrack build (anatomy.js) drawn at
-   either keyframe with the joints as handles to drag, the muscles' effort as
-   sliders, and the animated preview beside it. Saved as the JSON a move carries.
+   trace; several can be loaded and all are judged together. One is on the stage
+   at a time; the reps of every one are listed, grouped; a verdict on a rep is
+   kept by its time, per recording, in this browser and in the trace file.
+   Every number the builder changes judges every recording again at once.
    --------------------------------------------------------------------------- */
 Moves.ready.then(function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  /* the builder's draft, kept in this browser, stands in the library here too */
-  try { const d = JSON.parse(localStorage.getItem('ontrack.draft') || 'null'); if (d) Moves.draft(d); } catch { }
-  $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}${m.draft ? ' (draft)' : ''}</option>`).join('');
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const C = { good: '#35d07f', warn: '#ffb545', bad: '#ff5c6c', ink: '#e8edf4', dim: 'rgba(232,237,244,.45)', line: '#263040', accent: '#5aa9ff', edge: '#e879f9' };
   const A = window.OnTrackAnatomy;
+  const W = Spec.words;
 
-  let move = Moves.bridge || Moves.list[0], tuned = {}, trace = null, result = null, takes = [];
-  /* what the person said of each rep of this recording: kept by time, with the recording in
-     this browser, and in the trace file when it is saved */
-  let labels = [];
+  /* the move the recordings are judged with: the builder sets it — the draft laid over the
+     library when it is whole, the library's own exercise otherwise */
+  let move = Moves.bridge || Moves.list[0];
+  const cfgNow = () => Trace.defaults(move);
+  /* the recordings, in load order; `shown` is the one on the stage. `trace` and `result`
+     name the shown recording and its run for the drawing code below, which reads them */
+  const recordings = []; let shown = null, trace = null, result = null, recSeq = 0;
+  const video = $('clip'), overlay = $('overlay'), lanes = $('lanes'), reader = $('reader');
+
+  /* ---------- the person's verdicts, per recording ----------
+     kept by time, with the recording, under the exercise it was judged as (the library
+     exercise a draft came from, so renaming a draft keeps them), in this browser and in the
+     trace file when it is saved */
   const LABELS = 'ontrack.labels';
-  const labelKey = () => (trace ? `${move.id}|${trace.name}|${trace.frames.length}` : null);
-  const loadLabels = () => { labels = []; const k = labelKey(); if (!k) return; try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (Array.isArray(all[k])) labels = all[k]; } catch { } if (trace && Array.isArray(trace.labels) && !labels.length) labels = trace.labels.slice(); };
-  const saveLabels = () => { const k = labelKey(); if (!k) return; try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (labels.length) all[k] = labels; else delete all[k]; const keys = Object.keys(all); for (const old of keys.slice(0, Math.max(0, keys.length - 40))) delete all[old]; localStorage.setItem(LABELS, JSON.stringify(all)); } catch { } };
-  /* a rep's label set: the whole stretch replaced, since a label is by time */
-  function setLabel(seg, fn) {
-    const cur = Trace.labelOf(labels, seg);
+  const lineage = () => (window.__builder && window.__builder.source) || move.id;
+  const labelKey = (rec) => `${lineage()}|${rec.name}|${rec.frames.length}`;
+  function loadLabels(rec) {
+    rec.labels = [];
+    try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (Array.isArray(all[labelKey(rec)])) rec.labels = all[labelKey(rec)]; } catch { }
+    if (!rec.labels.length && Array.isArray(rec.fileLabels) && rec.fileLabels.length) rec.labels = rec.fileLabels.slice();
+  }
+  function saveLabels(rec) {
+    try {
+      const all = JSON.parse(localStorage.getItem(LABELS) || '{}'), k = labelKey(rec);
+      if (rec.labels.length) all[k] = rec.labels; else delete all[k];
+      const keys = Object.keys(all); for (const old of keys.slice(0, Math.max(0, keys.length - 60))) delete all[old];
+      localStorage.setItem(LABELS, JSON.stringify(all));
+    } catch { }
+  }
+  /* a rep's label replaced whole, since a label is by time */
+  function setLabel(rec, seg, fn) {
+    const cur = Trace.labelOf(rec.labels, seg);
     const next = fn(cur ? Object.assign({}, cur, { faults: (cur.faults || []).slice() }) : { t0: seg.t0, t1: seg.t1, tag: 'clean', faults: [] });
-    labels = labels.filter((l) => l !== cur);
-    if (next) { next.t0 = seg.t0; next.t1 = seg.t1; labels.push(next); }
-    saveLabels(); renderReps(); renderRecommend();
+    rec.labels = rec.labels.filter((l) => l !== cur);
+    if (next) { next.t0 = seg.t0; next.t1 = seg.t1; delete next.provisional; rec.labels.push(next); }
+    saveLabels(rec); renderReps(); renderRecommend(); renderSuggest();
   }
-  const video = $('clip'), overlay = $('overlay'), lanes = $('lanes');
+  function clearLabels(id) { const rec = recordings.find((r) => r.id === id); if (!rec) return; rec.labels = []; saveLabels(rec); renderReps(); renderRecommend(); renderSuggest(); }
+  /* the faults named on the spot, '+' and the words: offered as chips on every rep of this exercise */
+  const otherFaults = () => { const s = new Set(); for (const r of recordings) for (const l of r.labels) for (const f of l.faults || []) if (f[0] === '+') s.add(f); return [...s]; };
 
-  /* ---------- the move and its numbers ---------- */
-  function refreshMoves() { $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${m.name}${m.draft ? ' (draft)' : ''}</option>`).join(''); if (move) $('move').value = move.id; }
-  /* `keep` holds the tuned numbers and the trace where they are: the builder
-     re-laying its draft over the library is not a change of exercise */
-  function pickMove(id, keep) {
-    const same = keep && move && move.id === id;
-    move = Moves[id] || Moves.bridge || Moves.list[0]; $('move').value = move.id;
-    if (!same) tuned = {};
-    $('tuned-to-draft').hidden = !move.draft;
-    buildSliders(); buildTags(); rerun();
-    /* the editor follows the exercise unless the builder has a draft, whose figure it holds */
-    if (!same && !(window.__builder && window.__builder.draft)) animLoad();
-  }
-  function buildSliders() {
-    const host = $('sliders'); host.innerHTML = '';
-    const d = Trace.defaults(move);
-    /* a number each, typed: compact, and exact */
-    for (const s of Trace.settingsOf(move)) {
-      const v = tuned[s.key] != null ? tuned[s.key] : d[s.key];
-      const lab = el('label', null, `<span>${esc(s.label)}</span><input type="number" id="cfg-${s.key}" min="${s.min}" max="${s.max}" step="1" value="${v}">`);
-      host.appendChild(lab);
-      lab.querySelector('input').oninput = (e) => { const n = Number(e.target.value); if (Number.isFinite(n)) setTuned(s.key, n); };
-    }
-    $('tuned-note').textContent = '';
-  }
-  function setTuned(key, value) {
-    tuned[key] = value;
-    const v = $('val-' + key); if (v) v.textContent = value;
-    const i = $('cfg-' + key); if (i && Number(i.value) !== value) i.value = value;
-    const d = Trace.defaults(move), changed = Object.keys(tuned).filter((k) => tuned[k] !== d[k]);
-    $('tuned-note').textContent = changed.length ? `${changed.length} changed from the defaults` : '';
+  /* ---------- the exercise's list in the bar ---------- */
+  function refreshMoves() { const cur = $('move').value; $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${esc(m.name)}${m.draft ? ' (draft)' : ''}</option>`).join(''); $('move').value = Moves[cur] ? cur : move.id; }
+  /* the builder hands over the compiled move to judge with; every recording is judged again */
+  let lastLineage = null;
+  function setMove(m) {
+    move = m || move; $('move').value = move.id;
+    if (lineage() !== lastLineage) { lastLineage = lineage(); for (const r of recordings) loadLabels(r); }
     rerun();
   }
-  $('reset').onclick = () => { tuned = {}; buildSliders(); rerun(); $('apply-note').textContent = ''; };
-
-  /* the coach on this device keeps its numbers per move in the browser; the tuned
-     ones go in beside whatever else is there, under the same version */
-  $('apply').onclick = () => {
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem('wallsit') || '{}') || {}; } catch { saved = {}; }
-    if (saved.v !== Core.SETTINGS_V) saved = { v: Core.SETTINGS_V, move: move.id, common: {}, bands: {} };
-    saved.bands = saved.bands || {};
-    const mine = Object.assign({}, saved.bands[move.id] || {}, { stamp: Core.stampOf(move) });
-    const d = Trace.defaults(move);
-    for (const s of Trace.settingsOf(move)) mine[s.key] = String(tuned[s.key] != null ? tuned[s.key] : d[s.key]);
-    saved.bands[move.id] = mine;
-    try { localStorage.setItem('wallsit', JSON.stringify(saved)); $('apply-note').textContent = `Saved for the ${move.name} on this device. Open the coach and it uses them.`; }
-    catch (e) { $('apply-note').textContent = 'Could not save: ' + (e.message || e); }
-  };
-  $('download-numbers').onclick = () => {
-    const d = Trace.defaults(move), out = {};
-    for (const s of Trace.settingsOf(move)) out[s.key] = tuned[s.key] != null ? tuned[s.key] : d[s.key];
-    save(new Blob([JSON.stringify({ move: move.id, defaults: out }, null, 2)], { type: 'application/json' }), `${move.id}-numbers.json`);
-  };
   function save(blob, name) {
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
@@ -148,7 +123,7 @@ Moves.ready.then(function () {
       if (!thumb) { thumb = document.createElement('canvas'); thumb.width = 64; thumb.height = 36; }
       const ctx = thumb.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(v, 0, 0, 64, 36);
-      return Core.scene(ctx.getImageData(0, 0, 64, 36).data, 64, 36, lm, (tuned.vis != null ? tuned.vis : Core.COMMON.vis));
+      return Core.scene(ctx.getImageData(0, 0, 64, 36).data, 64, 36, lm, cfgNow().vis);
     } catch { return null; }
   }
   async function poseFor(v, ts) {
@@ -167,63 +142,145 @@ Moves.ready.then(function () {
     const res = lmk.detectForVideo(v, t);
     return res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
   }
-  const seekTo = (t) => new Promise((res) => { const done = () => { video.removeEventListener('seeked', done); res(); }; video.addEventListener('seeked', done); video.currentTime = t; });
+  const seekTo = (v, t) => new Promise((res) => { const done = () => { v.removeEventListener('seeked', done); res(); }; v.addEventListener('seeked', done); v.currentTime = t; });
 
-  async function loadVideo(file) {
-    const note = (t) => { $('progress').textContent = t; $('progress').hidden = !t; };
-    note('Opening the video…');
-    video.src = URL.createObjectURL(file);
-    await new Promise((res, rej) => { video.onloadedmetadata = res; video.onerror = () => rej(new Error('the video would not open')); });
-    const aspect = video.videoWidth / video.videoHeight, dur = video.duration;
+  /* a video, or several, read one after another through the hidden reader, so the stage is
+     free to play what is already there */
+  const note = (t) => { $('progress').textContent = t; $('progress').hidden = !t; };
+  async function loadVideo(file, which) {
+    note(`${which ? which + ' — ' : ''}Opening ${file.name}…`);
+    reader.src = URL.createObjectURL(file);
+    await new Promise((res, rej) => { reader.onloadedmetadata = res; reader.onerror = () => rej(new Error('the video would not open')); });
+    const aspect = reader.videoWidth / reader.videoHeight, dur = reader.duration;
     const fps = Math.max(5, Math.min(30, Number($('fps').value) || 15));
     const frames = [];
-    try {
-      for (let t = 0; t < dur; t += 1 / fps) {
-        await seekTo(Math.min(t, dur - 0.001));
-        const lm = await poseFor(video, Math.round(t * 1000));
-        frames.push({ t: Math.round(t * 1000), lm, scene: sceneOf(video, lm) });
-        if (frames.length % 5 === 0) note(`Reading the video… ${Math.round((t / dur) * 100)}% (${frames.length} frames)`);
-      }
-    } catch (e) { note('Could not read the video: ' + (e.message || e)); return; }
-    note('');
-    trace = { frames, aspect, name: file.name, source: 'video', fps, duration: dur * 1000, file };
-    loadLabels();
-    $('render-demo').disabled = false;
-    await seekTo(0);
-    sizeOverlay();
-    rerun();
+    for (let t = 0; t < dur; t += 1 / fps) {
+      await seekTo(reader, Math.min(t, dur - 0.001));
+      const lm = await poseFor(reader, Math.round(t * 1000));
+      frames.push({ t: Math.round(t * 1000), lm, scene: sceneOf(reader, lm) });
+      if (frames.length % 5 === 0) note(`${which ? which + ' — ' : ''}Reading ${file.name}… ${Math.round((t / dur) * 100)}% (${frames.length} frames)`);
+    }
+    URL.revokeObjectURL(reader.src); reader.removeAttribute('src');
+    const rec = addRecording({ frames, aspect, name: file.name, source: 'video', fps, duration: dur * 1000, file });
+    if (shown !== rec) show(rec);   // a video just read is what the person wants to see
+    return rec;
   }
-  $('video-file').onchange = (e) => { const f = e.target.files && e.target.files[0]; if (f) loadVideo(f).catch((err) => { $('progress').textContent = String(err.message || err); $('progress').hidden = false; }); };
+  async function loadVideos(files) {
+    const list = [...files];
+    for (let i = 0; i < list.length; i++) {
+      try { await loadVideo(list[i], list.length > 1 ? `${i + 1} of ${list.length}` : ''); }
+      catch (e) { note(`Could not read ${list[i].name}: ${e.message || e}`); return; }
+    }
+    note('');
+  }
+  $('video-file').onchange = (e) => { if (e.target.files && e.target.files.length) loadVideos(e.target.files); e.target.value = ''; };
+  /* a trace file, a takes file (the old Takes and the rule), or a bundle of traces: each becomes a recording */
+  function takeIn(packed, fallbackName) {
+    const { meta, frames } = Trace.unpack(packed);
+    if (meta.move && Moves[meta.move] && meta.move !== move.id && !recordings.length && window.__builder) window.__builder.open(meta.move);
+    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], tag: meta.tag || null });
+  }
+  function loadTakes(d) {
+    if (!d || !Array.isArray(d.takes)) throw new Error('not a takes file');
+    return d.takes.map((tk, i) => takeIn(tk, `take ${i + 1}`));
+  }
   $('trace-file').onchange = async (e) => {
-    const f = e.target.files && e.target.files[0]; if (!f) return;
-    try {
-      const { meta, frames } = Trace.unpack(await f.text());
-      trace = { frames, aspect: meta.aspect || 16 / 9, name: f.name, source: 'trace', duration: frames.length ? frames[frames.length - 1].t : 0, labels: Array.isArray(meta.labels) ? meta.labels : [] };
-      if (meta.move && Moves[meta.move]) pickMove(meta.move); else rerun();
-      loadLabels(); renderReps(); renderRecommend();
-    } catch (err) { $('progress').textContent = 'Not a trace: ' + (err.message || err); $('progress').hidden = false; }
+    for (const f of [...(e.target.files || [])]) {
+      try { const d = JSON.parse(await f.text()); if (d && Array.isArray(d.takes)) loadTakes(d); else takeIn(d, f.name); }
+      catch (err) { note(`Not a trace: ${f.name} (${err.message || err})`); }
+    }
+    e.target.value = '';
   };
-  $('export-trace').onclick = () => {
-    if (!trace) return;
-    save(new Blob([JSON.stringify(Trace.pack({ move: move.id, aspect: trace.aspect, name: trace.name, source: trace.source, fps: trace.fps || null, labels }, trace.frames))], { type: 'application/json' }),
-      `${move.id}-trace-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`);
+  const packed = (rec) => Trace.pack({ move: move.id, aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
+  function saveTrace(rec) { save(new Blob([JSON.stringify(packed(rec))], { type: 'application/json' }), `${move.id}-${String(rec.name).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-trace.json`); }
+  $('save-all').onclick = () => {
+    if (!recordings.length) return;
+    const out = { v: 1, kind: 'takes', move: move.id, saved: new Date().toISOString(), draft: window.__builder && window.__builder.touched ? window.__builder.fileOf() : undefined, takes: recordings.map(packed) };
+    save(new Blob([JSON.stringify(out)], { type: 'application/json' }), `${move.id}-recordings-${new Date().toISOString().slice(0, 10)}.json`);
   };
 
-  /* ---------- judging, and the lanes ---------- */
+  /* ---------- the recordings: added, judged, shown ---------- */
+  function addRecording(rec) {
+    rec.id = 'r' + (++recSeq); rec.labels = []; rec.result = null; rec.reps = []; rec.misses = [];
+    recordings.push(rec);
+    loadLabels(rec);
+    judgeOne(rec);
+    /* an old takes file tagged the whole take: its reps start with that verdict, dashed, until a tap confirms it */
+    if (rec.tag && !rec.labels.length) { for (const r of rec.reps) if (r.counted) rec.labels.push({ t0: r.t0, t1: r.t1, tag: rec.tag === 'clean' ? 'clean' : 'faults', faults: rec.tag === 'clean' ? [] : [rec.tag], provisional: true }); saveLabels(rec); }
+    $('save-all').disabled = false;
+    if (!shown) show(rec); else { renderRecList(); renderReps(); renderRecommend(); renderSuggest(); }
+    return rec;
+  }
+  /* the whole recording's verdict: every rep without a verdict of its own starts with it, dashed, until a tap confirms it */
+  function setTag(rec, tag) {
+    rec.tag = tag;
+    rec.labels = rec.labels.filter((l) => !l.provisional);
+    if (tag) for (const r of rec.reps) if (r.counted && !Trace.labelOf(rec.labels, r)) rec.labels.push({ t0: r.t0, t1: r.t1, tag: tag === 'clean' ? 'clean' : 'faults', faults: tag === 'clean' ? [] : [tag], provisional: true });
+    saveLabels(rec); renderRecList(); renderReps(); renderRecommend(); renderSuggest();
+  }
+  function removeRecording(id) {
+    const i = recordings.findIndex((r) => r.id === id); if (i < 0) return;
+    const rec = recordings[i]; recordings.splice(i, 1);
+    rec.frames = null; rec.result = null;
+    if (shown === rec) { shown = null; trace = null; result = null; if (recordings.length) show(recordings[Math.min(i, recordings.length - 1)]); else { if (video.src) URL.revokeObjectURL(video.src); video.removeAttribute('src'); video.load(); renderAll(); } }
+    else { renderRecList(); renderReps(); renderRecommend(); renderSuggest(); }
+    $('save-all').disabled = !recordings.length;
+  }
+  function judgeOne(rec) {
+    let fig = null; try { fig = window.Figure ? Figure.figureOf(move) : null; } catch { fig = null; }
+    const edge = cfgNow().edge;
+    const room = fig && fig.A && fig.B ? (r) => Core.roomOf(fig.A, fig.B, r, rec.aspect, edge) : null;
+    rec.result = Trace.run(move, {}, rec.frames, rec.aspect, room ? { room } : undefined);
+    rec.reps = Trace.reps(rec.result, move);
+    rec.misses = move.reps ? Trace.misses(rec.result, move) : [];
+  }
   let pending = 0;
-  function rerun() {
-    if (pending) return; pending = requestAnimationFrame(() => { pending = 0; judge(); });
+  function rerun() { if (pending) return; pending = requestAnimationFrame(() => { pending = 0; judgeAll(); }); }
+  function judgeAll() { for (const r of recordings) judgeOne(r); if (shown) { trace = shown; result = shown.result; } renderAll(); }
+  function renderAll() {
+    const total = recordings.reduce((a, r) => a + r.frames.length, 0), secs = recordings.reduce((a, r) => a + r.duration, 0) / 1000;
+    $('trace-note').textContent = recordings.length ? `${recordings.length} recording${recordings.length === 1 ? '' : 's'} · ${total} frames · ${secs.toFixed(1)} s` : 'none yet';
+    renderRecList(); sizeOverlay(); drawLanes(); drawOverlay(); listCues(); renderTracked(); renderReps(); renderRecommend(); renderSuggest(); renderStageBar();
   }
-  function judge() {
-    const fig = window.Figure ? Figure.figureOf(move) : null, edge = tuned.edge != null ? tuned.edge : Core.COMMON.edge;
-    const room = fig && fig.A && fig.B ? (r) => Core.roomOf(fig.A, fig.B, r, trace.aspect, edge) : null;
-    result = trace ? Trace.run(move, tuned, trace.frames, trace.aspect, room ? { room } : undefined) : null;
-    $('export-trace').disabled = !trace; $('add-take').disabled = !trace;
-    const edgeMs = result ? result.rows.reduce((a, r, i) => a + (r.reading && r.reading.edge && i ? r.t - result.rows[i - 1].t : 0), 0) : 0;
-    renderTracked();
-    $('trace-note').textContent = trace ? `${trace.name} · ${trace.frames.length} frames · ${(trace.duration / 1000).toFixed(1)} s` + (result ? ` · ${result.cues.length} cues` + (move.reps ? `, ${result.summary.reps} reps` : '') + (edgeMs ? ` · ${(edgeMs / 1000).toFixed(1)} s with a point at the picture's edge` : '') : '') : 'no recording yet';
-    drawLanes(); drawOverlay(); listCues(); renderReps(); renderVerdicts(); renderRecommend();
+  let shownUrl = null;
+  function show(rec) {
+    shown = rec; trace = rec; result = rec.result; focusRep = null;
+    if (shownUrl) { URL.revokeObjectURL(shownUrl); shownUrl = null; }
+    if (rec.file) { shownUrl = URL.createObjectURL(rec.file); video.src = shownUrl; } else { video.removeAttribute('src'); video.load(); }
+    $('render-demo').disabled = !rec.file;
+    renderAll();
   }
+  function renderRecList() {
+    const host = $('rec-list'); if (!host) return;
+    host.innerHTML = recordings.map((r) => {
+      const n = r.reps.length, counted = r.reps.filter((x) => x.counted).length, labelled = r.reps.filter((x) => Trace.labelOf(r.labels, x)).length;
+      const meta = `${(r.duration / 1000).toFixed(1)} s · ${move.reps ? `${counted} rep${counted === 1 ? '' : 's'}${n > counted ? `, ${n - counted} not counted` : ''}` : `${n} hold${n === 1 ? '' : 's'}`} · ${labelled} of ${n} classified`;
+      const tag = `<select class="tag" title="What the whole recording shows: its reps start with that verdict until you confirm or change each"><option value="">shows: —</option><option value="clean"${r.tag === 'clean' ? ' selected' : ''}>a clean set</option>${Trace.faultIds(move).map((id) => `<option value="${esc(id)}"${r.tag === id ? ' selected' : ''}>${esc((move.cues[id] && move.cues[id].label) || id)}</option>`).join('')}</select>`;
+      return `<li data-rec="${r.id}" aria-current="${shown === r}"><b>${esc(r.name)}</b><span class="meta">${meta}</span>${tag}${shown === r ? '' : '<button class="btn tiny-btn" type="button" data-act="show">Show</button>'}<button class="btn tiny-btn" type="button" data-act="save">Save the trace</button><button class="btn tiny-btn" type="button" data-act="remove" title="Remove this recording">✕</button></li>`;
+    }).join('');
+    host.querySelectorAll('button[data-act]').forEach((b) => { b.onclick = () => { const rec = recordings.find((r) => r.id === b.closest('li').dataset.rec); if (!rec) return; if (b.dataset.act === 'show') show(rec); else if (b.dataset.act === 'save') saveTrace(rec); else removeRecording(rec.id); }; });
+    host.querySelectorAll('select.tag').forEach((sel) => { sel.onchange = () => { const rec = recordings.find((r) => r.id === sel.closest('li').dataset.rec); if (rec) setTag(rec, sel.value || null); }; });
+  }
+  /* under the stage: which recording, which rep, and the chips for the rep in focus */
+  function renderStageBar() {
+    $('stage-name').textContent = shown ? shown.name : 'No recording on the stage';
+    const reps = shown ? shown.reps : [];
+    $('stage-rep').textContent = focusRep != null && reps[focusRep] ? `${repName(reps[focusRep], shown)} of ${reps.length}` : reps.length ? `${reps.length} rep${reps.length === 1 ? '' : 's'}` : '';
+    $('prev-rep').disabled = !reps.length; $('next-rep').disabled = !reps.length;
+    const host = $('stage-verdict');
+    host.innerHTML = focusRep != null && reps[focusRep] ? labelRow(shown, focusRep, Trace.labelOf(shown.labels, reps[focusRep]), 'rep') : '';
+  }
+  const repName = (r, rec) => (move.reps ? (r.counted ? `Rep ${r.n}` : (r.open ? 'Under way at the end' : 'Attempt, not counted')) : `Hold ${r.n}`);
+  function focusOn(rec, i) {
+    if (rec !== shown) show(rec);
+    focusRep = i; const r = rec.reps[i]; if (!r) return;
+    if (video.duration) video.currentTime = r.t0 / 1000; else { drawOverlay(r.t0); }
+    drawLanes(); renderReps(); renderStageBar();
+    if (window.innerWidth < 900) $('stage-wrap').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  $('prev-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.max(0, focusRep - 1)); };
+  $('next-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.min(shown.reps.length - 1, focusRep + 1)); };
+
   /* ---------- the reps, one by one ---------- */
   let focusRep = null;
   const sec = (ms) => (ms / 1000).toFixed(1) + 's';
@@ -244,72 +301,131 @@ Moves.ready.then(function () {
   }
   function renderReps() {
     const host = $('reps');
-    if (!result) { host.innerHTML = ''; $('reps-note').textContent = ''; return; }
-    const reps = Trace.reps(result, move), misses = move.reps ? Trace.misses(result, move) : [];
-    const label = (id) => (move.cues[id] && move.cues[id].label) || id;
-    const counted = reps.filter((r) => r.counted).length;
-    $('reps-note').textContent = move.reps ? `${counted} counted${reps.length > counted ? `, ${reps.length - counted} not` : ''}${misses.length ? `, ${misses.length} short of a rep` : ''}` : `${reps.length} stretch${reps.length === 1 ? '' : 'es'} held`;
-    const faultLine = (f) => `<b>${esc(label(f.id))}</b> ${f.stretches.map((s) => s.t0 === s.t1 ? sec(s.t0) : sec(s.t0) + '–' + sec(s.t1)).join(', ')}` +
-      (f.said.length ? ` <span class="said">said at ${f.said.map(sec).join(', ')}</span>` : ' <span class="muted">not said</span>');
-    const items = reps.map((r, i) => ({ t: r.t0, html: (() => {
-      const head = move.reps ? (r.counted ? `Rep ${r.n}` : (r.open ? 'Under way at the end' : 'Attempt, not counted')) : `Hold ${r.n}`;
-      const meta = [`${sec(r.t0)} to ${sec(r.t1)}`, r.holdMs ? `held ${sec(r.holdMs)}` : null, r.lowerMs != null ? `lowered over ${sec(r.lowerMs)}` : null].filter(Boolean).join(' · ');
-      const why = move.reps ? `<div class="rep-why">${whyOf(r)}</div>` : '';
-      const before = r.before.faults.length ? `<div class="rep-before">before it: ${r.before.faults.map(faultLine).join('; ')}</div>` : '';
-      const inside = r.faults.length ? `<ul>${r.faults.map((f) => `<li>${faultLine(f)}</li>`).join('')}</ul>` : '<div class="clean">clean</div>';
-      const lb = Trace.labelOf(labels, r);
-      return `<li class="rep${r.counted ? '' : ' not'}${focusRep === i ? ' focus' : ''}${lb && lb.tag === 'skip' ? ' skipped' : ''}" data-i="${i}"><div class="rep-head"><b>${head}</b> <span class="muted">${meta}</span></div>${why}${before}${inside}${labelRow(i, lb, 'rep')}</li>`;
-    })() })).concat(misses.map((m, j) => ({ t: m.t0, html: `<li class="miss" data-t="${m.tPeak}" data-j="${j}"><div class="rep-head"><b>Short of a rep</b> <span class="muted">${sec(m.t0)} to ${sec(m.t1)}</span></div><div class="rep-why">reached ${fmtV(m.peak, m.unit)} at ${sec(m.tPeak)}, ${Math.round(m.share * 100)}% of the way to the ${fmtV(m.raiseAt, m.unit)} a rep starts at — nothing began</div>${labelRow(j, Trace.labelOf(labels, m), 'miss')}</li>` })));
-    items.sort((x, y) => x.t - y.t);
-    const readyAt = result.rows.find((r) => r.out && r.out.ready);
-    const setup = move.reps ? `<li class="setup"><div class="rep-head"><b>Before the coaching</b> <span class="muted">${readyAt ? `${sec(result.rows[0].t)} to ${sec(readyAt.t)}` : 'the whole recording'}</span></div><div class="rep-why">${readyAt ? `the start position was held for ${sec(result.cfg.readyMs)} and the coaching began` : `the start position was never held for ${sec(result.cfg.readyMs)} — no rep can begin until it is`}</div></li>` : '';
-    host.innerHTML = setup + (items.map((x) => x.html).join('') || (move.reps ? '' : '<li class="muted">No stretch held yet.</li>'));
-    if (move.reps && !items.length) host.insertAdjacentHTML('beforeend', '<li class="muted">No attempt at a rep seen.</li>');
-    host.querySelectorAll('li.rep[data-i]').forEach((li) => { li.onclick = () => { const i = Number(li.dataset.i); focusRep = i; const r = reps[i]; if (video.duration) video.currentTime = r.t0 / 1000; else drawOverlay(r.t0); drawLanes(); renderReps(); }; });
-    host.querySelectorAll('li.miss[data-t]').forEach((li) => { li.onclick = () => { const t = Number(li.dataset.t); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } }; });
-    /* the label chips: a tap classifies and does not open the rep */
-    host.querySelectorAll('.rep-label .btn').forEach((b) => {
-      b.onclick = (e) => {
-        e.stopPropagation();
-        const row = b.closest('.rep-label'), kind = row.dataset.kind, seg = kind === 'rep' ? reps[Number(row.dataset.i)] : misses[Number(row.dataset.i)];
-        const v = b.dataset.v;
-        setLabel(seg, (l) => {
-          if (v === 'clean') return { tag: 'clean', faults: [] };
-          if (v === 'skip') return l.tag === 'skip' ? null : { tag: 'skip', faults: [] };
-          if (v === 'rep') return l.tag === 'rep' ? null : { tag: 'rep', faults: [] };
-          const set = new Set(l.tag === 'faults' ? l.faults : []); if (set.has(v)) set.delete(v); else set.add(v);
-          return set.size ? { tag: 'faults', faults: [...set] } : { tag: 'clean', faults: [] };
-        });
-      };
+    if (!recordings.length) { host.innerHTML = '<li class="muted">Load a video or a trace.</li>'; $('reps-note').textContent = ''; lanesReps = []; lanesMisses = []; return; }
+    const label = (id) => (id[0] === '+' ? id.slice(1) : (move.cues[id] && move.cues[id].label) || id);
+    let counted = 0, all = 0, classified = 0, provisional = 0, misses = 0;
+    const groups = recordings.map((rec) => {
+      const reps = rec.reps, ms = rec.misses;
+      counted += reps.filter((r) => r.counted).length; all += reps.length; misses += ms.length;
+      for (const r of reps) { const lb = Trace.labelOf(rec.labels, r); if (lb) { classified += 1; if (lb.provisional) provisional += 1; } }
+      const faultLine = (f) => `<b>${esc(label(f.id))}</b> ${f.stretches.map((s) => s.t0 === s.t1 ? sec(s.t0) : sec(s.t0) + '–' + sec(s.t1)).join(', ')}` + (f.said.length ? ` <span class="said">said at ${f.said.map(sec).join(', ')}</span>` : ' <span class="muted">not said</span>');
+      const items = reps.map((r, i) => ({ t: r.t0, html: (() => {
+        const meta = [`${sec(r.t0)} to ${sec(r.t1)}`, r.holdMs ? `held ${sec(r.holdMs)}` : null, r.lowerMs != null ? `lowered over ${sec(r.lowerMs)}` : null].filter(Boolean).join(' · ');
+        const why = move.reps ? `<div class="rep-why">${whyOf(r)}</div>` : '';
+        const before = r.before.faults.length ? `<div class="rep-before">before it: ${r.before.faults.map(faultLine).join('; ')}</div>` : '';
+        const inside = r.faults.length ? `<ul>${r.faults.map((f) => `<li>${faultLine(f)}</li>`).join('')}</ul>` : '<div class="clean">clean</div>';
+        const lb = Trace.labelOf(rec.labels, r);
+        return `<li class="rep${r.counted ? '' : ' not'}${rec === shown && focusRep === i ? ' focus' : ''}${lb && lb.tag === 'skip' ? ' skipped' : ''}" data-rec="${rec.id}" data-i="${i}"><div class="rep-head"><b>${repName(r, rec)}</b> <span class="muted">${meta}</span></div>${why}${before}${inside}${labelRow(rec, i, lb, 'rep')}</li>`;
+      })() })).concat(ms.map((m, j) => ({ t: m.t0, html: `<li class="miss" data-rec="${rec.id}" data-t="${m.tPeak}" data-j="${j}"><div class="rep-head"><b>Short of a rep</b> <span class="muted">${sec(m.t0)} to ${sec(m.t1)}</span></div><div class="rep-why">reached ${fmtV(m.peak, m.unit)} at ${sec(m.tPeak)}, ${Math.round(m.share * 100)}% of the way to the ${fmtV(m.raiseAt, m.unit)} a rep starts at — nothing began</div>${labelRow(rec, j, Trace.labelOf(rec.labels, m), 'miss')}</li>` })));
+      items.sort((x, y) => x.t - y.t);
+      const readyAt = rec.result.rows.find((x) => x.out && x.out.ready);
+      const setup = move.reps ? `<li class="setup"><div class="rep-head"><b>Before the coaching</b> <span class="muted">${readyAt ? `${sec(rec.result.rows[0].t)} to ${sec(readyAt.t)}` : 'the whole recording'}</span></div><div class="rep-why">${readyAt ? `the start position was held for ${sec(rec.result.cfg.readyMs)} and the coaching began` : `the start position was never held for ${sec(rec.result.cfg.readyMs)} — no rep can begin until it is`}</div></li>` : '';
+      const empty = !items.length ? (move.reps ? '<li class="muted">No attempt at a rep seen.</li>' : '<li class="muted">No stretch held.</li>') : '';
+      const n = reps.length, c = reps.filter((r) => r.counted).length, lab = reps.filter((r) => Trace.labelOf(rec.labels, r)).length;
+      return `<li class="rec-group" data-rec="${rec.id}" data-shown="${rec === shown}"><div class="group-head"><b>${esc(rec.name)}</b><span class="meta">${move.reps ? `${c} counted${n > c ? `, ${n - c} not` : ''}` : `${n} held`}${ms.length ? `, ${ms.length} short of a rep` : ''} · ${lab} of ${n} classified</span>${rec === shown ? '' : '<button class="btn tiny-btn" type="button" data-act="show">Show</button>'}</div><ol>${setup}${items.map((x) => x.html).join('')}${empty}</ol></li>`;
     });
-    lanesReps = reps; lanesMisses = misses;
+    host.innerHTML = groups.join('');
+    $('reps-note').textContent = `${move.reps ? `${counted} counted${all > counted ? `, ${all - counted} not` : ''}` : `${all} held`}${misses ? `, ${misses} short of a rep` : ''} · ${classified} classified${provisional ? ` (${provisional} from a take's tag, not confirmed)` : ''}, ${all - classified} not yet`;
+    host.querySelectorAll('.group-head button[data-act="show"]').forEach((b) => { b.onclick = () => { const rec = recordings.find((r) => r.id === b.closest('.rec-group').dataset.rec); if (rec) show(rec); }; });
+    host.querySelectorAll('li.rep[data-i]').forEach((li) => { li.onclick = () => { const rec = recordings.find((r) => r.id === li.dataset.rec); if (rec) focusOn(rec, Number(li.dataset.i)); }; });
+    host.querySelectorAll('li.miss[data-t]').forEach((li) => { li.onclick = () => { const rec = recordings.find((r) => r.id === li.dataset.rec); if (!rec) return; if (rec !== shown) show(rec); const t = Number(li.dataset.t); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } }; });
+    lanesReps = shown ? shown.reps : []; lanesMisses = shown ? shown.misses : [];
+    renderStageBar();
   }
-  /* the chips under a rep: clean, each fault the exercise knows, not a rep; under a short movement: this was a rep */
-  function labelRow(i, lb, kind) {
-    const label = (id) => (move.cues[id] && move.cues[id].label) || id;
+  /* the chips under a rep: clean, each fault the exercise knows, a fault named on the spot, not a rep;
+     under a short movement: this was a rep. A tap classifies and does not open the rep. */
+  function labelRow(rec, i, lb, kind) {
+    const label = (id) => (id[0] === '+' ? id.slice(1) : (move.cues[id] && move.cues[id].label) || id);
+    const prov = lb && lb.provisional ? ' provisional' : '';
     const pressed = (on) => ` aria-pressed="${on ? 'true' : 'false'}"`;
-    if (kind === 'miss') return `<div class="rep-label" data-kind="miss" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean" type="button" data-v="rep"${pressed(lb && lb.tag === 'rep')}>This was a rep</button></div>`;
-    const faults = Trace.faultIds(move).map((id) => `<button class="btn fault" type="button" data-v="${esc(id)}"${pressed(lb && lb.tag === 'faults' && lb.faults.includes(id))}>${esc(label(id))}</button>`).join('');
-    return `<div class="rep-label" data-kind="rep" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean" type="button" data-v="clean"${pressed(lb && lb.tag === 'clean')}>Clean</button>${faults}<button class="btn" type="button" data-v="skip"${pressed(lb && lb.tag === 'skip')}>Not a rep</button>${lb ? '' : '<span class="tiny">not yet classified</span>'}</div>`;
+    if (kind === 'miss') return `<div class="rep-label" data-kind="miss" data-rec="${rec.id}" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean${prov}" type="button" data-v="rep"${pressed(lb && lb.tag === 'rep')}>This was a rep</button></div>`;
+    const ids = Trace.faultIds(move).concat(otherFaults());
+    const faults = ids.map((id) => `<button class="btn ${id[0] === '+' ? 'other' : 'fault'}${prov}" type="button" data-v="${esc(id)}"${pressed(lb && lb.tag === 'faults' && lb.faults.includes(id))}>${esc(label(id))}</button>`).join('');
+    return `<div class="rep-label" data-kind="rep" data-rec="${rec.id}" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean${prov}" type="button" data-v="clean"${pressed(lb && lb.tag === 'clean')}>Clean</button>${faults}<button class="btn other" type="button" data-v="+" title="A fault the exercise does not know yet: name it, and the studio looks for a measure that tells it apart">+ another fault…</button><button class="btn${prov}" type="button" data-v="skip"${pressed(lb && lb.tag === 'skip')}>Not a rep</button>${lb ? (lb.provisional ? '<span class="tiny">from the take\'s tag — tap to confirm</span>' : '') : '<span class="tiny">not yet classified</span>'}</div>`;
   }
-  /* the numbers recommended from the verdicts */
+  /* one listener for every chip row, in the list and under the stage */
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.rep-label .btn'); if (!b) return;
+    e.stopPropagation(); e.preventDefault();
+    const row = b.closest('.rep-label'), rec = recordings.find((r) => r.id === row.dataset.rec); if (!rec) return;
+    const seg = row.dataset.kind === 'rep' ? rec.reps[Number(row.dataset.i)] : rec.misses[Number(row.dataset.i)]; if (!seg) return;
+    let v = b.dataset.v;
+    if (v === '+') { const words = window.prompt('What did you see? A few words for the fault — they become its name.'); if (!words || !words.trim()) return; v = '+' + words.trim().replace(/\s+/g, ' ').slice(0, 40); }
+    setLabel(rec, seg, (l) => {
+      if (v === 'clean') return { tag: 'clean', faults: [] };
+      if (v === 'skip') return l.tag === 'skip' && !l.provisional ? null : { tag: 'skip', faults: [] };
+      if (v === 'rep') return l.tag === 'rep' && !l.provisional ? null : { tag: 'rep', faults: [] };
+      const set = new Set(l.tag === 'faults' ? l.faults : []);
+      if (l.provisional) { /* a tap on the take's own verdict confirms it rather than undoing it */ if (!set.has(v)) set.add(v); }
+      else if (set.has(v)) set.delete(v); else set.add(v);
+      return set.size ? { tag: 'faults', faults: [...set] } : { tag: 'clean', faults: [] };
+    });
+  }, true);
+
+  /* ---------- the numbers recommended from the verdicts, pooled over every recording ---------- */
+  const runs = () => recordings.filter((r) => r.result).map((r) => ({ result: r.result, reps: r.reps, misses: r.misses, labels: r.labels, name: r.name, rec: r.id }));
+  function recommendNow() { return recordings.length ? Trace.recommend(move, runs()) : null; }
   function renderRecommend() {
     const table = $('recommend'), note = $('recommend-note'), all = $('recommend-all'); if (!table) return;
-    if (!result) { table.innerHTML = ''; note.textContent = ''; all.style.display = 'none'; return; }
-    const reps = lanesReps || [], misses = lanesMisses || [];
-    const rec = Trace.recommend(move, result, reps, labels, misses);
+    const rec = recommendNow();
+    const hand = (r) => { if (window.__builder && window.__builder.showRecommendations) window.__builder.showRecommendations(r); };
+    if (!rec) { table.innerHTML = ''; note.textContent = ''; all.style.display = 'none'; hand(null); return; }
+    const reps = recordings.reduce((a, r) => a + r.reps.length, 0);
     const words = (f) => f.status === 'fine' ? 'fine as it is' : f.status === 'move' ? `move to ${fmtV(f.value, f.unit)}` : `best cut ${fmtV(f.value, f.unit)} — ${f.afterFalse + f.afterMiss} rep${f.afterFalse + f.afterMiss === 1 ? '' : 's'} still on the wrong side`;
     const range = (x, u) => (x.n ? `${x.n}: ${x.lo === x.hi ? fmtV(x.lo, u) : fmtV(x.lo, u) + ' to ' + fmtV(x.hi, u)}` : '—');
-    if (!rec.labelled) { table.innerHTML = ''; note.textContent = reps.length ? `nothing classified yet — ${reps.length} rep${reps.length === 1 ? '' : 's'} to look at` : ''; all.style.display = 'none'; return; }
-    note.textContent = `from ${rec.labelled} classified rep${rec.labelled === 1 ? '' : 's'}${rec.unlabelled ? `, ${rec.unlabelled} not yet` : ''}${rec.skipped ? `, ${rec.skipped} left out` : ''}`;
-    const rows = rec.faults.map((f) => `<tr><td><b>${esc(f.label)}</b><br><span class="range">${esc(f.setting)}</span></td><td>${fmtV(f.now, f.unit)}</td><td class="range">${range(f.clean, f.unit)}</td><td class="range">${range(f.bad, f.unit)}</td><td class="range">${f.nowFalse} false alarm${f.nowFalse === 1 ? '' : 's'}, ${f.nowMiss} missed</td><td class="${f.status}">${words(f)}</td><td>${f.status === 'fine' ? '' : `<button class="btn tiny-btn" data-key="${esc(f.key)}" data-value="${f.value}">Apply</button>`}</td></tr>`)
+    if (!rec.labelled) { table.innerHTML = ''; note.textContent = reps ? `nothing classified yet — ${reps} rep${reps === 1 ? '' : 's'} to look at` : ''; all.style.display = 'none'; hand(rec); return; }
+    const moves = rec.faults.filter((f) => f.status !== 'fine').concat(rec.lines.filter((l) => l.status !== 'fine'));
+    note.textContent = `from ${rec.labelled} classified rep${rec.labelled === 1 ? '' : 's'} in ${recordings.length} recording${recordings.length === 1 ? '' : 's'}${rec.unlabelled ? `, ${rec.unlabelled} not yet` : ''}${rec.skipped ? `, ${rec.skipped} left out` : ''}: ${moves.length ? `${moves.length} number${moves.length === 1 ? '' : 's'} to move` : 'every number agrees with your verdicts'}`;
+    const rows = rec.faults.map((f) => `<tr><td><b>${esc(f.label)}</b><br><span class="range">${esc(W.settingWords(move.spec, f.key) || f.setting)}</span></td><td>${fmtV(f.now, f.unit)}</td><td class="range">${range(f.clean, f.unit)}</td><td class="range">${range(f.bad, f.unit)}</td><td class="range">${f.nowFalse} false alarm${f.nowFalse === 1 ? '' : 's'}, ${f.nowMiss} missed</td><td class="${f.status}">${words(f)}</td><td>${f.status === 'fine' ? '' : `<button class="btn tiny-btn" data-key="${esc(f.key)}" data-value="${f.value}">Apply</button>`}</td></tr>`)
       .concat(rec.lines.map((l) => `<tr><td><b>A rep starts past</b><br><span class="range">${esc(l.setting)}</span></td><td>${fmtV(l.now, l.unit)}</td><td class="range" colspan="2">the reps you called reps reach ${fmtV(l.nearest, l.unit)} at the least (${l.n})</td><td class="range">${l.status === 'move' ? 'one falls short of the line' : 'all cross it'}</td><td class="${l.status}">${l.status === 'fine' ? 'fine as it is' : `move to ${fmtV(l.value, l.unit)}`}</td><td>${l.status === 'fine' ? '' : `<button class="btn tiny-btn" data-key="${esc(l.key)}" data-value="${l.value}">Apply</button>`}</td></tr>`));
     table.innerHTML = rows.length ? '<tr><th>fault · its number</th><th>now</th><th>clean reps reach</th><th>marked reps reach</th><th>now</th><th>recommended</th><th></th></tr>' + rows.join('') : '<tr><td class="muted">No fault\'s edge can be read from these labels yet.</td></tr>';
-    const moves = rec.faults.filter((f) => f.status !== 'fine').concat(rec.lines.filter((l) => l.status !== 'fine'));
     all.style.display = moves.length < 2 ? 'none' : '';   // the button's own display rule would override `hidden`
-    table.querySelectorAll('button[data-key]').forEach((b) => { b.onclick = () => setTuned(b.dataset.key, Number(b.dataset.value)); });
-    all.onclick = () => { for (const m of moves) { tuned[m.key] = m.value; const i = $('cfg-' + m.key); if (i) i.value = m.value; } setTuned(moves[0].key, moves[0].value); };
+    const setNumber = (k, v) => { if (window.__builder) window.__builder.setNumber(k, v); };
+    table.querySelectorAll('button[data-key]').forEach((b) => { b.onclick = () => setNumber(b.dataset.key, Number(b.dataset.value)); });
+    all.onclick = () => { if (window.__builder) window.__builder.setNumbers(Object.fromEntries(moves.map((m) => [m.key, m.value]))); };
+    hand(rec);
   }
+
+  /* ---------- measures not yet built that tell the marked reps from the clean ones ---------- */
+  let suggestTimer = 0, lastDiscovery = null;
+  function renderSuggest() { clearTimeout(suggestTimer); suggestTimer = setTimeout(discoverNow, 250); }
+  function discoverNow() {
+    const host = $('suggest'), noteEl = $('suggest-note'); if (!host) return;
+    if (!Trace.discover || !recordings.length) { host.innerHTML = `<p class="tiny muted">${recordings.length ? '' : 'Load a recording and classify its reps; anything that tells the reps you mark apart is suggested here.'}</p>`; noteEl.textContent = ''; lastDiscovery = null; return; }
+    let d;
+    try { d = Trace.discover(move, runs(), { describe: (m) => W.describe(m, move.spec) }); } catch (e) { host.innerHTML = `<p class="tiny muted">Could not look: ${esc(e.message || e)}</p>`; return; }
+    lastDiscovery = d;
+    const groups = (d.groups || []).filter((g) => g.id !== '*' || g.rows.length);
+    const tried = d.candidates ? `${d.candidates.kept || d.candidates.total || 0} measures tried` : '';
+    noteEl.textContent = d.labelled ? `from ${d.labelled} classified rep${d.labelled === 1 ? '' : 's'}${tried ? ' · ' + tried : ''}` : '';
+    if (!groups.length) { host.innerHTML = '<p class="tiny muted">Classify reps on the right — clean ones and ones with a fault — and anything that tells them apart is suggested here.</p>'; return; }
+    const fmtU = (v, u) => (v == null ? '—' : (Math.abs(v) >= 100 ? Math.round(v) : +Number(v).toFixed(Math.abs(v) < 10 ? 1 : 0)) + (u || ''));
+    const rangeOf = (x, u) => (x && x.n ? (Math.abs(x.lo - x.hi) < 0.05 ? fmtU(x.lo, u) : `${fmtU(x.lo, u)}–${fmtU(x.hi, u)}`) : '—');
+    const dots = (row) => {
+      const vals = row.values || []; if (!vals.length) return '';
+      const lo = Math.min(...vals.map((v) => v.v), row.edge), hi = Math.max(...vals.map((v) => v.v), row.edge), span = (hi - lo) || 1;
+      const x = (v) => 8 + ((v - lo) / span) * 344;
+      return `<svg class="dots" viewBox="0 0 360 22" aria-label="each rep's value"><line x1="8" y1="11" x2="352" y2="11" stroke="rgba(232,237,244,.25)"/><line x1="${x(row.edge)}" y1="2" x2="${x(row.edge)}" y2="20" stroke="#ffb545" stroke-width="2"/>${vals.map((v) => `<circle cx="${x(v.v)}" cy="11" r="5" fill="${v.marked ? '#ff5c6c' : '#35d07f'}" data-t="${v.t0}" data-take="${esc(v.take || '')}"><title>${esc(v.take || '')} ${v.n ? 'rep ' + v.n : ''}: ${fmtU(v.v, row.unit)} ${v.marked ? '(marked)' : '(clean)'}</title></circle>`).join('')}</svg>`;
+    };
+    host.innerHTML = groups.map((g, gi) => {
+      const head = `<h3>For ‘${esc(g.label)}’ <span class="tiny">${g.n ? `${g.n.marked} marked, ${g.n.clean} clean` : ''}${g.when ? ` · judged ${esc(W.whenWords(move.spec, g.when))}` : ''}${g.luck != null && g.luck >= 1 ? ` · about ${Math.round(g.luck)} of the measures would split these reps by luck alone — the gap is what counts` : ''}</span></h3>`;
+      if (!g.rows || !g.rows.length) return `<div class="suggest-group" data-id="${esc(g.id)}">${head}<p class="tiny muted">${esc(g.note || 'Nothing separates them yet.')}</p></div>`;
+      return `<div class="suggest-group" data-id="${esc(g.id)}">${head}` + g.rows.map((row, ri) => {
+        const w = row.words || {};
+        const sentence = w.sentence || `${w.what || row.measurement.key} — clean reps ${rangeOf(row.clean, row.unit)}, marked reps ${rangeOf(row.marked, row.unit)} · suggest ${row.side === 'above' ? 'at most' : 'at least'} ${fmtU(row.edge, row.unit)}`;
+        const act = row.status === 'existing' && row.existing
+          ? (row.existing.hasFault ? `<span class="tiny">already built as <b>${esc(row.existing.label || row.existing.key)}</b> — its number is tuned in its card above</span>` : `<button class="btn tiny-btn" type="button" data-act="fault" data-g="${gi}" data-r="${ri}">Add a fault on ‘${esc(row.existing.label || row.existing.key)}’</button>`)
+          : `<button class="btn tiny-btn" type="button" data-act="add" data-g="${gi}" data-r="${ri}">Add this measure and a fault</button>`;
+        const also = row.also && row.also.length ? `<span class="tiny"> · moves with: ${row.also.slice(0, 3).map((a) => esc((a.words && a.words.what) || (a.measurement && a.measurement.key) || '')).join(', ')}${row.also.length > 3 ? ` and ${row.also.length - 3} more` : ''}</span>` : '';
+        return `<div class="suggest-row${row.status === 'existing' ? ' existing' : ''}"><div><b>${esc(sentence)}</b></div>${dots(row)}<div class="why">${esc(w.meaning || '')}${w.meaning ? ' ' : ''}${esc(row.why || '')}${also}</div><div class="row">${act}</div></div>`;
+      }).join('') + '</div>';
+    }).join('');
+    host.querySelectorAll('button[data-act]').forEach((b) => { b.onclick = () => { const g = groups[Number(b.dataset.g)], row = g.rows[Number(b.dataset.r)]; if (!window.__builder) return; if (b.dataset.act === 'add') window.__builder.addDiscovered(row, g); else window.__builder.addFaultOn(row, g); }; });
+    host.querySelectorAll('circle[data-t]').forEach((c) => { c.onclick = () => { const rec = recordings.find((r) => r.name === c.dataset.take) || shown; if (!rec) return; if (rec !== shown) show(rec); const t = Number(c.dataset.t); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } }; });
+  }
+  /* a fault named on the spot that the builder has now built: the labels follow the new id */
+  function renameFault(from, to) { for (const r of recordings) { let changed = false; for (const l of r.labels) { const i = (l.faults || []).indexOf(from); if (i >= 0) { l.faults[i] = to; changed = true; } } if (changed) saveLabels(r); } renderReps(); }
+
   let lanesReps = [], lanesMisses = [];
   const bandColour = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
   const PH = { setup: 'rgba(232,237,244,.10)', down: 'rgba(90,169,255,.18)', up: 'rgba(53,208,127,.30)', lower: 'rgba(255,181,69,.30)', done: 'rgba(53,208,127,.5)' };
@@ -447,7 +563,7 @@ Moves.ready.then(function () {
     const f = frameAt(t);
     Overlay.draw(ctx, {
       W: overlay.width, H: overlay.height, source: null, aspect: trace.aspect,
-      move, cfg: Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: true, setCount: 1, showPoints: allPoints() }),
+      move, cfg: Object.assign({}, Trace.defaults(move), { mirror: false, angles: true, setCount: 1, showPoints: allPoints() }),
       reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1, points: f ? f.lm : null,
       banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues,
     });
@@ -486,46 +602,6 @@ Moves.ready.then(function () {
   video.addEventListener('seeked', () => { drawOverlay(); drawLanes(); });
   window.addEventListener('resize', () => { sizeOverlay(); drawOverlay(); drawLanes(); });
 
-  /* ---------- takes and the rule ---------- */
-  function buildTags() {
-    const sel = $('take-tag'); sel.innerHTML = '<option value="clean">a clean set</option>';
-    for (const id of Trace.faultIds(move)) sel.appendChild(el('option', null, esc((move.cues[id] && (move.cues[id].label || move.cues[id].text)) || id))).value = id;
-  }
-  $('add-take').onclick = () => {
-    if (!trace) return;
-    const tag = $('take-tag').value, name = $('take-name').value.trim() || trace.name || `take ${takes.length + 1}`;
-    takes.push({ name, tag, move: move.id, frames: trace.frames, aspect: trace.aspect, labels: labels.slice() });
-    $('take-name').value = '';
-    renderVerdicts();
-  };
-  function renderVerdicts() {
-    const mine = takes.filter((t) => t.move === move.id);
-    $('export-takes').disabled = !takes.length;
-    $('takes').innerHTML = mine.map((t, i) => `<li><b>${esc(t.name)}</b> — ${t.tag === 'clean' ? 'clean' : esc((move.cues[t.tag] && move.cues[t.tag].label) || t.tag)} · ${t.frames.length} frames <button class="btn tiny-btn" data-i="${i}">remove</button></li>`).join('') || '<li class="muted">No takes yet for this exercise.</li>';
-    $('takes').querySelectorAll('button[data-i]').forEach((b) => { b.onclick = () => { const t = mine[Number(b.dataset.i)]; takes = takes.filter((x) => x !== t); renderVerdicts(); }; });
-    const table = $('verdicts');
-    if (!mine.length) { table.innerHTML = ''; return; }
-    const v = Trace.verdicts(move, tuned, mine);
-    table.innerHTML = '<tr><th>fault</th><th>quiet on clean takes</th><th>fires on its takes</th><th>verdict</th></tr>' + v.table.map((r) => {
-      const label = (move.cues[r.id] && move.cues[r.id].label) || r.id;
-      const verdict = r.pass == null ? '<span class="muted">no take of it</span>' : r.pass ? '<span class="ok">passes</span>' : '<span class="no">fails</span>';
-      return `<tr><td>${esc(label)}</td><td>${r.cleanTotal - r.cleanFired} of ${r.cleanTotal}</td><td>${r.faultFired} of ${r.faultTotal}</td><td>${verdict}</td></tr>`;
-    }).join('');
-  }
-  $('export-takes').onclick = () => {
-    const out = { v: 1, kind: 'takes', takes: takes.map((t) => Trace.pack({ move: t.move, aspect: t.aspect, name: t.name, tag: t.tag, labels: t.labels || [] }, t.frames)) };
-    save(new Blob([JSON.stringify(out)], { type: 'application/json' }), `takes-${new Date().toISOString().slice(0, 10)}.json`);
-  };
-  $('takes-file').onchange = async (e) => {
-    const f = e.target.files && e.target.files[0]; if (!f) return;
-    try {
-      const d = JSON.parse(await f.text());
-      if (!d || d.kind !== 'takes' || !Array.isArray(d.takes)) throw new Error('not a takes file');
-      for (const tk of d.takes) { const { meta, frames } = Trace.unpack(tk); takes.push({ name: meta.name || 'take', tag: meta.tag || 'clean', move: meta.move || move.id, frames, aspect: meta.aspect || 16 / 9, labels: Array.isArray(meta.labels) ? meta.labels : [] }); }
-      renderVerdicts();
-    } catch (err) { $('progress').textContent = String(err.message || err); $('progress').hidden = false; }
-  };
-
   /* ---------- the animation editor: the muscle figure, by hand ---------- */
   /* the points of a figure, by view: a side view has one limb near and one far; a
      front view (a body lying on its side facing the camera) has a left and a right */
@@ -563,7 +639,8 @@ Moves.ready.then(function () {
   }
   /* the selected exercise's figure into the editor */
   function animLoad() {
-    const f = window.Figure ? Figure.figureOf(move) : null;
+    const lib = (Moves.library && Moves.library[move.id]) || move;
+    const f = window.Figure ? Figure.figureOf(lib) : null;
     const base = f || Object.assign(Figure.fromAngles({ A: { torso: 0 } }), { view: 'side' });
     setFig(Object.assign({}, base, { view: base.view || (move.figure && move.figure.view) || 'side', flip: !!(move.figure && move.figure.flip) || !!(move.pose && move.pose.A && move.pose.A.face === 'left'), side: (move.figure && move.figure.side) || 'both', w: move.muscles || (move.figure && move.figure.w) || {} }));
   }
@@ -595,7 +672,7 @@ Moves.ready.then(function () {
     const j = figureJson();
     $('anim-json').value = JSON.stringify(j);
     A.register('edit', Object.assign({}, j, { B: j.B || j.A }));
-    A.mountAll($('fig-editor'));
+    A.mountAll($('fig-panel'));
     /* the builder's draft carries the figure: every drag goes to it */
     if (!quiet && window.__builder && window.__builder.figChanged) window.__builder.figChanged(j);
   }
@@ -722,17 +799,6 @@ Moves.ready.then(function () {
   $('anim-download').onclick = () => save(new Blob([JSON.stringify(figureJson(), null, 2)], { type: 'application/json' }), `${move.id}-figure.json`);
   $('anim-copy').onclick = async () => { try { await navigator.clipboard.writeText($('anim-json').value); $('anim-copy').textContent = 'Copied'; setTimeout(() => { $('anim-copy').textContent = 'Copy as JSON'; }, 1500); } catch { $('anim-json').select(); } };
 
-  /* ---------- tabs and wiring ---------- */
-  function showTab(which) {
-    if (which === 'anim') which = 'build';   // the animation editor lives in the Build tab now
-    for (const t of ['build', 'review']) { $('pane-' + t).hidden = which !== t; $('tab-' + t).setAttribute('aria-selected', String(which === t)); }
-    if (which === 'build') animChanged(); else if (which === 'review') { sizeOverlay(); drawLanes(); drawOverlay(); }
-    try { history.replaceState(null, '', location.pathname + '?tab=' + which + (move ? '&move=' + move.id : '')); } catch { }
-  }
-  $('tab-build').onclick = () => showTab('build');
-  $('tab-review').onclick = () => showTab('review');
-  $('move').onchange = () => pickMove($('move').value);
-
   /* ---------- a demo film: the clip drawn over and voiced, after the fact ----------
      The same drawing the coach's page makes (overlay.js) on every frame of the
      clip, and the same sounds — the coach's own voice for each cue at its moment
@@ -782,7 +848,7 @@ Moves.ready.then(function () {
         error: (e) => { why = why || e; },
       });
       enc.configure(pick.config);
-      const cfg = Object.assign({}, Trace.defaults(move), tuned, { mirror: false, angles: false, setCount: 1, showPoints: allPoints() });
+      const cfg = Object.assign({}, Trace.defaults(move), { mirror: false, angles: false, setCount: 1, showPoints: allPoints() });
       let n = 0;
       for (let t = 0; t < dur; t += 1 / fps, n++) {
         await seekTo(Math.min(t, dur - 0.001));
@@ -815,14 +881,20 @@ Moves.ready.then(function () {
   }
   $('render-demo').onclick = renderDemo;
 
+  $('move').onchange = () => { if (window.__builder) window.__builder.open($('move').value); };
+  $('fig-edit').addEventListener('toggle', () => { if ($('fig-edit').open) requestAnimationFrame(() => animChanged()); });
+  window.addEventListener('resize', () => { if ($('fig-edit').open) drawEditor(); });
+
   window.__review = {
     get demo() { return demo; },
-    get trace() { return trace; }, get result() { return result; }, get takes() { return takes; }, get tuned() { return tuned; },
-    get fig() { return figureJson(); }, get move() { return move; }, get ev() { return ev; }, editBox: fitBox, editTransform, pickMove, refreshMoves, setTuned, showTab, setFig, animLoad, animChanged,
-    loadTrace(frames, aspect, name) { trace = { frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }; loadLabels(); judge(); },
-    get labels() { return labels; }, recommend() { return result ? Trace.recommend(move, result, lanesReps || [], labels, lanesMisses || []) : null; },
+    get recordings() { return recordings; }, get shown() { return shown; }, get trace() { return trace; }, get result() { return result; }, get move() { return move; },
+    get labels() { return shown ? shown.labels : []; },
+    get fig() { return figureJson(); }, get ev() { return ev; }, editBox: fitBox, editTransform, setFig, animLoad, animChanged, refreshMoves, setMove, rerun, judgeAll,
+    /* a trace handed in by a test, or by the builder's own tools: it becomes a recording and is shown */
+    loadTrace(frames, aspect, name) { return addRecording({ frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }); },
+    loadTakes, show(id) { const r = recordings.find((x) => x.id === id); if (r) show(r); }, remove: removeRecording, focus: (id, i) => { const r = recordings.find((x) => x.id === id); if (r) focusOn(r, i); },
+    runs, recommend: recommendNow, discover() { discoverNow(); return lastDiscovery; }, get discovery() { return lastDiscovery; },
+    setLabel, clearLabels, renameFault, saveTrace, setTag(id, tag) { const r = recordings.find((x) => x.id === id); if (r) setTag(r, tag); },
   };
-  const q = new URLSearchParams(location.search);
-  pickMove(q.get('move') || 'bridge');
-  if (q.get('tab')) showTab(q.get('tab'));
+  window.__studio = window.__review;
 });

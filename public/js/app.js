@@ -246,6 +246,9 @@ Moves.ready.then(function () {
        camera, the coach and the voice stop with it: nothing is said to a page
        that is not the camera's */
     if (h !== '#/live' && (running || inSet)) leaveLive();
+    /* an exercise in the address (#/ex/~code, from the studio's "Open on my phone"): decoded,
+       checked, kept as the draft on this device and opened */
+    if ((m = h.match(/^#\/ex\/~([A-Za-z0-9_-]+)$/))) { importLink(m[1]); return; }
     if ((m = h.match(/^#\/ex\/([a-z0-9]+)/)) && Moves[m[1]]) { planCtx = null; if (move.id !== m[1]) selectMove(m[1]); else showMove(); show('ex'); }
     else if (h === '#/live') { if (!running && !inSet && !starting) { location.hash = exHref(); return; } show('live'); }
     else if (h === '#/done') { if (!setsDone.length) { location.hash = exHref(); return; } show('done'); }
@@ -263,6 +266,22 @@ Moves.ready.then(function () {
       } else { planCtx = null; showPlan(p); show('plan'); }
     }
     else { planCtx = null; show('home'); }
+  }
+  let imported = null;
+  async function importLink(code) {
+    const note = opt('lib-note');
+    const fail = (why) => { if (note.setAttribute) { note.hidden = false; note.textContent = 'That link did not open: ' + why; } location.replace(location.pathname + '#/'); };
+    let file;
+    try { file = await Share.decode(code); } catch (e) { return fail(e.message || String(e)); }
+    const errors = Spec.check(file).filter((p) => p.level === 'error');
+    if (errors.length) return fail(errors.map((p) => (p.at ? p.at + ': ' : '') + p.message).join('; '));
+    try { localStorage.setItem(DRAFT, JSON.stringify(file)); } catch { }
+    try { Moves.draft(file); } catch (e) { return fail(e.message || String(e)); }
+    sel.innerHTML = Moves.list.map((mv) => `<option value="${mv.id}">${mv.name}</option>`).join('');
+    buildPicker();
+    imported = file.id;
+    history.replaceState(null, '', location.pathname + '#/ex/' + file.id);   // the long address goes; a reload does not import again
+    route();
   }
   /* the exercise page to go back to: the step of the plan, or the exercise itself */
   const exHref = () => (planCtx ? planHref(planCtx.plan, planCtx.i + 1) : '#/ex/' + move.id);
@@ -401,6 +420,8 @@ Moves.ready.then(function () {
     opt('about').hidden = false;
     opt('ex-title').textContent = move.name + (move.draft ? ' (draft)' : '');
     opt('draft-note').hidden = !move.draft;
+    /* a draft that came in by a link says so, once, so the person knows the phone has what the studio made */
+    if (move.draft && imported === move.id) { const dn = opt('draft-note'); if (dn.firstChild && dn.firstChild.nodeType === 3) dn.firstChild.textContent = `Imported from the studio's link: ${move.name}, ${(move.measurements || []).length} measurements, ${Math.max(0, move.faults.length - 1 - (move.prompts || []).length)} faults. It stays on this phone as the draft until you drop it. `; }
     opt('ex-more-words').innerHTML = [['Safety', move.safety], ['Easier', move.easier], ['Harder', move.harder], ['Common mistakes', move.mistakes]]
       .filter(([, t]) => t).map(([k, t]) => `<p><b>${k}.</b> ${esc(t)}</p>`).join('');
     opt('setup-place').textContent = placement(move);

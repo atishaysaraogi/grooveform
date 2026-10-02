@@ -1025,9 +1025,10 @@ try {
     assert.equal(r.value, 42, 'and what it declares is on the global scope');
   });
 
-  await step('the Review page judges a trace, holds takes to the rule, and hands the numbers to the coach', async () => {
+  await step('the studio judges two recordings, pools the verdicts, and the number applied is the draft\'s', async () => {
     await page.goto(base + '/review.html?move=bridge');
-    await page.waitForSelector('#sliders input');
+    await page.waitForSelector('#measures .mcard');
+    assert.match(await page.textContent('#build-note'), /bridge\.json · as in the library/, 'an untouched copy of the library\'s file');
     /* the stand-in bodies are in every page of this context: a clean rep and a rep
        past the knees, as traces at fifteen frames a second */
     const traces = await page.evaluate(() => {
@@ -1035,72 +1036,145 @@ try {
       const REST = { bShin: 95, dip: 50, hipAng: 130, bFoot: 0 }, TOP = { bShin: 95, dip: 5, hipAng: 170, bFoot: 0 }, HALF = { bShin: 95, dip: 25, hipAng: 145, bFoot: 0 };
       return { clean: mk([[REST, 4500], [TOP, 3500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 4500], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]) };
     });
-    await page.evaluate((f) => window.__review.loadTrace(f, document.getElementById('cam') ? 16 / 9 : 16 / 9, 'clean'), traces.clean);
-    await page.waitForFunction(() => /1 reps/.test(document.getElementById('trace-note').textContent), null, { timeout: 5000 });
+    page.__traces = traces;
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
+    await page.waitForFunction(() => window.__review.recordings.length === 1 && window.__review.recordings[0].reps.length === 1, null, { timeout: 5000 });
+    assert.match(await page.textContent('#trace-note'), /1 recording · \d+ frames/);
     const cues = await page.$$eval('#cue-log li', (l) => l.map((x) => x.textContent));
     assert.ok(cues.some((c) => /Lift your hips/.test(c)) && cues.some((c) => /— 1$/.test(c)), 'the coach\'s cues, at their moments: ' + JSON.stringify(cues));
     assert.ok((await page.evaluate(() => document.getElementById('lanes').height)) > 100, 'the lanes are drawn');
     const reps = await page.$$eval('#reps li.rep', (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     assert.equal(reps.length, 1, 'one rep broken out');
     assert.match(reps[0], /^Rep 1 .*held .*clean/, 'counted, held, clean: ' + reps[0]);
-    await page.fill('#take-name', 'clean 1'); await page.click('#add-take');
+    /* a second recording: listed beside the first, its reps grouped under its name */
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
     await page.waitForFunction(() => /Hips above knees/.test(document.getElementById('reps').textContent), null, { timeout: 5000 });
-    const rep1 = await page.$eval('#reps li.rep', (x) => x.textContent.replace(/\s+/g, ' ').trim());
+    const [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
+    assert.equal(await page.$$eval('#rec-list li', (l) => l.length), 2, 'two recordings listed');
+    assert.equal(await page.$$eval('#reps .rec-group', (l) => l.length), 2, 'and two groups of reps');
+    const high = `#reps li.rep[data-rec="${r2}"]`;
+    const rep1 = await page.$eval(high, (x) => x.textContent.replace(/\s+/g, ' ').trim());
     assert.match(rep1, /Hips above knees \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
     /* the person classifies the rep: with the hips past the knees. The allowance of three already
-       divides it from the clean take's rep, so the number is recommended as it is */
-    assert.match(await page.textContent('#recommend-note'), /nothing classified yet — 1 rep/);
-    await page.click('#reps li.rep .rep-label .btn[data-v="hipHigh"]');
-    await page.waitForFunction(() => /from 1 classified rep/.test(document.getElementById('recommend-note').textContent), null, { timeout: 5000 });
+       divides it from the clean recording's rep, so the number is recommended as it is */
+    assert.match(await page.textContent('#recommend-note'), /nothing classified yet — 2 reps/);
+    await page.click(`${high} .rep-label .btn[data-v="hipHigh"]`);
+    await page.waitForFunction(() => /from 1 classified rep in 2 recordings/.test(document.getElementById('recommend-note').textContent), null, { timeout: 5000 });
     const recRow = async () => (await page.$$eval('#recommend tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /^Hips above knees/.test(t));
-    assert.match(await recRow(), /\| 3 \| — \| 1: \d+°? \| 0 false alarms, 0 missed \| fine as it is/, 'the marked rep reaches past the edge, nothing to move: ' + await recRow());
-    assert.equal(await page.$eval('#reps li.rep .rep-label .btn[data-v="hipHigh"]', (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
-    assert.deepEqual(await page.evaluate(() => window.__review.labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time');
-    await page.selectOption('#take-tag', 'hipHigh'); await page.fill('#take-name', 'high'); await page.click('#add-take');
-    await wait(200);
-    const row = async () => (await page.$$eval('#verdicts tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /Hips above knees/.test(t));
-    assert.match(await row(), /1 of 1 \| 1 of 1 \| passes/, 'quiet on the clean take, fires on its own: ' + await row());
-    /* a band edge moved: judged again at once, and the rule now fails */
-    await page.evaluate(() => window.__review.setTuned('overMax', 15));
-    await wait(200);
-    assert.match(await row(), /0 of 1 \| fails/, 'with the allowance at fifteen the fault never fires: ' + await row());
-    assert.match(await page.$eval('#reps li.rep', (x) => x.textContent), /clean/, 'and the rep reads clean under the new number');
-    /* the recommendation disagrees: the rep the person marked is missed at fifteen, and Apply brings the edge back under it */
+    assert.match(await recRow(), /\| 3° \| — \| 1: \d+° \| 0 false alarms, 0 missed \| fine as it is/, 'the marked rep reaches past the edge, nothing to move: ' + await recRow());
+    const recLine = () => page.$eval('#measures .rec[data-fault="hipHigh"]', (n) => n.className + ' | ' + n.textContent.replace(/\s+/g, ' ').trim());
+    assert.match(await recLine(), /^rec fine \| ✓ 3° agrees with your verdicts/, 'and the fault\'s own row says so, under the number: ' + await recLine());
+    assert.equal(await page.$eval(`${high} .rep-label .btn[data-v="hipHigh"]`, (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
+    assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time, with its recording');
+    /* a number moved on the card: every recording judged again at once, and the row disagrees */
+    await page.evaluate(() => window.__builder.setNumber('overMax', 15));
+    await wait(300);
+    assert.match(await page.$eval(high, (x) => x.textContent), /clean/, 'the rep reads clean under the new number');
     assert.match(await recRow(), /0 false alarms, 1 missed \| move to \d+/, 'the marked rep is missed at fifteen: ' + await recRow());
-    const suggested = Number((await recRow()).match(/move to ([\d.]+)/)[1]);
+    assert.match(await recLine(), /^rec move \| .*1 missed\. Move the number to \d+°/, await recLine());
+    const suggested = Number((await recLine()).match(/Move the number to (\d+)°/)[1]);
     assert.ok(suggested < 12 && suggested >= 3, 'under the marked rep, over the clean one: ' + suggested);
-    await page.click('#recommend button[data-key="overMax"]');
-    await page.waitForFunction((v) => Number(document.getElementById('cfg-overMax').value) === v, suggested, { timeout: 5000 });
-    assert.match(await page.$eval('#reps li.rep', (x) => x.textContent), /Hips above knees/, 'and the rep flags again');
+    /* Apply writes the draft's own number: the input in the sentence, the file, the coach's copy */
+    await page.click('#measures .rec[data-fault="hipHigh"] button[data-key="overMax"]');
+    await page.waitForFunction((v) => Number(document.getElementById('def-overMax').value) === v, suggested, { timeout: 5000 });
+    assert.match(await page.$eval(high, (x) => x.textContent), /Hips above knees/, 'and the rep flags again');
     assert.match(await recRow(), /fine as it is/);
-    await page.evaluate(() => window.__review.setTuned('overMax', 15));
-    await wait(200);
-    await page.click('#apply');
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wallsit')).bands.bridge.overMax), '15', 'the number went into the coach\'s own store');
-    assert.match(await page.textContent('#apply-note'), /Saved for the Glute bridge/);
+    assert.equal(await page.evaluate(() => Moves.bridge.draft === true && Moves.bridge.defaults.overMax), suggested, 'the draft laid over the library carries it');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ontrack.draft')).defaults.overMax), suggested, 'and it is kept in this browser');
+    assert.match(await page.textContent('#build-note'), /bridge\.json · edited/);
+    assert.match(await page.$eval('#move', (s) => s.options[s.selectedIndex].textContent), /Glute bridge \(draft\)/);
+    assert.equal(await page.isVisible('#build-drop'), true, 'the changes can be dropped');
   });
 
-  await step('the Review page reads a video into a trace, and the animation editor edits the muscle figure', async () => {
+  await step('the studio keeps each recording\'s verdicts, pools them, takes a recording\'s tag as its verdict, suggests a measure, and saves the session', async () => {
+    const traces = page.__traces;
+    /* the verdicts come back with the recordings after a reload, each to its own */
+    await page.click(`#reps li.rep[data-rec="${(await page.evaluate(() => window.__review.recordings[0].id))}"] .rep-label .btn[data-v="clean"]`);
+    await page.reload();
+    await page.waitForSelector('#measures .mcard');
+    await page.click('#build-drop');
+    await page.waitForFunction(() => /as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
+    await page.waitForFunction(() => window.__review.recordings.length === 2 && document.querySelectorAll('#reps li.rep').length === 2, null, { timeout: 5000 });
+    const [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
+    assert.equal(await page.$$eval('#reps .rep-label .btn[aria-pressed="true"]', (l) => l.map((b) => b.dataset.v).join(',')), 'clean,hipHigh', 'both verdicts back on their reps');
+    assert.match(await page.textContent('#reps-note'), /2 classified, 0 not yet/);
+    /* pooled: one recommendation from the two recordings, with the reps it was made from */
+    assert.match(await page.textContent('#recommend-note'), /from 2 classified reps in 2 recordings/);
+    const line = await page.$eval('#measures .rec[data-fault="hipHigh"]', (n) => n.className + ' | ' + n.textContent.replace(/\s+/g, ' ').trim());
+    assert.match(line, /^rec fine \| ✓ 3° agrees .*clean reps -?\d+° \(1\), marked \d+° \(1\)/, line);
+    assert.equal(await page.$$eval('#measures .rec[data-fault="hipHigh"] details li', (l) => l.length), 2, 'by rep: one from each recording');
+    assert.equal(await page.evaluate(() => window.__review.recommend().recordings), 2);
+    /* a recording's tag is the verdict its reps start with, dashed; a tap makes it the person's */
+    await page.evaluate((id) => window.__review.clearLabels(id), r2);
+    await page.selectOption(`#rec-list li[data-rec="${r2}"] select.tag`, 'hipHigh');
+    const chip = `#reps li.rep[data-rec="${r2}"] .rep-label .btn[data-v="hipHigh"]`;
+    assert.equal(await page.$eval(chip, (b) => b.getAttribute('aria-pressed') + ' ' + b.classList.contains('provisional')), 'true true', 'pressed, from the tag');
+    assert.match(await page.textContent('#reps-note'), /1 from a take's tag, not confirmed/);
+    await page.click(chip);
+    assert.equal(await page.$eval(chip, (b) => b.getAttribute('aria-pressed') + ' ' + b.classList.contains('provisional')), 'true false', 'confirmed');
+    assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh']);
+    /* a measure the exercise does not have: the bridge without its hip-over-knee reading no longer
+       tells the two apart, and the studio finds the geometry that would */
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean 2'), traces.clean);
+    await page.waitForFunction(() => window.__review.recordings.length === 3, null, { timeout: 5000 });
+    const r3 = await page.evaluate(() => window.__review.recordings[2].id);
+    await page.click(`#reps li.rep[data-rec="${r3}"] .rep-label .btn[data-v="clean"]`);
+    await page.evaluate(() => { const c = [...document.querySelectorAll('#measures .mcard')].find((x) => /hip over the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
+    await page.waitForFunction(() => !JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
+    await page.waitForFunction(() => document.querySelectorAll('#suggest .suggest-row').length >= 1, null, { timeout: 15000 });
+    const first = await page.$eval('#suggest .suggest-row', (n) => n.textContent.replace(/\s+/g, ' ').trim());
+    assert.match(first, /hip|knee|thigh/i, 'the hips over the knees, found again: ' + first);
+    assert.match(first, /clean reps .*marked reps .*suggest at (most|least)/, first);
+    const before = await page.$$eval('#measures .mcard', (l) => l.length);
+    await page.click('#suggest .suggest-row button[data-act="add"]');
+    await page.waitForFunction((n) => document.querySelectorAll('#measures .mcard').length === n + 1, before, { timeout: 5000 });
+    assert.ok(await page.$('#measures .mcard:last-child .rec[data-fault]'), 'the new card carries a fault with its own recommendation row');
+    assert.equal(await page.$$eval('#problems li.error', (l) => l.length), 0, 'and the file is whole');
+    assert.equal(await page.evaluate(() => Moves.bridge.draft), true);
+    /* the session file: every recording with its verdicts and tag, and the draft; it loads back whole */
+    const dl = page.waitForEvent('download');
+    await page.click('#save-all');
+    const saved = JSON.parse(await (await import('node:fs/promises')).readFile(await (await dl).path(), 'utf8'));
+    assert.equal(saved.kind, 'takes'); assert.equal(saved.takes.length, 3); assert.equal(saved.draft.id, 'bridge');
+    assert.equal(saved.takes[1].tag, 'hipHigh'); assert.equal(saved.takes[0].labels[0].tag, 'clean');
+    assert.ok(saved.draft.measurements.length === before, 'the draft in the file is the one on the page');
+    await page.evaluate(() => { for (const r of [...window.__review.recordings]) window.__review.remove(r.id); });
+    assert.equal(await page.$$eval('#rec-list li', (l) => l.length), 0);
+    await page.setInputFiles('#trace-file', { name: 'session.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(saved)) });
+    await page.waitForFunction(() => window.__review.recordings.length === 3, null, { timeout: 10000 });
+    assert.equal(await page.$eval('#rec-list li:nth-child(2) select.tag', (s) => s.value), 'hipHigh', 'the tag came back');
+    assert.equal(await page.$eval(`#reps .rec-group:first-child li.rep .rep-label .btn[data-v="clean"]`, (b) => b.getAttribute('aria-pressed')), 'true', 'and the verdicts');
+    /* an old takes file, tagged as a whole: its reps start with that verdict, dashed */
+    await page.evaluate((f) => window.__review.loadTakes({ v: 1, kind: 'takes', takes: [Trace.pack({ move: 'bridge', aspect: 16 / 9, name: 'old take', tag: 'hipHigh' }, f)] }), traces.high);
+    await page.waitForFunction(() => window.__review.recordings.length === 4, null, { timeout: 5000 });
+    const old = await page.evaluate(() => window.__review.recordings[3].id);
+    assert.equal(await page.$eval(`#reps li.rep[data-rec="${old}"] .rep-label .btn[data-v="hipHigh"]`, (b) => b.getAttribute('aria-pressed') + ' ' + b.classList.contains('provisional')), 'true true');
+    await page.click('#build-drop');
+    await page.waitForFunction(() => /as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+  });
+
+  await step('the studio reads a video into a recording, and the animation editor edits the muscle figure', async () => {
     /* the model stood in for by the clean trace, frame for frame, over a short clip */
     await page.evaluate(() => {
-      const frames = window.__review.trace.frames;
+      const frames = window.__review.recordings[0].frames;
       window.__reviewPose = (ts) => frames[Math.min(frames.length - 1, Math.floor(ts / 66))].lm;
     });
     await page.fill('#fps', '5');
+    const had = await page.evaluate(() => window.__review.recordings.length);
     await page.setInputFiles('#video-file', new URL('./fixtures/clip.webm', import.meta.url).pathname);
-    await page.waitForFunction(() => window.__review.trace && window.__review.trace.source === 'video', null, { timeout: 30000 });
-    const n = await page.evaluate(() => window.__review.trace.frames.length);
+    await page.waitForFunction((n) => window.__review.recordings.length === n + 1 && window.__review.shown && window.__review.shown.source === 'video', had, { timeout: 30000 });
+    const n = await page.evaluate(() => window.__review.shown.frames.length);
     assert.ok(n >= 15 && n <= 25, 'four seconds at five a second: ' + n + ' frames');
-    const lw = await page.evaluate(() => document.getElementById('lanes').clientWidth);   // the lanes sit under the video now, in its column
+    assert.equal(await page.$eval('#rec-list li[aria-current="true"] b', (b) => b.textContent), 'clip.webm', 'the video just read is on the stage');
+    const lw = await page.evaluate(() => document.getElementById('lanes').clientWidth);
     await page.click('#lanes', { position: { x: Math.round(lw * 0.9), y: 20 } });
     await wait(300);
     assert.ok((await page.evaluate(() => document.getElementById('clip').currentTime)) > 0.5, 'a tap on the lanes goes to that moment');
-    /* the animation editor: in the Build tab now, working on a draft — a copy of the bridge */
-    await page.click('#tab-build');
-    await page.click('#build-copy');
-    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
-    await wait(300);
+    /* the animation editor, under the animation: the open exercise's figure, a copy of the bridge's */
+    await page.evaluate(() => { document.getElementById('fig-edit').open = true; });
+    await wait(400);
     const before = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
     assert.match(await page.inputValue('#anim-json'), /"view":"side","A":\{"h"/, 'the bridge\'s figure loaded');
     assert.equal(await page.$$eval('#weights input', (l) => l.length), 12, 'a slider per muscle region');
@@ -1114,6 +1188,7 @@ try {
     const after = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
     assert.notEqual(after, before, 'the knee moved: ' + before + ' to ' + after);
     assert.ok((await page.inputValue('#anim-json')).includes('"kn":' + after), 'and the JSON follows');
+    assert.match(await page.textContent('#build-note'), /edited/, 'a drag on the drawing is an edit of the exercise');
   });
 
   await step('the Review page renders a demo film: the coaching drawn on every frame, the voice and the tones on the sound', async () => {
@@ -1129,7 +1204,7 @@ try {
         info: { samples: info.samples, duration: info.duration, codec: info.codec, width: info.width, height: info.height, tracks: info.tracks }, note: document.getElementById('demo-note').textContent };
     });
     assert.ok(!d.why, 'rendered: ' + d.why);
-    const secs = await page.evaluate(() => window.__review.trace.duration / 1000);
+    const secs = await page.evaluate(() => window.__review.shown.duration / 1000);
     assert.ok(d.frames >= secs * 24 * 0.9 && d.frames === d.info.samples, `a frame for every tick of the film's clock: ${d.frames} of ${(secs * 24).toFixed(0)}, ${d.info.samples} in the file`);
     assert.ok(Math.abs(d.info.duration - secs) < 0.3, 'the file is as long as the clip: ' + d.info.duration + ' vs ' + secs);
     assert.equal(d.info.width, d.width, 'the frame is the clip\'s size');
@@ -1185,23 +1260,25 @@ try {
     await page.evaluate(() => { localStorage.removeItem('ontrack.plans'); });
   });
 
-  await step('the builder: a copy of an exercise becomes a draft that the coach runs, and the file downloads whole', async () => {
-    await page.goto(base + '/review.html?tab=build&move=bridge');
-    await page.waitForSelector('#pane-build:not([hidden])');
-    await page.click('#build-copy');
-    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+  await step('the builder: a copy of an exercise becomes a draft on its first edit, the coach gets it by a link, and the file downloads whole', async () => {
+    await page.goto(base + '/review.html?move=bridge');
+    await page.waitForSelector('#measures .mcard');
+    /* the drag on the drawing left a draft; dropped, the page holds the library's own file again */
+    if (await page.isVisible('#build-drop')) { await page.click('#build-drop'); }
+    await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     assert.deepEqual(await page.$$eval('#problems li.error', (l) => l.length), 0, 'the library\'s own file has no errors');
     /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose
        lists are its own and not rebuilt — so nothing is left pointing at it */
     assert.ok(JSON.parse(await page.inputValue('#build-json')).draw.some((g) => g.measure === 'over'), 'the bridge draws its hips-over-knees reading');
-    await page.evaluate(() => { const c = [...document.querySelectorAll('.mcard')].find((x) => /hip above knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
+    await page.evaluate(() => { const c = [...document.querySelectorAll('.mcard')].find((x) => /hip over the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
     await page.waitForFunction(() => !JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
     const less = JSON.parse(await page.inputValue('#build-json'));
     assert.ok(!less.draw.some((g) => g.measure === 'over' || g.good === 'over'), 'its drawing went with it: ' + JSON.stringify(less.draw));
     assert.ok(!less.faults.some((f) => f.measure === 'over'), 'and its fault');
     assert.equal(await page.$$eval('#problems li.error', (l) => l.length), 0, 'and nothing is left dangling');
+    assert.match(await page.textContent('#build-note'), /bridge\.json · edited/, 'the first edit made it a draft');
     await page.click('#build-drop'); await page.evaluate(() => window.__builder.fromLibrary('bridge'));   // the library's bridge back, and a fresh copy of it for the rest
-    await page.waitForFunction(() => /bridge\.json is whole/.test(document.getElementById('build-note').textContent) && JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
+    await page.waitForFunction(() => /as in the library/.test(document.getElementById('build-note').textContent) && JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
     /* the form writes the file: the opening words change, and the draft stands in for the bridge */
     await page.evaluate(() => {
       const i = [...document.querySelectorAll('#build-form textarea')].find((x) => /I will wait while you get set up/.test(x.value));
@@ -1234,12 +1311,23 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 1, null, { timeout: 5000 });
     await page.evaluate(() => { const i = [...document.querySelectorAll('#build-form input')].find((x) => /far too long/.test(x.value)); i.value = 'Heels lifting'; i.dispatchEvent(new Event('change')); });
     await page.waitForFunction(() => document.querySelectorAll('#problems li.error').length === 0, null, { timeout: 5000 });
-    /* the coach's page picks the draft up: it is the bridge there now, and its opening words are the draft's */
-    await page.goto(base + '/#/ex/bridge');
+    /* the draft travels in a link: the whole file in the address, which the coach's page decodes,
+       keeps as its draft and opens — the road from the laptop to the phone */
+    await page.click('#try-live');
+    await page.waitForFunction(() => /#\/ex\/~/.test(document.getElementById('share-link').value), null, { timeout: 5000 });
+    const link = await page.inputValue('#share-link');
+    assert.match(link, /\/index\.html#\/ex\/~z[A-Za-z0-9_-]+$/, link.slice(0, 80));
+    assert.ok(link.length < 6000, 'short enough for a message: ' + link.length);
+    assert.match(await page.textContent('#share-note'), /KB.*QR code/);
+    await page.click('#try-close');
+    await page.evaluate(() => localStorage.removeItem('ontrack.draft'));   // so the import, not the store, is what the coach picks up
+    await page.goto(link);
     await page.waitForSelector('#screen-ex:not([hidden])');
-    await page.waitForFunction(() => window.__app && window.__app.move.draft, null, { timeout: 5000 });
+    await page.waitForFunction(() => window.__app && window.__app.move.draft && location.hash === '#/ex/bridge', null, { timeout: 8000 });
     assert.match(await page.textContent('#ex-title'), /\(draft\)/);
     assert.equal(await page.isVisible('#draft-note'), true);
+    assert.match(await page.textContent('#draft-note'), /Imported from the studio's link: Glute bridge, \d+ measurements, \d+ faults/);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ontrack.draft')).words.start), 'Draft opening words. Lie down side on.', 'the file in the link is the draft now');
     await set({ move: 'bridge', bShin: 95, dip: 50, hipAng: 130, bFoot: 0 });
     await oneSet();
     await startSession();
@@ -1252,6 +1340,9 @@ try {
     await page.waitForFunction(() => window.__app.move.id === 'bridge' && !window.__app.move.draft, null, { timeout: 5000 });
     assert.match(await page.evaluate(() => window.__app.move.start), /I will wait while you get set up/);
     assert.equal(await page.evaluate(() => localStorage.getItem('ontrack.draft')), null, 'and forgotten');
+    /* a link that holds no exercise says so and lands on the home page */
+    await page.goto(base + '/#/ex/~znotours');
+    await page.waitForFunction(() => location.hash === '#/' && /That link did not open/.test(document.getElementById('lib-note').textContent), null, { timeout: 5000 });
     /* back to the knee raise, which the reload step below expects to find */
     await set({ move: 'kneeraise' });
     await pick('kneeraise');

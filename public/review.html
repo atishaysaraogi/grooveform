@@ -4,38 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>OnTrack — Build &amp; review</title>
+<title>OnTrack — Studio</title>
 <link rel="stylesheet" href="styles.css?v=2026-10-02a">
 </head>
-<body class="review">
-<header class="bar">
-  <h1 class="wordmark">OnTrack <span class="sub">build &amp; review</span></h1>
+<body class="review studio">
+<header class="bar" id="bar">
+  <h1 class="wordmark">OnTrack <span class="sub">studio</span></h1>
   <select id="move" class="pick" aria-label="Exercise"></select>
-  <nav class="tabs" role="tablist">
-    <button class="tab" id="tab-build" role="tab" aria-selected="false">Build</button>
-    <button class="tab" id="tab-review" role="tab" aria-selected="true">Recordings</button>
-  </nav>
-  <a class="chip" href="index.html">Back to the coach</a>
+  <button class="btn" id="build-new" type="button">New</button>
+  <label class="btn file"><input type="file" id="build-file" accept=".json,application/json">Load a file</label>
+  <span class="note" id="build-note"></span>
+  <span class="spacer"></span>
+  <button class="btn" id="build-download" type="button">Download the file</button>
+  <button class="btn primary" id="try-live" type="button" disabled>Try it</button>
+  <button class="btn" id="build-drop" type="button" hidden>Drop the changes</button>
+  <a class="chip" href="index.html">The coach</a>
 </header>
 
-<main>
-  <!-- ============ build: an exercise, from a pose to a file ============ -->
-  <section id="pane-build" hidden>
-    <p class="muted">An exercise is one file. Start from a pose, draw the movement, add the measurements — a kind and its points, from a list or a tap on the figure — and the file writes itself: the phone, the words, the skeleton, the numbers all come with defaults you can change. When it is whole it stands in the library on this browser, the Recordings tab judges videos with it and Try it live runs it in the coach. Download it and drop it into <code>public/exercises</code>.</p>
-    <div id="build-start" class="build-start"></div>
-    <div class="row">
-      <button class="btn" id="build-copy">Edit a copy of the exercise selected above</button>
-      <label class="btn file"><input type="file" id="build-file" accept=".json,application/json">Load a file</label>
-      <button class="btn primary" id="try-live" disabled>Try it live</button>
-      <button class="btn" id="build-download">Download the file</button>
-      <button class="btn" id="build-drop">Drop the draft</button>
-    </div>
-    <p class="note" id="build-note"></p>
-    <div id="build-form" class="build-form"></div>
-    <!-- the figure editor: static markup the builder places into its "drawn" step; parked here when no draft is open -->
-    <div id="fig-park" hidden>
-      <div id="fig-editor" class="review-grid">
-        <div>
+<main class="studio-grid">
+  <!-- ============ the exercise: the movement drawn, what is measured, the words, the file ============ -->
+  <section id="build-form" class="col build-form">
+    <section class="panel" id="fig-panel">
+      <h2>The movement <span class="tiny" id="fig-note"></span></h2>
+      <canvas class="demo-fig muscle" id="fig-demo" data-anat="edit" role="img" aria-label="The move, animated"></canvas>
+      <details id="fig-edit">
+        <summary>Edit the drawing</summary>
+        <div id="fig-editor">
           <div class="row">
             <span class="seg" role="radiogroup" aria-label="Keyframe">
               <button class="btn" id="kf-A" aria-pressed="true">A — start</button>
@@ -43,7 +37,7 @@
             </span>
             <button class="btn" id="anim-copy-ab" title="Copy the pose being edited onto the other keyframe">Copy this pose onto the other</button>
             <button class="btn" id="anim-undo">Undo my edits</button>
-            <button class="btn" id="anim-load" title="Replace the drawing with the figure of the exercise selected in the bar">Take the selected exercise’s figure</button>
+            <button class="btn" id="anim-load" title="Replace the drawing with the library's figure for this exercise">The library's figure</button>
           </div>
           <div class="row">
             <span class="seg" role="radiogroup" aria-label="Viewpoint">
@@ -51,35 +45,53 @@
               <button class="btn" id="ev-top" aria-pressed="false">From above</button>
               <button class="btn" id="ev-iso" aria-pressed="false">Isometric</button>
             </span>
+            <button class="btn" id="fig-from-frame" title="Take this keyframe's pose from the frame the video is on">This frame is the pose</button>
           </div>
           <canvas id="anim-edit" class="edit-fig" aria-label="Keyframe editor"></canvas>
-          <p class="tiny">From the camera, drag a joint: the bone above it turns and everything below comes round with it, every limb keeping its length. The hip drags the whole body. The other keyframe sits behind, faint. In a side view the far limbs are the dimmer handles. From above, the camera sits at the bottom of the picture: drag a joint down to bring it toward the camera, up to take it away, and what hangs off it comes along; a limb that comes toward the camera or goes away from it can only be shown here. Isometric is a look at both together, not editable.</p>
+          <p class="tiny">From the camera, drag a joint: the bone above it turns and everything below comes round with it, every limb keeping its length. The hip drags the whole body. The other keyframe sits behind, faint. In a side view the far limbs are the dimmer handles. From above, the camera sits at the bottom of the picture: drag a joint down to bring it toward the camera, up to take it away. Isometric is a look at both together, not editable.</p>
           <label class="tiny check"><input type="checkbox" id="anim-stretch"> Stretch limbs — a drag moves the joint itself and changes the bone’s length (shift swaps this for one drag)</label>
           <div class="grid">
             <label>Holds still<select id="anim-hold"><option value="no">No — it moves A to B and back</option><option value="yes">Yes — a hold</option></select></label>
             <label>Faces<select id="anim-flip"><option value="no">Right</option><option value="yes">Left</option></select></label>
-            <label title="Which side of the body the belly, chest and abdominals are drawn on, the back and glutes on the other. From the pose, the knee says — lying down with the leg nearly in line with the body it can say wrong, or change as the leg lifts; set it here and it stays.">Front of the body<select id="anim-belly"><option value="auto">From the pose — the knee leads the front</option><option value="1">Facing down</option><option value="-1">Facing up</option></select></label>
+            <label title="Which side of the body the belly, chest and abdominals are drawn on, the back and glutes on the other.">Front of the body<select id="anim-belly"><option value="auto">From the pose — the knee leads the front</option><option value="1">Facing down</option><option value="-1">Facing up</option></select></label>
             <label>Working side<select id="anim-side"><option value="both">Both</option><option value="R">Near</option><option value="L">Far</option></select></label>
             <label>Wall at x (blank for none)<input type="number" id="anim-wall" min="200" max="420" step="1"></label>
             <label>A second angle on the exercise page<select id="anim-second"><option value="">None — the camera’s view is enough</option><option value="top">From above</option><option value="iso">Isometric</option></select></label>
           </div>
-        </div>
-        <div>
-          <canvas class="demo-fig muscle" data-anat="edit" role="img" aria-label="The move, animated"></canvas>
           <details><summary>Muscles working</summary><div class="grid sliders" id="weights"></div></details>
           <details><summary>The figure as JSON</summary>
             <div class="row"><button class="btn" id="anim-download">Download the figure</button><button class="btn" id="anim-copy">Copy as JSON</button></div>
             <textarea id="anim-json" rows="4" spellcheck="false" aria-label="The figure as JSON"></textarea>
           </details>
         </div>
-      </div>
-    </div>
-    <section class="panel">
+      </details>
+      <details id="start-over"><summary>Start a new exercise from a pose</summary><div id="build-start" class="build-start"></div></details>
+    </section>
+
+    <section class="panel" id="measures-panel">
+      <h2>What is measured <span class="tiny" id="measures-note"></span> <button class="btn tiny-btn" id="numbers-reset" type="button" hidden title="Every number back to the library file's, the rest of your edit kept">The library's numbers</button></h2>
+      <p class="tiny">One card a measurement: what is measured and how it is read, what it is for, when it must be right and between what, and the faults on either side. Classify the reps on the right and every fault's row says where its number should sit.</p>
+      <div class="strip" id="rec-summary"><span id="recommend-note"></span><button class="btn" id="recommend-all" type="button" style="display:none">Apply every recommendation</button></div>
+      <div id="measures"></div>
+      <div class="row"><button class="btn primary" id="add-measure" type="button">Add a measurement</button></div>
+      <div id="derived"></div>
+    </section>
+
+    <section class="panel" id="suggest-panel">
+      <h2>Measures you have not built <span class="tiny" id="suggest-note"></span></h2>
+      <p class="tiny">Every measurement the camera could read over these landmarks, tried against the reps you classified: the ones where the reps you marked with a fault stand apart from the clean ones, above the model's own wobble. Add one and it becomes a card above with a fault on it, ready to word.</p>
+      <div id="suggest"></div>
+    </section>
+
+    <details class="panel" id="exercise-panel"><summary>The exercise, the phone and the words</summary><div id="exercise-form"></div></details>
+    <details class="panel" id="numbers-panel"><summary>Reps, sets, the hold, and the timing</summary><div id="numbers-form"></div></details>
+
+    <section class="panel" id="problems-panel">
       <h2>Problems</h2>
       <p class="tiny">Each is marked where it is on the form; click one to go there.</p>
       <ul class="problems" id="problems"></ul>
     </section>
-    <details class="panel">
+    <details class="panel" id="file-panel">
       <summary>The file</summary>
       <p class="tiny">The whole file as it stands. It can be edited here too; Apply reads it back into the form.</p>
       <textarea id="build-json" rows="14" spellcheck="false" aria-label="The exercise file as JSON"></textarea>
@@ -87,109 +99,99 @@
     </details>
   </section>
 
-  <!-- ============ recordings: judge a video after the fact, tune the numbers against it ============ -->
-  <section id="pane-review">
-    <p class="muted">Load a recording of a set. The pose model reads it once, frame by frame; after that every band edge can be moved and the whole recording is judged again on the spot. Tag recordings as clean or as showing one fault, and the numbers are held to the rule: quiet on every clean take, firing on every take of the fault.</p>
-
-    <div class="row">
-      <label class="btn primary file"><input type="file" id="video-file" accept="video/*,.mp4,.webm,.mov">Load a video</label>
-      <label class="btn file"><input type="file" id="trace-file" accept=".json,application/json">Load a trace</label>
-      <button class="btn" id="export-trace" disabled>Save the trace</button>
-      <label>Frames a second read<input type="number" id="fps" value="15" min="5" max="30" step="1" style="width:5em"></label>
-    </div>
-    <p class="note" id="progress" hidden></p>
-
-    <div class="review-grid">
-      <div class="stage-col">
-        <div class="stage small" id="stage">
-          <video id="clip" playsinline muted controls></video>
-          <canvas id="overlay"></canvas>
-        </div>
-        <section class="panel lanes-panel">
-          <h2>What was read <span class="tiny" id="trace-note">no recording yet</span></h2>
-          <canvas id="lanes" height="10"></canvas>
-          <div class="lane-legend" aria-label="What the lanes show">
-            <span><i style="background:rgba(232,237,244,.35)"></i>waiting for the start position</span>
-            <span><i style="background:rgba(90,169,255,.5)"></i>between reps</span>
-            <span><i style="background:rgba(53,208,127,.6)"></i>up</span>
-            <span><i class="mark" style="background:#35d07f"></i>hold clock running</span>
-            <span><i style="background:rgba(255,181,69,.6)"></i>lowering</span>
-            <span><i class="line" style="border-color:#5aa9ff"></i>a rep starts past this</span>
-            <span><i class="line" style="border-color:#ffb545"></i>back at the start past this</span>
-            <span><i style="background:rgba(53,208,127,.35)"></i>inside the band</span>
-            <span><i class="mark" style="background:rgba(255,92,108,.8)"></i>out of the band</span>
-            <span><i class="mark" style="background:#e879f9"></i>a point at the picture's edge</span>
-            <span><b>rep 1</b> counted · <b>×</b> not counted · <b>?</b> fell short</span>
-          </div>
-          <p class="tiny">The top lane is the reading the rep is judged on; below it one lane per band, each labelled with its reading, its band and its units, then the coach's cues at the moments they would have been said. Tap anywhere to go to that moment.</p>
-          <ol class="log" id="cue-log"></ol>
-        </section>
-      </div>
-      <div class="side-col">
-        <section class="panel tracked-panel">
-          <h2>Tracked <span class="tiny" id="tracked-at"></span></h2>
-          <table class="tracked" id="tracked"><tbody></tbody></table>
-          <p class="tiny" id="take-stats"></p>
-          <label class="tiny"><input type="checkbox" id="all-points"> Every point the model sees, with its certainty, and the picture's margin (a review aid; drawn into the demo film too)</label>
-        </section>
-        <section class="panel">
-          <h2>Numbers <span class="tiny" id="tuned-note"></span></h2>
-          <div class="numbers" id="sliders"></div>
-          <div class="row">
-            <button class="btn primary" id="apply">Use these in the coach on this device</button>
-            <button class="btn" id="reset">Defaults</button>
-            <button class="btn" id="download-numbers">Download</button>
-            <button class="btn" id="tuned-to-draft" hidden>Into the draft</button>
-          </div>
-          <p class="tiny" id="apply-note"></p>
-          <details class="more">
-            <summary>A demo film</summary>
-            <p class="tiny">The clip drawn over and voiced after the fact: the skeleton, the counters and every cue on the picture, and on the sound the coach's own voice and the tones at the moments they would have played, over the clip's own sound if it has any. The same drawing and the same sounds as the coach's page.</p>
-            <div class="row">
-              <button class="btn primary" id="render-demo" disabled>Render a demo film</button>
-              <label><input type="checkbox" id="demo-overlay" checked> Draw the coaching on the picture</label>
-            </div>
-            <p class="tiny" id="demo-note"></p>
-          </details>
-        </section>
-      </div>
-    </div>
-
-    <section class="panel">
-      <h2>Rep by rep <span class="tiny" id="reps-note"></span></h2>
-      <p class="tiny">Each rep the coach saw — counted, or an attempt it dropped — with why it counted or did not (how far it got against the lines, how long the hold clock ran against the hold asked, which band broke the position), then every fault it had on the screen inside it and from when to when, whether the fault was said and at what moment, and the set-up faults in the pause before it. A fault has to hold for the persist time to be listed, as it has to before it is said; a flicker shorter than that is left out. Move a number above and this changes with it. Tap a rep to go to it.</p>
-      <p class="tiny"><b>Classify each rep</b> as you see it on the video — clean, or the faults it really had, or not a rep at all — and the numbers below are recommended from your verdicts. Your labels stay with the recording on this browser and go into the trace file when you save it.</p>
-      <ol class="reps" id="reps"></ol>
-    </section>
-
-    <section class="panel">
-      <h2>Recommended numbers <span class="tiny" id="recommend-note"></span></h2>
-      <p class="tiny">For every fault, the edge that agrees with your verdicts: the reps you called clean (or marked with other faults) have to stay inside it, the reps you marked with the fault have to cross it. The edge is kept where it is when it already does that, moved just past the clean reps or just short of the marked ones when it does not, and where the two overlap the cut that gets most reps right is given with what it gets wrong. The lift line is held to the movements you called reps. Apply puts a number into the panel above; the recording is judged again at once.</p>
-      <div class="scroll-x"><table class="verdicts recommend" id="recommend"></table></div>
-      <div class="row"><button class="btn" id="recommend-all" hidden>Apply every recommendation</button></div>
-    </section>
-
-    <section class="panel">
-      <h2>Takes and the rule</h2>
+  <!-- ============ the recordings: videos read into reps, judged with the exercise as it stands ============ -->
+  <section id="col-video" class="col">
+    <section class="panel" id="recordings-panel">
+      <h2>Recordings <span class="tiny" id="trace-note">none yet</span></h2>
       <div class="row">
-        <label>This recording shows
-          <select id="take-tag"><option value="clean">a clean set</option></select>
-        </label>
-        <input type="text" id="take-name" placeholder="a name for it" style="min-width:12em">
-        <button class="btn" id="add-take" disabled>Add it as a take</button>
-        <button class="btn" id="export-takes" disabled>Save all takes</button>
-        <label class="btn file"><input type="file" id="takes-file" accept=".json,application/json">Load takes</label>
+        <label class="btn primary file"><input type="file" id="video-file" accept="video/*,.mp4,.webm,.mov" multiple>Load videos</label>
+        <label class="btn file"><input type="file" id="trace-file" accept=".json,application/json" multiple>Load traces</label>
+        <button class="btn" id="save-all" type="button" disabled>Save all traces</button>
+        <label>Frames a second read<input type="number" id="fps" value="15" min="5" max="30" step="1" style="width:5em"></label>
       </div>
-      <ul class="takes" id="takes"></ul>
-      <table class="verdicts" id="verdicts"></table>
+      <p class="note" id="progress" hidden></p>
+      <ol class="rec-list" id="rec-list"></ol>
+    </section>
+
+    <div id="stage-wrap">
+      <div class="stage small" id="stage">
+        <video id="clip" playsinline muted controls></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="row stage-bar" id="stage-bar">
+        <span class="tiny" id="stage-name"></span>
+        <button class="btn tiny-btn" id="prev-rep" type="button" title="The rep before">◀ rep</button>
+        <button class="btn tiny-btn" id="next-rep" type="button" title="The next rep">rep ▶</button>
+        <span class="tiny" id="stage-rep"></span>
+      </div>
+      <div id="stage-verdict"></div>
+      <canvas id="lanes" height="10"></canvas>
+      <details id="stage-more">
+        <summary>What the lanes show · at this moment · the cues · a demo film</summary>
+        <div class="lane-legend" aria-label="What the lanes show">
+          <span><i style="background:rgba(232,237,244,.35)"></i>waiting for the start position</span>
+          <span><i style="background:rgba(90,169,255,.5)"></i>between reps</span>
+          <span><i style="background:rgba(53,208,127,.6)"></i>up</span>
+          <span><i class="mark" style="background:#35d07f"></i>hold clock running</span>
+          <span><i style="background:rgba(255,181,69,.6)"></i>lowering</span>
+          <span><i class="line" style="border-color:#5aa9ff"></i>a rep starts past this</span>
+          <span><i class="line" style="border-color:#ffb545"></i>back at the start past this</span>
+          <span><i style="background:rgba(53,208,127,.35)"></i>inside the band</span>
+          <span><i class="mark" style="background:rgba(255,92,108,.8)"></i>out of the band</span>
+          <span><i class="mark" style="background:#e879f9"></i>a point at the picture's edge</span>
+          <span><b>rep 1</b> counted · <b>×</b> not counted · <b>?</b> fell short</span>
+        </div>
+        <p class="tiny">The top lane is the reading the rep is judged on; below it one lane per band, then the coach's cues at the moments they would have been said. Tap anywhere to go to that moment.</p>
+        <h3 class="tiny-h">At this moment <span class="tiny" id="tracked-at"></span></h3>
+        <table class="tracked" id="tracked"><tbody></tbody></table>
+        <p class="tiny" id="take-stats"></p>
+        <label class="tiny"><input type="checkbox" id="all-points"> Every point the model sees, with its certainty, and the picture's margin (a review aid; drawn into the demo film too)</label>
+        <h3 class="tiny-h">Every cue, in order</h3>
+        <ol class="log" id="cue-log"></ol>
+        <h3 class="tiny-h">A demo film</h3>
+        <p class="tiny">The clip drawn over and voiced after the fact: the skeleton, the counters and every cue on the picture, and on the sound the coach's own voice and the tones at the moments they would have played.</p>
+        <div class="row">
+          <button class="btn primary" id="render-demo" disabled>Render a demo film</button>
+          <label><input type="checkbox" id="demo-overlay" checked> Draw the coaching on the picture</label>
+        </div>
+        <p class="tiny" id="demo-note"></p>
+      </details>
+    </div>
+
+    <section class="panel" id="reps-panel">
+      <h2>The reps <span class="tiny" id="reps-note"></span></h2>
+      <p class="tiny">Each rep the coach saw in each recording — counted, or an attempt it dropped — with why, and every fault it had on the screen inside it. <b>Classify each rep</b> as you see it on the video: clean, the faults it really had, a fault the exercise does not know yet, or not a rep at all. Your verdicts stay with the recording on this browser and go into its trace file; the numbers on the left follow them.</p>
+      <ol class="reps" id="reps"></ol>
+      <details id="recommend-details">
+        <summary>The recommendations as a table</summary>
+        <div class="scroll-x"><table class="verdicts recommend" id="recommend"></table></div>
+      </details>
     </section>
   </section>
-
 </main>
+
+<!-- try it: on this device, on the phone by a link, or by the file -->
+<div class="sheet" id="try-sheet" hidden>
+  <div class="sheet-box" role="dialog" aria-labelledby="try-title">
+    <h2 id="try-title">Try it</h2>
+    <h3 class="tiny-h">On this device</h3>
+    <p class="tiny">The exercise as it stands is kept in this browser; the coach runs it with a draft badge until you drop it.</p>
+    <div class="row"><button class="btn primary" id="try-here" type="button">Open it in the coach</button></div>
+    <h3 class="tiny-h">On the phone</h3>
+    <p class="tiny">The whole exercise is in this link. Paste it into a message or a note to yourself and open it on the phone: it becomes the draft there and opens.</p>
+    <textarea id="share-link" rows="3" readonly spellcheck="false" aria-label="The link"></textarea>
+    <div class="row"><button class="btn" id="share-copy" type="button">Copy the link</button><button class="btn" id="share-send" type="button" hidden>Share…</button><span class="tiny" id="share-note"></span></div>
+    <h3 class="tiny-h">Or the file</h3>
+    <p class="tiny">Download the file, get it onto the phone by any means, open this page there and Load a file.</p>
+    <div class="row"><button class="btn" id="share-download" type="button">Download the file</button><span class="spacer"></span><button class="btn" id="try-close" type="button">Close</button></div>
+  </div>
+</div>
+<video id="reader" playsinline muted hidden></video>
 
 <script src="js/core.js?v=2026-10-02a"></script>
 <script src="js/spec.js?v=2026-10-02a"></script>
 <script src="js/moves.js?v=2026-10-02a"></script>
+<script src="js/share.js?v=2026-10-02a"></script>
 <script src="js/trace.js?v=2026-10-02a"></script>
 <script src="js/overlay.js?v=2026-10-02a"></script>
 <script src="js/sound.js?v=2026-10-02a"></script>

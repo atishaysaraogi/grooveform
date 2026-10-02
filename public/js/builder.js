@@ -1,32 +1,29 @@
 /* ---------------------------------------------------------------------------
-   The builder: an exercise from a pose to a file, in five steps.
+   The builder: the exercise on the studio's left-hand side.
 
-     1  The exercise    a name, and what it is (reps or a hold, which sides, a load)
-     2  Drawn           the movement as a figure: a starting pose to drag into the
-                        start (A) and the end (B) — the editor from the Animation
-                        tab, placed here
-     3  Measured        what the camera judges, chosen by clicking the figure: the
-                        angle at a joint, the lean of a limb, the height of one
-                        point over another, the length between two. Each has a
-                        role — tracks the rep, must be right, a note, a reading —
-                        and its value at A and at B is read off the drawing, which
-                        is where its edges and thresholds come from
-     4  Phone, words    templated from the pose; the long tail under More words
-     5  Numbers         reps, sets, the hold; then the check, try it, download
+   There is always one exercise open, and it is always a working copy: picking a
+   library exercise opens an untouched copy of its file (nothing is stored, the
+   recordings are judged with the library's own exercise); the first edit makes it
+   the draft — kept in this browser (localStorage 'ontrack.draft'), laid over the
+   library (Moves.draft) so the recordings and the coach run it, listed as
+   "(draft)". A new exercise starts from a pose and is a draft from its first
+   moment. The numbers being tuned have one home, the draft's `defaults`: the
+   inputs on the cards write there, a recommendation's Apply writes there, the
+   phone receives them in the file or the link.
+
+   A measurement is one card, read top to bottom as a physio would say it: WHAT
+   is measured (the shape and its points) and HOW it is read; what it is FOR;
+   WHEN it must be right and the RULE; the faults on either side of the rule, each
+   with the recommendation the classified reps make for its number. The words come
+   from the geometry (Spec.words), never typed, so they are never out of date.
 
    Everything the file needs that the person has not touched is derived: the
    landmarks and bones from the measurements, the drawing on the picture, which
-   way the body faces from the position, the rep thresholds from A and B, the
-   faults from the bands. A field once edited is left alone (draft.auto keeps
-   which are still the template's; it is not written to the file).
-
-   Every change goes into the draft, the draft is checked (Spec.check) and the
-   problems listed, and when it has no errors it is laid over the library
-   (Moves.draft) so the Recordings tab judges videos with it and Try it live runs
-   it in the coach. Download writes the one file to drop into public/exercises.
-   The draft is kept in this browser (localStorage 'ontrack.draft') until dropped.
+   way the body faces from the position, the faults' first words from the shape.
+   A field once edited is left alone (draft.auto keeps which are still the
+   template's; it is not written to the file).
    --------------------------------------------------------------------------- */
-/* after the library is loaded and the Review page has set itself up (both wait on Moves.ready; this waits after it) */
+/* after the library is loaded and review.js has set itself up (both wait on Moves.ready; this waits after it) */
 Moves.ready.then(function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -34,6 +31,7 @@ Moves.ready.then(function () {
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DRAFT = 'ontrack.draft';
   const LM = Spec.LANDMARKS;
+  const W = Spec.words;
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
   const TIMING = [
@@ -45,26 +43,42 @@ Moves.ready.then(function () {
     ['jump', 'A point moving faster than this many body-diagonals a second is held where it was'], ['jumpHold', 'For at most this many frames'],
   ];
 
+  /* the draft: the file being worked on, with the builder's bookkeeping on it (auto, source, touched —
+     all stripped by fileOf). `source` is the library id the copy came from, null for a pose start
+     or a loaded file; `touched` is false for an untouched copy */
   let draft = null, timer = 0;
-  /* measuring as the old Studio did it: a card per measurement, its kind, and a slot
-     per point — filled from a list or by a tap on the figure. `editing` is the slot a
-     tap fills next: { m, slot }. The figure only illustrates; nothing on the cards
-     changes when it is dragged. */
+  const source = () => (draft ? draft.source || null : null);
+  const touched = () => !!(draft && draft.touched);
+  /* the shapes a measurement can take, in the physio's words, and the file kind (and axis) each is */
+  const SHAPES = [
+    ['angle', 'an angle at a joint'], ['tilt', 'a line’s lean from upright'], ['floor', 'a line’s angle from the floor'], ['down', 'a line lifted from hanging'],
+    ['rise', 'how high one point is over another, as an angle'], ['height', 'the height of one point over another, as a length'], ['ahead', 'how far one point is ahead of another, as a length'],
+    ['distance', 'the distance between two points'], ['bend', 'a point off a line'],
+  ];
+  const SHAPE_HELP = {
+    angle: 'the angle at the middle point between the other two — a knee, a hip, an elbow. 180 is straight. One tap on a joint fills all three from the limbs meeting there.',
+    tilt: 'how far the line leans off vertical, signed the way the body faces: a trunk from upright, a shin from plumb.',
+    floor: 'the angle the line makes with the floor: 90 is upright, over 90 the second point is forward of the first.',
+    down: 'how far the line is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
+    rise: 'how far the second point sits above the first, as an angle off level: + above, − below. Good for two points close together (heel and toe).',
+    height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle.',
+    ahead: 'how far the second point is ahead of the first the way the body faces, as a share of a limb: a knee past the toes by so much.',
+    distance: 'the straight distance between the two points as a share of a limb: feet apart, a hand from the shoulder.',
+    bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle.',
+  };
+  const shapeOf = (m) => (m.kind === 'distance' ? (m.axis === 'y' ? 'height' : m.axis === 'x' ? 'ahead' : 'distance') : m.kind);
+  const kindOfShape = (s) => (s === 'height' || s === 'ahead' ? 'distance' : s);
+  /* the slot names per kind, in order, and the sentence each shape makes of them */
   const SLOTS = {
     angle: [['a', 'one end'], ['b', 'the joint'], ['c', 'other end']], tilt: [['base', 'base'], ['top', 'top']], floor: [['at', 'at'], ['to', 'to']],
     down: [['from', 'from'], ['to', 'to']], rise: [['a', 'the reference'], ['b', 'the point']], distance: [['a', 'from'], ['b', 'to']], bend: [['a', 'line start'], ['b', 'the point'], ['c', 'line end']],
   };
-  const KIND_WORDS = { angle: 'Angle at a joint', tilt: 'Segment from vertical', floor: 'Segment from the floor', down: 'Lifted from hanging', rise: 'Height of a point over another', distance: 'Distance, % of a segment', bend: 'Point’s offset from a line' };
-  const KIND_HELP = {
-    angle: 'the angle at the middle point between the other two — a knee, a hip, an elbow. One tap on a joint fills all three from the limbs meeting there.',
-    tilt: 'how far the line base→top leans off vertical, signed the way the body faces: a torso from upright, a shin from plumb.',
-    floor: 'the angle the line at→to makes with the floor: 90 is plumb, less is leaning the way the body faces.',
-    down: 'how far the line from→to is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
-    rise: 'how far the second point sits above the first, as an angle off level: + above, − below.',
-    distance: 'the distance between the two points as a percent of a reference segment, the shin unless changed under More.',
-    bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle.',
+  const SENTENCE = {
+    angle: ['at', 'b', 'between', 'a', 'and', 'c'], tilt: ['of the', 'base', '→', 'top', 'line'], floor: ['of the', 'at', '→', 'to', 'line'], down: ['of the', 'from', '→', 'to', 'line'],
+    rise: [':', 'b', 'over', 'a'], height: [':', 'b', 'over', 'a', ', as % of', 'per'], ahead: [':', 'b', 'ahead of', 'a', ', as % of', 'per'],
+    distance: ['from', 'a', 'to', 'b', ', as % of', 'per'], bend: [':', 'b', 'off the', 'a', '–', 'c', 'line'],
   };
-  /* which measurement's which slot the next tap on the figure (or pick from the list) fills */
+  /* which measurement's which slot the next pick from the list fills */
   let editing = null;
 
   /* ================= starting poses ================= */
@@ -160,9 +174,14 @@ Moves.ready.then(function () {
     if (f.pose && f.pose.A) { const r = Figure.fromAngles(f.pose); return withFeet({ view: 'side', A: r.A, B: r.B, hold: !!f.pose.hold, flip: (f.pose.A || {}).face === 'left', side: 'both', w: d.muscles || {}, ...(r.wall != null ? { wall: r.wall } : {}) }); }
     return withFeet(figureOfPose(POSES[0]));
   }
-  function start(json, auto) {
+  /* a file opened: as a copy of a library exercise (untouched until edited), a new one from a pose,
+     a loaded file, or the draft kept from last time */
+  function start(json, auto, opts) {
+    opts = opts || {};
     draft = clone(json);
     draft.auto = auto || draft.auto || {};   // a loaded or copied file is the person's: nothing in it is the template's
+    draft.source = opts.source !== undefined ? opts.source : (draft.source || null);
+    draft.touched = !!opts.touched;
     draft.figure = { points: figurePoints(draft) }; delete draft.figure.pose;
     inferRoles();
     editing = null;
@@ -170,7 +189,9 @@ Moves.ready.then(function () {
     render();
     commit(false);
   }
-  const fromLibrary = (id) => { const m = Moves[id]; if (m) start(m.spec); };
+  /* a library exercise opened as an untouched copy; a draft of another exercise stays parked */
+  function open(id) { const m = (Moves.library && Moves.library[id]) || Moves[id]; if (!m) return; start(m.spec, {}, { source: id, touched: !!m.draft }); }
+  const fromLibrary = open;
   /* a file says which banded measurements make the position (inPosition, or all of them):
      that is each measurement's role here, and the role is the builder's, not the file's */
   function inferRoles() {
@@ -178,7 +199,19 @@ Moves.ready.then(function () {
     for (const m of draft.measurements || []) { m.role = m.key === pk ? 'progress' : !m.band ? 'reading' : (!pos || pos.includes(m.key)) ? 'hold' : 'note'; m.named = true; m.short = m.short || m.label || m.key; }
   }
   /* the file as it is written: the builder's bookkeeping left out */
-  function fileOf() { const f = clone(draft); delete f.auto; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; delete m.named; } return f; }
+  function fileOf() { const f = clone(draft); delete f.auto; delete f.source; delete f.touched; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; delete m.named; } return f; }
+  /* the first edit: the copy becomes the draft. One draft at a time: a draft of another exercise
+     still parked is dropped, after asking */
+  function touch() {
+    if (!draft || draft.touched) return true;
+    const parked = Moves.list.find((m) => m.draft && m.id !== draft.id);
+    if (parked && !window.confirm(`Drop the draft of “${parked.name}” first? It has not been downloaded.`)) return false;
+    if (parked) Moves.draft(null);
+    draft.touched = true;
+    return true;
+  }
+  /* the move the recordings are judged with: the draft laid over the library when it is whole, else the library's own */
+  const judged = () => Moves[draft.id] || (source() && Moves[source()]) || Moves.list[0];
 
   /* every change comes here: the derived parts are brought up to date, the file is
      checked, the problems listed, the draft kept, and when whole laid over the library */
@@ -191,18 +224,30 @@ Moves.ready.then(function () {
     $('problems').innerHTML = problems.length
       ? problems.map((p) => `<li class="${p.level}" data-at="${esc(p.at || '')}"><b>${esc(p.at || '')}</b> ${esc(p.message)}</li>`).join('')
       : '<li class="ok">Nothing wrong with it.</li>';
-    $('build-note').textContent = errors.length ? `${errors.length} thing${errors.length === 1 ? '' : 's'} to fix before it can run — see Problems below` : `${draft.id}.json is whole${problems.length ? ` (${problems.length} to look at)` : ''}`;
+    const note = $('build-note');
+    note.classList.toggle('bad', !!errors.length);
+    note.textContent = errors.length ? `${errors.length} thing${errors.length === 1 ? '' : 's'} to fix before it can run — see Problems` : `${draft.id}.json · ${touched() ? 'edited' : 'as in the library'}${problems.length ? ` (${problems.length} to look at)` : ''}`;
     $('try-live').disabled = !!errors.length;
+    $('build-drop').hidden = !touched();
     $('build-json').value = JSON.stringify(file, null, 2);
-    try { localStorage.setItem(DRAFT, JSON.stringify(draft)); } catch { }
-    if (!errors.length) {
-      try {
-        Moves.draft(file);
-        if (window.__review) { window.__review.refreshMoves(); window.__review.pickMove(draft.id, true); }
-      } catch (e) { $('build-note').textContent = 'Could not compile: ' + (e.message || e); }
+    if (touched()) {
+      try { localStorage.setItem(DRAFT, JSON.stringify(draft)); } catch { }
+      if (!errors.length) { try { Moves.draft(file); } catch (e) { note.textContent = 'Could not compile: ' + (e.message || e); } }
     }
+    if (window.__review) { window.__review.refreshMoves(); window.__review.setMove(judged()); }
     if (structural) render(); else refreshValues();
     mark(problems);
+    $('measures-note').textContent = `${draft.measurements.length} measurement${draft.measurements.length === 1 ? '' : 's'} · ${draft.faults.length} fault${draft.faults.length === 1 ? '' : 's'}`;
+    const reset = $('numbers-reset'); if (reset) reset.hidden = !(touched() && source() && ((Moves.library && Moves.library[source()]) || Moves[source()]));
+    $('fig-note').textContent = `${draft.name} · ${draft.type === 'hold' ? 'a hold' : 'reps'} · ${draft.position || ''} · ${draft.phone && draft.phone.view === 'front' ? 'facing the phone' : 'side on'}`;
+  }
+  /* a number changed by a recommendation's Apply, or any input: one path */
+  function setNumber(key, value) { setNumbers({ [key]: value }); }
+  function setNumbers(obj) {
+    if (!draft || !touch()) return;
+    for (const [k, v] of Object.entries(obj)) if (Number.isFinite(v)) draft.defaults[k] = v;
+    commit(false);
+    document.querySelectorAll('[data-def]').forEach((n) => { if (obj[n.dataset.def] != null && document.activeElement !== n) { n.value = obj[n.dataset.def]; n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } });
   }
 
   /* ---- where a problem is on the form ----
@@ -254,13 +299,9 @@ Moves.ready.then(function () {
   function drop() {
     try { localStorage.removeItem(DRAFT); } catch { }
     Moves.draft(null);
-    if (window.__review) { window.__review.refreshMoves(); window.__review.pickMove(Moves.list[0].id, true); }
+    const back = source() || Moves.list[0].id;
     draft = null; editing = null;
-    parkEditor();
-    $('build-form').innerHTML = ''; $('problems').innerHTML = ''; $('build-json').value = '';
-    $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.';
-    $('try-live').disabled = true;
-    renderStart();
+    open(Moves[back] ? back : Moves.list[0].id);
   }
   const debounce = (fn) => { clearTimeout(timer); timer = setTimeout(fn, 250); };
 
@@ -272,7 +313,6 @@ Moves.ready.then(function () {
   const progressKey = () => (draft.type === 'reps' && draft.progress ? draft.progress.measure : null);
   const roleOf = (m) => (m.key === progressKey() ? 'progress' : !m.band ? 'reading' : (draft.inPosition || bandedKeys()).includes(m.key) ? 'hold' : 'note');
   /* the units a kind reads in: degrees, or percent for a length */
-  const unitOf = (m) => (m.fromStart === 'ratio' || m.kind === 'distance' ? '%' : '\u00b0');
   /* when a measurement's faults are judged — kept on each of its faults */
   const whenOf = (m) => { const f = (draft.faults || []).find((x) => x.measure === m.key); return f ? (f.when || (f.setup ? 'always' : 'top')) : 'top'; };
   const setWhen = (m, w) => { for (const x of draft.faults || []) if (x.measure === m.key) { delete x.setup; if (w === 'top') delete x.when; else x.when = w; } };
@@ -375,61 +415,69 @@ Moves.ready.then(function () {
   const fmt = (v, m) => (v == null ? '—' : (m && m.kind === 'distance' && !m.times ? v.toFixed(2) : Math.round(v) + (m && m.kind === 'distance' ? '%' : '°')));
   const valuesAB = (m) => { const f = draft.figure.points; return { A: valueOf(m, f.A), B: valueOf(m, f.B || f.A) }; };
 
-  /* ================= measuring, by hand, as the old Studio did it =================
-     A measurement is a kind and a landmark for each of its slots, filled from a list
-     over the slot or by tapping the figure; its role, its edges and its thresholds
-     are typed, with a button to take numbers from the drawing when that helps. */
   const NEIGHBOURS = {
     side: { kn: ['hip', 'an'], hip: ['sh', 'kn'], an: ['kn', 'ft'], sh: ['hip', 'el'], el: ['sh', 'wr'], he: ['ft', 'kn'], knF: ['hip', 'anF'], anF: ['knF', 'ftF'], elF: ['sh', 'wrF'], heF: ['ftF', 'knF'] },
     front: { knL: ['hipL', 'anL'], hipL: ['shL', 'knL'], shL: ['hipL', 'elL'], elL: ['shL', 'wrL'], anL: ['knL', 'toL'], heL: ['toL', 'knL'], knR: ['hipR', 'anR'], hipR: ['shR', 'knR'], shR: ['hipR', 'elR'], elR: ['shR', 'wrR'], anR: ['knR', 'toR'], heR: ['toR', 'knR'] },
   };
   const SEGMENTS = [['hip', 'shoulder', 'torso'], ['hip', 'knee', 'thigh'], ['knee', 'ankle', 'shin'], ['shoulder', 'elbow', 'arm'], ['elbow', 'wrist', 'forearm'], ['heel', 'toe', 'foot'], ['ankle', 'toe', 'foot'], ['shoulder', 'wrist', 'arm'], ['hip', 'ankle', 'leg'], ['shoulder', 'ear', 'neck']];
+  /* ================= measuring: a shape, a point per slot, the words from the geometry ================= */
   const side_ = (n) => (/^other\./.test(n) ? 'other' : /^L\./.test(n) ? 'l' : /^R\./.test(n) ? 'r' : '');
-  const segmentOf = (x, y) => { if (!x || !y) return null; const a = plain(x), b = plain(y); const hit = SEGMENTS.find(([p, q]) => (p === a && q === b) || (p === b && q === a)); return hit ? (side_(x) || side_(y)) + hit[2] : null; };
   const uniqueKey = (base, self) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m !== self && m.key === k)) k = base + n++; return k; };
-  const wordsFor = (name) => String(name || '').replace(/^other\./, 'other ').replace(/^L\./, 'left ').replace(/^R\./, 'right ').replace(/^other(?=[a-z])/, 'other ').replace(/^l(?=[a-z])/, 'left ').replace(/^r(?=[a-z])/, 'right ');
-  const hudOf = (name) => plain(name || 'm').replace(/^other/, '').slice(0, 5).toUpperCase();
   const slotsOf = (kind) => SLOTS[kind] || SLOTS.angle;
-  const filled = (m) => slotsOf(m.kind).every(([k]) => m[k]);
+  const filled = (m) => slotsOf(m.kind).every(([k]) => m[k]) && (!needsPer(m) || (m.per && m.per[0] && m.per[1]));
+  const needsPer = (m) => m.kind === 'distance';
   const nextEmpty = (m, after) => { const sl = slotsOf(m.kind).map(([k]) => k); const from = after ? sl.indexOf(after) + 1 : 0; return sl.slice(from).concat(sl.slice(0, from)).find((k) => !m[k]) || null; };
-  /* a name and a short name for a measurement from what it reads, unless given */
+  const describe = (m) => W.describe(m, draft);
+  /* the key, the words and the short name follow the geometry until the person names it */
   function nameIt(m) {
     if (m.named) return;
-    const S = m, seg = m.kind === 'tilt' ? segmentOf(S.base, S.top) : m.kind === 'floor' ? segmentOf(S.at, S.to) : m.kind === 'down' ? segmentOf(S.from, S.to) : m.kind === 'distance' ? segmentOf(S.a, S.b) : null;
-    let key = 'm', short = 'reading', label = '';
-    if (m.kind === 'angle' && S.b) { key = side_(S.b) + plain(S.b); short = wordsFor(S.b); label = `${short} angle`; }
-    else if (m.kind === 'tilt' && S.top) { key = seg || plain(S.top) + 'lean'; short = seg ? wordsFor(seg) : wordsFor(S.top); label = `${short} lean from vertical`; }
-    else if (m.kind === 'floor' && S.to) { key = seg || plain(S.to) + 'floor'; short = seg ? wordsFor(seg) : wordsFor(S.to); label = `${short} against the floor`; }
-    else if (m.kind === 'down' && S.to) { key = seg || plain(S.to) + 'lift'; short = seg ? wordsFor(seg) : wordsFor(S.to); label = `${short} lifted from hanging`; }
-    else if (m.kind === 'rise' && S.b) { key = side_(S.b) + plain(S.b) + 'up'; short = `${wordsFor(S.b)} height`; label = S.a ? `${wordsFor(S.b)} above the ${wordsFor(S.a)}` : short; }
-    else if (m.kind === 'distance' && S.a && S.b) { key = (seg || plain(S.a) + plain(S.b)) + 'len'; short = seg ? `${wordsFor(seg)} length` : `${wordsFor(S.a)}–${wordsFor(S.b)} length`; label = m.fromStart === 'ratio' ? `${short}, % of its start` : `${short}, % of the shin`; }
-    else if (m.kind === 'bend' && S.b) { key = side_(S.b) + plain(S.b) + 'bend'; short = `${wordsFor(S.b)} off the line`; label = S.a && S.c ? `${wordsFor(S.b)} off the ${wordsFor(S.a)}–${wordsFor(S.c)} line` : short; }
-    if (m.fromStart === 'change' && label) label += ', change from the start';
-    const old = m.key, nk = uniqueKey(key, m);
-    if (old !== nk) { m.key = nk; for (const x of draft.faults) if (x.measure === old) x.measure = nk; if (draft.progress && draft.progress.measure === old) draft.progress.measure = nk; if (draft.inPosition) draft.inPosition = draft.inPosition.map((k) => (k === old ? nk : k)); }
-    m.label = label; m.short = short; m.hud = m.kind === 'distance' ? 'LEN' : hudOf(m.b || m.top || m.to || 'm');
+    const d = describe(m);
+    const old = m.key, nk = uniqueKey(d.named ? d.short : 'm', m);
+    if (old !== nk) { m.key = nk; for (const x of draft.faults) if (x.measure === old) x.measure = nk; if (draft.progress && draft.progress.measure === old) draft.progress.measure = nk; if (draft.inPosition) draft.inPosition = draft.inPosition.map((k) => (k === old ? nk : k)); renameRefs(old, nk); }
+    m.label = d.named ? d.what : ''; m.short = d.named ? d.short.replace(/([A-Z])/g, ' $1').toLowerCase() : 'reading'; m.hud = d.hud;
   }
-  /* a slot filled: by the list or by the figure; then the next empty one is the one being filled */
+  /* a slot filled from the list: the next empty one is the one being filled */
   function fillSlot(m, slot, name) {
-    m[slot] = name;
-    if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) { const k = keyOfName(name, figView()); const nb = k && NEIGHBOURS[figView()][k]; if (nb) { m.a = NAME[figView()][nb[0]]; m.c = NAME[figView()][nb[1]]; } }
+    if (!touch()) return;
+    if (slot === 'per0' || slot === 'per1') { m.per = m.per || [null, null]; m.per[slot === 'per0' ? 0 : 1] = name; }
+    else {
+      m[slot] = name;
+      if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) { const k = keyOfName(name, figView()); const nb = k && NEIGHBOURS[figView()][k]; if (nb) { m.a = NAME[figView()][nb[0]]; m.c = NAME[figView()][nb[1]]; } }
+    }
     nameIt(m);
     const nxt = nextEmpty(m, slot);
     editing = nxt ? { m, slot: nxt } : null;
     commit(true);
   }
-  function tapped(k) {
-    if (!k || !editing) return;
-    const name = NAME[figView()][k]; if (!name) return;
-    fillSlot(editing.m, editing.slot, name);
+  /* the shape changed: the points kept by position, the words and the band's defaults re-derived */
+  function setShape(m, shape) {
+    const was = slotsOf(m.kind).map(([k]) => m[k]), kind = kindOfShape(shape);
+    for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) delete m[k];
+    slotsOf(kind).forEach(([k], i) => { if (was[i]) m[k] = was[i]; });
+    m.kind = kind;
+    if (shape === 'height') m.axis = 'y'; else if (shape === 'ahead') m.axis = 'x'; else delete m.axis;
+    if (kind === 'distance') { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); m.times = 100; } else { delete m.per; if (m.times === 100) delete m.times; }
+    m.named = false;
+    if (m.band) setBand(m, Spec.bandKind(m.band));
+    nameIt(m);
+    editing = nextEmpty(m) ? { m, slot: nextEmpty(m) } : null;
   }
-  /* the landmark list over a slot, as the Studio had it */
+  /* the landmark list over a slot */
+  const LIMBS = [['the trunk', ['hip', 'shoulder']], ['the thigh', ['hip', 'knee']], ['the shin', ['knee', 'ankle']], ['the upper arm', ['shoulder', 'elbow']], ['the forearm', ['elbow', 'wrist']], ['the foot', ['heel', 'toe']]];
   function landmarkPopup(anchor, m, slot) {
     document.querySelectorAll('.lm-pop').forEach((n) => n.remove());
     const pop = el('div', 'lm-pop');
-    const group = (title, names) => { pop.appendChild(el('div', 'lm-title', esc(title))); const g = el('div', 'lm-grid'); for (const n of names) { const b = btn(plain(n), () => { pop.remove(); fillSlot(m, slot, n); }, 'tiny-btn'); if (m[slot] === n) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } pop.appendChild(g); };
-    if (figView() === 'front') { group('Left side', LM.map((n) => 'L.' + n)); group('Right side', LM.map((n) => 'R.' + n)); }
-    else { group('The side being measured', LM); group('The other side', LM.map((n) => 'other.' + n)); }
+    const group = (title, names, pick) => { pop.appendChild(el('div', 'lm-title', esc(title))); const g = el('div', 'lm-grid'); for (const n of names) { const b = btn(W.pointWords(n, true), () => { pop.remove(); pick(n); }, 'tiny-btn'); if (m[slot] === n) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } pop.appendChild(g); };
+    if (slot === 'per') {
+      pop.appendChild(el('div', 'lm-title', 'as a share of which limb'));
+      const g = el('div', 'lm-grid'); const pre = figView() === 'front' ? 'R.' : '';
+      for (const [w, [a, b]] of LIMBS) { const bt = btn(w, () => { pop.remove(); if (!touch()) return; m.per = [pre + a, pre + b]; nameIt(m); commit(true); }, 'tiny-btn'); if (m.per && m.per[0] === pre + a && m.per[1] === pre + b) bt.setAttribute('aria-pressed', 'true'); g.appendChild(bt); }
+      pop.appendChild(g);
+      pop.appendChild(el('div', 'lm-title', 'or two points: from'));
+      const g2 = el('div', 'lm-grid'); for (const n of LM) g2.appendChild(btn(W.pointWords(n, true), () => { pop.remove(); fillSlot(m, 'per0', n); }, 'tiny-btn')); pop.appendChild(g2);
+      pop.appendChild(el('div', 'lm-title', 'to')); const g3 = el('div', 'lm-grid'); for (const n of LM) g3.appendChild(btn(W.pointWords(n, true), () => { pop.remove(); fillSlot(m, 'per1', n); }, 'tiny-btn')); pop.appendChild(g3);
+    } else if (figView() === 'front') { group('Left', LM.map((n) => 'L.' + n), (n) => fillSlot(m, slot, n)); group('Right', LM.map((n) => 'R.' + n), (n) => fillSlot(m, slot, n)); }
+    else { group('This side', LM, (n) => fillSlot(m, slot, n)); group('The other side', LM.map((n) => 'other.' + n), (n) => fillSlot(m, slot, n)); }
     anchor.parentNode.appendChild(pop);
     const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('pointerdown', close, true); } };
     setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
@@ -437,28 +485,30 @@ Moves.ready.then(function () {
   /* what the drawing says the measurement reads, on request: the edges around the end, the
      thresholds between start and end */
   const TOL = (m) => (m.kind === 'angle' || m.kind === 'bend' ? 10 : m.kind === 'distance' ? 10 : 8);
-  const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
-  const ensureSetting = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: `${cap(m.short || m.label || m.key)}, ${words}`, min: Math.round(lo), max: Math.round(hi) }); };
+  const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: m.axis ? { range: [-20, 20], min: -10, max: 10, sym: 10 } : { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
+  const settingLabel = (m, words) => `${cap((describe(m).what || m.key))}, ${words}`;
+  const ensureSetting = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: settingLabel(m, words), min: Math.round(lo), max: Math.round(hi) }); };
   function clearBand(m) {
     for (const s of m.settings || []) { if (!(draft.settings || []).some((t) => t.key === s.key) && !['raiseAt', 'downAt'].includes(s.key)) delete draft.defaults[s.key]; }
     delete m.band; delete m.settings; delete m.scale; delete m.note;
     draft.faults = draft.faults.filter((x) => x.measure !== m.key);
   }
-  /* a band of a shape, with default edges for its kind and a fault for each side, editable */
+  /* a band of a shape, with default edges for its kind and a fault for each side, worded from the geometry */
   function setBand(m, kind) {
-    const d = draft, base = m.key, L = m.short || m.label || m.key, def = bandDefault(m), span = def.range[1] - def.range[0], w = whenOf(m);
+    const d = draft, base = m.key, def = bandDefault(m), span = def.range[1] - def.range[0], w = whenOf(m);
+    const keep = d.faults.filter((x) => x.measure === m.key && x.own);   // faults the person has worded stay through a change of rule
     clearBand(m);
     if (kind === 'none') return;
-    m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? [0, 200] : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
+    m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? (m.axis ? [-100, 100] : [0, 200]) : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
     if (kind === 'range') { m.band = { lo: base + 'Min', hi: base + 'Max' }; ensureSetting(m, base + 'Min', def.range[0], 'at least', def.range[0] - span, def.range[1] + span); ensureSetting(m, base + 'Max', def.range[1], 'at most', def.range[0] - span, def.range[1] + span); }
     else if (kind === 'min') { m.band = { min: base + 'Min' }; ensureSetting(m, base + 'Min', def.min, 'at least', def.min - span, def.min + span); }
     else if (kind === 'max') { m.band = { max: base + 'Max' }; ensureSetting(m, base + 'Max', def.max, 'at most', def.max - span, def.max + span); }
     else if (kind === 'sym') { m.band = { sym: base + 'Max' }; m.scale = [-45, 45]; ensureSetting(m, base + 'Max', def.sym, 'allowed either way', 1, 45); }
-    const f = (id, side, label, text, deep, tone) => d.faults.push(Object.assign({ id, measure: m.key, side, label: label.slice(0, 26), text, deep, tone }, w !== 'top' ? { when: w } : {}));
-    if (kind === 'min') f(base + 'Low', 'below', `${cap(L)} short`, `Keep the ${L} — it is dropping`, `More ${L} — it is well short`, 'plain');
-    else if (kind === 'max') f(base + 'High', 'above', `${cap(L)} too far`, `Not so much ${L}`, `Less ${L} — it is well past`, 'plain');
-    else if (kind === 'sym') { f(base + 'Over', 'above', `${cap(L)} off one way`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); f(base + 'Under', 'below', `${cap(L)} off the other`, `Bring the ${L} back level`, `The ${L} is well off — bring it back`, 'plain'); }
-    else { f(base + 'Low', 'below', `${cap(L)} short`, `A little further — ${L}`, `Further — ${L} is well short`, 'up'); f(base + 'High', 'above', `${cap(L)} too far`, `Not so far — ${L}`, `Ease off — ${L} is well past`, 'down'); }
+    const f = (id, side) => { const kept = keep.find((x) => x.side === side); if (kept) { d.faults.push(kept); return; } const t = W.faultTemplate(d, m, side); d.faults.push(Object.assign({ id, measure: m.key, side, label: t.label.slice(0, 26), text: t.text, tone: roleOf(m) === 'progress' ? (side === 'above' ? 'down' : 'up') : 'plain' }, w !== 'top' ? { when: w } : {})); };
+    if (kind === 'min') f(base + 'Low', 'below');
+    else if (kind === 'max') f(base + 'High', 'above');
+    else if (kind === 'sym') { f(base + 'Over', 'above'); f(base + 'Under', 'below'); }
+    else { f(base + 'Low', 'below'); f(base + 'High', 'above'); }
   }
   function setRole(m, role) {
     const d = draft, was = roleOf(m);
@@ -497,11 +547,82 @@ Moves.ready.then(function () {
     else if (kind === 'range') { d.defaults[m.band.lo] = Math.round(lo - tol); d.defaults[m.band.hi] = Math.round(hi + tol); }
   }
   function addMeasure() {
+    if (!touch()) return;
     const m = { key: uniqueKey('m'), kind: 'angle', label: '', hud: 'M', role: 'reading' };
     draft.measurements.push(m);
     editing = { m, slot: 'b' };
     commit(true);
   }
+  /* the numbers a recording gives, on request: the reading of this measurement over the shown recording's
+     frames; its 5th and 95th percentiles are the start and the top (or the two edges) */
+  function fromRecording(m) {
+    const rv = window.__review, shown = rv && rv.shown; if (!shown || !shown.result || !filled(m)) return false;
+    const OTHER = { L: 'R', R: 'L' }, bare = Object.assign({}, m); delete bare.fromStart;
+    const vals = [], early = [], t0 = shown.result.rows.length ? shown.result.rows[0].t : 0;
+    for (const row of shown.result.rows) {
+      const r = row.reading; if (!r || !r.ok) continue;
+      const ctx = { P: r.points, both: { [r.side]: r.points, [OTHER[r.side]]: r.other }, cfg: shown.result.cfg, facing: r.facing, Core, values: {}, side: r.side };
+      const x = Spec.measure(bare, ctx).x; if (x == null || !Number.isFinite(x)) continue;
+      vals.push(x); if (row.t - t0 < 1500) early.push(x);
+    }
+    if (vals.length < 10) return false;
+    const sorted = vals.slice().sort((a, b) => a - b), pct = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
+    const lo = pct(0.05), hi = pct(0.95), med = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+    const startV = early.length ? med(early) : lo;
+    const d = draft, tol = TOL(m), kind = Spec.bandKind(m.band), role = roleOf(m);
+    if (role === 'progress') {
+      const up = Math.abs(hi - startV) >= Math.abs(lo - startV), Aval = startV, Bval = up ? hi : lo;
+      d.progress.direction = up ? 'up' : 'down';
+      d.defaults.raiseAt = Math.round(Aval + (Bval - Aval) * 0.4); d.defaults.downAt = Math.round(Aval + (Bval - Aval) * 0.15);
+      if (kind === 'range') { d.defaults[m.band.lo] = Math.round(Bval - tol); d.defaults[m.band.hi] = Math.round(Bval + tol); }
+      for (const x of d.faults) { if (x.measure !== m.key) continue; if (/Low$/.test(x.id)) { x.side = up ? 'below' : 'above'; x.tone = up ? 'up' : 'down'; } if (/High$/.test(x.id)) { x.side = up ? 'above' : 'below'; x.tone = up ? 'down' : 'up'; } }
+      return true;
+    }
+    if (kind === 'min') d.defaults[m.band.min] = Math.round(lo - tol);
+    else if (kind === 'max') d.defaults[m.band.max] = Math.round(hi + tol);
+    else if (kind === 'sym') d.defaults[m.band.sym] = Math.round(Math.max(Math.abs(lo), Math.abs(hi)) + tol);
+    else if (kind === 'range') { d.defaults[m.band.lo] = Math.round(lo - tol); d.defaults[m.band.hi] = Math.round(hi + tol); }
+    return true;
+  }
+  /* a measure the studio found in the recordings, written in as a card with a fault on it: a note, so
+     the reps stay cut as they were and the labels find them */
+  function addDiscovered(row, group) {
+    if (!row || !row.measurement || !touch()) return;
+    const d = draft;
+    if (!d.inPosition) d.inPosition = bandedKeys();
+    const m = clone(row.measurement); delete m.key;
+    const base = W.describe(m, d).short || 'found';
+    m.key = uniqueKey(base); m.named = true; m.role = 'note';
+    const settingKey = m.key + (row.side === 'above' ? 'Max' : 'Min');
+    const s = (m.settings && m.settings[0]) || {};
+    m.band = row.side === 'above' ? { max: settingKey } : { min: settingKey };
+    m.settings = [{ key: settingKey, label: settingLabel(m, row.side === 'above' ? 'at most' : 'at least'), min: s.min != null ? s.min : (m.scale ? m.scale[0] : -90), max: s.max != null ? s.max : (m.scale ? m.scale[1] : 180) }];
+    m.label = m.label || W.describe(m, d).what; m.hud = m.hud || W.describe(m, d).hud; m.note = row.side === 'above' ? 'at most' : 'at least';
+    d.measurements.push(m);
+    d.defaults[settingKey] = row.edge;
+    const words = group && group.id && group.id[0] === '+' ? group.id.slice(1) : (group && group.label) || (row.fault && row.fault.label) || 'Found';
+    const id = uniqueFaultId(W.camel(words));
+    const when = (row.fault && row.fault.when) || (group && group.when) || 'top';
+    d.faults.push(Object.assign({ id, measure: m.key, side: row.side, label: words.slice(0, 26), text: (row.fault && row.fault.text) || words, tone: 'plain' }, when !== 'top' ? { when } : {}));
+    if (!d.auto.landmarks && d.landmarks) { const L = d.landmarks; for (const n of lmRefs(m)) { if (!L.joints.includes(n)) L.joints.push(n); if (!L.dots.includes(n)) L.dots.push(n); } }
+    if (group && group.id && group.id[0] === '+' && window.__review) window.__review.renameFault(group.id, id);
+    commit(true);
+    goTo(`measurements[${d.measurements.length - 1}]`);
+  }
+  /* a fault on a measurement the exercise already has, at the edge the recordings suggest */
+  function addFaultOn(row, group) {
+    if (!row || !row.existing || !touch()) return;
+    const d = draft, m = d.measurements.find((q) => q.key === row.existing.key); if (!m) return;
+    if (!m.band) { if (!d.inPosition) d.inPosition = bandedKeys(); setBand(m, row.side === 'above' ? 'max' : 'min'); d.faults = d.faults.filter((x) => x.measure !== m.key); const k = row.side === 'above' ? m.band.max : m.band.min; d.defaults[k] = row.edge; }
+    const words = group && group.id && group.id[0] === '+' ? group.id.slice(1) : (group && group.label) || 'Found';
+    const id = uniqueFaultId(W.camel(words));
+    const when = (group && group.when) || 'top';
+    d.faults.push(Object.assign({ id, measure: m.key, side: row.side, label: words.slice(0, 26), text: words, tone: 'plain' }, when !== 'top' ? { when } : {}));
+    if (group && group.id && group.id[0] === '+' && window.__review) window.__review.renameFault(group.id, id);
+    commit(true);
+    goTo(`measurements[${d.measurements.indexOf(m)}]`);
+  }
+  const uniqueFaultId = (base) => { base = (base || 'fault').replace(/[^a-zA-Z0-9]/g, '') || 'fault'; if (!/^[a-zA-Z]/.test(base)) base = 'f' + base; let id = base, n = 2; const taken = new Set(draft.faults.map((x) => x.id).concat(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready', 'room', 'raise'])); while (taken.has(id)) id = base + n++; return id; };
   /* Everywhere else a measurement is named: the drawing (arcs, readouts, a line's good),
      the bone colours, the side pick, the gates of later measurements, the start ranges,
      the position list, faults' requires. Removed with it, or renamed with it — whatever
@@ -539,73 +660,6 @@ Moves.ready.then(function () {
     if (editing && editing.m === m) editing = null;
   }
 
-  /* ---- the measuring canvas: the figure at A with every landmark the model has, named, to tap ---- */
-  let mcanvas = null;
-  function mBox() {
-    const f = draft.figure.points, xs = [], ys = [];
-    for (const K of [f.A, f.B || f.A]) for (const k in K) { xs.push(K[k][0]); ys.push(K[k][1]); }
-    return { x0: Math.min(...xs) - 30, x1: Math.max(...xs) + 30, y0: Math.min(...ys) - 24, y1: Math.max(...ys) + 18 };
-  }
-  function mTransform() {
-    /* the canvas takes the drawing's shape: a standing body tall, a lying one wide */
-    const b = mBox(), ratio = Math.max(1.2, Math.min(3.2, (b.x1 - b.x0) / (b.y1 - b.y0)));
-    if (mcanvas.style.aspectRatio !== `${ratio}`) mcanvas.style.aspectRatio = `${ratio}`;
-    const r = mcanvas.getBoundingClientRect();
-    const s = Math.min(r.width / (b.x1 - b.x0), r.height / (b.y1 - b.y0)) * 0.96;
-    return { s, tx: r.width / 2 - (b.x0 + b.x1) / 2 * s, ty: r.height / 2 - (b.y0 + b.y1) / 2 * s, w: r.width, h: r.height };
-  }
-  function drawMeasure() {
-    if (!mcanvas || !draft) return;
-    const r = mcanvas.getBoundingClientRect(); if (!r.width) return;
-    const T = mTransform(), rr = mcanvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
-    mcanvas.width = Math.round(rr.width * dpr); mcanvas.height = Math.round(rr.height * dpr);
-    const ctx = mcanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, rr.width, rr.height);
-    const f = draft.figure.points, view = figView(), K = f.A, B = f.B || f.A, N = NAME[view];
-    const at = (p) => [T.tx + p[0] * T.s, T.ty + p[1] * T.s];
-    const chain = (Kf, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const c of chainsOf(view)) { const pts = c.filter((k) => Kf[k]); if (pts.length < 2) continue; ctx.beginPath(); pts.forEach((k, i) => { const [x, y] = at(Kf[k]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); } if (Kf.h) { const [x, y] = at(Kf.h); ctx.beginPath(); ctx.arc(x, y, 8 * T.s, 0, Math.PI * 2); ctx.stroke(); } };
-    ctx.strokeStyle = 'rgba(232,237,244,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, T.ty + 163 * T.s); ctx.lineTo(rr.width, T.ty + 163 * T.s); ctx.stroke();
-    if (B !== K) chain(B, 'rgba(90,169,255,.22)', 4 * T.s);
-    chain(K, 'rgba(232,237,244,.55)', 4 * T.s);
-    /* what is measured already, in the colour of its role */
-    const P = (n) => { if (!n) return null; const p = pointFor(Array.isArray(n) ? n[0] : n, K, view); return p ? at([p.x, p.y]) : null; };
-    for (const m of draft.measurements) {
-      const role = roleOf(m), colour = role === 'progress' ? '#5aa9ff' : role === 'hold' ? '#35d07f' : role === 'note' ? '#ffb545' : 'rgba(232,237,244,.5)';
-      ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 2.5;
-      if (m.kind === 'angle' || m.kind === 'bend') { const a = P(m.a), b = P(m.b), c = P(m.c); if (a && b && c) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.lineTo(...c); ctx.stroke(); const rad = 14 * Math.max(0.6, T.s / 2); ctx.beginPath(); ctx.arc(b[0], b[1], rad, Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0]), false); ctx.stroke(); } }
-      else { const a = P(m.a || m.base || m.from || m.at), b = P(m.b || m.top || m.to); if (a && b) { ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]); } }
-    }
-    /* the measurement being edited: its filled slots in amber, numbered in slot order */
-    const picks = editing ? slotsOf(editing.m.kind).filter(([k]) => editing.m[k]).map(([k]) => [k, editing.m[k]]) : [];   // (the measuring canvas is no longer shown; kept for a tap on the figure)
-    /* every landmark, a dot and a name: the near side's names above, the far side's below, the
-       names along a row staggered so a lying body's do not run into each other */
-    const fs = Math.max(9, Math.min(11, rr.width / 70));
-    ctx.font = `700 ${fs}px ui-sans-serif, system-ui, sans-serif`; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    const keys = Object.keys(K).filter((k) => N[k]);
-    const rows = { near: keys.filter((k) => !/^(other|L)\./.test(N[k])).sort((p, q) => K[p][0] - K[q][0]), far: keys.filter((k) => /^(other|L)\./.test(N[k])).sort((p, q) => K[p][0] - K[q][0]) };
-    for (const k of keys) {
-      const name = N[k], [x, y] = at(K[k]), far = rows.far.includes(k), picked = picks.find(([, v]) => v === name);
-      ctx.beginPath(); ctx.arc(x, y, picked ? 7 : 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = picked ? '#ffb545' : far ? 'rgba(232,237,244,.45)' : '#e8edf4'; ctx.fill();
-      if (picked) { ctx.fillStyle = '#0b0f16'; ctx.textAlign = 'center'; ctx.fillText(String(picks.indexOf(picked) + 1), x, y + 0.5); }
-      const label = name.replace(/^other\./, '·').replace(/^L\./, 'L ').replace(/^R\./, 'R ');
-      const row = far ? rows.far : rows.near, i = row.indexOf(k), step = (i % 2) * (fs + 2);
-      const lx = x + (far ? -7 : 7), ly = y + (far ? 9 + step : -(9 + step));
-      ctx.textAlign = far ? 'right' : 'left';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(11,15,22,.9)'; ctx.strokeText(label, lx, ly);
-      ctx.fillStyle = picked ? '#ffb545' : far ? 'rgba(232,237,244,.55)' : 'rgba(232,237,244,.9)'; ctx.fillText(label, lx, ly);
-    }
-    ctx.fillStyle = 'rgba(232,237,244,.6)'; ctx.textAlign = 'left';
-    const sl = editing && slotsOf(editing.m.kind).find(([k]) => k === editing.slot);
-    ctx.fillText(editing ? `${editing.m.label || KIND_WORDS[editing.m.kind]} — tap ${sl ? sl[1] : 'a point'}` + (editing.m.kind === 'angle' && editing.slot === 'b' ? ' (a joint fills all three)' : '') : 'Tap a slot on a card, then a point here', 8, 12);
-  }
-  function hitAt(e) {
-    const T = mTransform(), r = mcanvas.getBoundingClientRect(), K = draft.figure.points.A, N = NAME[figView()];
-    const x = (e.clientX - r.left - T.tx) / T.s, y = (e.clientY - r.top - T.ty) / T.s, tol = 12 / T.s;
-    let best = null, bd = tol;
-    for (const k in K) { if (!N[k]) continue; const d = Math.hypot(K[k][0] - x, K[k][1] - y); if (d < bd) { bd = d; best = k; } }
-    return best;
-  }
-
   /* ================= controls ================= */
   function field(label, value, onchange, o) {
     o = o || {};
@@ -621,7 +675,9 @@ Moves.ready.then(function () {
     else { input = el('input'); input.type = o.type || 'text'; if (o.type === 'number') { input.step = o.step || 'any'; } input.value = value == null ? '' : value; if (o.placeholder) input.placeholder = o.placeholder; }
     if (o.title) lab.title = o.title;
     if (o.at) lab.dataset.at = o.at;
+    if (o.def) input.dataset.def = o.def;
     input.onchange = () => {
+      if (!touch()) { render(); return; }
       const v = o.type === 'check' ? input.checked : o.type === 'number' ? (input.value === '' ? null : Number(input.value)) : input.value;
       onchange(v);
       commit(!!o.structural);
@@ -643,66 +699,227 @@ Moves.ready.then(function () {
   function autoField(flag, label, value, onchange, o) {
     const lab = field(label, value, (v) => { draft.auto[flag] = false; onchange(v); }, o);
     if (draft.auto[flag]) lab.querySelector('span').appendChild(el('em', 'auto-note', ' · from the pose; edit to make it yours'));
-    else { const a = el('button', 'linkbtn', 'use the template'); a.type = 'button'; a.style.marginLeft = '6px'; a.onclick = () => { draft.auto[flag] = true; commit(true); }; lab.querySelector('span').appendChild(a); }
+    else { const a = el('button', 'linkbtn', 'use the template'); a.type = 'button'; a.style.marginLeft = '6px'; a.onclick = () => { if (!touch()) return; draft.auto[flag] = true; commit(true); }; lab.querySelector('span').appendChild(a); }
     return lab;
   }
   const settingKeys = () => Object.keys(draft.defaults || {});
   const optsOf = (arr, blank) => (blank ? [['', blank]] : []).concat(arr.map((k) => [k, k]));
   const lmOpts = (blank) => optsOf(LM.concat(LM.map((k) => 'other.' + k), figView() === 'front' ? LM.flatMap((k) => ['L.' + k, 'R.' + k]) : []), blank);
 
-  /* ================= the editor's place ================= */
-  function parkEditor() { const e = $('fig-editor'); if (e && e.parentNode !== $('fig-park')) $('fig-park').appendChild(e); }
-  function placeEditor(host) { const e = $('fig-editor'); host.appendChild(e); if (window.__review) requestAnimationFrame(() => window.__review.animChanged()); }
   /* the editor's every drag: into the draft */
   function figChanged(j) {
     if (!draft) return;
     if (!j || !j.A) return;   // the editor before any figure is set
+    if (!touch()) { if (window.__review) window.__review.setFig(draft.figure.points); return; }
     draft.figure = { points: Object.assign({}, j, { B: j.hold ? undefined : j.B }) };
     draft.muscles = j.w || {};
     commit(false);
     /* the edges on the cards follow too */
     document.querySelectorAll('[data-def]').forEach((n) => { if (document.activeElement !== n) n.value = draft.defaults[n.dataset.def]; });
-    drawMeasure();
   }
   /* the values at A and B on the cards, without rebuilding the form */
   function refreshValues() {
     if (!draft) return;
-    document.querySelectorAll('[data-val]').forEach((n) => { const m = draft.measurements.find((q) => q.key === n.dataset.val); if (!m) return; const { A, B } = valuesAB(m); n.innerHTML = `at the start <b>${fmt(A, m)}</b> · at the end <b>${fmt(B, m)}</b>`; });
-    drawMeasure();
+    document.querySelectorAll('[data-val]').forEach((n) => { const m = draft.measurements.find((q) => q.key === n.dataset.val); if (!m) return; const { A, B } = valuesAB(m); n.innerHTML = `A <b>${fmt(A, m)}</b> · B <b>${fmt(B, m)}</b>`; });
+    document.querySelectorAll('[data-edge]').forEach((n) => { const [key, side] = n.dataset.edge.split('|'); const m = draft.measurements.find((q) => q.key === key); if (!m || !m.band) return; n.textContent = edgeOf(m, side); });
   }
+  const edgeKeyOf = (m, side) => (side === 'above' ? (m.band.sym || m.band.hi || m.band.max) : (m.band.sym || m.band.lo || m.band.min));
+  const edgeOf = (m, side) => { const k = edgeKeyOf(m, side); if (!k) return ''; const v = draft.defaults[k]; return W.edgeWords(draft, m, side, m.band.sym && side === 'below' ? -v : v); };
 
   /* ================= the start: a pose ================= */
   function renderStart() {
-    const host = $('build-start'); host.innerHTML = '';
-    const pickGrid = () => {
-      const g = el('div', 'pose-pick');
-      for (const p of POSES) { const b = btn(`${poseSvg(figureOfPose(p))}<span>${esc(p.name)}</span>`, () => start(fromPose(p), AUTO())); g.appendChild(b); }
-      return g;
-    };
-    if (!draft) { host.appendChild(el('h2', null, 'Start from a pose')); host.appendChild(el('p', 'tiny', 'Pick how the person starts and which way the phone looks at them. Everything else follows from it and can be changed.')); host.appendChild(pickGrid()); return; }
-    const d = details(`Start over from a pose (the draft “${draft.name}” would be dropped)`); d.appendChild(pickGrid()); host.appendChild(d);
+    const host = $('build-start'); if (!host) return; host.innerHTML = '';
+    host.appendChild(el('p', 'tiny', 'Pick how the person starts and which way the phone looks at them. Everything else follows from it and can be changed. The exercise open now stays as it is until you edit the new one.'));
+    const g = el('div', 'pose-pick');
+    for (const p of POSES) { const b = btn(`${poseSvg(figureOfPose(p))}<span>${esc(p.name)}</span>`, () => { if (touched() && !window.confirm(`Start a new exercise? The draft of “${draft.name}” would be dropped — download it first if you want it.`)) return; Moves.draft(null); start(fromPose(p), AUTO(), { source: null, touched: true }); $('start-over').open = false; $('exercise-panel').open = true; $('fig-edit').open = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }, null); g.appendChild(b); }
+    host.appendChild(g);
   }
 
   /* ================= the form ================= */
   function render() {
     renderStart();
-    const host = $('build-form');
-    parkEditor(); host.innerHTML = '';
     if (!draft) return;
     const d = draft; d.auto = d.auto || {};
     d.words = d.words || {}; d.phone = d.phone || {}; d.landmarks = d.landmarks || {}; d.measurements = d.measurements || []; d.faults = d.faults || [];
     d.defaults = d.defaults || {}; d.settings = d.settings || []; d.draw = d.draw || []; d.muscles = d.muscles || {}; d.figure = d.figure || {};
+    renderMeasures(); renderDerived(); renderExercise(); renderNumbers();
+    refreshValues();
+  }
+  /* bare controls for a sentence: a select, a number, words */
+  const pick = (value, options, onchange, title, structural, at) => { const sel = el('select', 'inline'); for (const [v, t] of options) { const it = el('option', null, esc(t)); it.value = v; sel.appendChild(it); } sel.value = value == null ? '' : String(value); if (title) sel.title = title; if (at) sel.dataset.at = at; sel.onchange = () => { if (!touch()) { sel.value = value == null ? '' : String(value); return; } onchange(sel.value); commit(!!structural); }; return sel; };
+  const num = (value, onchange, defKey, title) => { const inp = el('input', 'inline num'); inp.type = 'number'; inp.step = 'any'; inp.value = value == null ? '' : value; if (defKey) { inp.dataset.def = defKey; if (!document.getElementById('def-' + defKey)) inp.id = 'def-' + defKey; } if (title) inp.title = title; inp.onchange = () => { if (!touch()) { inp.value = value == null ? '' : value; return; } const v = inp.value === '' ? null : Number(inp.value); onchange(v); commit(false); }; return inp; };
+  const words = (t, cls) => el('span', 'w ' + (cls || ''), esc(t));
+  const text = (value, onchange, placeholder, cls, at, max) => { const inp = el('input', 'inline ' + (cls || '')); inp.value = value || ''; if (placeholder) inp.placeholder = placeholder; if (at) inp.dataset.at = at; if (max) inp.maxLength = max; inp.onchange = () => { if (!touch()) { inp.value = value || ''; return; } onchange(inp.value); commit(false); }; return inp; };
+  const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the rep'], ['always', 'at all times, before the rep too'], ['between', 'between reps, at rest']];
+  const whenOpts = () => WHEN_OPTS.map(([v, t]) => [v, v === 'top' && draft.words && draft.words.atTop ? draft.words.atTop : t]);
 
-    /* 1 — the exercise */
-    let s = section('The exercise');
+  function renderMeasures() {
+    const host = $('measures'); host.innerHTML = '';
+    const d = draft;
+    if (!d.measurements.length) host.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. Add one and make it the one that tracks the rep.' : 'Nothing measured yet. Add what has to be right for the hold.'));
+    d.measurements.forEach((m, i) => host.appendChild(card(m, i)));
+  }
+  function card(m, i) {
+    const d = draft, role = roleOf(m), desc = describe(m), u = desc.unit, at = `measurements[${i}]`;
+    const cardEl = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); cardEl.dataset.at = at; cardEl.dataset.key = m.key;
+    /* the head: what it is, its values at A and B, the tools */
+    const head = el('div', 'mhead');
+    /* the head says what the geometry is, in words; the file's own short label, when it differs, is under More */
+    head.appendChild(el('b', 'what', esc(desc.named ? desc.what : (m.label || m.key))));
+    head.appendChild(el('span', 'mvals', '')); head.lastChild.dataset.val = m.key;
+    const tools = el('span', 'rowtools');
+    tools.appendChild(btn('↑', () => { if (i > 0 && touch()) { [d.measurements[i - 1], d.measurements[i]] = [d.measurements[i], d.measurements[i - 1]]; commit(true); } }, 'tiny-btn'));
+    tools.appendChild(btn('↓', () => { if (i < d.measurements.length - 1 && touch()) { [d.measurements[i + 1], d.measurements[i]] = [d.measurements[i], d.measurements[i + 1]]; commit(true); } }, 'tiny-btn'));
+    tools.appendChild(btn('✕', () => { if (touch()) { removeMeasure(m); commit(true); } }, 'tiny-btn'));
+    head.appendChild(tools);
+    cardEl.appendChild(head);
+    /* sentence 1 — what is measured, and how it is read */
+    const what = el('div', 'sentence what');
+    what.appendChild(words('Measure'));
+    const shape = shapeOf(m);
+    what.appendChild(pick(shape, SHAPES, (v) => setShape(m, v), SHAPE_HELP[shape] || '', true, at + '.kind'));
+    const slotBtn = (k, label) => {
+      const val = k === 'per' ? (m.per && m.per[0] && m.per[1] ? (LIMBS.find(([, [a, b]]) => plain(m.per[0]) === a && plain(m.per[1]) === b) || [null])[0] || `${W.pointWords(m.per[0], true)}–${W.pointWords(m.per[1], true)}` : null) : m[k] ? W.pointWords(m[k], true) : null;
+      const b = btn(val ? esc(val) : (label || '…'), () => { editing = { m, slot: k }; document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('editing', c === cardEl)); landmarkPopup(b, m, k); });
+      b.classList.add('slot'); b.dataset.at = at + '.' + (k === 'per' ? 'per' : k); b.setAttribute('aria-pressed', String(!!(editing && editing.m === m && editing.slot === k)));
+      if (!val) b.classList.add('empty');
+      return b;
+    };
+    for (const tok of SENTENCE[shape] || SENTENCE.angle) { if (tok === 'per') what.appendChild(slotBtn('per', 'a limb')); else if (SLOTS[m.kind].some(([k]) => k === tok)) what.appendChild(slotBtn(tok, (SLOTS[m.kind].find(([k]) => k === tok) || [])[1])); else what.appendChild(words(tok)); }
+    what.appendChild(words(', read'));
+    what.appendChild(pick(m.fromStart || '', [['', 'as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been this set'], ['belowPeak', 'as how far under the most it has been this set'], ['rest', 'as the change from the rest position (which follows slowly)']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; m.named = false; nameIt(m); }, 'the coach reads the value when the set-up wait ends and from then on gives the change from it, or the percentage of it', true, at + '.fromStart'));
+    cardEl.appendChild(what);
+    /* the meaning line: what the number is, which way is which */
+    if (desc.meaning || desc.notes.length) cardEl.appendChild(el('div', 'meaning', esc([desc.meaning].concat(desc.notes.map((n) => cap(n) + '.')).filter(Boolean).join(' '))));
+    /* what it is for */
+    const roles = d.type === 'reps'
+      ? [['progress', 'tracks the rep', 'the count follows this one: a rep is under way past one line and counts when it is back past the other'], ['hold', 'must be right to hold', 'the hold clock at the top runs only while this is inside its rule; out of it is a fault'], ['note', 'a note', 'called when it is out, but the count goes on'], ['reading', 'just shown', 'on the picture only, never judged']]
+      : [['hold', 'must be right to hold', 'the hold clock runs only while this is inside its rule'], ['note', 'a note', 'called when it is out, but the clock goes on'], ['reading', 'just shown', 'on the picture only, never judged']];
+    cardEl.appendChild(chips(roles, role, (v) => { if (!touch()) return; setRole(m, v); commit(true); }));
+    /* the rep's two lines */
+    if (role === 'progress') {
+      const row = el('div', 'sentence progress'); row.dataset.at = 'progress';
+      const dn = d.progress.direction === 'down';
+      row.appendChild(words('The rep is under way once it')); row.appendChild(pick(d.progress.direction || 'up', [['up', 'rises past'], ['down', 'falls under']], (v) => { d.progress.direction = v; }, '', true));
+      row.appendChild(num(d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, 'raiseAt', 'the rep is under way once the reading passes this')); row.appendChild(words(u));
+      row.appendChild(words(`and counts once it is back ${dn ? 'over' : 'under'}`)); row.appendChild(num(d.defaults.downAt, (v) => { d.defaults.downAt = v; }, 'downAt', 'the rep counts once the reading is back past this')); row.appendChild(words(u));
+      cardEl.appendChild(row);
+      const rec = el('div', 'rec'); rec.dataset.recKey = 'raiseAt'; cardEl.appendChild(rec);
+    }
+    if (role !== 'reading') {
+      const kind = Spec.bandKind(m.band) || 'none';
+      const row = el('div', 'sentence rule'); row.dataset.at = at + '.band';
+      if (d.type === 'reps') row.appendChild(pick(whenOf(m), whenOpts(), (v) => { setWhen(m, v); }, 'when the rule is checked and its faults called', true)); else row.appendChild(words('In the hold,'));
+      row.appendChild(words('it must be'));
+      row.appendChild(pick(kind, [['none', 'anything: not judged'], ['range', 'between'], ['min', 'at least'], ['max', 'at most'], ['sym', 'within ±']], (v) => { setBand(m, v); }, '', true));
+      if (m.band) {
+        const n = (rk, title) => { const key = m.band[rk]; row.appendChild(num(d.defaults[key], (v) => { d.defaults[key] = v; }, key, title)); row.appendChild(words(u)); };
+        if (kind === 'range') { n('lo', 'the lower edge'); row.appendChild(words('and')); n('hi', 'the upper edge'); }
+        else if (kind === 'min') n('min', 'the edge'); else if (kind === 'max') n('max', 'the edge'); else { n('sym', 'either side of zero'); row.appendChild(words(`of ${desc.zero || 'zero'}`)); }
+      }
+      cardEl.appendChild(row);
+      /* the start position: a second rule, judged before the coaching begins */
+      const sr = el('div', 'sentence start'); sr.dataset.at = `ready.ranges.${m.key}`;
+      const range = d.ready && d.ready.ranges && d.ready.ranges[m.key];
+      if (range) {
+        sr.appendChild(words('At the start position it must be between'));
+        sr.appendChild(num(range[0], (v) => { d.ready.ranges[m.key][0] = v; }, null, 'the start position\'s lower edge')); sr.appendChild(words(u));
+        sr.appendChild(words('and')); sr.appendChild(num(range[1], (v) => { d.ready.ranges[m.key][1] = v; }, null, 'the start position\'s upper edge')); sr.appendChild(words(u));
+        const rm = btn('✕', () => { if (!touch()) return; delete d.ready.ranges[m.key]; if (!Object.keys(d.ready.ranges).length) { delete d.ready.ranges; if (d.ready.atStart === undefined && !d.ready.nudge) delete d.ready; } commit(true); }, 'tiny-btn'); rm.title = 'no start-position rule'; sr.appendChild(rm);
+      } else {
+        const g = btn('○ add a start-position rule', () => { if (!touch()) return; const { A } = valuesAB(m); const tol = TOL(m); const base = A != null ? A : (m.band ? d.defaults[m.band.lo || m.band.min || m.band.max || m.band.sym] : 0); d.ready = d.ready || {}; d.ready.ranges = d.ready.ranges || {}; d.ready.ranges[m.key] = [Math.round(base - tol), Math.round(base + tol)]; commit(true); }, 'tiny-btn ghost'); g.title = 'judged in the set-up wait, before the coaching begins'; sr.appendChild(g);
+      }
+      cardEl.appendChild(sr);
+      /* the faults: one row each, the edge in words, then the words the coach uses */
+      const fs = d.faults.filter((x) => x.measure === m.key);
+      for (const x of fs) {
+        const fat = `faults[${d.faults.indexOf(x)}]`;
+        const row = el('div', 'fault-row sentence'); row.dataset.at = fat; row.dataset.fault = x.id;
+        const edge = el('span', 'edge', esc(edgeOf(m, x.side))); edge.dataset.edge = `${m.key}|${x.side}`; row.appendChild(edge);
+        row.appendChild(words('→'));
+        row.appendChild(text(x.label, (v) => { x.label = v; x.own = true; }, 'short words on the picture', '', fat + '.label', 26));
+        row.appendChild(words('said as'));
+        row.appendChild(text(x.text, (v) => { x.text = v; x.own = true; }, 'what the coach says', 'wide', fat + '.text'));
+        row.appendChild(words('well past'));
+        row.appendChild(text(x.deep, (v) => { x.deep = v; }, 'stronger words (optional)', 'wide'));
+        const more = btn('⋯', () => { ex.hidden = !ex.hidden; }, 'tiny-btn'); more.title = 'this fault\'s side, when, tone, and what silences it'; row.appendChild(more);
+        const rm = btn('✕', () => { if (!touch()) return; d.faults = d.faults.filter((q) => q !== x); commit(true); }, 'tiny-btn'); rm.title = 'remove this fault'; row.appendChild(rm);
+        const ex = el('div', 'more-f'); ex.hidden = true;
+        const g = el('div', 'sentence');
+        g.appendChild(words('on the')); g.appendChild(pick(x.side, [['above', 'high side'], ['below', 'low side']], (v) => { x.side = v; }, '', true, fat + '.side')); g.appendChild(words('of the rule'));
+        if (d.type === 'reps') { g.appendChild(words(', judged')); g.appendChild(pick(x.when || (x.setup ? 'always' : 'top'), whenOpts(), (v) => { delete x.setup; if (v === 'top') delete x.when; else x.when = v; }, 'this fault alone; the rule above sets every fault on it at once', true, fat + '.when')); }
+        g.appendChild(words(', tone')); g.appendChild(pick(x.tone || 'plain', Spec.TONES.map((t) => [t, t]), (v) => { x.tone = v; }, '', false, fat + '.tone'));
+        ex.appendChild(g);
+        const others = d.measurements.filter((q) => q.band && q !== m);
+        if (others.length) { const rq = el('div', 'sentence'); rq.appendChild(words('only while these are right:')); rq.appendChild(chipsMulti(others.map((q) => [q.key, describe(q).short]), x.requires || [], (set) => { if (set.length) x.requires = set; else delete x.requires; })); ex.appendChild(rq); }
+        const otherF = d.faults.filter((q) => q !== x);
+        if (otherF.length) { const un = el('div', 'sentence'); un.appendChild(words('not while one of these is on:')); un.appendChild(chipsMulti(otherF.map((q) => [q.id, q.label || q.id]), x.unless || [], (set) => { if (set.length) x.unless = set; else delete x.unless; })); ex.appendChild(un); }
+        row.appendChild(ex);
+        cardEl.appendChild(row);
+        const rec = el('div', 'rec'); rec.dataset.fault = x.id; rec.dataset.recKey = edgeKeyOf(m, x.side) || ''; cardEl.appendChild(rec);
+      }
+      const acts = el('div', 'row');
+      if (m.band) acts.appendChild(btn('Add a fault', () => { if (!touch()) return; const side = fs.some((q) => q.side === 'above') && !fs.some((q) => q.side === 'below') ? 'below' : 'above'; const t = W.faultTemplate(d, m, side); d.faults.push(Object.assign({ id: uniqueFaultId(m.key + 'Fault'), measure: m.key, side, label: t.label.slice(0, 26), text: t.text, tone: 'plain' }, whenOf(m) !== 'top' ? { when: whenOf(m) } : {})); commit(true); }, 'tiny-btn'));
+      if (filled(m)) acts.appendChild(btn('Numbers from the drawing', () => { if (!touch()) return; fromDrawing(m); commit(true); }, 'tiny-btn'));
+      if (filled(m) && window.__review && window.__review.shown) acts.appendChild(btn('Numbers from the recording', () => { if (!touch()) return; if (fromRecording(m)) commit(true); }, 'tiny-btn'));
+      cardEl.appendChild(acts);
+    }
+    /* more: the names, the arithmetic, the gate, the meter */
+    const more = details('More about this measurement');
+    const gg = grid('tight');
+    const lab = field('words for it (the picture and the settings use these)', m.label, (v) => { m.label = v; m.named = true; }, { structural: true, at: at + '.label', wide: true });
+    if (desc.named && m.label !== desc.what) { const use = el('button', 'linkbtn', 'use the generated words'); use.type = 'button'; use.style.marginLeft = '6px'; use.onclick = () => { if (!touch()) return; m.label = desc.what; m.named = true; commit(true); }; lab.querySelector('span').appendChild(use); }
+    gg.appendChild(lab);
+    gg.appendChild(field('short name on the picture', m.hud, (v) => { m.hud = v; m.named = true; }, { at: at + '.hud' }));
+    gg.appendChild(field('key', m.key, (v) => { const old = m.key; m.key = keyOf(v); m.named = true; for (const x of d.faults) if (x.measure === old) x.measure = m.key; if (d.progress && d.progress.measure === old) d.progress.measure = m.key; renameRefs(old, m.key); }, { structural: true, at: at + '.key' }));
+    gg.appendChild(field('offset (added)', m.offset, (v) => { if (v == null) delete m.offset; else m.offset = v; }, { type: 'number' }));
+    gg.appendChild(field('times', m.times, (v) => { if (v == null) delete m.times; else m.times = v; }, { type: 'number' }));
+    gg.appendChild(field('bias (taken off: a number or a setting)', m.bias, (v) => { if (v == null || v === '') delete m.bias; else m.bias = isNaN(Number(v)) ? v : Number(v); }, { at: at + '.bias' }));
+    gg.appendChild(field('unseen: the reading when a landmark is hidden', m.unseen, (v) => { if (v == null) delete m.unseen; else m.unseen = v; }, { type: 'number', at: at + '.unseen' }));
+    gg.appendChild(field('optional: not read is not a fault', m.optional, (v) => { if (v) m.optional = true; else delete m.optional; }, { type: 'check' }));
+    { const gt = m.gate || {}; const earlier = d.measurements.slice(0, i).map((q) => q.key);
+      gg.appendChild(field('read only while this earlier measurement…', gt.measure, (v) => { if (!v) delete m.gate; else m.gate = Object.assign({}, m.gate, { measure: v }); }, { options: [['', '— (always)']].concat(earlier.map((k) => [k, k])), at: at + '.gate' }));
+      gg.appendChild(field('…is at least', gt.min, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.min; else m.gate.min = isNaN(Number(v)) ? v : Number(v); } }, { at: at + '.gate.min' }));
+      gg.appendChild(field('…and at most', gt.max, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.max; else m.gate.max = isNaN(Number(v)) ? v : Number(v); } }, { at: at + '.gate.max' })); }
+    if (m.band) { gg.appendChild(field('meter from', (m.scale || [])[0], (v) => { m.scale = [v, (m.scale || [])[1]]; }, { type: 'number', at: at + '.scale' })); gg.appendChild(field('meter to', (m.scale || [])[1], (v) => { m.scale = [(m.scale || [])[0], v]; }, { type: 'number', at: at + '.scale' })); }
+    gg.appendChild(field('why (a note for the file)', m.why, (v) => { m.why = v; }, { type: 'textarea', rows: 2, wide: true }));
+    more.appendChild(gg); cardEl.appendChild(more);
+    return cardEl;
+  }
+  const chipsMulti = (items, current, onchange) => { const c = el('div', 'chips'); const set = new Set(current); for (const [v, t] of items) { const b = btn(t, () => { if (!touch()) return; if (set.has(v)) set.delete(v); else set.add(v); onchange([...set]); commit(true); }); b.setAttribute('aria-pressed', String(set.has(v))); c.appendChild(b); } return c; };
+  function renderDerived() {
+    const host = $('derived'); host.innerHTML = '';
+    const d = draft, more = details('Landmarks, bones and the drawing (derived from the measurements)');
+    const g = grid();
+    const L = d.landmarks;
+    const lmField = (label, value, set, at) => autoField('landmarks', label, value, set, { wide: true, at });
+    g.appendChild(lmField('Joints used', list(L.joints), (v) => { L.joints = fromList(v); }, 'landmarks.joints'));
+    g.appendChild(lmField('Needed — the frame is unusable without these', list(L.needed), (v) => { L.needed = fromList(v); }, 'landmarks.needed'));
+    g.appendChild(lmField('Dots drawn', list(L.dots), (v) => { L.dots = fromList(v); }, 'landmarks.dots'));
+    g.appendChild(autoField('landmarks', 'Bones, one a line as a-b', (L.bones || []).map((b) => b.join('-')).join('\n'), (v) => { L.bones = fromLines(v).map((x) => x.split('-').map((y) => y.trim())).filter((b) => b.length === 2); }, { type: 'textarea', rows: 3, at: 'landmarks.bones' }));
+    g.appendChild(autoField('landmarks', 'Bone colours, a|b: measurement', Object.entries(L.limb || {}).map(([k, v]) => `${k}: ${v}`).join('\n'), (v) => { L.limb = {}; for (const line of fromLines(v)) { const mm = /^([^:]+):\s*(\S+)$/.exec(line); if (mm) L.limb[mm[1].trim()] = mm[2]; } }, { type: 'textarea', rows: 3, at: 'landmarks.limb' }));
+    g.appendChild(autoField('facing', 'Faces from', (d.facing || {}).from, (v) => { d.facing = Object.assign({}, d.facing, { from: v }); }, { options: lmOpts('—'), at: 'facing' }));
+    g.appendChild(autoField('facing', 'toward', (d.facing || {}).to, (v) => { d.facing = Object.assign({}, d.facing, { to: v }); }, { options: lmOpts('—'), at: 'facing' }));
+    g.appendChild(field('The two direction words (forward, back)', (d.facing && d.facing.words || []).join(', '), (v) => { const w = fromList(v); d.facing = Object.assign({}, d.facing); if (w.length === 2) d.facing.words = w; else delete d.facing.words; }, { placeholder: 'forward, back', title: 'what + and − mean in the sentences: forward/back, toward the feet/toward the head' }));
+    g.appendChild(autoField('side', 'Which side is measured', (d.side || {}).pick || 'clearest', (v) => { d.side = { pick: v }; }, { options: [['clearest', 'the side the model sees best'], ['left', 'the left'], ['right', 'the right'], ['highest', 'the side whose joint is higher'], ['measure', 'the side whose measurement is larger']], structural: true, at: 'side.pick' }));
+    if ((d.side || {}).pick === 'highest') g.appendChild(autoField('side', 'that joint', d.side.joint, (v) => { d.side.joint = v; }, { options: lmOpts('—'), at: 'side.joint' }));
+    if ((d.side || {}).pick === 'measure') g.appendChild(autoField('side', 'that measurement', d.side.measure, (v) => { d.side.measure = v; }, { options: optsOf(d.measurements.map((m) => m.key), '—'), at: 'side.measure' }));
+    if (['highest', 'measure'].includes((d.side || {}).pick)) { const h = d.side.hold || {}; g.appendChild(autoField('side', 'held until the other side leads by', h.margin, (v) => { if (v == null) delete d.side.hold; else d.side.hold = Object.assign({ frames: 5 }, d.side.hold, { margin: v }); }, { type: 'number', at: 'side.hold' })); }
+    g.appendChild(autoField('draw', 'Drawn on the picture, as JSON', JSON.stringify(d.draw), (v) => { try { d.draw = JSON.parse(v); } catch { } }, { type: 'textarea', rows: 3, wide: true, at: 'draw' }));
+    more.appendChild(g); host.appendChild(more);
+  }
+  function renderExercise() {
+    const host = $('exercise-form'); host.innerHTML = '';
+    const d = draft;
     let g = grid();
     g.appendChild(autoField('id', 'Name', d.name, (v) => { d.name = v; }, { placeholder: 'Glute bridge', at: 'name' }));
-    g.appendChild(field(`File and key: ${d.id}.json`, d.id, (v) => { d.id = keyOf(v); d.auto.id = false; }, { placeholder: 'bridge', title: 'one word, lowercase: the file’s name and what the browser remembers it by', at: 'id' }));
+    g.appendChild(field(`File and key: ${d.id}.json`, d.id, (v) => { d.id = keyOf(v); d.auto.id = false; }, { placeholder: 'bridge', title: 'one word, lowercase: the file’s name and what the browser remembers it by', at: 'id', structural: true }));
     g.appendChild(field('What it is', d.type, (v) => { d.type = v; if (v === 'hold') { d.defaults.holdTargetSec = Math.max(d.defaults.holdTargetSec || 0, 20); } }, { options: [['reps', 'reps — a movement, counted'], ['hold', 'hold — one position, timed']], structural: true, at: 'type' }));
     g.appendChild(field('Sides', d.sides || 'both', (v) => { d.sides = v; }, { options: [['both', 'both at once'], ['left', 'the left'], ['right', 'the right'], ['alternate', 'one side per set, alternating']], structural: true, at: 'sides' }));
     g.appendChild(field('Load', d.load || 'none', (v) => { d.load = v; }, { options: [['none', 'none'], ['weight', 'a weight (kg bubble)'], ['band', 'a band (light, medium, heavy)'], ['both', 'a weight and a band']], at: 'load' }));
     g.appendChild(field('Body position', d.position || '', (v) => { d.position = v; }, { options: optsOf(Spec.POSITIONS), structural: true, title: 'sets the phone’s orientation, the opening words and which way the body faces, until you change those yourself', at: 'position' }));
-    s.appendChild(g);
+    if (d.type === 'reps') g.appendChild(field('The top of the rep, in a phrase (for the sentences)', d.words.atTop, (v) => { if (v) d.words.atTop = v; else delete d.words.atTop; }, { placeholder: 'at the top of the rep', structural: true, title: '“at the bottom of the squat”, “at the full slide”, “at the cat”' }));
+    host.appendChild(g);
     let more = details('More about it');
     g = grid();
     g.appendChild(field('The movement, in words', d.movement, (v) => { d.movement = v; }, { placeholder: 'hips lifted to a line and lowered' }));
@@ -713,129 +930,8 @@ Moves.ready.then(function () {
     g.appendChild(field('Status', d.status || 'ready', (v) => { d.status = v; }, { options: [['ready', 'ready — on the home page'], ['draft', 'draft — listed with a badge']] }));
     const mg = grid('tight'); mg.dataset.at = 'muscles'; for (const k of Spec.REGIONS) mg.appendChild(field(k, d.muscles[k], (v) => { if (v) d.muscles[k] = v; else delete d.muscles[k]; if (d.figure.points) d.figure.points.w = d.muscles; if (window.__review) window.__review.setFig(d.figure.points); }, { type: 'number', step: '0.05' }));
     more.appendChild(g); more.appendChild(el('p', 'tiny', 'Muscles working, 0 to 1 — the figure warms them by this:')); more.appendChild(mg);
-    s.appendChild(more); host.appendChild(s);
-
-    /* 2 — drawn */
-    s = section('The movement, drawn', 'A is the start, B the end; the coach animates between them. Drag the joints. The drawing is the demo on the exercise page and a picture to measure on; step 3 does not change when it moves.');
-    placeEditor(s);
-    host.appendChild(s);
-
-    /* 3 — measured */
-    s = section('What is measured', 'One card a measurement: its kind, its points (from the list over each slot), what it is for, when it must be right and between what. Degrees for angles, percent for lengths.');
-    mcanvas = null;
-    s.appendChild(btn('Add a measurement', addMeasure, 'primary'));
-    if (!d.measurements.length) s.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. Add one and make it the one that tracks the rep.' : 'Nothing measured yet. Add what has to be right for the hold.'));
-    /* bare controls for a sentence: a select, a number, words */
-    const pick = (value, options, onchange, title, structural, at) => { const sel = el('select', 'inline'); for (const [v, t] of options) { const it = el('option', null, esc(t)); it.value = v; sel.appendChild(it); } sel.value = value == null ? '' : String(value); if (title) sel.title = title; if (at) sel.dataset.at = at; sel.onchange = () => { onchange(sel.value); commit(!!structural); }; return sel; };
-    const num = (value, onchange, defKey, title) => { const inp = el('input', 'inline num'); inp.type = 'number'; inp.step = 'any'; inp.value = value == null ? '' : value; if (defKey) inp.dataset.def = defKey; if (title) inp.title = title; inp.onchange = () => { const v = inp.value === '' ? null : Number(inp.value); onchange(v); commit(false); }; return inp; };
-    const words = (t, cls) => el('span', 'w ' + (cls || ''), esc(t));
-    const KIND_OPTS = Object.entries(KIND_WORDS);
-    const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the whole rep'], ['always', 'at all times, before the rep too'], ['between', 'between reps only, at rest']];
-    d.measurements.forEach((m, i) => {
-      const card = el('div', 'mcard' + (editing && editing.m === m ? ' editing' : '')); const role = roleOf(m), u = unitOf(m), at = `measurements[${i}]`; card.dataset.at = at;
-      /* the head: its name, its kind, its values at A and B, the tools */
-      const head = el('div', 'mhead');
-      head.appendChild(el('b', null, esc(m.label || m.key)));
-      head.appendChild(pick(m.kind, KIND_OPTS, (v) => { const keep = new Set(slotsOf(v).map(([k]) => k)); for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) if (!keep.has(k)) delete m[k]; if (v !== 'distance') { delete m.per; delete m.times; } else { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); } m.kind = v; if (m.band) setBand(m, Spec.bandKind(m.band)); nameIt(m); editing = { m, slot: slotsOf(v)[0][0] }; }, KIND_HELP[m.kind] || '', true, at + '.kind'));
-      head.appendChild(el('span', 'mvals', '')); head.lastChild.dataset.val = m.key;
-      const tools = el('span', 'rowtools');
-      tools.appendChild(btn('↑', () => { if (i > 0) { [d.measurements[i - 1], d.measurements[i]] = [d.measurements[i], d.measurements[i - 1]]; commit(true); } }, 'tiny-btn'));
-      tools.appendChild(btn('↓', () => { if (i < d.measurements.length - 1) { [d.measurements[i + 1], d.measurements[i]] = [d.measurements[i], d.measurements[i + 1]]; commit(true); } }, 'tiny-btn'));
-      tools.appendChild(btn('✕', () => { removeMeasure(m); commit(true); }, 'tiny-btn'));
-      head.appendChild(tools);
-      card.appendChild(head);
-      /* the points, a slot each: the list opens over the slot */
-      const slotRow = el('div', 'chips slots');
-      for (const [k, w] of slotsOf(m.kind)) {
-        const b = btn(`${w}: ${m[k] ? esc(plain(m[k])) + (side_(m[k]) ? ` (${side_(m[k]) === 'other' ? 'other side' : side_(m[k]) === 'l' ? 'left' : 'right'})` : '') : '…'}`, () => { editing = { m, slot: k }; document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('editing', c === card)); slotRow.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); landmarkPopup(b, m, k); });
-        b.setAttribute('aria-pressed', String(!!(editing && editing.m === m && editing.slot === k)));
-        b.classList.add('slot'); b.dataset.at = at + '.' + k; slotRow.appendChild(b);
-      }
-      if (m.kind === 'distance') { const per = m.per || []; for (const n of [0, 1]) { const b = btn(`${n ? 'to' : 'as % of'}: ${per[n] ? esc(plain(per[n])) : '…'}`, () => { const pk = 'per' + n; m.per = m.per || ['knee', 'ankle']; landmarkPopup(b, { get [pk]() { return m.per[n]; }, set [pk](v) { m.per[n] = v; }, kind: m.kind, key: m.key }, pk); }); b.classList.add('slot'); b.dataset.at = at + '.per'; slotRow.appendChild(b); } }
-      /* measured as: the value, or against where it stood at the start */
-      slotRow.appendChild(pick(m.fromStart || '', [['', 'measured as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been in the set'], ['belowPeak', 'as how far under the most it has been in the set'], ['rest', 'as the change from the rest position (which follows slowly)']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; nameIt(m); }, 'the coach reads the value when the set-up wait ends, and from then on gives the change from it, or the percentage of it: how a length seen by the camera is judged against its own start', true, at + '.fromStart'));
-      card.appendChild(slotRow);
-      /* what it is for */
-      const roles = d.type === 'reps'
-        ? [['progress', 'tracks the rep', 'the count follows this one: a rep is under way past one line and counts when it is back past the other'], ['hold', 'must be right', 'the hold clock at the top runs only while this is inside its band; out of it is a fault'], ['note', 'a note', 'called when it is out, but the count goes on'], ['reading', 'just shown', 'on the picture only, never judged']]
-        : [['hold', 'must be right', 'the hold clock runs only while this is inside its band'], ['note', 'a note', 'called when it is out, but the clock goes on'], ['reading', 'just shown', 'on the picture only, never judged']];
-      card.appendChild(chips(roles, role, (v) => { setRole(m, v); commit(true); }));
-      /* the rule, as a sentence */
-      if (role === 'progress') {
-        const row = el('div', 'sentence'); row.dataset.at = 'progress';
-        row.appendChild(words('it')); row.appendChild(pick(d.progress.direction || 'up', [['up', 'rises'], ['down', 'falls']], (v) => { d.progress.direction = v; })); row.appendChild(words('during the rep; under way past'));
-        row.appendChild(num(d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, 'raiseAt', 'the rep is under way once the reading passes this')); row.appendChild(words(u));
-        row.appendChild(words('and counts once back past')); row.appendChild(num(d.defaults.downAt, (v) => { d.defaults.downAt = v; }, 'downAt', 'the rep counts once the reading is back past this')); row.appendChild(words(u));
-        card.appendChild(row);
-      }
-      if (role !== 'reading') {
-        const kind = Spec.bandKind(m.band) || 'none';
-        const row = el('div', 'sentence'); row.dataset.at = at + '.band';
-        if (d.type === 'reps') row.appendChild(pick(whenOf(m), WHEN_OPTS, (v) => { setWhen(m, v); }, 'when the rule is checked and its faults called', true)); else row.appendChild(words('throughout the hold,'));
-        row.appendChild(words('it must be'));
-        row.appendChild(pick(kind, [['none', 'anything: not judged'], ['range', 'between'], ['min', 'at least'], ['max', 'at most'], ['sym', 'within ± of zero']], (v) => { setBand(m, v); }, '', true));
-        if (m.band) {
-          const n = (rk, title) => { const key = m.band[rk]; row.appendChild(num(d.defaults[key], (v) => { d.defaults[key] = v; }, key, title)); row.appendChild(words(u)); };
-          if (kind === 'range') { n('lo', 'the lower edge'); row.appendChild(words('and')); n('hi', 'the upper edge'); }
-          else if (kind === 'min') n('min', 'the edge'); else if (kind === 'max') n('max', 'the edge'); else n('sym', 'either side of zero');
-          if (role === 'progress') row.appendChild(words('at the top'));
-        }
-        card.appendChild(row);
-        if (filled(m)) card.appendChild(btn('Numbers from the drawing', () => { fromDrawing(m); commit(true); }, 'tiny-btn'));
-      }
-      /* the faults: one line each */
-      const fs = d.faults.filter((x) => x.measure === m.key);
-      for (const x of fs) {
-        const row = el('div', 'fault-row sentence'), fat = `faults[${d.faults.indexOf(x)}]`; row.dataset.at = fat;
-        row.appendChild(pick(x.side, [['above', 'above it'], ['below', 'below it']], (v) => { x.side = v; }, '', false, fat + '.side'));
-        row.appendChild(words('→ on the picture')); const lab = el('input', 'inline'); lab.value = x.label || ''; lab.maxLength = 26; lab.placeholder = 'short words'; lab.dataset.at = fat + '.label'; lab.onchange = () => { x.label = lab.value; commit(false); }; row.appendChild(lab);
-        row.appendChild(words('said')); const tx = el('input', 'inline wide'); tx.value = x.text || ''; tx.placeholder = 'what the coach says'; tx.dataset.at = fat + '.text'; tx.onchange = () => { x.text = tx.value; commit(false); }; row.appendChild(tx);
-        row.appendChild(words('well past')); const dp = el('input', 'inline wide'); dp.value = x.deep || ''; dp.placeholder = 'stronger words (optional)'; dp.onchange = () => { x.deep = dp.value; commit(false); }; row.appendChild(dp);
-        const rm = btn('✕', () => { d.faults = d.faults.filter((q) => q !== x); commit(true); }, 'tiny-btn'); rm.title = 'remove this fault'; row.appendChild(rm);
-        card.appendChild(row);
-      }
-      if (m.band) card.appendChild(btn('Add a fault', () => { d.faults.push(Object.assign({ id: m.key + 'Fault' + (fs.length + 1), measure: m.key, side: 'above', label: `${cap(m.short || m.key)}`, text: '', deep: '', tone: 'plain' }, whenOf(m) !== 'top' ? { when: whenOf(m) } : {})); commit(true); }, 'tiny-btn'));
-      more = details('More about this measurement');
-      const gg = grid('tight');
-      gg.appendChild(field('words for it', m.label, (v) => { m.label = v; m.named = true; }, { structural: true, at: at + '.label' }));
-      gg.appendChild(field('short name on the picture', m.hud, (v) => { m.hud = v; m.named = true; }, { at: at + '.hud' }));
-      gg.appendChild(field('key', m.key, (v) => { const old = m.key; m.key = keyOf(v); m.named = true; for (const x of d.faults) if (x.measure === old) x.measure = m.key; if (d.progress && d.progress.measure === old) d.progress.measure = m.key; renameRefs(old, m.key); }, { structural: true, at: at + '.key' }));
-      gg.appendChild(field('offset (added)', m.offset, (v) => { if (v == null) delete m.offset; else m.offset = v; }, { type: 'number' }));
-      gg.appendChild(field('times', m.times, (v) => { if (v == null) delete m.times; else m.times = v; }, { type: 'number' }));
-      gg.appendChild(field('bias (taken off: a number or a setting)', m.bias, (v) => { if (v == null || v === '') delete m.bias; else m.bias = isNaN(Number(v)) ? v : Number(v); }, { at: at + '.bias' }));
-      gg.appendChild(field('unseen: the reading when a landmark is hidden', m.unseen, (v) => { if (v == null) delete m.unseen; else m.unseen = v; }, { type: 'number', at: at + '.unseen' }));
-      gg.appendChild(field('optional: not read is not a fault', m.optional, (v) => { if (v) m.optional = true; else delete m.optional; }, { type: 'check' }));
-      { const gt = m.gate || {}; const earlier = d.measurements.slice(0, i).map((q) => q.key);
-        gg.appendChild(field('read only while this earlier measurement…', gt.measure, (v) => { if (!v) delete m.gate; else m.gate = Object.assign({}, m.gate, { measure: v }); }, { options: [['', '— (always)']].concat(earlier.map((k) => [k, k])), at: at + '.gate' }));
-        gg.appendChild(field('…is at least', gt.min, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.min; else m.gate.min = isNaN(Number(v)) ? v : Number(v); } }, { at: at + '.gate.min' }));
-        gg.appendChild(field('…and at most', gt.max, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.max; else m.gate.max = isNaN(Number(v)) ? v : Number(v); } }, { at: at + '.gate.max' })); }
-      if (m.band) { gg.appendChild(field('meter from', (m.scale || [])[0], (v) => { m.scale = [v, (m.scale || [])[1]]; }, { type: 'number', at: at + '.scale' })); gg.appendChild(field('meter to', (m.scale || [])[1], (v) => { m.scale = [(m.scale || [])[0], v]; }, { type: 'number', at: at + '.scale' })); }
-      for (const x of fs) gg.appendChild(field(`tone of “${x.label || x.id}”`, x.tone || 'tick', (v) => { x.tone = v; }, { options: Spec.TONES.map((t) => [t, t]), at: `faults[${d.faults.indexOf(x)}].tone` }));
-      gg.appendChild(field('why (a note for the file)', m.why, (v) => { m.why = v; }, { type: 'textarea', rows: 2, wide: true }));
-      more.appendChild(gg); card.appendChild(more);
-      s.appendChild(card);
-    });
-    more = details('Landmarks, bones and the drawing (derived from the measurements)');
-    g = grid();
-    const L = d.landmarks;
-    const lmField = (label, value, set, at) => autoField('landmarks', label, value, set, { wide: true, at });
-    g.appendChild(lmField('Joints used', list(L.joints), (v) => { L.joints = fromList(v); }, 'landmarks.joints'));
-    g.appendChild(lmField('Needed — the frame is unusable without these', list(L.needed), (v) => { L.needed = fromList(v); }, 'landmarks.needed'));
-    g.appendChild(lmField('Dots drawn', list(L.dots), (v) => { L.dots = fromList(v); }, 'landmarks.dots'));
-    g.appendChild(autoField('landmarks', 'Bones, one a line as a-b', (L.bones || []).map((b) => b.join('-')).join('\n'), (v) => { L.bones = fromLines(v).map((x) => x.split('-').map((y) => y.trim())).filter((b) => b.length === 2); }, { type: 'textarea', rows: 3, at: 'landmarks.bones' }));
-    g.appendChild(autoField('landmarks', 'Bone colours, a|b: measurement', Object.entries(L.limb || {}).map(([k, v]) => `${k}: ${v}`).join('\n'), (v) => { L.limb = {}; for (const line of fromLines(v)) { const mm = /^([^:]+):\s*(\S+)$/.exec(line); if (mm) L.limb[mm[1].trim()] = mm[2]; } }, { type: 'textarea', rows: 3, at: 'landmarks.limb' }));
-    g.appendChild(autoField('facing', 'Faces from', (d.facing || {}).from, (v) => { d.facing = Object.assign({}, d.facing, { from: v }); }, { options: lmOpts('—'), at: 'facing' }));
-    g.appendChild(autoField('facing', 'toward', (d.facing || {}).to, (v) => { d.facing = Object.assign({}, d.facing, { to: v }); }, { options: lmOpts('—'), at: 'facing' }));
-    g.appendChild(autoField('side', 'Which side is measured', (d.side || {}).pick || 'clearest', (v) => { d.side = { pick: v }; }, { options: [['clearest', 'the side the model sees best'], ['left', 'the left'], ['right', 'the right'], ['highest', 'the side whose joint is higher'], ['measure', 'the side whose measurement is larger']], structural: true, at: 'side.pick' }));
-    if ((d.side || {}).pick === 'highest') g.appendChild(autoField('side', 'that joint', d.side.joint, (v) => { d.side.joint = v; }, { options: lmOpts('—'), at: 'side.joint' }));
-    if ((d.side || {}).pick === 'measure') g.appendChild(autoField('side', 'that measurement', d.side.measure, (v) => { d.side.measure = v; }, { options: optsOf(d.measurements.map((m) => m.key), '—'), at: 'side.measure' }));
-    if (['highest', 'measure'].includes((d.side || {}).pick)) { const h = d.side.hold || {}; g.appendChild(autoField('side', 'held until the other side leads by', h.margin, (v) => { if (v == null) delete d.side.hold; else d.side.hold = Object.assign({ frames: 5 }, d.side.hold, { margin: v }); }, { type: 'number', at: 'side.hold' })); }
-    g.appendChild(autoField('draw', 'Drawn on the picture, as JSON', JSON.stringify(d.draw), (v) => { try { d.draw = JSON.parse(v); } catch { } }, { type: 'textarea', rows: 3, wide: true, at: 'draw' }));
-    more.appendChild(g); s.appendChild(more);
-    host.appendChild(s);
-
-    /* 4 — the phone and the words */
-    s = section('The phone and the words', 'Where the phone goes and what is said follow from the pose; change what you like.');
+    host.appendChild(more);
+    host.appendChild(el('h3', 'tiny-h', 'The phone and the words'));
     g = grid();
     g.appendChild(field('The phone', d.phone.orientation || 'tall', (v) => { d.phone.orientation = v; }, { options: [['tall', 'stood up (tall picture)'], ['wide', 'on its side (wide picture)']], structural: true, at: 'phone.orientation' }));
     g.appendChild(field('It sees the body', d.phone.view || 'side', (v) => { d.phone.view = v; }, { options: [['side', 'side on'], ['front', 'from the front (left and right apart)']], structural: true, title: 'a front view names landmarks L.knee and R.knee; the figure’s view should match', at: 'phone.view' }));
@@ -844,7 +940,7 @@ Moves.ready.then(function () {
     g.appendChild(autoField('start', 'Opening words (said once, first)', d.words.start, (v) => { d.words.start = v; }, { type: 'textarea', rows: 2, wide: true, at: 'words.start' }));
     if (d.type === 'reps') g.appendChild(autoField('prompt', 'The prompt that asks for the movement', (d.prompt || {}).text, (v) => { d.prompt = Object.assign({ id: 'raise' }, d.prompt, { text: v }); }, { wide: true, placeholder: 'Lift your hips', at: 'prompt' }));
     g.appendChild(field('The starting position, in a line', d.words.position, (v) => { d.words.position = v; }, { wide: true, placeholder: 'On your back, knees bent, feet flat, side on to the phone.', at: 'words.position' }));
-    s.appendChild(g);
+    host.appendChild(g);
     more = details('More words');
     g = grid();
     g.appendChild(field('The end position (the top)', d.words.top, (v) => { d.words.top = v; }, { type: 'textarea', rows: 2, wide: true, at: 'words.top' }));
@@ -865,62 +961,145 @@ Moves.ready.then(function () {
     g.appendChild(field('Common mistakes', d.words.mistakes, (v) => { d.words.mistakes = v; }, { type: 'textarea', rows: 2 }));
     g.appendChild(field('Easier', d.words.easier, (v) => { d.words.easier = v; }));
     g.appendChild(field('Harder', d.words.harder, (v) => { d.words.harder = v; }));
-    more.appendChild(g); s.appendChild(more);
-    host.appendChild(s);
-
-    /* 5 — the numbers */
-    s = section('The numbers', 'The set and the hold. The edges and thresholds of what is measured are on their cards above.');
-    g = grid('tight');
-    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number', at: 'defaults.repCount' })); g.appendChild(field('Hold at the top, seconds (0: the rep counts on reaching the top and coming back)', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec' })); }
-    else g.appendChild(field('Hold the position for, seconds', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec' }));
-    g.appendChild(field('Sets', d.defaults.setCount, (v) => { d.defaults.setCount = v; }, { type: 'number', at: 'defaults.setCount' }));
+    more.appendChild(g); host.appendChild(more);
+  }
+  function renderNumbers() {
+    const host = $('numbers-form'); host.innerHTML = '';
+    const d = draft;
+    let g = grid('tight');
+    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number', at: 'defaults.repCount', def: 'repCount' })); g.appendChild(field('Hold at the top, seconds (0: the rep counts on reaching the top and coming back)', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec', def: 'holdTargetSec' })); }
+    else g.appendChild(field('Hold the position for, seconds', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec', def: 'holdTargetSec' }));
+    g.appendChild(field('Sets', d.defaults.setCount, (v) => { d.defaults.setCount = v; }, { type: 'number', at: 'defaults.setCount', def: 'setCount' }));
     if (d.type === 'hold') g.appendChild(field('Time calls, seconds left', list(d.defaults.callAtSec), (v) => { d.defaults.callAtSec = fromList(v).map(Number).filter((n) => n > 0); }, { at: 'defaults.callAtSec' }));
-    s.appendChild(g);
-    more = details('Timing, smoothing, and every number the file has');
+    host.appendChild(g);
+    const more = details('Timing, smoothing, and every number the file has');
     g = grid('tight');
-    for (const [k, label] of TIMING) g.appendChild(field(label, d.defaults[k], (v) => { if (v == null) delete d.defaults[k]; else d.defaults[k] = v; }, { type: 'number', at: 'defaults.' + k }));
+    for (const [k, label] of TIMING) g.appendChild(field(label, d.defaults[k], (v) => { if (v == null) delete d.defaults[k]; else d.defaults[k] = v; }, { type: 'number', at: 'defaults.' + k, def: k }));
     more.appendChild(g);
-    more.appendChild(el('p', 'tiny', 'Every number in defaults, as the file has it:'));
+    more.appendChild(el('p', 'tiny', 'Every number in defaults, as the file has it (the edges and the lines are on the cards too):'));
     g = grid('tight'); g.dataset.at = 'defaults';
-    for (const k of settingKeys()) if (k !== 'callAtSec') g.appendChild(field(k, d.defaults[k], (v) => { if (v == null) delete d.defaults[k]; else d.defaults[k] = v; }, { type: 'number', at: 'defaults.' + k }));
-    more.appendChild(g); s.appendChild(more);
-    host.appendChild(s);
-
-    refreshValues();
+    for (const k of settingKeys()) if (k !== 'callAtSec') { const sw = W.settingWords(d, k); g.appendChild(field(sw ? `${k} — ${sw}` : k, d.defaults[k], (v) => { if (v == null) delete d.defaults[k]; else d.defaults[k] = v; }, { type: 'number', at: 'defaults.' + k, def: k })); }
+    more.appendChild(g); host.appendChild(more);
   }
 
-  /* ================= wiring ================= */
-  $('build-copy').onclick = () => { const id = $('move').value; if (Moves[id]) start(Moves[id].spec); };
-  $('build-file').onchange = async (e) => {
-    const f = e.target.files && e.target.files[0]; if (!f) return;
-    try { start(JSON.parse(await f.text())); } catch (err) { $('build-note').textContent = 'Not an exercise file: ' + (err.message || err); }
-  };
-  $('build-download').onclick = () => {
+  /* ================= the recommendations, on the rows they concern ================= */
+  let lastRec = null;
+  function showRecommendations(rec) {
+    lastRec = rec;
+    const haveRecs = !!(window.__review && window.__review.recordings && window.__review.recordings.length);
+    const fmtV = (v, u) => (v == null ? '—' : (Math.abs(v) >= 100 || u === '°' ? Math.round(v) : +v.toFixed(1)) + (u || ''));
+    const range = (x, u) => (x && x.n ? (Math.abs(x.lo - x.hi) < 0.05 ? fmtV(x.lo, u) : `${fmtV(x.lo, u)}–${fmtV(x.hi, u)}`) + ` (${x.n})` : 'none');
+    document.querySelectorAll('.mcard .rec').forEach((n) => {
+      n.className = 'rec'; n.innerHTML = '';
+      if (!haveRecs) { n.hidden = true; return; }
+      n.hidden = false;
+      const line = n.dataset.recKey === 'raiseAt' && !n.dataset.fault ? (rec && rec.lines.find((l) => l.key === 'raiseAt')) : null;
+      const f = n.dataset.fault && rec ? rec.faults.find((x) => x.id === n.dataset.fault) : null;
+      if (!rec || !rec.labelled || (!f && !line)) { n.classList.add('muted'); n.textContent = rec && rec.labelled ? 'No rep is classified with this yet.' : 'No verdicts yet — classify the reps on the right.'; return; }
+      const apply = (key, value) => { const b = el('button', 'btn tiny-btn', `Apply ${esc(String(value))}`); b.type = 'button'; b.dataset.key = key; b.dataset.value = value; b.onclick = () => setNumber(key, Number(value)); return b; };
+      if (line) {
+        n.classList.add(line.status);
+        n.innerHTML = line.status === 'fine' ? `✓ the reps you called reps reach ${fmtV(line.nearest, line.unit)} at the least (${line.n}): the line at ${fmtV(line.now, line.unit)} holds.` : `The shortest rep you called a rep reaches ${fmtV(line.nearest, line.unit)}, short of the line at ${fmtV(line.now, line.unit)}: move the line to <b>${fmtV(line.value, line.unit)}</b>.`;
+        if (line.status !== 'fine') n.appendChild(apply(line.key, line.value));
+        return;
+      }
+      n.classList.add(f.status);
+      const thin = (f.clean.n < 3 || f.bad.n < 2) ? ' — few reps: label more' : '';
+      const by = f.by && f.by.length ? ` <details><summary>by rep</summary><ul>${f.by.map((b) => `<li>${esc(b.take || '')} ${b.n ? 'rep ' + b.n : ''} · ${fmtV(b.v, f.unit)} · ${b.marked ? 'marked' : 'clean'}</li>`).join('')}</ul></details>` : '';
+      if (f.status === 'fine') n.innerHTML = `✓ <b>${fmtV(f.now, f.unit)}</b> agrees with your verdicts: clean reps ${range(f.clean, f.unit)}, marked ${range(f.bad, f.unit)}${thin}.${by}`;
+      else if (f.status === 'move') { n.innerHTML = `Clean reps ${range(f.clean, f.unit)}, marked ${range(f.bad, f.unit)}: as it stands ${f.nowFalse} false alarm${f.nowFalse === 1 ? '' : 's'}, ${f.nowMiss} missed. Move the number to <b>${fmtV(f.value, f.unit)}</b>${thin}.${by} `; n.appendChild(apply(f.key, f.value)); }
+      else { n.innerHTML = `The clean and the marked reps overlap: clean ${range(f.clean, f.unit)}, marked ${range(f.bad, f.unit)}. The cut that gets most right is <b>${fmtV(f.value, f.unit)}</b>: ${f.afterFalse} clean rep${f.afterFalse === 1 ? '' : 's'} would still be flagged, ${f.afterMiss} marked still missed${thin}.${by} `; n.appendChild(apply(f.key, f.value)); }
+    });
+  }
+
+  /* ================= try it: here, on the phone by a link, or by the file ================= */
+  const sheet = $('try-sheet');
+  async function openTry() {
+    if (!draft) return;
+    commit(false);
+    if ($('try-live').disabled) return;
+    sheet.hidden = false;
+    $('share-link').value = 'Making the link…'; $('share-note').textContent = '';
+    try {
+      const code = await Share.encode(fileOf());
+      const url = location.origin + location.pathname.replace(/[^/]*$/, 'index.html') + '#/ex/~' + code;
+      $('share-link').value = url;
+      $('share-note').textContent = `${(url.length / 1024).toFixed(1)} KB — fine for a message, a note or an email; too long for a QR code.`;
+      $('share-send').hidden = !navigator.share;
+    } catch (e) { $('share-link').value = ''; $('share-note').textContent = 'Could not make the link: ' + (e.message || e); }
+  }
+  $('try-live').onclick = openTry;
+  $('try-close').onclick = () => { sheet.hidden = true; };
+  sheet.onclick = (e) => { if (e.target === sheet) sheet.hidden = true; };
+  $('try-here').onclick = () => { if (!draft) return; if (!draft.touched) { /* an untouched copy runs as the library's own */ } commit(false); location.href = 'index.html#/ex/' + draft.id; };
+  $('share-copy').onclick = async () => { try { await navigator.clipboard.writeText($('share-link').value); $('share-copy').textContent = 'Copied'; setTimeout(() => { $('share-copy').textContent = 'Copy the link'; }, 1500); } catch { $('share-link').select(); } };
+  $('share-send').onclick = async () => { try { await navigator.share({ title: draft.name, text: `${draft.name} — an OnTrack exercise`, url: $('share-link').value }); } catch { } };
+  $('share-download').onclick = () => download();
+  function download() {
     if (!draft) return;
     const blob = new Blob([JSON.stringify(fileOf(), null, 2) + '\n'], { type: 'application/json' });
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = `${draft.id || 'exercise'}.json`; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  const link = async () => location.origin + location.pathname.replace(/[^/]*$/, 'index.html') + '#/ex/~' + (await Share.encode(fileOf()));
+
+  /* ================= wiring ================= */
+  $('build-new').onclick = () => { $('start-over').open = true; $('start-over').scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+  $('build-file').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      if (j && j.move && j.defaults && !j.measurements) { /* a numbers file from an earlier studio: its numbers into the open exercise */ if (touch()) { Object.assign(draft.defaults, j.defaults); commit(true); } return; }
+      if (touched() && !window.confirm(`Replace the draft of “${draft.name}” with this file? Download it first if you want it.`)) return;
+      Moves.draft(null);
+      start(j, {}, { source: Moves[j.id] && !Moves[j.id].draft ? j.id : null, touched: true });
+    } catch (err) { $('build-note').textContent = 'Not an exercise file: ' + (err.message || err); }
+    e.target.value = '';
   };
-  $('try-live').onclick = () => { if (!draft) return; commit(false); location.href = 'index.html#/ex/' + draft.id; };
+  $('build-download').onclick = download;
   $('build-drop').onclick = drop;
+  $('add-measure').onclick = addMeasure;
+  /* the library's own numbers back into the draft, the rest of the edit kept */
+  $('numbers-reset').onclick = () => { const lib = source() && ((Moves.library && Moves.library[source()]) || Moves[source()]); if (!lib || !touch()) return; for (const [k, v] of Object.entries(lib.spec.defaults || {})) if (k in draft.defaults) draft.defaults[k] = v; commit(true); };
   $('build-apply-json').onclick = () => {
-    try { const j = JSON.parse($('build-json').value); start(j, draft ? draft.auto : {}); }
+    try { const j = JSON.parse($('build-json').value); if (!touch()) return; start(j, draft ? draft.auto : {}, { source: source(), touched: true }); }
     catch (e) { $('build-note').textContent = 'That is not JSON: ' + (e.message || e); }
   };
-  /* the tuned numbers from the Recordings tab, into the draft */
-  $('tuned-to-draft').onclick = () => {
-    if (!draft || !window.__review) return;
-    Object.assign(draft.defaults, window.__review.tuned);
-    commit(true);
+  /* a keyframe from the frame the video is on: the landmarks of that moment, as the figure's points */
+  $('fig-from-frame').onclick = () => {
+    const rv = window.__review, rec = rv && rv.shown; if (!rec || !rec.result || !touch()) return;
+    const t = $('clip').duration ? $('clip').currentTime * 1000 : 0;
+    let best = null; for (const r of rec.result.rows) if (!best || Math.abs(r.t - t) < Math.abs(best.t - t)) best = r;
+    const rd = best && best.reading; if (!rd || !rd.ok) { $('build-note').textContent = 'The model does not see the person in this frame.'; return; }
+    const K = figureFromReading(rd, rec.aspect); if (!K) return;
+    const f = draft.figure.points, kf = $('kf-B').getAttribute('aria-pressed') === 'true' ? 'B' : 'A';
+    f[kf] = K; if (kf === 'A' && !f.B) f.B = clone(K);
+    if (window.__review) window.__review.setFig(f);
+    commit(false);
   };
-  window.addEventListener('resize', () => { if (draft) drawMeasure(); });
+  /* a reading's points scaled into the drawing's space (400 × 175, the floor at y 161), the near side as the figure's near limb */
+  function figureFromReading(rd, aspect) {
+    const P = rd.points, O = rd.other || {};
+    const near = { h: P.ear, sh: P.shoulder, hip: P.hip, kn: P.knee, an: P.ankle, he: P.heel, ft: P.toe, el: P.elbow, wr: P.wrist }, far = { knF: O.knee, anF: O.ankle, heF: O.heel, ftF: O.toe, elF: O.elbow, wrF: O.wrist };
+    const pts = Object.assign({}, near, far); const have = Object.entries(pts).filter(([, p]) => p && p.v >= 0.5);
+    if (have.length < 5) return null;
+    const ys = have.map(([, p]) => p.y), xs = have.map(([, p]) => p.x);
+    const span = Math.max(Math.max(...ys) - Math.min(...ys), (Math.max(...xs) - Math.min(...xs))) || 1;
+    const s = 130 / span, cx = (Math.min(...xs) + Math.max(...xs)) / 2, bottom = Math.max(...ys);
+    const flip = (rd.facing || 1) < 0 ? -1 : 1;
+    const K = {}; for (const [k, p] of have) K[k] = [Math.round(306 + (p.x - cx) * s * flip), Math.round(161 - (bottom - p.y) * s)];
+    return K;
+  }
 
-  /* a draft kept from last time comes back; otherwise the page offers the poses */
+  /* a draft kept from last time comes back; otherwise the exercise in the address, or the first */
   let kept = null;
   try { kept = JSON.parse(localStorage.getItem(DRAFT) || 'null'); } catch { kept = null; }
-  if (kept) start(kept, kept.auto || {});
-  else { renderStart(); $('build-note').textContent = 'No draft. Start from a pose above, or from a copy of an exercise.'; }
+  const q = new URLSearchParams(location.search);
+  if (kept && kept.id && kept.measurements) start(kept, kept.auto || {}, { source: kept.source || (Moves.library && Moves.library[kept.id] ? kept.id : null), touched: true });
+  else open(Moves[q.get('move')] ? q.get('move') : (Moves.bridge ? 'bridge' : Moves.list[0].id));
+  if (q.get('move') && draft && draft.id !== q.get('move') && Moves[q.get('move')]) open(q.get('move'));
 
-  window.__builder = { get draft() { return draft; }, start, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, tapped, addMeasure, fillSlot, setRole, setBand, fromDrawing, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
+  window.__builder = { get draft() { return draft; }, get source() { return source(); }, get touched() { return touched(); }, start, open, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, addMeasure, fillSlot, setShape, setRole, setBand, fromDrawing, fromRecording, setNumber, setNumbers, showRecommendations, addDiscovered, addFaultOn, fileOf, link, download, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
+  if (window.__studio) Object.assign(window.__studio, { builder: window.__builder });
 });
