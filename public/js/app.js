@@ -281,6 +281,7 @@ Moves.ready.then(function () {
     buildPicker();
     imported = file.id;
     window.history.replaceState(null, '', location.pathname + '#/ex/' + file.id);   // the long address goes; a reload does not import again
+    if (move && move.id === file.id) selectMove(file.id);   // the page was already on this exercise: take the draft, not the copy it had
     route();
   }
   /* the exercise page to go back to: the step of the plan, or the exercise itself */
