@@ -851,7 +851,7 @@ Moves.ready.then(function () {
       const cfg = Object.assign({}, Trace.defaults(move), { mirror: false, angles: false, setCount: 1, showPoints: allPoints() });
       let n = 0;
       for (let t = 0; t < dur; t += 1 / fps, n++) {
-        await seekTo(Math.min(t, dur - 0.001));
+        await seekTo(video, Math.min(t, dur - 0.001));
         const row = rowAt(t * 1000);
         if (overlayOn) {
           Overlay.draw(ctx, { W, H, source: { image: video, w: video.videoWidth, h: video.videoHeight, quarter: 0, mirror: false },
@@ -877,7 +877,7 @@ Moves.ready.then(function () {
       save(blob, `${String(trace.name || 'clip').replace(/\.[^.]+$/, '')}-demo.mp4`);
       note(`${(blob.size / 1e6).toFixed(1)} MB \u00b7 ${samples.length} frames \u00b7 ${audio ? `the voice on ${voiced} of ${cues.length} cues and every tone` : 'silent \u2014 this browser cannot encode sound'}${original ? ', over the clip\u2019s own sound' : ''}${overlayOn ? ', the coaching drawn on every frame' : ', the picture as it was'}.`);
     } catch (e) { note('Could not render: ' + (e.message || e)); demo = { why: String(e && e.message || e) }; }
-    finally { btn.disabled = false; try { await seekTo(0); } catch { } }
+    finally { btn.disabled = false; try { await seekTo(video, 0); } catch { } }
   }
   $('render-demo').onclick = renderDemo;
 
