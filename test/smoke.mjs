@@ -1173,7 +1173,7 @@ try {
     await wait(300);
     assert.ok((await page.evaluate(() => document.getElementById('clip').currentTime)) > 0.5, 'a tap on the lanes goes to that moment');
     /* the animation editor, under the animation: the open exercise's figure, a copy of the bridge's */
-    await page.evaluate(() => { document.getElementById('fig-edit').open = true; });
+    await page.evaluate(() => { document.getElementById('fig-edit').open = true; document.getElementById('anim-edit').scrollIntoView({ block: 'center' }); });
     await wait(400);
     const before = await page.evaluate(() => JSON.stringify(window.__review.fig.A.kn));
     assert.match(await page.inputValue('#anim-json'), /"view":"side","A":\{"h"/, 'the bridge\'s figure loaded');
