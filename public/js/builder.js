@@ -601,7 +601,7 @@ Moves.ready.then(function () {
     d.measurements.push(m);
     d.defaults[settingKey] = row.edge;
     const words = group && group.id && group.id[0] === '+' ? group.id.slice(1) : (group && group.label) || (row.fault && row.fault.label) || 'Found';
-    const id = uniqueFaultId(W.camel(words));
+    const id = uniqueFaultId(keptFaultId(group) || W.camel(words));
     const when = (row.fault && row.fault.when) || (group && group.when) || 'top';
     d.faults.push(Object.assign({ id, measure: m.key, side: row.side, label: words.slice(0, 26), text: (row.fault && row.fault.text) || words, tone: 'plain' }, when !== 'top' ? { when } : {}));
     if (!d.auto.landmarks && d.landmarks) { const L = d.landmarks; for (const n of lmRefs(m)) { if (!L.joints.includes(n)) L.joints.push(n); if (!L.dots.includes(n)) L.dots.push(n); } }
@@ -615,13 +615,16 @@ Moves.ready.then(function () {
     const d = draft, m = d.measurements.find((q) => q.key === row.existing.key); if (!m) return;
     if (!m.band) { if (!d.inPosition) d.inPosition = bandedKeys(); setBand(m, row.side === 'above' ? 'max' : 'min'); d.faults = d.faults.filter((x) => x.measure !== m.key); const k = row.side === 'above' ? m.band.max : m.band.min; d.defaults[k] = row.edge; }
     const words = group && group.id && group.id[0] === '+' ? group.id.slice(1) : (group && group.label) || 'Found';
-    const id = uniqueFaultId(W.camel(words));
+    const id = uniqueFaultId(keptFaultId(group) || W.camel(words));
     const when = (group && group.when) || 'top';
     d.faults.push(Object.assign({ id, measure: m.key, side: row.side, label: words.slice(0, 26), text: words, tone: 'plain' }, when !== 'top' ? { when } : {}));
     if (group && group.id && group.id[0] === '+' && window.__review) window.__review.renameFault(group.id, id);
     commit(true);
     goTo(`measurements[${d.measurements.indexOf(m)}]`);
   }
+  /* the verdicts and a take's tag name a fault by its id: when the draft no longer has that fault (its measure
+     was removed), the one built from the recordings takes the id back, so the verdicts keep meaning it */
+  const keptFaultId = (group) => (group && group.id && group.id !== '*' && group.id[0] !== '+' && !draft.faults.some((f) => f.id === group.id) ? group.id : null);
   const uniqueFaultId = (base) => { base = (base || 'fault').replace(/[^a-zA-Z0-9]/g, '') || 'fault'; if (!/^[a-zA-Z]/.test(base)) base = 'f' + base; let id = base, n = 2; const taken = new Set(draft.faults.map((x) => x.id).concat(['lost', 'edge', 'framing', 'dark', 'backlit', 'blend', 'notready', 'room', 'raise'])); while (taken.has(id)) id = base + n++; return id; };
   /* Everywhere else a measurement is named: the drawing (arcs, readouts, a line's good),
      the bone colours, the side pick, the gates of later measurements, the start ranges,
