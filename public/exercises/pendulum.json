@@ -32,15 +32,15 @@
     "hint": "Bent forward with one hand on a table, the other arm hanging loose and swinging in small circles.",
     "start": "Stand the phone up on the floor. Lean forward with one hand on a table, side on to it, and let the other arm hang.",
     "position": "Stand side on to the phone, bend forward from the hips with the good hand on a table or chair back, and let the stiff arm hang straight down, relaxed.",
-    "top": "The trunk leaning forward about sixty degrees, the arm hanging straight and loose, swinging small circles a foot across from the body, not the shoulder.",
+    "top": "The trunk leaning forward — anywhere from halfway to nearly flat — the arm hanging straight and loose, swinging small circles about a foot across, moved by the body, not the shoulder.",
     "howto": [
-      "Lean forward from the hips with your good hand on a table, so the stiff arm hangs clear of your body.",
+      "Stand with one foot forward and the knees soft. Lean forward from the hips with your good hand on a table, so the stiff arm hangs clear of your body.",
       "Let the arm hang heavy. Rock your body gently so the arm swings in small circles, about a foot across — the shoulder muscles do nothing.",
       "Keep it going for the count. Ten circles each way, then the other direction.",
       "As it eases over the weeks, widen the circles a little or hold a light weight. Never force it."
     ],
-    "cannot": "Whether the shoulder muscles are truly relaxed: it sees the lean, the arm hanging and the elbow. The arm should feel heavy, like a rope.",
-    "about": "Pendulum swing — standing side on, bent forward: the lean, as the hip-to-shoulder line off vertical, 40–80° (bent enough for the arm to clear the body); the arm, as how far the shoulder-to-wrist line is lifted from hanging straight down, at most 35° — a swing a foot across is well inside it, and more than that is the shoulder lifting the arm rather than the body swinging it; the elbow at least 150°, the arm hanging straight. The clock runs while all three are right. Thirty seconds a set, three sets.",
+    "cannot": "Whether the shoulder muscles are truly relaxed, and the side-to-side part of the swing, which is toward the camera: it sees the lean, the arm’s forward-and-back swing and the elbow. The arm should feel heavy, like a rope.",
+    "about": "Pendulum swing — standing side on, bent forward with the good hand on a table: the lean, as the hip-to-shoulder line off vertical, 30–95° (from halfway to nearly flat, enough for the arm to hang clear); the arm, as how far the shoulder-to-wrist line is lifted from hanging straight down, at most 23° — circles a foot across stay well inside it, more is the shoulder lifting the arm rather than the body swinging it; and the elbow at least 150°, the arm hanging straight. The clock runs while all three are right. Thirty seconds a set, three sets.",
     "lost": "Stand side on to the camera, bent forward, the whole body in",
     "holdLabel": "Swing for",
     "hold": "That is it — let it swing",
@@ -55,30 +55,128 @@
     "back": 0.2
   },
   "figure": {
-    "pose": {
+    "points": {
+      "view": "side",
       "A": {
-        "torso": 55,
-        "neck": -20,
-        "thigh": 5,
-        "shin": -5,
-        "foot": 0,
-        "uarm": 10,
-        "farm": 10,
-        "uarmF": 80,
-        "farmF": 40
+        "h": [
+          318,
+          55
+        ],
+        "sh": [
+          305,
+          73
+        ],
+        "hip": [
+          269,
+          98
+        ],
+        "kn": [
+          272,
+          128
+        ],
+        "an": [
+          269,
+          158
+        ],
+        "ft": [
+          283,
+          158
+        ],
+        "el": [
+          310,
+          99
+        ],
+        "wr": [
+          314,
+          122
+        ],
+        "knF": [
+          268,
+          128
+        ],
+        "anF": [
+          266,
+          158
+        ],
+        "ftF": [
+          279,
+          161
+        ],
+        "elF": [
+          331,
+          78
+        ],
+        "wrF": [
+          346,
+          96
+        ]
       },
       "B": {
-        "torso": 55,
-        "neck": -20,
-        "thigh": 5,
-        "shin": -5,
-        "foot": 0,
-        "uarm": -15,
-        "farm": -15,
-        "uarmF": 80,
-        "farmF": 40
+        "h": [
+          318,
+          55
+        ],
+        "sh": [
+          305,
+          73
+        ],
+        "hip": [
+          269,
+          98
+        ],
+        "kn": [
+          272,
+          128
+        ],
+        "an": [
+          269,
+          158
+        ],
+        "ft": [
+          283,
+          158
+        ],
+        "el": [
+          299,
+          98
+        ],
+        "wr": [
+          292,
+          121
+        ],
+        "knF": [
+          268,
+          128
+        ],
+        "anF": [
+          266,
+          158
+        ],
+        "ftF": [
+          279,
+          161
+        ],
+        "elF": [
+          331,
+          78
+        ],
+        "wrF": [
+          346,
+          96
+        ]
       },
-      "anchor": "ft"
+      "hold": false,
+      "side": "both",
+      "flip": false,
+      "props": [
+        {
+          "kind": "box",
+          "x": 338,
+          "y": 99,
+          "w": 48,
+          "h": 65
+        }
+      ]
     }
   },
   "facing": {
@@ -156,7 +254,7 @@
           "key": "leanMax",
           "label": "Trunk lean, at most",
           "min": 50,
-          "max": 90
+          "max": 95
         }
       ]
     },
@@ -218,7 +316,7 @@
       "measure": "lean",
       "side": "below",
       "label": "Lean further",
-      "text": "Lean forward a little more, hand on the table",
+      "text": "Lean forward a little more, hand on the table — the arm has to hang clear",
       "deep": "Bend further forward from the hips — the arm has to hang clear of your body",
       "tone": "plain"
     },
@@ -226,8 +324,8 @@
       "id": "leanHigh",
       "measure": "lean",
       "side": "above",
-      "label": "Too far forward",
-      "text": "Come up a little — about sixty degrees",
+      "label": "Too far down",
+      "text": "Come up a little — anywhere from halfway to nearly flat is fine",
       "deep": "",
       "tone": "plain"
     },
@@ -268,9 +366,9 @@
     }
   ],
   "defaults": {
-    "leanMin": 40,
-    "leanMax": 80,
-    "armMax": 35,
+    "leanMin": 30,
+    "leanMax": 95,
+    "armMax": 23,
     "elbowMin": 150,
     "holdTargetSec": 30,
     "callAtSec": [

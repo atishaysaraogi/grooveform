@@ -32,13 +32,13 @@
     "position": "Stand facing the phone, feet hip-width apart, both arms hanging by your sides, palms forward or thumbs up.",
     "top": "One straight arm raised out to the side to shoulder height — level, not above — the shoulder down, the trunk upright and still.",
     "howto": [
-      "Stand facing the phone, arms by your sides, thumb pointing up on the working hand.",
-      "Raise the arm out to the side, slowly, to shoulder height — or as high as is comfortable. Keep the elbow straight.",
-      "Hold for the count with the shoulder down, away from the ear, and the trunk still.",
+      "Stand facing the phone, arms by your sides, palm facing forward, thumb pointing out on the working hand.",
+      "Raise the arm out to the side, slowly, to shoulder height, the thumb turning up as it rises. Keep the elbow straight and the trunk upright.",
+      "Hold for the count with the shoulder down, away from the ear.",
       "Lower slowly. The rep counts when the arm is back by your side."
     ],
-    "cannot": "Whether the shoulder blade is turning as it should or the trunk is leaning to the other side: it sees the arm’s angle from the front, the shoulder rising and the elbow. Keep the body still yourself.",
-    "about": "Arm raise to the side — facing the phone: the raise, as the angle at the shoulder between the hip and the wrist, 80–110° at the top (90 is level); a rep is under way past 45 and counts when the arm is back under 25; the working shoulder no more than 8° above the other, which is a shrug; and the elbow at least 150°. Hold two seconds at the top. A frozen shoulder may stop well short of 90 — set the top where it comfortably reaches and raise it as it frees.",
+    "cannot": "Whether the shoulder blade is turning as it should, and an elbow that bends toward the phone: with the thumb up the forearm bends toward the camera, which a front view barely sees. It sees the arm’s angle, the shoulder rising and the trunk leaning.",
+    "about": "Arm raise to the side — facing the phone: the raise, as the angle at the shoulder between the hip and the wrist, 80–110° at the top (90 is level); a rep is under way past 45 and counts when the arm is back under 25; the working shoulder no more than 8° higher than at the start, which is a shrug; the trunk not leaning away from the arm, within 7° of where it started; and the elbow at least 150°. Hold two seconds at the top. A frozen shoulder may stop well short of 90 — set the top where it comfortably reaches and raise it as it frees.",
     "lost": "Stand facing the camera, both arms in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -46,7 +46,7 @@
     "safety": "To the point of stretch, not pain. If the shoulder catches on the way up, turn the thumb up and try a little lower.",
     "easier": "A lower top; a shorter hold; no weight.",
     "harder": "A light weight; a longer hold; a slow count down.",
-    "mistakes": "Hiking the shoulder toward the ear; leaning the trunk away to gain height; bending the elbow; swinging the arm up."
+    "mistakes": "Leaning the trunk away to gain height; hiking the shoulder toward the ear; bending the elbow; swinging the arm up."
   },
   "muscles": {
     "shoulder": 1,
@@ -202,8 +202,12 @@
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "other.shoulder",
+    "to": "shoulder",
+    "words": [
+      "outward",
+      "inward"
+    ]
   },
   "side": {
     "pick": "highest",
@@ -302,7 +306,7 @@
         -20,
         30
       ],
-      "why": "How far the working shoulder sits above the other, as the shoulder line’s angle off level: a shrug lifts it. Past 8 is a hike.",
+      "why": "The line between the shoulders, as its change since the start, so a resting tilt of your own is not called a shrug: the working shoulder rising toward the ear. A little rise is normal past ninety degrees; eight is well beyond it.",
       "settings": [
         {
           "key": "shrugMax",
@@ -310,7 +314,34 @@
           "min": 3,
           "max": 25
         }
-      ]
+      ],
+      "fromStart": "change"
+    },
+    {
+      "key": "lean",
+      "label": "trunk lean",
+      "hud": "LEAN",
+      "note": "upright",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "fromStart": "change",
+      "band": {
+        "sym": "leanMax"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "leanMax",
+          "label": "Trunk lean from the start, at most",
+          "min": 3,
+          "max": 20
+        }
+      ],
+      "why": "The working side's hip-to-shoulder line, as its change since the start: leaning the trunk away from the arm tilts it toward the other side (−) and is the commonest way to make a low arm look higher."
     },
     {
       "key": "elbow",
@@ -358,6 +389,15 @@
     "tone": "up"
   },
   "faults": [
+    {
+      "id": "leanAway",
+      "measure": "lean",
+      "side": "below",
+      "when": "rep",
+      "label": "Leaning away",
+      "text": "Trunk upright — don’t lean away from the arm",
+      "deep": "Lower the arm until you can stay upright"
+    },
     {
       "id": "elbowBent",
       "measure": "elbow",
@@ -423,7 +463,8 @@
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "leanMax": 7
   },
   "settings": [
     {

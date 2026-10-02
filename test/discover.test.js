@@ -14,6 +14,7 @@ const { ASPECT, take, REST, rep } = require('./fixtures/rig.js');
 /* a bridge without its shin measurement, its two shin faults, the start range on it, its arc
    and its limb colours: the move that has to find the shin for itself */
 const file = JSON.parse(JSON.stringify(Moves.bridge.spec));
+file.defaults.holdTargetSec = 2;   // the takes here were timed for a two-second hold (the file's own is three)
 file.measurements = file.measurements.filter((m) => m.key !== 'shin');
 file.faults = file.faults.filter((f) => f.measure !== 'shin');
 delete file.ready.ranges.shin;
@@ -21,7 +22,7 @@ file.draw = file.draw.filter((d) => d.measure !== 'shin');
 for (const k of Object.keys(file.landmarks.limb)) if (file.landmarks.limb[k] === 'shin') delete file.landmarks.limb[k];
 assert.equal(Spec.check(file).filter((p) => p.level === 'error').length, 0, 'the shin-less bridge is a valid file');
 const NOSHIN = Spec.compile(file, Core);
-const M = Moves.bridge;
+const M = (() => { const f = JSON.parse(JSON.stringify(Moves.bridge.spec)); f.defaults.holdTargetSec = 2; return Spec.compile(f, Core); })();
 
 const JIT = { jitter: 0.004 };
 const run = (move, frames, name) => { const result = Trace.run(move, { readyMs: 2000 }, frames, ASPECT); return { result, reps: Trace.reps(result, move), name }; };
@@ -31,6 +32,9 @@ const pts = (m) => ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from'].map((k) =>
 const SHIN = ['knee', 'ankle', 'heel', 'toe'];
 /* five reps, the second and the fourth with the feet walked out (the shin at 120 at the top) */
 const FEET_OUT = [[REST, 3000], ...rep(), ...rep({ shin: 120 }), ...rep(), ...rep({ shin: 120 }), ...rep()];
+/* the same, with the feet out at rest before those two lifts too: the file judges where the feet are at rest, between reps */
+const OUT = { shin: 125 };
+const FEET_OUT_REST = [[REST, 3000], ...rep(null, OUT), ...rep({ shin: 120 }), ...rep(null, OUT), ...rep({ shin: 120 }), ...rep()];
 
 test('a shin-from-vertical candidate ranks first on a bridge that has no shin measurement', () => {
   const A = run(NOSHIN, take(FEET_OUT, JIT), 'clip 1');
@@ -73,10 +77,10 @@ test('a shin-from-vertical candidate ranks first on a bridge that has no shin me
 });
 
 test('an existing measurement wins its fold: on the full bridge the file\'s own shin angle is the row', () => {
-  const A = run(M, take(FEET_OUT, JIT));
+  const A = run(M, take(FEET_OUT_REST, JIT));
   const d = Trace.discover(M, [Object.assign(A, { labels: label(A.reps, ['clean', 'feetFar', 'clean', 'feetFar', 'clean']) })]);
   const g = d.groups[0];
-  assert.equal(g.id, 'feetFar'); assert.equal(g.label, 'Feet too far out'); assert.equal(g.when, 'always', 'the fault\'s own window');
+  assert.equal(g.id, 'feetFar'); assert.equal(g.label, 'Feet too far out'); assert.equal(g.when, 'between', 'the fault\'s own window');
   const r = g.rows[0];
   assert.equal(r.status, 'existing'); assert.deepEqual(r.existing, { key: 'shin', label: 'toe, heel, knee', hasBand: true, hasFault: true });
   assert.equal(r.measurement.kind, 'angle'); assert.deepEqual(pts(r.measurement), ['toe', 'heel', 'knee']);
@@ -92,7 +96,7 @@ test('nothing separates identical reps, however they are marked', () => {
   const g = d.groups.find((x) => x.id === 'hipHigh');
   assert.equal(g.status, 'none'); assert.deepEqual(g.rows, []);
   assert.ok(g.luck > 1, 'and the luck count says why a split would mean little: ' + g.luck);
-  assert.match(g.note, /Nothing I can measure from these landmarks tells the 2 reps you marked ‘Hips above knees’ from the 3 clean ones/);
+  assert.match(g.note, /Nothing I can measure from these landmarks tells the 2 reps you marked ‘Hips too high’ from the 3 clean ones/);
 });
 
 test('the floor: two clean reps and one marked, and a small effect under the gate', () => {
@@ -157,7 +161,7 @@ test('trust: a landmark the model is unsure of is left out, and said so', () => 
 });
 
 test('performance: thirty seconds at fifteen frames a second, under a second', () => {
-  const frames = take([[REST, 3000], ...rep(), ...rep(), ...rep({ shin: 120 }), ...rep()], Object.assign({ fps: 15 }, JIT));
+  const frames = take([[REST, 3000], ...rep(), ...rep(null, OUT), ...rep({ shin: 120 }), ...rep()], Object.assign({ fps: 15 }, JIT));
   assert.ok(frames.length > 400 && frames.length < 500, 'about 450 frames: ' + frames.length);
   const A = run(M, frames);
   assert.equal(A.reps.length, 4);
@@ -170,7 +174,7 @@ test('performance: thirty seconds at fifteen frames a second, under a second', (
 });
 
 test('the groups: every fault the labels name, and all of them together; windowOf is the coach\'s window', () => {
-  const A = run(M, take(FEET_OUT, JIT));
+  const A = run(M, take(FEET_OUT_REST, JIT));
   const labels = label(A.reps, ['clean', 'feetFar', 'clean', '+feet out', 'clean']);
   labels[3].faults.push('hipHigh');
   const d = Trace.discover(M, [Object.assign(A, { labels })]);

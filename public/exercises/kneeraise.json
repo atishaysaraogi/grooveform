@@ -23,15 +23,15 @@
     "hint": "Phone standing up, side on to you, whole body in frame.",
     "start": "Stand the phone up on the floor, then stand side on, tall, and raise one knee.",
     "position": "Stand side on to the phone, tall, feet together, arms relaxed at your sides.",
-    "top": "One knee up with the thigh level and the knee at a right angle, foot relaxed under it.",
+    "top": "One knee up with the thigh level, the lower leg hanging under it, the trunk tall.",
     "howto": [
-      "Stand tall, weight on one foot.",
-      "Raise the other knee until the thigh is level and the knee is at a right angle, foot relaxed under it.",
-      "Hold at the top for the count; keep the standing leg and the trunk still.",
+      "Stand tall beside a chair, one hand on it for balance, weight on the leg furthest from the phone.",
+      "Raise the other knee until the thigh is level — or as high as is comfortable — the lower leg hanging relaxed under the knee.",
+      "Hold at the top for the count. Keep the standing leg straight and the trunk tall; don't lean back.",
       "Lower slowly and put the foot down — the rep counts when you are standing again."
     ],
-    "cannot": "The standing side and the hips staying level: it follows the raised leg nearest the camera. Balance is yours.",
-    "about": "Knee raise — standing side on, tall, one knee up: the angle at that knee between hip and ankle, and the angle at its heel between the toe and the knee, the first allowed 80–100° and the second 60–100°. Hold ten seconds, lower slowly, and the rep counts when you are back to standing.",
+    "cannot": "The standing side and the hips staying level: it follows the raised leg nearest the camera and the trunk. Balance is yours.",
+    "about": "Knee raise — standing side on, tall, one knee up: the thigh's height, as its angle from hanging, at least 75° at the top (90 is level); the lower leg hanging within 20° of plumb under the knee once the thigh is up; and the trunk between 8° back and 15° forward of upright. A rep is under way once the thigh passes 45° and counts when it is back under 20° and you are standing. Hold ten seconds, lower slowly.",
     "lost": "Step into the camera, side on",
     "lower": "Lower slowly",
     "early": "Hold it to the end of the count next time",
@@ -39,65 +39,244 @@
     "safety": "Hold something for balance if you need to; the camera does not mind a hand on a chair.",
     "easier": "A shorter hold; a hand on a wall.",
     "harder": "A longer hold; an ankle weight; eyes closed.",
-    "mistakes": "Leaning back to lift the knee; the foot pointing down; the knee not coming up to level."
+    "mistakes": "Leaning back to lift the knee; the knee not coming up to level; swinging the foot out in front; rocking the trunk or the pelvis."
   },
   "muscles": { "thigh": 0.8, "abs": 0.5, "calf": 0.3 },
   "figure": { "pose": {
     "A": { "torso": 0, "thigh": 0, "shin": 0, "uarm": 8, "farm": 8 },
     "B": { "torso": 0, "thigh": 90, "shin": 0, "foot": 0, "uarm": 8, "farm": 8, "thighF": 0, "shinF": 0, "footF": 0 }
   } },
-  "facing": { "from": "heel", "to": "toe" },
+  "facing": {
+    "from": "other.heel",
+    "to": "other.toe"
+  },
   "side": { "pick": "measure", "measure": "thigh" },
   "landmarks": {
-    "joints": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
-    "needed": ["hip", "knee", "ankle", "heel", "toe"],
-    "bones": [["shoulder", "hip"], ["hip", "knee"], ["knee", "ankle"], ["ankle", "heel"], ["ankle", "toe"], ["heel", "toe"]],
-    "dots": ["shoulder", "hip", "knee", "ankle", "heel", "toe"],
-    "limb": { "hip|knee": "knee", "knee|ankle": "knee", "ankle|toe": "foot", "ankle|heel": "foot", "heel|toe": "foot" }
+    "joints": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe",
+      "other.heel",
+      "other.toe"
+    ],
+    "needed": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle"
+    ],
+    "bones": [
+      [
+        "shoulder",
+        "hip"
+      ],
+      [
+        "hip",
+        "knee"
+      ],
+      [
+        "knee",
+        "ankle"
+      ],
+      [
+        "ankle",
+        "heel"
+      ],
+      [
+        "ankle",
+        "toe"
+      ],
+      [
+        "heel",
+        "toe"
+      ]
+    ],
+    "dots": [
+      "shoulder",
+      "hip",
+      "knee",
+      "ankle",
+      "heel",
+      "toe"
+    ],
+    "limb": {
+      "shoulder|hip": "lean",
+      "hip|knee": "thigh",
+      "knee|ankle": "shin"
+    }
   },
   "measurements": [
-    { "key": "knee", "label": "knee angle", "hud": "KNEE", "note": "target",
-      "kind": "angle", "a": "hip", "b": "knee", "c": "ankle",
-      "band": { "lo": "kneeMin", "hi": "kneeMax" }, "scale": [40, 180],
+    {
+      "key": "knee",
+      "label": "knee angle",
+      "hud": "KNEE",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "scale": [40, 180],
+      "settings": [],
+      "why": "The angle at the raised knee, drawn but not judged: with the thigh level and the foot hanging under it, about 90."
+    },
+    {
+      "key": "shin",
+      "label": "lower leg hanging",
+      "hud": "SHIN",
+      "note": "under the knee",
+      "kind": "tilt",
+      "base": "ankle",
+      "top": "knee",
+      "band": {
+        "sym": "shinTilt"
+      },
+      "scale": [-60, 60],
       "settings": [
-        { "key": "kneeMin", "label": "Knee angle, lowest", "min": 40, "max": 175 },
-        { "key": "kneeMax", "label": "Knee angle, highest", "min": 45, "max": 180 }
+        {
+          "key": "shinTilt",
+          "label": "Lower leg off vertical, at most (degrees)",
+          "min": 5,
+          "max": 45
+        }
       ],
-      "why": "A right angle at the raised knee, ten degrees either way." },
-    { "key": "foot", "label": "toe, heel, knee", "hud": "FOOT", "note": "target",
-      "kind": "angle", "a": "toe", "b": "heel", "c": "knee",
-      "band": { "lo": "footMin", "hi": "footMax" }, "scale": [40, 170],
+      "why": "The lower leg off plumb: 0 with the foot hanging under the knee; − the foot swung out in front, + tucked back. Judged once the thigh is up."
+    },
+    {
+      "key": "thigh",
+      "label": "thigh from straight down",
+      "hud": "THIGH",
+      "note": "level",
+      "kind": "down",
+      "from": "hip",
+      "to": "knee",
+      "why": "0 standing, 90 thigh level. Judged at the top — level, or as high as is comfortable — and the progress measurement; it also picks the leg being raised.",
+      "band": {
+        "min": "thighMin"
+      },
+      "scale": [0, 110],
       "settings": [
-        { "key": "footMin", "label": "Foot angle, lowest", "min": 30, "max": 165 },
-        { "key": "footMax", "label": "Foot angle, highest", "min": 35, "max": 170 }
+        {
+          "key": "thighMin",
+          "label": "Thigh at the top, at least (90 is level)",
+          "min": 30,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "key": "lean",
+      "label": "trunk upright",
+      "hud": "TRUNK",
+      "note": "tall",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "lo": "leanBack",
+        "hi": "leanFwd"
+      },
+      "scale": [-30, 30],
+      "settings": [
+        {
+          "key": "leanBack",
+          "label": "Leaning back, at most (degrees, negative)",
+          "min": -25,
+          "max": -3
+        },
+        {
+          "key": "leanFwd",
+          "label": "Leaning forward, at most (degrees)",
+          "min": 3,
+          "max": 30
+        }
       ],
-      "why": "The foot's own line against the shin's, taken at the heel. It grows as the toes point away and shrinks as they come up. The band is not centred on a right angle and is not meant to be." },
-    { "key": "thigh", "label": "thigh from straight down", "hud": "THIGH", "note": "lift",
-      "kind": "down", "from": "hip", "to": "knee",
-      "why": "0 standing, 90 thigh level. Not judged: it tells the phases apart and picks the leg being raised." }
+      "why": "The trunk off plumb, + forward: leaning back is the usual way to get the knee higher."
+    }
   ],
   "progress": { "measure": "thigh", "raiseAt": "raiseAt", "downAt": "downAt", "direction": "up" },
   "prompt": { "id": "raise", "text": "Raise one knee" },
   "faults": [
-    { "id": "kneeOpen", "measure": "knee", "side": "above", "label": "Knee too open", "text": "Bend your knee more", "deep": "Bend your knee to a right angle" },
-    { "id": "kneeShut", "measure": "knee", "side": "below", "label": "Knee too closed", "text": "Open your knee a little", "deep": "Open your knee out to a right angle" },
-    { "id": "toesDown", "measure": "foot", "side": "above", "label": "Foot pointing away", "text": "Pull your toes up", "deep": "Pull your toes up — your foot is pointing away" },
-    { "id": "toesUp", "measure": "foot", "side": "below", "label": "Toes pulled up", "text": "Ease your toes down", "deep": "Ease your toes down — your toes are pulled too far up" }
+    {
+      "id": "leanBack",
+      "measure": "lean",
+      "side": "below",
+      "when": "top",
+      "label": "Leaning back",
+      "text": "Stand tall — don't lean back"
+    },
+    {
+      "id": "leanFwd",
+      "measure": "lean",
+      "side": "above",
+      "when": "top",
+      "label": "Leaning forward",
+      "text": "Stand tall"
+    },
+    {
+      "id": "thighLow",
+      "measure": "thigh",
+      "side": "below",
+      "when": "top",
+      "label": "Knee low",
+      "text": "Lift the knee a little higher — thigh level, if comfortable"
+    },
+    {
+      "id": "kneeOpen",
+      "measure": "shin",
+      "side": "below",
+      "label": "Foot out in front",
+      "text": "Let the lower leg hang — foot under the knee",
+      "requires": [
+        "thigh"
+      ]
+    },
+    {
+      "id": "kneeShut",
+      "measure": "shin",
+      "side": "above",
+      "label": "Foot tucked back",
+      "text": "Let the foot hang under the knee",
+      "requires": [
+        "thigh"
+      ]
+    }
   ],
   "draw": [
-    { "kind": "plumb", "at": "hip", "share": -0.16 },
-    { "kind": "arc", "measure": "thigh", "size": 0.55, "tone": "none" },
-    { "kind": "arc", "measure": "knee", "size": 1 },
-    { "kind": "arc", "measure": "foot", "size": 0.7 }
+    {
+      "kind": "plumb",
+      "at": "hip",
+      "share": -0.16
+    },
+    {
+      "kind": "arc",
+      "measure": "thigh",
+      "size": 0.55,
+      "tone": "none"
+    },
+    {
+      "kind": "arc",
+      "measure": "knee",
+      "size": 1
+    }
   ],
   "defaults": {
-    "kneeMin": 80, "kneeMax": 100,
-    "footMin": 60, "footMax": 100,
-    "raiseAt": 45, "downAt": 20,
-    "holdTargetSec": 10, "callAtSec": [5],
-    "repCount": 10, "setCount": 3,
-    "lowerSec": 1, "restSec": 2,
-    "deepAt": 8
+    "raiseAt": 45,
+    "downAt": 20,
+    "holdTargetSec": 10,
+    "callAtSec": [
+      5
+    ],
+    "repCount": 10,
+    "setCount": 3,
+    "lowerSec": 1,
+    "restSec": 2,
+    "deepAt": 8,
+    "thighMin": 75,
+    "shinTilt": 20,
+    "leanBack": -8,
+    "leanFwd": 15
   },
   "settings": [
     { "key": "repCount", "label": "Reps in a set", "min": 1, "max": 50 },

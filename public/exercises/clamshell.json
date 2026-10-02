@@ -35,16 +35,16 @@
   "words": {
     "hint": "Lying on your side facing the phone, knees bent, the top knee lifted open like a clam and lowered.",
     "start": "Lay the phone on its side on the floor. Lie on your side facing it, hips stacked, knees bent, feet together.",
-    "position": "Lie on your side facing the phone, head on your arm, hips stacked one above the other, both knees bent to about forty five degrees, heels together and in line with your bottom.",
-    "top": "The top knee lifted open — thirty to forty five degrees — with the heels still together and the hips still stacked, not rolled back.",
+    "position": "Lie on your side facing the phone, head on your arm, hips stacked one above the other, hips bent to about forty five degrees and knees to about ninety, heels together and in line with your bottom.",
+    "top": "The top knee lifted open as far as the hips stay still, the heels still together, the hips still stacked.",
     "howto": [
-      "Lie on your side facing the phone, knees bent, heels together in line with your bottom, hips stacked.",
-      "Keeping the heels together, lift the top knee open like a clam — only as far as the hips stay still. Thirty to forty five degrees is plenty.",
-      "Hold for the count. The top hip stays stacked over the bottom one; nothing rolls back.",
+      "Lie on your side facing the phone, head on your arm, hips bent to about forty five degrees, knees to about ninety, heels together, hips stacked. Rest the top hand on the top hip.",
+      "Keeping the heels together, lift the top knee open like a clam — only as far as the hips stay still. The top hand feels the hip: it must not roll back.",
+      "Hold for the count.",
       "Lower the knee slowly. The rep counts when the knees are together."
     ],
-    "cannot": "Whether the outer hip is working or the hip flexors have taken over: it sees the knee opening, the hips rolling back and the feet parting. Feel for the outer hip.",
-    "about": "Clamshell — lying on the side facing the phone: the opening, as how far the top knee has risen from where it started (the hip-to-knee line off level, read as the change from the start), 25–60° at the top; a rep is under way past 12 and counts when the knee is back under 5; the hips rolling back, as the top hip rising above the bottom one from where it started, at most 10°; and the feet together, the heel-to-heel distance at most 35% of the thigh. Hold two seconds at the top. A smaller honest range beats a big cheated one: if the hips roll, lift less.",
+    "cannot": "The hips rolling back — that is away from the camera — and whether the outer hip is doing the work: it sees the knee opening, the top hip hitching toward the ribs and the feet parting. Keep the top hand on the hip to feel the roll.",
+    "about": "Clamshell — lying on the side facing the phone: the opening, as how far the top knee has risen from where it started (the hip-to-knee line off level, read as the change from the start), 18–50 at the top — how big a true opening looks depends on how bent the hips are, so the hips are set at about forty five degrees; a rep is under way past 12 and counts when the knee is back under 5; the top hip not hitching toward the ribs, at most 8° from the start; and the feet together, the heels parting no more than a tenth of the trunk from the start. Hold two seconds at the top. A roll back is away from the camera and is not seen: a smaller honest range beats a big cheated one.",
     "lost": "Lie on your side facing the camera, whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -52,7 +52,7 @@
     "safety": "Stop if the front of the hip pinches — roll a little forward and lift less.",
     "easier": "A smaller opening; a shorter hold; no band.",
     "harder": "A band above the knees; a longer hold; the feet lifted off the floor together.",
-    "mistakes": "Rolling the hips back to open the knee higher; the feet parting; lifting too high; rushing; a band that is too heavy."
+    "mistakes": "Rolling the hips back to open the knee higher; hitching the top hip toward the ribs; the feet parting; lifting too high; rushing; a band that is too heavy."
   },
   "muscles": {
     "glute": 1,
@@ -65,141 +65,141 @@
       "A": {
         "h": [
           200,
-          148
+          140
         ],
         "shL": [
           220,
-          166
+          158
         ],
         "shR": [
           220,
-          130
+          122
         ],
         "hipL": [
           262,
-          159
+          151
         ],
         "hipR": [
           262,
-          137
+          129
         ],
         "knL": [
           284,
-          167
+          159
         ],
         "knR": [
           284,
-          151
+          143
         ],
         "anL": [
           304,
-          170
+          162
         ],
         "anR": [
           304,
-          156
+          148
         ],
         "heL": [
           304,
-          173
+          165
         ],
         "heR": [
           304,
-          159
+          151
         ],
         "toL": [
           309,
-          173
+          165
         ],
         "toR": [
           309,
-          159
+          151
         ],
         "elL": [
           180,
-          160
+          152
         ],
         "wrL": [
           166,
-          158
+          150
         ],
         "elR": [
           232,
-          128
+          120
         ],
         "wrR": [
           246,
-          150
+          142
         ]
       },
       "B": {
         "h": [
           200,
-          148
+          140
         ],
         "shL": [
           220,
-          166
+          158
         ],
         "shR": [
           220,
-          130
+          122
         ],
         "hipL": [
           262,
-          159
+          151
         ],
         "hipR": [
           262,
-          137
+          129
         ],
         "knL": [
           284,
-          167
+          159
         ],
         "knR": [
-          281,
-          121
+          282,
+          128
         ],
         "anL": [
           304,
-          170
+          162
         ],
         "anR": [
           304,
-          156
+          148
         ],
         "heL": [
           304,
-          173
+          165
         ],
         "heR": [
           304,
-          159
+          151
         ],
         "toL": [
           309,
-          173
+          165
         ],
         "toR": [
           309,
-          159
+          151
         ],
         "elL": [
           180,
-          160
+          152
         ],
         "wrL": [
           166,
-          158
+          150
         ],
         "elR": [
           232,
-          128
+          120
         ],
         "wrR": [
           246,
-          150
+          142
         ]
       },
       "hold": false,
@@ -209,7 +209,11 @@
   },
   "facing": {
     "from": "hip",
-    "to": "shoulder"
+    "to": "shoulder",
+    "words": [
+      "toward the head",
+      "toward the feet"
+    ]
   },
   "side": {
     "pick": "highest",
@@ -225,7 +229,8 @@
       "other.hip",
       "knee",
       "heel",
-      "other.heel"
+      "other.heel",
+      "shoulder"
     ],
     "needed": [
       "hip",
@@ -264,7 +269,7 @@
         -10,
         80
       ],
-      "why": "How far the top knee has risen: the hip-to-knee line off level, as the change from where it stood at the start. Also the progress measurement.",
+      "why": "How far the top knee has risen: the hip-to-knee line off level, as the change from the start. How big a true opening looks depends on how bent the hips are: 45° of opening reads about 22 with the hips bent 30°, 35 at 45°, 51 at 60°. Also the progress measurement.",
       "settings": [
         {
           "key": "openMin",
@@ -281,30 +286,30 @@
       ]
     },
     {
-      "key": "roll",
-      "label": "top hip rising from the start",
-      "hud": "HIPS",
-      "note": "stacked",
-      "kind": "rise",
-      "a": "other.hip",
-      "b": "hip",
+      "key": "hike",
+      "label": "top hip still",
+      "hud": "HIP",
+      "note": "still",
+      "kind": "tilt",
+      "base": "other.hip",
+      "top": "hip",
       "fromStart": "change",
       "band": {
-        "max": "rollMax"
+        "max": "hikeMax"
       },
       "scale": [
         -20,
-        40
+        30
       ],
-      "why": "The hips rolling back: the top hip comes up and back relative to the bottom one, read as the change from the start. Past 10 the pelvis is doing the opening.",
       "settings": [
         {
-          "key": "rollMax",
-          "label": "Top hip risen from the start, at most (degrees)",
+          "key": "hikeMax",
+          "label": "Top hip hitched toward the ribs, at most (degrees from the start)",
           "min": 3,
-          "max": 30
+          "max": 25
         }
-      ]
+      ],
+      "why": "The line from the bottom hip up to the top hip, as its change since the start: stacked it is plumb; the top hip hitching up toward the ribs to help the knee open tilts it toward the head."
     },
     {
       "key": "feet",
@@ -315,8 +320,8 @@
       "a": "heel",
       "b": "other.heel",
       "per": [
-        "hip",
-        "knee"
+        "shoulder",
+        "hip"
       ],
       "times": 100,
       "optional": true,
@@ -327,15 +332,16 @@
         0,
         100
       ],
-      "why": "The heel-to-heel distance against the thigh: together they read near 0; a top foot lifting away grows it.",
+      "why": "The heel-to-heel distance, as its change since the start, as a share of the trunk (the shoulder to the hip, which the camera sees full length): together it stays near 0; the top foot lifting away grows it.",
       "settings": [
         {
           "key": "feetMax",
-          "label": "Heels apart, % of the thigh, at most",
-          "min": 10,
-          "max": 80
+          "label": "Heels parted from the start, at most (% of the trunk)",
+          "min": 4,
+          "max": 40
         }
-      ]
+      ],
+      "fromStart": "change"
     }
   ],
   "progress": {
@@ -348,8 +354,7 @@
     "atStart": true
   },
   "inPosition": [
-    "open",
-    "roll"
+    "open"
   ],
   "prompt": {
     "id": "raise",
@@ -363,7 +368,7 @@
       "side": "below",
       "label": "Open short",
       "text": "Lift the knee a little higher",
-      "deep": "Open the knee further — thirty to forty five degrees",
+      "deep": "Open the knee further — as far as the hips stay still",
       "tone": "up"
     },
     {
@@ -376,14 +381,12 @@
       "tone": "down"
     },
     {
-      "id": "rolling",
-      "measure": "roll",
+      "id": "hipHike",
+      "measure": "hike",
       "side": "above",
-      "label": "Hips rolling back",
-      "text": "Keep the hips stacked — don’t roll back",
-      "deep": "The hips are rolling back — roll forward a little and lift the knee less",
-      "tone": "plain",
-      "when": "rep"
+      "when": "rep",
+      "label": "Hip hitching",
+      "text": "Keep the top hip still — don’t hitch it toward your ribs"
     },
     {
       "id": "feetApart",
@@ -404,10 +407,9 @@
     }
   ],
   "defaults": {
-    "openMin": 25,
-    "openMax": 60,
-    "rollMax": 10,
-    "feetMax": 35,
+    "openMin": 18,
+    "openMax": 50,
+    "feetMax": 10,
     "raiseAt": 12,
     "downAt": 5,
     "holdTargetSec": 2,
@@ -416,7 +418,8 @@
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "hikeMax": 8
   },
   "settings": [
     {

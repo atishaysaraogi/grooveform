@@ -11,20 +11,23 @@ const W = Spec.words;
 test('a measurement is described from its geometry, in a physio\'s words', () => {
   const f = Moves.bridge.spec, m = (k) => f.measurements.find((x) => x.key === k);
   const foot = W.describe(m('foot'), f);
-  assert.equal(foot.what, 'the foot line off the floor (heel over toe)');
-  assert.match(foot.meaning, /0° is flat on the floor; \+ the heel up, − the toes up/);
-  assert.match(foot.notes[0], /less the model's slant of 9° \(footBias\)/);
+  assert.equal(foot.what, 'the foot line off the floor (heel over toe), as the change since the start');
+  assert.equal(foot.meaning, '0 is as at the start; + the heel up, − the toes up.', 'a change still says which way is which');
+  assert.deepEqual(foot.notes, []);
   assert.equal(foot.unit, '°');
-  assert.equal(W.describe(m('hip'), f).what, 'the hip angle (knee–hip–shoulder)');
-  assert.equal(W.describe(m('over'), f).what, 'the hip over the knee (the thigh line off level)');
+  assert.equal(W.describe(m('hip'), f).what, 'the hip angle (knee–hip–shoulder), read on past 180', 'a joint angle that keeps rising past straight');
+  assert.deepEqual(W.describe(m('hip'), f).notes, []);
+  assert.equal(W.describe(m('over'), f).what, 'the hip off the straight line from the knee to the shoulder');
   assert.equal(W.describe(m('shin'), f).what, 'the ankle angle at the heel (toe–heel–knee)');
-  /* the other side's knee is the same named angle, said with its side */
+  /* the other side's points are said with their side; a reversed sign is said */
   const slr = Moves.slr.spec;
-  assert.equal(W.describe(slr.measurements.find((x) => x.key === 'rest'), slr).what, 'the other knee angle (hip–knee–ankle)');
-  assert.equal(W.describe(slr.measurements.find((x) => x.key === 'lift'), slr).what, 'the angle between the thighs at the hip (other knee–hip–knee)');
+  assert.equal(W.describe(slr.measurements.find((x) => x.key === 'other'), slr).what, 'the height of the other heel over the hip, as % of the other shin, as the change since the start');
+  const lift = W.describe(slr.measurements.find((x) => x.key === 'lift'), slr);
+  assert.equal(lift.what, 'the hip angle (knee–hip–shoulder), as the change from rest');
+  assert.deepEqual(lift.notes, ['sign reversed']);
   /* a length, a change, a ratio */
   const clam = Moves.clamshell.spec;
-  assert.equal(W.describe(clam.measurements.find((x) => x.key === 'feet'), clam).what, 'the gap between the heels, as % of the thigh');
+  assert.equal(W.describe(clam.measurements.find((x) => x.key === 'feet'), clam).what, 'the gap between the heels, as % of the trunk, as the change since the start');
   assert.match(W.describe(clam.measurements.find((x) => x.key === 'open'), clam).what, /the knee over the hip .*, as the change since the start$/);
   const ww = Moves.wallwalk.spec;
   assert.equal(W.describe(ww.measurements.find((x) => x.key === 'shrug'), ww).unit, '%');
@@ -46,18 +49,19 @@ test('every measurement in the library gets words, and none is a bare key', () =
 
 test('the rule, the fault and the setting read as sentences with the window in them', () => {
   const f = Moves.bridge.spec, m = (k) => f.measurements.find((x) => x.key === k);
-  assert.equal(W.ruleWords(f, m('foot'), null, f.defaults), 'At all times, the foot line off the floor (heel over toe) must be within 10° of flat.');
-  assert.equal(W.ruleWords(f, m('hip'), null, f.defaults), 'At the top of the rep, the hip angle (knee–hip–shoulder) must be at least 160°.');
+  assert.equal(W.ruleWords(f, m('foot'), null, f.defaults), 'At all times, the foot line off the floor (heel over toe), as the change since the start, must be within 12° of the start.');
+  assert.equal(W.ruleWords(f, m('hip'), null, f.defaults), 'At the top of the rep, the hip angle (knee–hip–shoulder), read on past 180, must be at least 160°.');
   assert.equal(W.startWords(f, m('shin')), 'At the start position, the ankle angle at the heel (toe–heel–knee) must be between 45° and 150°.');
-  assert.equal(W.faultWords(f, f.faults.find((x) => x.id === 'heelsUp'), f.defaults), 'Over 10° at all times (the heel up) → ‘Heels lifting’, said as ‘Keep your heels down’; well past: ‘Heels down — they are coming off the floor’.');
-  assert.equal(W.settingWords(f, 'footFlat'), 'The foot line off the floor (heel over toe), at all times: within ± (°)');
-  assert.equal(W.settingWords(f, 'overMax'), 'The hip over the knee (the thigh line off level), at the top of the rep: at most (°)');
+  assert.equal(W.faultWords(f, f.faults.find((x) => x.id === 'heelsUp'), f.defaults), 'Over 12° at all times (risen more than 12° from the start) → ‘Heels lifting’, said as ‘Keep your heels down’; well past: ‘Heels down — they are coming off the floor’.');
+  assert.equal(W.settingWords(f, 'footFlat'), 'The foot line off the floor (heel over toe), as the change since the start, at all times: within ± (°)');
+  assert.equal(W.settingWords(f, 'overMax'), 'The hip off the straight line from the knee to the shoulder, at the top of the rep: at most (°)');
+  assert.match(W.faultWords(f, f.faults.find((x) => x.id === 'feetFar'), f.defaults), /^Over 122° between reps/, 'the feet are judged at rest');
   assert.match(W.settingWords(f, 'raiseAt'), /^A rep is under way once the hip angle .* rises past \(°\)$/);
   assert.equal(W.settingWords(f, 'footBias'), null, 'a number that is not an edge keeps the file\'s own words');
   assert.equal(W.whenWords(Moves.plank.spec, 'top'), 'in the hold');
   assert.equal(W.whenWords(Object.assign({}, f, { words: Object.assign({}, f.words, { atTop: 'at the bottom of the squat' }) }), 'top'), 'at the bottom of the squat');
   /* the edge words follow the sign */
-  assert.equal(W.edgeWords(f, m('foot'), 'below', -10), 'Under -10° (the toes up)');
+  assert.equal(W.edgeWords(f, m('foot'), 'below', -10), 'Under -10° (dropped more than 10° from the start)');
   const cat = Moves.catcamel.spec;
   assert.match(W.faultWords(cat, cat.faults.find((x) => x.measure === 'round' && x.side === 'above'), cat.defaults), /dropped less than 15° from the start/);
 });
@@ -68,6 +72,9 @@ test('a new fault starts with words from the geometry', () => {
   assert.deepEqual(W.faultTemplate(f, f.measurements.find((x) => x.key === 'hip'), 'below'), { label: 'Hips short of the line', text: 'Lift the hips higher' });
   const t = W.faultTemplate(Moves.hinge.spec, Moves.hinge.spec.measurements.find((x) => x.key === 'hinge'), 'above');
   assert.ok(t.label.length <= 26 && t.text, JSON.stringify(t));
+  /* a foot read against its start is still heels lifting; any other change is said by the part that moved */
+  assert.deepEqual(W.faultTemplate(Moves.lunge.spec, Moves.lunge.spec.measurements.find((x) => x.key === 'heel'), 'above'), { label: 'Heels lifting', text: 'Keep the heels down' });
+  assert.deepEqual(W.faultTemplate(Moves.kneeext.spec, Moves.kneeext.spec.measurements.find((x) => x.key === 'thigh'), 'above'), { label: 'Thigh up from start', text: 'Back to where you started' });
 });
 
 test('a distance along one axis: the height of a point over another as a share of a limb', () => {
@@ -97,7 +104,8 @@ test('a distance along one axis: the height of a point over another as a share o
 
 test('a tilt signed by the line it is facing from is warned about', () => {
   const file = JSON.parse(JSON.stringify(Moves.calfraise.spec));
-  assert.ok(Spec.check(file).some((p) => p.level === 'warn' && /can never read negative/.test(p.message)), 'the calf raise faces hip to shoulder and tilts the same line');
+  file.facing = { from: 'hip', to: 'shoulder' };
+  assert.ok(Spec.check(file).some((p) => p.level === 'warn' && /can never read negative/.test(p.message)), 'facing hip to shoulder, the trunk lean tilts the same line');
   file.facing = { from: 'heel', to: 'toe' };
   assert.ok(!Spec.check(file).some((p) => /can never read negative/.test(p.message)));
 });

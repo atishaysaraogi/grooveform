@@ -7,14 +7,18 @@ hold, and hands you a recording of the set with the cues on it.
 
 **Live:** https://atishaysaraogi.github.io/grooveform/
 
-Thirteen exercises — **wall sit**, **elbow plank**, **knee raise**, **glute
-bridge**, **donkey kick**, the **four-way straight leg raises** (on the back,
-on the side, face down, inner thigh), **forward lunge**, **static quads**,
-**dynamic quads** and **step-up** — each one a file in `public/exercises/`,
-and a Build page that writes the next. The eight newer ones were built from
-published form standards, set out in `docs/standards.md` with their sources. Nothing is
-uploaded — the pose model, the coaching and the video file are all made on
-the device.
+Twenty-eight exercises, each one a file in `public/exercises/`, and a Build
+page that writes the next. For the **shoulder**: pendulum swing, wall walk,
+arm raise to the side, shoulder turn-out, cross-body stretch. For the **knee
+and hip**: straight leg raise, inner range quads, heel slide, seated knee
+extension, prone leg raise, mini squat, forward lunge, step-up, sit to stand,
+wall sit, heel raise, knee raise. For the **hip**: clamshell, side-lying leg
+raise, inner thigh raise, donkey kick. For the **back**: knee to chest, glute
+bridge, bird dog, cat–camel, elbow plank, prone press-up, hip hinge. Each was
+checked against published form guidance and against photos of the movement
+done right and wrong; what each asks for, the mistakes it catches and its
+sources are in `docs/standards.md`. Nothing is uploaded — the pose model, the
+coaching and the video file are all made on the device.
 
 ## Starting
 

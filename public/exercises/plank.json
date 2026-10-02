@@ -33,17 +33,17 @@
     "top": "One straight line from shoulder to ankle, shoulders over the elbows.",
     "howto": [
       "Forearms down, elbows under your shoulders, hands flat or lightly fisted.",
-      "Toes tucked, legs straight, one line from shoulder to ankle.",
+      "Toes tucked, legs straight, one line from shoulder to ankle, head in line, eyes on the floor just ahead of the hands.",
       "Squeeze the glutes and pull the ribs in so the hips neither sag nor pike.",
       "Hold, breathing; drop the knees when the time is called."
     ],
-    "cannot": "The neck and head, and whether the shoulder blades are spread: it judges the shoulder over the elbow and the hip on the line, nothing above the shoulder.",
-    "about": "Elbow plank — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 5° behind to 15° in front; and how far your hip sits off the straight line from shoulder to ankle, allowed ±5°. Above the line your hips are piked and are told to come down, below it they are sagging and are told to lift.",
+    "cannot": "Whether the shoulder blades are spread and how you breathe: it judges the shoulder over the elbow, the hip on the line, the knees and the head.",
+    "about": "Elbow plank — where your shoulder sits over your elbow, measured as the lean of your upper arm off vertical, allowed from 10° behind to 15° in front; how far your hip sits off the straight line from shoulder to ankle, allowed 7° below and 10° above — above the line your hips are piked and are told to come down, below it they are sagging and are told to lift; the knees straight, at least 165°; and the head in line with the back, within 20°. Thirty seconds to start; build toward sixty.",
     "lost": "Step into the camera, side on",
     "safety": "Drop to the knees rather than let the lower back sag. Stop if the lower back hurts.",
-    "easier": "From the knees; a shorter hold.",
+    "easier": "A shorter hold, or several short holds with rests between. (A plank from the knees is easier, but the camera judges the full plank.)",
     "harder": "A longer hold; feet raised on a step.",
-    "mistakes": "Hips sagging; hips piked up; shoulders drifting behind the elbows."
+    "mistakes": "Hips sagging; hips piked up; the head hanging or craning; knees bent; shoulders drifting behind the elbows; holding the breath."
   },
   "muscles": {
     "abs": 1,
@@ -55,34 +55,112 @@
   "figure": {
     "points": {
       "A": {
-        "h": [248, 112],
-        "sh": [266, 120],
-        "hip": [310, 131],
-        "kn": [338, 142],
-        "an": [364, 152],
-        "ft": [368, 162],
-        "el": [266, 158],
-        "wr": [244, 161],
-        "knF": [336, 146],
-        "anF": [362, 156],
-        "ftF": [366, 162],
-        "elF": [268, 160],
-        "wrF": [248, 162]
+        "h": [
+          248,
+          112
+        ],
+        "sh": [
+          266,
+          120
+        ],
+        "hip": [
+          310,
+          131
+        ],
+        "kn": [
+          338,
+          142
+        ],
+        "an": [
+          364,
+          152
+        ],
+        "ft": [
+          368,
+          162
+        ],
+        "el": [
+          266,
+          158
+        ],
+        "wr": [
+          244,
+          161
+        ],
+        "knF": [
+          336,
+          146
+        ],
+        "anF": [
+          362,
+          156
+        ],
+        "ftF": [
+          366,
+          162
+        ],
+        "elF": [
+          268,
+          160
+        ],
+        "wrF": [
+          248,
+          162
+        ]
       },
       "B": {
-        "h": [248, 110],
-        "sh": [266, 118],
-        "hip": [310, 126],
-        "kn": [338, 139],
-        "an": [364, 151],
-        "ft": [368, 162],
-        "el": [266, 158],
-        "wr": [244, 161],
-        "knF": [336, 143],
-        "anF": [362, 155],
-        "ftF": [366, 162],
-        "elF": [268, 160],
-        "wrF": [248, 162]
+        "h": [
+          248,
+          110
+        ],
+        "sh": [
+          266,
+          118
+        ],
+        "hip": [
+          310,
+          126
+        ],
+        "kn": [
+          338,
+          139
+        ],
+        "an": [
+          364,
+          151
+        ],
+        "ft": [
+          368,
+          162
+        ],
+        "el": [
+          266,
+          158
+        ],
+        "wr": [
+          244,
+          161
+        ],
+        "knF": [
+          336,
+          143
+        ],
+        "anF": [
+          362,
+          155
+        ],
+        "ftF": [
+          366,
+          162
+        ],
+        "elF": [
+          268,
+          160
+        ],
+        "wrF": [
+          248,
+          162
+        ]
       },
       "hold": true,
       "flip": false,
@@ -102,13 +180,15 @@
       "elbow",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "ear"
     ],
     "needed": [
       "shoulder",
       "elbow",
       "hip",
-      "ankle"
+      "ankle",
+      "knee"
     ],
     "bones": [
       [
@@ -157,7 +237,8 @@
       "elbow|wrist": "stack",
       "shoulder|hip": "line",
       "hip|knee": "line",
-      "knee|ankle": "line"
+      "knee|ankle": "line",
+      "ear|shoulder": "head"
     }
   },
   "measurements": [
@@ -191,7 +272,7 @@
           "max": 40
         }
       ],
-      "why": "The upper arm's lean off vertical, positive toward the head. The shoulder belongs over the elbow or a little in front; behind it the joint takes the load at its weakest, so the band is not symmetric."
+      "why": "The upper arm's lean off vertical, positive toward the head: the shoulder belongs over the elbow or a little in front of it (elbows further forward make the plank harder, not wrong); more than ten degrees behind it and the shoulder takes the load at its end."
     },
     {
       "key": "line",
@@ -204,7 +285,8 @@
       "b": "hip",
       "c": "ankle",
       "band": {
-        "sym": "hipLine"
+        "lo": "hipSag",
+        "hi": "hipPike"
       },
       "scale": [
         -30,
@@ -212,13 +294,72 @@
       ],
       "settings": [
         {
-          "key": "hipLine",
-          "label": "Hip allowed off the line",
+          "key": "hipSag",
+          "label": "Hip below the line, at most (degrees, negative)",
+          "min": -25,
+          "max": -2
+        },
+        {
+          "key": "hipPike",
+          "label": "Hip above the line, at most (degrees)",
           "min": 2,
           "max": 25
         }
       ],
-      "why": "How far the hip sits off the shoulder-to-ankle line, as degrees of bend: positive piked up, negative sagging."
+      "why": "How far the hip sits off the shoulder-to-ankle line, as degrees of bend: positive piked up, negative sagging. Five degrees is under three centimetres at the hip, inside the model's wobble, so the band is −7 to +10 — a sag loads the lower back, a small pike does not."
+    },
+    {
+      "key": "knee",
+      "label": "knees straight",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Knee angle, at least (180 is straight)",
+          "min": 130,
+          "max": 179
+        }
+      ],
+      "why": "The knees straight: a bent knee drops the hips onto the legs and the line from shoulder to ankle stops meaning anything."
+    },
+    {
+      "key": "head",
+      "label": "head in line",
+      "hud": "HEAD",
+      "note": "in line",
+      "kind": "bend",
+      "a": "ear",
+      "b": "shoulder",
+      "c": "hip",
+      "optional": true,
+      "band": {
+        "sym": "headTilt"
+      },
+      "scale": [
+        -50,
+        50
+      ],
+      "settings": [
+        {
+          "key": "headTilt",
+          "label": "Head off the line of the back, at most (degrees)",
+          "min": 5,
+          "max": 45
+        }
+      ],
+      "why": "How far the shoulder sits off the straight line from the ear to the hip: 0 with the head in line with the back; + the head dropping toward the floor, − craning up to look ahead."
     }
   ],
   "faults": [
@@ -241,6 +382,14 @@
       "tone": "walking in"
     },
     {
+      "id": "kneeBent",
+      "measure": "knee",
+      "side": "below",
+      "when": "top",
+      "label": "Knees bent",
+      "text": "Straighten the knees"
+    },
+    {
       "id": "hipup",
       "measure": "line",
       "side": "above",
@@ -257,6 +406,22 @@
       "text": "Lift your hips",
       "deep": "Lift your hips — shoulders to heels in one line",
       "tone": "up"
+    },
+    {
+      "id": "headDrop",
+      "measure": "head",
+      "side": "above",
+      "when": "top",
+      "label": "Head dropping",
+      "text": "Head in line — don’t let it hang"
+    },
+    {
+      "id": "headUp",
+      "measure": "head",
+      "side": "below",
+      "when": "top",
+      "label": "Head craning",
+      "text": "Head in line — eyes on the floor just ahead of your hands"
     }
   ],
   "draw": [
@@ -283,19 +448,26 @@
       "size": 0.9
     }
   ],
+  "inPosition": [
+    "stack",
+    "line",
+    "knee"
+  ],
   "defaults": {
-    "stackMin": -5,
+    "stackMin": -10,
     "stackMax": 15,
-    "hipLine": 5,
     "deepAt": 8,
     "setCount": 3,
-    "holdTargetSec": 60,
+    "holdTargetSec": 30,
     "callAtSec": [
-      45,
-      30,
+      20,
       10,
       5
-    ]
+    ],
+    "hipSag": -7,
+    "hipPike": 10,
+    "kneeMin": 165,
+    "headTilt": 20
   },
   "settings": [
     {

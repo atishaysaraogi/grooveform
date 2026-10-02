@@ -616,7 +616,7 @@
 
       let cue = null;
       if (this.phase === 'down' && raised) {
-        this.phase = 'up'; this.repHoldMs = 0; this.inSince = 0; this.called = {};
+        this.phase = 'up'; this.repHoldMs = 0; this.inSince = 0; this.called = {}; this.peak = null;
       } else if (this.phase === 'up') {
         if (this.repHoldMs >= targetMs) { this.phase = 'lower'; this.lowerAt = t; cue = this.offer('lower', t, C.lower.text, true); }
         else if (atStart) {
@@ -666,8 +666,15 @@
       /* when each fault is judged (the file's `when`): at the top (while the rep is up —
          the default), through the rep (up and lowering), or at all times (between reps
          too, what `setup` used to say) */
+      /* a rep on its way back down without having been held: what is wrong at the top is no
+         longer worth saying ("higher" to someone lowering), only what is judged through the
+         rep. The rep's own peak is the reference, so it is the same for every measure */
+      const pg = v.progress;
+      if (this.phase === 'up' && pg && pg.x != null && (this.peak == null || (pg.dir > 0 ? pg.x > this.peak : pg.x < this.peak))) this.peak = pg.x;
+      const falling = this.phase === 'up' && pg && pg.x != null && this.peak != null && pg.downAt != null &&
+        (pg.dir > 0 ? this.peak - pg.x : pg.x - this.peak) > 0.3 * Math.abs(this.peak - pg.downAt);
       const W = this.move.when || {}, setup = this.move.setup || [];
-      const judged = (id) => { const w = W[id] || (setup.includes(id) ? 'always' : 'top'); return w === 'between' ? this.phase === 'down' : this.phase === 'up' ? true : this.phase === 'lower' ? w !== 'top' : this.phase === 'down' ? w === 'always' : false; };
+      const judged = (id) => { const w = W[id] || (setup.includes(id) ? 'always' : 'top'); return w === 'between' ? this.phase === 'down' : this.phase === 'up' ? !(falling && w === 'top') : this.phase === 'lower' ? w !== 'top' : this.phase === 'down' ? w === 'always' : false; };
       let on = {};
       if (this.phase === 'down') on.raise = 99;
       for (const id of Object.keys(v.faults || {})) if (judged(id)) on[id] = v.faults[id];
@@ -791,7 +798,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-02b';
+  const VER = '2026-10-02c';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

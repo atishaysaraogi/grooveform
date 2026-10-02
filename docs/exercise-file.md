@@ -396,7 +396,7 @@ said, whatever their sizes.
   "label": "Feet too far out",                 // on the picture: 26 characters at most
   "text": "Walk your feet in",                 // said
   "deep": "Walk your feet in toward you — they are well out",   // said when far past the band (deepAt)
-  "when": "always",                            // top (default: judged while the rep is up) | rep (up and lowering) | always (between reps too)
+  "when": "between",                           // top (default: judged while the rep is up) | rep (up and lowering) | always (between reps too) | between (at rest only)
   "requires": ["foot"],                        // only judged while these measurements are good
   "unless": ["liftHigh"],                      // not while these faults are on
   "tone": "walking in" }
@@ -407,8 +407,11 @@ said, whatever their sizes.
 lift to the return, lowering included; `always`, between reps as well, so the
 feet are coached before the lift is asked for (`setup: true` is the old
 spelling of `always`); `between`, only between reps, at rest — the quad set's
-roll under the knee is judged there and nowhere else. A hold judges every
-fault all the time. Tones: `tick` (default), `plain`,
+roll under the knee and the bridge's feet are judged there and nowhere else.
+`always` and `between` faults are said before the prompt, so a correction of
+the start position is not talked over by the call to move. A top fault is not
+said once the rep is well on its way back down. A hold judges every fault all
+the time. Tones: `tick` (default), `plain`,
 `up`, `down`, `walking in`, `walking out`, `hold`, `done`, `call`.
 
 ## Drawn on the picture

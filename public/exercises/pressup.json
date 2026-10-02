@@ -43,7 +43,7 @@
       "Lower slowly. The rep counts when the chest is back on the floor."
     ],
     "cannot": "Whether the back muscles are relaxed and where the pain is moving: it sees the chest rising and the hips lifting. Let the arms do all of it.",
-    "about": "Prone press-up — face down side on: the press, as the hip-to-shoulder line off level, at least 30° at the top (flat reads near 0; a full press with straight arms about 45); a rep is under way past 15 and counts when the chest is back under 8; and the hips on the floor, as the knee-to-hip line off level at most 8° — the hips coming up turns it into a push-up. Hold two seconds at the top. A McKenzie extension: ten reps, repeated through the day, with the range growing as it eases; pain that moves toward the spine is the sign to keep going, pain that moves down the leg the sign to stop.",
+    "about": "Prone press-up — face down side on: the press, as the hip-to-shoulder line off level, at least 20° at the top (flat reads near 0; on the elbows about 30; a full press with straight arms about 45) — only as far as is comfortable; a rep is under way past 15 and counts when the chest is back under 8; and the hips on the floor, the knee-to-hip line no more than 5° above where it started — the hips coming up turns it into a push-up; and the legs relaxed on the floor, the knees not lifting more than 8° — that is the back muscles doing it. Hold two seconds at the top. A McKenzie extension: ten reps, repeated through the day, with the range growing as it eases; pain that moves toward the spine is the sign to keep going, pain that moves down the leg the sign to stop.",
     "lost": "Lie face down side on to the camera, the whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -51,7 +51,7 @@
     "safety": "Stop if the pain spreads further down the leg. The back muscles stay relaxed; the arms press.",
     "easier": "Up onto the elbows rather than the hands; a smaller press; a shorter hold.",
     "harder": "Straight arms; a longer hold; a breath out at the top to let the hips sink.",
-    "mistakes": "Lifting the hips off the floor; tensing the back to lift; holding the breath; pushing into sharp pain."
+    "mistakes": "Lifting the hips off the floor; lifting the legs or tensing the back to lift; holding the breath; pushing into sharp pain."
   },
   "muscles": {
     "back": 0.5,
@@ -69,13 +69,13 @@
         "thighF": -90,
         "shinF": -90,
         "footF": 180,
-        "uarm": -150,
-        "farm": 30,
-        "uarmF": -150,
-        "farmF": 30
+        "uarm": 35.1,
+        "farm": -163.2,
+        "uarmF": 35.1,
+        "farmF": -163.2
       },
       "B": {
-        "torso": 55,
+        "torso": 45,
         "neck": -10,
         "thigh": -90,
         "shin": -90,
@@ -83,10 +83,10 @@
         "thighF": -90,
         "shinF": -90,
         "footF": 180,
-        "uarm": -170,
-        "farm": 5,
-        "uarmF": -170,
-        "farmF": 5
+        "uarm": -6.3,
+        "farm": 81.4,
+        "uarmF": -6.3,
+        "farmF": 81.4
       },
       "anchor": "ft",
       "belly": 1
@@ -165,21 +165,29 @@
       "a": "knee",
       "b": "hip",
       "band": {
-        "max": "hipLift"
+        "lo": "legsLift",
+        "hi": "hipLift"
       },
       "scale": [
         -20,
         40
       ],
-      "why": "The knee-to-hip line off level: the hips coming up with the press, which is a push-up, not an extension.",
+      "why": "The knee-to-hip line off level, as its change since the start: + the hips coming up with the press, which is a push-up, not an extension; − the knees lifting off the floor, the back muscles doing the work. Read against the start, since the shape of the body alone tilts it a few degrees.",
       "settings": [
         {
+          "key": "legsLift",
+          "label": "Legs lifted, at most (degrees from the start, negative)",
+          "min": -30,
+          "max": -2
+        },
+        {
           "key": "hipLift",
-          "label": "Hip above the knee, at most (degrees)",
-          "min": 3,
+          "label": "Hips lifted, at most (degrees from the start)",
+          "min": 2,
           "max": 30
         }
-      ]
+      ],
+      "fromStart": "change"
     }
   ],
   "progress": {
@@ -219,6 +227,14 @@
       "deep": "The hips are up — this is a push-up; lower them and press less",
       "tone": "plain",
       "when": "rep"
+    },
+    {
+      "id": "legsLift",
+      "measure": "hip",
+      "side": "below",
+      "when": "rep",
+      "label": "Legs lifting",
+      "text": "Legs relaxed on the floor — the arms do the work"
     }
   ],
   "draw": [
@@ -234,17 +250,18 @@
     }
   ],
   "defaults": {
-    "pressMin": 30,
-    "hipLift": 8,
+    "pressMin": 20,
+    "hipLift": 5,
     "raiseAt": 15,
     "downAt": 8,
     "holdTargetSec": 2,
     "callAtSec": [],
     "repCount": 10,
-    "setCount": 3,
+    "setCount": 1,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "legsLift": -8
   },
   "settings": [
     {

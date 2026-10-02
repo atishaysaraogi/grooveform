@@ -1,6 +1,6 @@
 'use strict';
-/* The glute bridge: feet placed, hips lifted to a line, no higher than the knees,
-   feet flat throughout, lowered slowly. Every number the app acts on is held
+/* The glute bridge: feet placed, hips lifted to one line from the knees to the
+   shoulders and no higher, feet flat throughout, lowered slowly. Every number the app acts on is held
    against a body posed to exactly that number. Run: npm test */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -9,19 +9,19 @@ const M = require('../public/js/moves.js').bridge;
 
 const D = Math.PI / 180;
 const ASPECT = 16 / 9;                        // lying down, so the phone is on its side
-/* the rig lays heel and toe on one floor line, so the model's slant that the file takes off is zero here */
-const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, { footBias: 0 }, o);
+const cfg = (o) => Object.assign({}, Core.COMMON, M.defaults, o);
 const read = (lm, o) => M.read(lm, ASPECT, cfg(o));
 const judge = (r, o) => M.judge(r, cfg(o));
 /* and a coach on the rig is told the same */
-const Coach = (o) => new Core.Coach(M, Object.assign({ footBias: 0, readyMs: 2000 }, o));   // the rep mechanics with a two-second wait; the wait itself has tests of its own
+const Coach = (o) => new Core.Coach(M, Object.assign({ readyMs: 2000 }, o));   // the rep mechanics with a two-second wait; the wait itself has tests of its own
 
 /* A body on its back, side on, built backwards from the angles it should read.
      shin   the angle at the heel between the toe and the knee (90 = shin plumb)
      dip    how far the thigh drops from the knee to the hip, below level: 50 lying
             on the floor with the knees up, 0 hips level with the knees, negative
-            hips above them. The hip's rise above the knee reads as −dip.
-     hipAng the angle at the hip between knee and shoulder
+            hips above them.
+     hipAng the angle at the hip between knee and shoulder, past 180 the hip pushed
+            above the line from the knee to the shoulder: the line reads hipAng − 180
      foot   the foot line's tilt: + heel above toe, − toe above heel
      facing +1 = feet to the image right, −1 = mirrored
    The foot is laid from the heel, the shin swung up off it by `shin`, the thigh
@@ -62,12 +62,12 @@ test('rise: how far one point sits above another, signed', () => {
   assert.equal(Core.rise({ x: 1, y: 1 }, { x: 1, y: 1 }), null);
 });
 
-test('lying there reads the shin, the hip, the hip below the knee, and a flat foot', () => {
+test('lying there reads the shin, the hip, the hip below the line, and a flat foot', () => {
   const r = readOf({});
   assert.ok(r.ok);
   assert.ok(Math.abs(r.shin - 90) < 0.01, 'shin plumb: ' + r.shin);
   assert.ok(Math.abs(r.hip - 130) < 0.01, 'hip angle as posed: ' + r.hip);
-  assert.ok(Math.abs(r.over + 50) < 0.01, 'the hip is fifty below the knee: ' + r.over);
+  assert.ok(Math.abs(r.over + 50) < 0.01, 'the hip is fifty below the line from knee to shoulder: ' + r.over);
   assert.ok(Math.abs(r.foot) < 0.01, 'foot flat: ' + r.foot);
   const v = judge(r);
   assert.equal(v.atStart, true, 'and that is the start of a rep');
@@ -78,14 +78,14 @@ test('lying there reads the shin, the hip, the hip below the knee, and a flat fo
 test('the four readings come back as posed, and are independent of each other', () => {
   for (const shin of [70, 85, 100, 120]) {
     for (const dip of [50, 20, 0, -8]) {
-      for (const hipAng of [120, 160, 175]) {
+      for (const hipAng of [120, 160, 175, 190]) {
         for (const foot of [-15, 0, 12]) {
           for (const facing of [1, -1]) {
             const r = read(body({ shin, dip, hipAng, foot, facing }));
             const at = `(shin ${shin}, dip ${dip}, hip ${hipAng}, foot ${foot}, facing ${facing})`;
             assert.ok(Math.abs(r.shin - shin) < 0.01, `shin read ${r.shin.toFixed(2)} ${at}`);
             assert.ok(Math.abs(r.hip - hipAng) < 0.01, `hip read ${r.hip.toFixed(2)} ${at}`);
-            assert.ok(Math.abs(r.over + dip) < 0.01, `rise read ${r.over.toFixed(2)} ${at}`);
+            assert.ok(Math.abs(r.over - (hipAng - 180)) < 0.01, `line read ${r.over.toFixed(2)} ${at}`);
             assert.ok(Math.abs(r.foot - foot) < 0.01, `foot read ${r.foot.toFixed(2)} ${at}`);
           }
         }
@@ -100,12 +100,12 @@ test('it reads the same body at half the size: degrees, not distances', () => {
   for (const k of ['shin', 'hip', 'over', 'foot']) assert.ok(Math.abs(big[k] - small[k]) < 0.01, k);
 });
 
-const TOP = { shin: 95, dip: 5, hipAng: 170, foot: 0 };   // a good top: hips just under the knees, line made
+const TOP = { shin: 95, dip: 5, hipAng: 170, foot: 0 };   // a good top: the line from knees to shoulders made, near enough
 
-test('the shin band is 85 to 110 at the heel, edges included, and says which way the feet go', () => {
+test('the shin band is 85 to 122 at the heel, edges included, and says which way the feet go', () => {
   const at = (shin) => judge(readOf(Object.assign({}, TOP, { shin })));
-  assert.equal(at(85).good.shin, true); assert.equal(at(110).good.shin, true); assert.equal(at(97).good.shin, true);
-  assert.equal(at(84).good.shin, false); assert.equal(at(111).good.shin, false);
+  assert.equal(at(85).good.shin, true); assert.equal(at(122).good.shin, true); assert.equal(at(111).good.shin, true);
+  assert.equal(at(84).good.shin, false); assert.equal(at(123).good.shin, false);
   /* the toes point away from the head, so over the band the knee leans toward
      the head: the feet are out too far and are walked in. Under it the knee is
      out over the toes: too close, walked out. */
@@ -113,8 +113,10 @@ test('the shin band is 85 to 110 at the heel, edges included, and says which way
   assert.ok(at(70).faults.feetClose > 0 && at(70).faults.feetFar == null, 'feet close');
   assert.match(M.cues.feetFar.text, /walk your feet in/i);
   assert.match(M.cues.feetClose.text, /feet out/i);
-  /* the feet, flat and placed, are set-up faults, coached before the lift is asked for */
-  assert.deepEqual(M.setup, ['heelsUp', 'toesUp', 'feetFar', 'feetClose']);
+  /* the feet flat are judged at all times; where they are is judged at rest, between reps,
+     where they can be moved — both before the lift is asked for */
+  assert.deepEqual(M.setup, ['heelsUp', 'toesUp']);
+  assert.equal(M.when.feetFar, 'between'); assert.equal(M.when.feetClose, 'between');
   /* the shin's angle is taken at the heel: a heel or a toe off the floor moves
      it, so the foot is corrected first and the shin is not judged until it is flat */
   const up = (shin, foot) => judge(readOf(Object.assign({}, TOP, { shin, foot })));
@@ -124,50 +126,56 @@ test('the shin band is 85 to 110 at the heel, edges included, and says which way
   assert.ok(up(125, 0).faults.feetFar > 0, 'and flat again, the shin is judged');
 });
 
-test('the top is a hip angle of at least 160, and the hip no more than three degrees above the knee', () => {
+test('the top is a hip angle of at least 160, and the hip no more than eight degrees above the line from knee to shoulder', () => {
   const at = (o) => judge(readOf(Object.assign({}, TOP, o)));
   assert.equal(at({ hipAng: 160 }).good.hip, true, 'the edge is in');
   assert.equal(at({ hipAng: 159 }).good.hip, false);
   assert.ok(at({ hipAng: 150 }).faults.hipLow > 0);
-  assert.equal(at({ dip: -3 }).good.over, true, 'three above is allowed');
-  assert.equal(at({ dip: -3 }).faults.hipHigh, undefined);
-  assert.equal(at({ dip: -4 }).good.over, false, 'four is not');
-  assert.ok(Math.abs(at({ dip: -10 }).faults.hipHigh - 7) < 0.01, 'and the fault is how far over');
-  assert.equal(at({ dip: 30 }).good.over, true, 'below the knee is never the fault');
-  assert.match(M.cues.hipHigh.text, /no higher than your knees/i);
+  assert.equal(at({ hipAng: 188 }).good.over, true, 'eight above is allowed');
+  assert.equal(at({ hipAng: 188 }).faults.hipHigh, undefined);
+  assert.equal(at({ hipAng: 189 }).good.over, false, 'nine is not');
+  assert.ok(Math.abs(at({ hipAng: 195 }).faults.hipHigh - 7) < 0.01, 'and the fault is how far over');
+  assert.equal(at({ hipAng: 140 }).good.over, true, 'below the line is never this fault');
+  /* the hip angle is read on past straight, so far past the line it keeps rising rather than
+     closing again — and if it ever reads short there, the hips too high silences "lift higher" */
+  assert.ok(Math.abs(readOf(Object.assign({}, TOP, { hipAng: 205 })).hip - 205) < 0.01, 'past the line the hip reads past 180');
+  assert.ok(at({ hipAng: 205 }).faults.hipHigh > 0 && at({ hipAng: 205 }).faults.hipLow == null, 'too high, not short: ' + JSON.stringify(at({ hipAng: 205 }).faults));
+  assert.equal(at({ dip: -8 }).faults.hipHigh, undefined, 'the hips above the knees are not the fault — above the line is');
+  assert.match(M.cues.hipHigh.text, /one line/i);
 });
 
 test('the foot stays flat: heels lifting and toes lifting are told apart', () => {
   const at = (foot) => judge(readOf(Object.assign({}, TOP, { foot })));
-  assert.equal(at(10).good.foot, true); assert.equal(at(-10).good.foot, true);
-  assert.equal(at(11).good.foot, false); assert.equal(at(-11).good.foot, false);
+  assert.equal(at(12).good.foot, true); assert.equal(at(-12).good.foot, true);
+  assert.equal(at(13).good.foot, false); assert.equal(at(-13).good.foot, false);
   assert.ok(at(18).faults.heelsUp > 0 && at(18).faults.toesUp == null, 'heel above toe: heels up');
   assert.ok(at(-18).faults.toesUp > 0 && at(-18).faults.heelsUp == null, 'toe above heel: toes up');
   assert.match(M.cues.heelsUp.text, /heels down/i);
   assert.match(M.cues.toesUp.text, /toes down/i);
 });
 
-test('the model\'s heel sits above the sole, so a flat foot reads heel-up: the file takes that slant off', () => {
-  /* with the file's own numbers (footBias 9) the rig's flat foot reads nine degrees toe-up
-     and a heel raised by nine reads level — what a real flat foot reads, as recorded */
-  const own = (o) => Object.assign({}, Core.COMMON, M.defaults, o);
-  const at = (foot, o) => M.read(body(Object.assign({}, TOP, { foot })), ASPECT, own(o)).foot;
-  assert.ok(Math.abs(at(0) + 9) < 0.01, 'flat on the rig reads -9 once the slant is taken off: ' + at(0));
-  assert.ok(Math.abs(at(9)) < 0.01, 'the model\'s flat foot reads level: ' + at(9));
-  assert.ok(Math.abs(at(9, { footBias: 0 }) - 9) < 0.01, 'and the bias is a setting');
-  const j = (foot) => M.judge(M.read(body(Object.assign({}, TOP, { foot })), ASPECT, own()), own());
-  assert.ok(j(20).faults.heelsUp > 0, 'twenty on the model is eleven of real heel lift');
-  assert.ok(j(-2).faults.toesUp > 0, 'minus two on the model, as recorded with the toes visibly up, is toes up');
-  assert.equal(j(9).faults.heelsUp, undefined); assert.equal(j(9).faults.toesUp, undefined);
-  assert.ok(M.bands.find((b) => b.key === 'foot').set.some((s) => s.key === 'footBias'), 'tunable from the settings, beside the foot band');
+test('the foot is read against its own start, so the model\'s slant of a flat foot is taken off by itself', () => {
+  /* the model sets a flat foot's heel above the sole (a recorded flat foot read nine degrees
+     heel-up, and real photos read anything from -8 to -21 at the top): the foot is read as its
+     change from the start, whatever that slant is */
+  assert.ok(M.fromStart.some((x) => x.key === 'foot' && x.how === 'change'));
+  const c = Coach();
+  let t = play(c, Object.assign({}, REST, { foot: 9 }), 2300, 0).t;   // lying, the model's foot at nine
+  ({ t } = play(c, Object.assign({}, REST, { foot: 9 }), 1000, t));
+  const flat = play(c, Object.assign({}, TOP, { foot: 9 }), 1500, t); t = flat.t;
+  assert.ok(Math.abs(flat.last.reading.foot) < 0.01, 'the same slant at the top reads flat: ' + flat.last.reading.foot);
+  assert.ok(!flat.said.some((x) => x.id === 'heelsUp' || x.id === 'toesUp'), JSON.stringify(flat.said.map((x) => x.text)));
+  const up = play(c, Object.assign({}, TOP, { foot: 9 + 16 }), 1500, t);
+  assert.ok(up.said.some((x) => x.id === 'heelsUp'), 'sixteen more is the heels lifting: ' + JSON.stringify(up.said.map((x) => x.text)));
+  assert.equal(M.defaults.footBias, undefined, 'no slant to set by hand');
 });
 
 test('the position is all four together, with the hips actually lifted', () => {
   const at = (o) => judge(readOf(Object.assign({}, TOP, o)));
   assert.equal(at({}).inPosition, true);
-  assert.equal(at({ shin: 120 }).inPosition, false, 'feet');
+  assert.equal(at({ shin: 125 }).inPosition, false, 'feet');
   assert.equal(at({ hipAng: 150 }).inPosition, false, 'hip short of the line');
-  assert.equal(at({ dip: -8 }).inPosition, false, 'hip past the knees');
+  assert.equal(at({ hipAng: 192 }).inPosition, false, 'hip past the line');
   assert.equal(at({ foot: 15 }).inPosition, false, 'heels up');
   assert.equal(at({ hipAng: 145 }).raised, false, 'and under the lift mark it is not up at all');
   assert.equal(at({ hipAng: 150 }).raised, true);
@@ -179,7 +187,7 @@ test('the order: feet flat, then where they are, then the hips — too high befo
   assert.deepEqual(M.faults, ['lost', 'heelsUp', 'toesUp', 'feetFar', 'feetClose', 'raise', 'hipHigh', 'hipLow']);
   assert.equal(M.camera, 'wide');
   assert.equal(M.reps, true);
-  assert.equal(M.defaults.holdTargetSec, 2);
+  assert.equal(M.defaults.holdTargetSec, 3);
   assert.equal(M.defaults.repCount, 10);
 });
 
@@ -225,7 +233,7 @@ test('a rep: lift, hold at the top, lower slowly, and it counts when the hips ar
   assert.equal(c.reps, 0);
   assert.ok(rest.said.some((x) => x.id === 'raise' && /lift your hips/i.test(x.text)), 'asked to lift: ' + texts(rest));
 
-  const up = play(c, TOP, 3500, t); t = up.t;            // settle, then the two second squeeze
+  const up = play(c, TOP, 4500, t); t = up.t;            // settle, then the three second squeeze
   assert.equal(up.last.phase, 'lower', 'held, and time to come down');
   assert.equal(c.reps, 0, 'not counted at the top');
   assert.ok(up.said.some((x) => x.id === 'hold'), 'told to hold: ' + texts(up));
@@ -242,7 +250,7 @@ test('dropped from the top, the rep is counted and the count says so', () => {
   const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
-  ({ t } = play(c, TOP, 3500, t));
+  ({ t } = play(c, TOP, 4500, t));
   const drop = play(c, REST, 900, t);
   assert.equal(c.reps, 1);
   assert.match(drop.said.find((x) => x.id === 'count1').text, /^1 — slower on the way down$/);
@@ -257,25 +265,26 @@ test('feet placed wrong are corrected at the start, before the lift is asked for
   /* fixed, the lift is asked for */
   const fixed = play(c, REST, 3000, far.t);
   assert.ok(fixed.said.some((x) => x.id === 'raise'), texts(fixed));
-  /* and a foot off the floor at the start comes before where the feet are */
+  /* and a foot coming off the floor comes before where the feet are */
   const both = Coach();
-  const lifted = play(both, Object.assign({}, REST, { shin: 125, foot: -16 }), 3800, 0);
-  const said = lifted.said.find((x) => x.id !== 'lost');
+  const lt = settle(both, 0);
+  const lifted = play(both, Object.assign({}, REST, { shin: 125, foot: -16 }), 2500, lt);
+  const said = lifted.said.find((x) => x.id !== 'lost' && x.id !== 'raise');
   assert.equal(said && said.id, 'toesUp', 'toes down first: ' + texts(lifted));
 });
 
-test('at the top, the hips past the knees are said before the line being short, and the feet before both', () => {
+test('at the top, hips pushed past the line are told so and not told to lift higher, and the feet come before the hips', () => {
   const both = Coach();
   let t = settle(both, 0);
   ({ t } = play(both, REST, 1000, t));
-  const up = play(both, { shin: 95, dip: -10, hipAng: 150, foot: 0 }, 2500, t);
+  const up = play(both, { shin: 95, dip: -10, hipAng: 205, foot: 0 }, 2500, t);
   const ids = up.said.map((x) => x.id);
   assert.ok(ids.includes('hipHigh'), texts(up));
-  assert.ok(!ids.includes('hipLow') || ids.indexOf('hipHigh') < ids.indexOf('hipLow'), 'too high first');
+  assert.ok(!ids.includes('hipLow'), 'not "lift higher": ' + texts(up));
   const feet = Coach();
   t = settle(feet, 0);
   ({ t } = play(feet, REST, 1000, t));
-  const lift = play(feet, { shin: 95, dip: -10, hipAng: 150, foot: 16 }, 2500, t);
+  const lift = play(feet, { shin: 95, dip: -10, hipAng: 205, foot: 16 }, 2500, t);
   const first = lift.said.find((x) => x.id !== 'lost');
   assert.equal(first && first.id, 'heelsUp', 'heels before hips: ' + texts(lift));
 });
@@ -288,7 +297,7 @@ test('a frame or two read as the start does not end a rep: the return has to hol
   let g = play(c, REST, 200, t); t = g.t;                // the model blinks: three frames at the start
   assert.equal(g.last.phase, 'up', 'still the same rep');
   assert.ok(!g.said.some((x) => x.id === 'early'), texts(g));
-  ({ t } = play(c, TOP, 2500, t));
+  ({ t } = play(c, TOP, 3500, t));
   assert.equal(c.phase, 'lower', 'the hold went on and finished: ' + c.phase);
   const down = play(c, REST, 1000, t);
   assert.equal(c.reps, 1, 'and the real return counts it');
@@ -306,7 +315,7 @@ test('ten reps finish the set; the number is a setting', () => {
   let t = settle(c, 0);
   for (let i = 0; i < 3; i++) {
     ({ t } = play(c, REST, 800, t));
-    ({ t } = play(c, TOP, 3300, t));
+    ({ t } = play(c, TOP, 4000, t));
     ({ t } = play(c, HALFWAY, 1200, t));
     const out = play(c, REST, 900, t); t = out.t;
     assert.equal(c.reps, i + 1);
@@ -321,7 +330,7 @@ test('after a rep is counted there is a quiet two seconds before the next is ask
   const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
-  ({ t } = play(c, TOP, 3500, t));
+  ({ t } = play(c, TOP, 4500, t));
   ({ t } = play(c, HALFWAY, 1300, t));
   const down = play(c, REST, 3000, t);
   const count = down.said.find((x) => x.id === 'count1');
@@ -333,14 +342,14 @@ test('after a rep is counted there is a quiet two seconds before the next is ask
   /* a set-up fault waits for the quiet too */
   const c2 = Coach();
   let u = settle(c2, 0);
-  ({ t: u } = play(c2, REST, 1000, u)); ({ t: u } = play(c2, TOP, 3500, u)); ({ t: u } = play(c2, HALFWAY, 1300, u));
+  ({ t: u } = play(c2, REST, 1000, u)); ({ t: u } = play(c2, TOP, 4500, u)); ({ t: u } = play(c2, HALFWAY, 1300, u));
   const far = play(c2, Object.assign({}, REST, { shin: 125 }), 3000, u);
   const cnt = far.said.find((x) => x.id === 'count1'), feet = far.said.find((x) => x.id === 'feetFar');
   assert.ok(feet && feet.t - cnt.t >= 2000, 'feet corrected only after the quiet: ' + texts(far));
   /* and it is a setting: none at zero */
   const c3 = Coach({ restSec: 0 });
   let w = settle(c3, 0);
-  ({ t: w } = play(c3, REST, 1000, w)); ({ t: w } = play(c3, TOP, 3500, w)); ({ t: w } = play(c3, HALFWAY, 1300, w));
+  ({ t: w } = play(c3, REST, 1000, w)); ({ t: w } = play(c3, TOP, 4500, w)); ({ t: w } = play(c3, HALFWAY, 1300, w));
   const quick = play(c3, REST, 2600, w);
   const q0 = quick.said.find((x) => x.id === 'count1'), q1 = quick.said.find((x) => x.id === 'raise');
   assert.ok(q1 && q1.t - q0.t < 2000, texts(quick));
@@ -361,9 +370,10 @@ test('every fault present is on view in words, whether or not it is the one bein
   const c = Coach();
   let t = settle(c, 0);
   ({ t } = play(c, REST, 1000, t));
-  /* at the top with three things wrong: the voice says one, the words show all three */
-  const out = c.step(read(body({ shin: 120, dip: -10, hipAng: 150, foot: 16 }), c.cfg), t);
-  assert.deepEqual(out.active, ['heelsUp', 'hipHigh', 'hipLow'], 'in the move\'s order — and no word on the shin while a heel is up');
+  /* at the top with the heels up, the hips short and the feet out: the voice says one, the
+     words show what is judged there — the feet's place is judged at rest, not at the top */
+  const out = c.step(read(body({ shin: 125, dip: 20, hipAng: 150, foot: 16 }), c.cfg), t);
+  assert.deepEqual(out.active, ['heelsUp', 'hipLow'], 'in the move\'s order — and no word on where the feet are at the top');
   for (const id of out.active) assert.ok(M.cues[id].label, id + ' has short words');
   /* at rest only the set-up faults are on view; the hips being down is not a fault there
      (the return takes a moment to be believed, so the rest is played for half a second) */

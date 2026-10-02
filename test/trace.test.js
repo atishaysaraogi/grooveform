@@ -6,7 +6,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Trace = require('../public/js/trace.js');
 const Moves = require('../public/js/moves.js');
-const M = Moves.bridge;
+const Core = require('../public/js/core.js');
+const Spec = require('../public/js/spec.js');
+/* the bridge, with the two-second hold these takes were timed for (the file's own is three) */
+const M = (() => { const f = JSON.parse(JSON.stringify(Moves.bridge.spec)); f.defaults.holdTargetSec = 2; return Spec.compile(f, Core); })();
+/* a top with the hips pushed past the line from the knees to the shoulders, by `deg` */
+const over = (deg) => Object.assign({}, require('./fixtures/rig.js').TOP, { hipAng: 180 + deg });
 
 /* the bridge rig: a body posed to known angles, and a take of poses held for stretches of time */
 const { ASPECT, body, take, REST, TOP, HALF, cleanRep } = require('./fixtures/rig.js');
@@ -23,18 +28,18 @@ test('a trace run gives a row per frame with the reading, the verdict and the co
 });
 
 test('the numbers laid over the defaults change the verdicts, and the trace need not be read again', () => {
-  const frames = take([[REST, 3000], [Object.assign({}, TOP, { dip: -4 }), 3500], [HALF, 1300], [REST, 1500]]);   // four above the knee
+  const frames = take([[REST, 3000], [over(10), 3500], [HALF, 1300], [REST, 1500]]);   // ten above the line
   const strict = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
-  assert.ok(Trace.stretches(strict, 'hipHigh').length > 0, 'four is over three');
-  const eased = Trace.run(M, { overMax: 6 }, frames, ASPECT);
-  assert.equal(Trace.stretches(eased, 'hipHigh').length, 0, 'and under six');
-  assert.equal(eased.cfg.overMax, 6);
+  assert.ok(Trace.stretches(strict, 'hipHigh').length > 0, 'ten is over eight');
+  const eased = Trace.run(M, { overMax: 12 }, frames, ASPECT);
+  assert.equal(Trace.stretches(eased, 'hipHigh').length, 0, 'and under twelve');
+  assert.equal(eased.cfg.overMax, 12);
 });
 
 test('the tuning rule: quiet on every clean take, fires on every take of the fault', () => {
   const clean1 = { name: 'clean 1', tag: 'clean', frames: take(cleanRep), aspect: ASPECT };
   const clean2 = { name: 'clean 2', tag: 'clean', frames: take(cleanRep), aspect: ASPECT };
-  const high = { name: 'too high', tag: 'hipHigh', frames: take([[REST, 3000], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]), aspect: ASPECT };
+  const high = { name: 'too high', tag: 'hipHigh', frames: take([[REST, 3000], [over(15), 3500], [HALF, 1300], [REST, 1500]]), aspect: ASPECT };
   const feet = { name: 'feet out', tag: 'feetFar', frames: take([[Object.assign({}, REST, { shin: 125 }), 4000]]), aspect: ASPECT };
   const v = Trace.verdicts(M, {}, [clean1, clean2, high, feet]);
   const row = (id) => v.table.find((x) => x.id === id);
@@ -43,7 +48,7 @@ test('the tuning rule: quiet on every clean take, fires on every take of the fau
   assert.equal(row('heelsUp').pass, null, 'no take of it, no verdict');
   assert.equal(row('heelsUp').cleanTotal, 2);
   /* numbers that make a clean take fire fail the rule */
-  const tight = Trace.verdicts(M, { overMax: -8 }, [clean1, high]);
+  const tight = Trace.verdicts(M, { overMax: -12 }, [clean1, high]);
   assert.equal(tight.table.find((x) => x.id === 'hipHigh').cleanFired, 1);
   assert.equal(tight.table.find((x) => x.id === 'hipHigh').pass, false);
 });
@@ -60,13 +65,13 @@ test('a trace survives a trip through a file, and the settings list is the panel
   assert.throws(() => Trace.unpack('{"v":2}'), /not a trace/);
   const keys = Trace.settingsOf(M).map((s) => s.key);
   assert.ok(keys.includes('shinMin') && keys.includes('overMax') && keys.includes('repCount'));
-  assert.equal(Trace.defaults(M).overMax, 3);
-  assert.deepEqual(Trace.bandRange(M.bands[2], Trace.defaults(M)), { lo: -40, hi: 3 });
+  assert.equal(Trace.defaults(M).overMax, 8);
+  assert.deepEqual(Trace.bandRange(M.bands[2], Trace.defaults(M)), { lo: -60, hi: 8 });
 });
 
 test('the reps are broken out one by one, with the faults inside each and when they were said', () => {
-  /* two reps, the first past the knees for a moment at the top, then a dropped attempt */
-  const frames = take([[REST, 3000], [TOP, 1500], [Object.assign({}, TOP, { dip: -12 }), 1500], [TOP, 2500], [HALF, 1300], [REST, 2600],
+  /* two reps, the first past the line for a moment at the top, then a dropped attempt */
+  const frames = take([[REST, 3000], [TOP, 1500], [over(15), 1500], [TOP, 2500], [HALF, 1300], [REST, 2600],
     [TOP, 3500], [HALF, 1300], [REST, 2600],
     [TOP, 800], [REST, 1500]]);
   const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
@@ -76,7 +81,7 @@ test('the reps are broken out one by one, with the faults inside each and when t
   assert.deepEqual(reps.map((x) => x.n), [1, 2, null]);
   assert.ok(reps[0].t0 >= 2900 && reps[0].t0 <= 3200, 'the first rep starts at the lift: ' + reps[0].t0);
   const high = reps[0].faults.find((f) => f.id === 'hipHigh');
-  assert.ok(high, 'the first rep flags the hips past the knees: ' + JSON.stringify(reps[0].faults.map((f) => f.id)));
+  assert.ok(high, 'the first rep flags the hips past the line: ' + JSON.stringify(reps[0].faults.map((f) => f.id)));
   assert.ok(high.stretches[0].t0 >= 4400 && high.stretches[0].t0 <= 4700, 'from the moment it went past: ' + high.stretches[0].t0);
   assert.ok(high.said.length === 1 && high.said[0] >= high.stretches[0].t0, 'and was said, once, after it held: ' + high.said);
   assert.equal(reps[1].faults.length, 0, 'the second rep is clean — a hip still on its way up is not short of the line: ' + JSON.stringify(reps[1].faults));
@@ -84,7 +89,7 @@ test('the reps are broken out one by one, with the faults inside each and when t
   assert.ok(reps[0].lowerMs > 1000, 'and the lowering took its time: ' + reps[0].lowerMs);
   assert.ok(reps[2].cues.some((c) => c.id === 'early'), 'the dropped attempt was told so');
   /* the numbers moved: the fault leaves the rep */
-  const eased = Trace.reps(Trace.run(M, { readyMs: 2000, overMax: 15 }, frames, ASPECT), M);
+  const eased = Trace.reps(Trace.run(M, { readyMs: 2000, overMax: 20 }, frames, ASPECT), M);
   assert.ok(!eased[0].faults.some((f) => f.id === 'hipHigh'));
   /* set-up faults in the pause before a rep */
   const feet = take([[Object.assign({}, REST, { shin: 125 }), 3000], [REST, 800], [TOP, 3500], [HALF, 1300], [REST, 1500]]);
@@ -124,10 +129,10 @@ test('an attempt is accounted for: how far it got, its hold against the target, 
 });
 
 test('reps classified by a person: the edge that agrees with them is recommended, the current one kept when it already does', () => {
-  /* four reps: two clean at the top, one with the hips past the knees (dip -12), one not high enough (hipAng 150) */
+  /* four reps: two clean at the top, one with the hips fifteen past the line, one not high enough (hipAng 150) */
   const frames = take([[REST, 3000],
     [TOP, 3500], [HALF, 1300], [REST, 2600],
-    [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 2600],
+    [over(15), 3500], [HALF, 1300], [REST, 2600],
     [TOP, 3500], [HALF, 1300], [REST, 2600],
     [Object.assign({}, TOP, { hipAng: 150 }), 3500], [HALF, 1300], [REST, 2600]]);
   const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
@@ -145,8 +150,8 @@ test('reps classified by a person: the edge that agrees with them is recommended
   assert.equal(rec.labelled, 4); assert.equal(rec.unlabelled, 0);
   const high = rec.faults.find((f) => f.id === 'hipHigh'), low = rec.faults.find((f) => f.id === 'hipLow');
   assert.ok(high && low, rec.faults.map((f) => f.id).join(','));
-  /* hips past the knees: the clean reps sit about five below the knee line, the marked rep about twelve above; the
-     allowance of three already divides them, so it stays */
+  /* hips past the line: the clean reps sit about ten below it, the marked rep fifteen above; the
+     allowance of eight already divides them, so it stays */
   assert.equal(high.key, 'overMax'); assert.equal(high.status, 'fine'); assert.equal(high.value, high.now);
   assert.equal(high.clean.n, 3, 'the hipLow rep counts as clean for this fault'); assert.equal(high.bad.n, 1);
   assert.ok(high.clean.hi < 0 && high.bad.lo > 8, `clean up to ${high.clean.hi}, marked from ${high.bad.lo}`);
@@ -161,11 +166,11 @@ test('reps classified by a person: the edge that agrees with them is recommended
   assert.equal(high2.nowMiss, 1, 'at fifteen the marked rep is missed');
   assert.equal(high2.status, 'move'); assert.ok(high2.value > high2.clean.hi && high2.value < high2.bad.lo, `recommended ${high2.value} between ${high2.clean.hi} and ${high2.bad.lo}`);
   assert.equal(high2.afterMiss, 0); assert.equal(high2.afterFalse, 0);
-  /* the line moved the other way, to minus two: the clean reps fire; the recommendation lifts it just past them */
-  const r3 = Trace.run(M, { readyMs: 2000, overMax: -8 }, frames, ASPECT), reps3 = Trace.reps(r3, M);
+  /* the line moved the other way, to minus twelve: the clean reps fire; the recommendation lifts it just past them */
+  const r3 = Trace.run(M, { readyMs: 2000, overMax: -12 }, frames, ASPECT), reps3 = Trace.reps(r3, M);
   const rec3 = Trace.recommend(M, r3, reps3, labels, []);
   const high3 = rec3.faults.find((f) => f.id === 'hipHigh');
-  assert.ok(high3.nowFalse >= 1, 'clean reps fire at minus eight: ' + high3.nowFalse);
+  assert.ok(high3.nowFalse >= 1, 'clean reps fire at minus twelve: ' + high3.nowFalse);
   assert.equal(high3.status, 'move'); assert.ok(high3.value >= high3.clean.hi && high3.value < high3.bad.lo, `lifted to ${high3.value}`);
   assert.equal(high3.afterFalse, 0);
   /* a person who calls a clean rep faulty and a faulty rep clean: the two overlap, and the best cut is reported with what it gets wrong */
@@ -199,7 +204,7 @@ test('the lift line: a movement the person called a rep has to cross it', () => 
 
 test('several recordings are judged together: the clean rep in one, the marked rep in the other, one recommendation', () => {
   const clean = take([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 2600], [TOP, 3500], [HALF, 1300], [REST, 2600]]);
-  const high = take([[REST, 3000], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 2600]]);
+  const high = take([[REST, 3000], [over(15), 3500], [HALF, 1300], [REST, 2600]]);
   const r1 = Trace.run(M, { readyMs: 2000, overMax: 15 }, clean, ASPECT), r2 = Trace.run(M, { readyMs: 2000, overMax: 15 }, high, ASPECT);
   const reps1 = Trace.reps(r1, M), reps2 = Trace.reps(r2, M);
   assert.equal(reps1.length, 2); assert.equal(reps2.length, 1);

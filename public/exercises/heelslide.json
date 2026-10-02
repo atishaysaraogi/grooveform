@@ -37,13 +37,13 @@
     "position": "Lie on your back, side on to the phone, both legs straight, the working leg nearest the camera. A towel under the heel helps it slide.",
     "top": "The heel slid in toward the buttock as far as is comfortable — the knee bent to about a right angle — the heel and the hips on the floor.",
     "howto": [
-      "Lie on your back, legs straight, hips and shoulders on the floor.",
+      "Lie on your back, legs straight, hips and shoulders on the floor, the kneecap pointing at the ceiling.",
       "Slide the heel of the working leg along the floor toward your buttock, bending the knee as far as is comfortable. Keep the heel on the floor.",
-      "Hold at the deepest point for the count. Hips still on the floor.",
+      "Hold at the deepest point for five seconds. Hips still on the floor, the knee pointing up.",
       "Slide the heel back out until the leg is straight. The rep counts there."
     ],
-    "cannot": "The feel inside the knee and the stretch at the front of the thigh: it sees the knee angle, the hips and the heel.",
-    "about": "Heel slide — lying on the back side on: the knee angle, from 180 straight; the rep is under way once it is under 150 and counts when the leg is back past 165; the target at the deepest point is at most 90° (a right angle), which is the first goal after knee surgery — most daily life needs 90–110, a bike 110–120 — and the setting to move as the knee frees; the hips on the floor, as the hip no more than 8° above the shoulder; and the heel on the floor, no more than 10° above the other heel. Hold two seconds at the deepest point.",
+    "cannot": "The feel inside the knee, the stretch at the front of the thigh and the knee falling in or out (toward the camera): it sees the knee angle, the hips and the heel.",
+    "about": "Heel slide — lying on the back side on: the knee angle, from 180 straight; the rep is under way once it is under 150 and counts when the leg is back past 165; the goal at the deepest point is 90° (a right angle), the first goal after knee surgery — stairs need 80–90, a chair 90–100, a bike 90–115 — said as a goal rather than stopping the hold, and the setting to move as the knee frees; the hips on the floor, the shoulder-to-hip line no more than 5° off where it started; and the heel on the floor, no more than an eighth of a shin above where it started. Hold five seconds at the deepest point.",
     "lost": "Lie down side on to the camera, hips to feet in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -51,7 +51,7 @@
     "safety": "Go to firm stretch, not sharp pain. After surgery, follow the range your surgeon or physio has set.",
     "easier": "A shallower bend; a shorter hold; a slippery surface under the heel.",
     "harder": "A deeper bend; a longer hold; a strap round the ankle to help the last few degrees.",
-    "mistakes": "Lifting the heel off the floor; lifting the hip to help the knee bend; rushing the slide back out; holding the breath."
+    "mistakes": "Lifting the heel off the floor; lifting the hip to help the knee bend; letting the knee fall in or out; rushing the slide back out; holding the breath."
   },
   "muscles": {
     "ham": 0.6,
@@ -69,8 +69,8 @@
         "thighF": -90,
         "shinF": -90,
         "footF": 90,
-        "uarm": -60,
-        "farm": -60
+        "uarm": -90,
+        "farm": -90
       },
       "B": {
         "torso": 90,
@@ -81,8 +81,8 @@
         "thighF": -90,
         "shinF": -90,
         "footF": 90,
-        "uarm": -60,
-        "farm": -60
+        "uarm": -90,
+        "farm": -90
       },
       "anchor": "h",
       "belly": -1
@@ -106,8 +106,7 @@
       "hip",
       "knee",
       "ankle",
-      "heel",
-      "other.heel"
+      "heel"
     ],
     "needed": [
       "shoulder",
@@ -188,7 +187,7 @@
         -20,
         30
       ],
-      "why": "The shoulder-to-hip line off level: the hip coming up to help the knee bend.",
+      "why": "The line from the shoulder to the hip, as its change since the start: + the hip lifting off the floor to help the knee bend.",
       "settings": [
         {
           "key": "hipLift",
@@ -196,18 +195,18 @@
           "min": 2,
           "max": 25
         }
-      ]
+      ],
+      "fromStart": "change"
     },
     {
       "key": "heel",
-      "label": "heel above the other heel",
+      "label": "heel on the floor",
       "hud": "HEEL",
-      "note": "on the floor",
-      "kind": "rise",
-      "a": "other.heel",
+      "note": "stays down",
+      "kind": "distance",
+      "a": "hip",
       "b": "heel",
       "optional": true,
-      "unseen": 0,
       "band": {
         "max": "heelLift"
       },
@@ -215,15 +214,22 @@
         -20,
         60
       ],
-      "why": "The heel lifting off the floor as it slides, against the other heel. Not read when the other heel is hidden.",
+      "why": "The heel's height over the hip, as its change since the start, as a share of the shin: it slides along the floor, so it stays near 0; a heel lifting reads up.",
       "settings": [
         {
           "key": "heelLift",
-          "label": "Heel above the other heel, at most (degrees)",
-          "min": 3,
+          "label": "Heel lifted, at most (% of the shin)",
+          "min": 4,
           "max": 40
         }
-      ]
+      ],
+      "axis": "y",
+      "per": [
+        "knee",
+        "ankle"
+      ],
+      "times": 100,
+      "fromStart": "change"
     }
   ],
   "progress": {
@@ -236,8 +242,8 @@
     "atStart": true
   },
   "inPosition": [
-    "knee",
-    "hip"
+    "hip",
+    "heel"
   ],
   "prompt": {
     "id": "raise",
@@ -250,7 +256,7 @@
       "measure": "knee",
       "side": "above",
       "label": "Slide further",
-      "text": "Slide the heel further toward you",
+      "text": "Slide the heel a little further toward you, if it is comfortable",
       "deep": "Further in if you can — bend the knee a little more",
       "tone": "up"
     },
@@ -289,11 +295,11 @@
   ],
   "defaults": {
     "kneeMax": 90,
-    "hipLift": 8,
-    "heelLift": 10,
+    "hipLift": 5,
+    "heelLift": 12,
     "raiseAt": 150,
     "downAt": 165,
-    "holdTargetSec": 2,
+    "holdTargetSec": 5,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,

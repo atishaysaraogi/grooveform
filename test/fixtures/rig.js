@@ -55,8 +55,8 @@ function take(script, opts) {
 }
 
 /* The three poses of a rep. The foot's slant of 9 is the model's own: its heel landmark
-   sits above the sole, and the file takes nine degrees off for it, so a foot drawn flat
-   would read −9°, one degree inside the ±10 band, and any jitter would break the holds. */
+   sits above the sole. The file reads the foot against its start, so the slant is taken off
+   by itself. */
 const REST = { shin: 95, dip: 50, hipAng: 130, foot: 9 }, TOP = { shin: 95, dip: 5, hipAng: 170, foot: 9 }, HALF = { shin: 95, dip: 25, hipAng: 145, foot: 9 };
 const cleanRep = [[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 1500]];
 /* one rep from the top: held, lowered, and the pause before the next */

@@ -23,15 +23,15 @@
   "items": [
     {
       "move": "catcamel",
-      "sets": 2,
+      "sets": 1,
       "reps": 8
     },
     {
       "move": "pressup",
-      "sets": 3,
+      "sets": 1,
       "reps": 10,
       "rom": 70,
-      "note": "A smaller press at first."
+      "note": "A smaller press at first. Ten, repeated through the day."
     },
     {
       "move": "kneechest",
@@ -42,7 +42,7 @@
       "move": "bridge",
       "sets": 2,
       "reps": 10,
-      "hold": 2
+      "hold": 3
     },
     {
       "move": "birddog",

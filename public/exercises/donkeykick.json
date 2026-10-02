@@ -30,16 +30,16 @@
   "words": {
     "hint": "Phone on its side on the floor, side on to you, on your hands and knees, whole body in frame.",
     "start": "Lay the phone on its side on the floor, then get on your hands and knees side on to it, and kick one leg up.",
-    "position": "On your hands and knees, side on to the phone, hands under your shoulders, knees under your hips, back level.",
-    "top": "The working thigh in line with the back, knee still bent at a right angle, back level.",
+    "position": "On your hands and knees, side on to the phone, hands under your shoulders, knees under your hips, back flat.",
+    "top": "The working thigh in line with the back, knee still bent at a right angle, back flat and still.",
     "howto": [
-      "Hands under the shoulders, knees under the hips, back level, neck long.",
-      "Keeping the knee bent at a right angle, lift the leg nearest the camera until the thigh is in line with the back.",
-      "Hold at the top for the count without arching the lower back to make height.",
+      "Hands under the shoulders, knees under the hips, back flat, neck long, eyes to the floor.",
+      "Keeping the knee bent at a right angle, lift the leg nearest the camera, sole to the ceiling, until the thigh is in line with the back.",
+      "Hold at the top for the count without arching the lower back or rocking the trunk to make height.",
       "Lower slowly to the floor — the rep counts there. Sets alternate legs."
     ],
-    "cannot": "The hips rolling open toward the working side, and the far leg: it judges the arms, the back line and the lifted leg from the side. Keep the hips square yourself.",
-    "about": "Donkey kick — on hands and knees, side on: the arms plumb from the floor, 85–105°, elbows straight (at least 165°); the back level, hip to shoulder within ±10° of the floor; the working knee at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 160° at the top and no more than 5° above the line. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. One leg per set, the sets alternating.",
+    "cannot": "The shape of the spine — a sag or a round — the hips rolling open toward the working side, and the far leg: it judges the arms, the trunk staying still and the lifted leg from the side. Keep your weight centred and your hips square yourself.",
+    "about": "Donkey kick — on hands and knees, side on: the arms plumb from the floor, 85–105°, elbows straight (at least 165°); the trunk still, the hip-to-shoulder line within ±8° of where it was at the start; the working knee at a right angle, 80–100°; and the lift, the angle at the hip between knee and shoulder, at least 165° at the top and no more than 8° above the line of the back. Hold two seconds at the top, lower slowly, and the rep counts when the knee is back down. One leg per set, the sets alternating.",
     "lost": "Get onto your hands and knees, side on to the camera",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -47,7 +47,7 @@
     "safety": "Height comes from the hip, never from arching the lower back. Stop if the back or the wrists hurt.",
     "easier": "A smaller lift; a shorter hold; forearms down instead of hands.",
     "harder": "A band around the thighs; an ankle weight; a longer hold at the top.",
-    "mistakes": "Arching the back to lift higher; the knee straightening; the shoulders drifting behind the wrists."
+    "mistakes": "Arching the lower back to lift higher; rocking the trunk; the knee straightening; the shoulders drifting behind the wrists; the head dropping."
   },
   "muscles": {
     "glute": 1,
@@ -58,9 +58,8 @@
   "figure": {
     "pose": {
       "A": {
-        "face": "left",
-        "torso": -88,
-        "neck": -25,
+        "torso": 63,
+        "neck": 10,
         "thigh": 0,
         "shin": -90,
         "foot": 180,
@@ -68,18 +67,18 @@
         "farm": 0
       },
       "B": {
-        "face": "left",
-        "torso": -88,
-        "neck": -25,
-        "thigh": -90,
-        "shin": 180,
-        "foot": 60,
+        "torso": 63,
+        "neck": 10,
+        "thigh": -63,
+        "shin": -153,
+        "foot": -153,
         "uarm": 0,
         "farm": 0,
         "thighF": 0,
         "shinF": -90,
         "footF": 180
-      }
+      },
+      "belly": 1
     }
   },
   "facing": {
@@ -196,7 +195,7 @@
       "label": "knee, hip, shoulder",
       "hud": "LIFT",
       "note": "at the top",
-      "kind": "angle",
+      "kind": "bend",
       "a": "knee",
       "b": "hip",
       "c": "shoulder",
@@ -215,7 +214,8 @@
           "max": 179
         }
       ],
-      "why": "The lift: about 90 kneeling, 180 with the thigh in line with the back. Also the progress measurement."
+      "why": "The lift: the angle at the hip between the knee and the shoulder, about 90–115 kneeling, 180 with the thigh in line with the back, read on past it, so a thigh kicked above the back keeps rising rather than reading as one coming down. Also the progress measurement.",
+      "offset": 180
     },
     {
       "key": "over",
@@ -313,9 +313,9 @@
     },
     {
       "key": "back",
-      "label": "back off level",
-      "hud": "BACK",
-      "note": "level",
+      "label": "trunk still",
+      "hud": "TRUNK",
+      "note": "still",
       "kind": "rise",
       "a": "hip",
       "b": "shoulder",
@@ -329,12 +329,13 @@
       "settings": [
         {
           "key": "backLevel",
-          "label": "Back off level, at most",
+          "label": "Trunk tilted from the start, at most (degrees)",
           "min": 3,
           "max": 30
         }
       ],
-      "why": "The hip-to-shoulder line off level: positive the shoulders above the hips (sagging), negative rounding."
+      "why": "The hip-to-shoulder line, as its change since the start: rocking back onto the knees reads up, rocking forward or the hips dropping toward the kicking side reads down. There is no landmark on the spine, so a sag or a round is not seen — the trunk moving is.",
+      "fromStart": "change"
     }
   ],
   "progress": {
@@ -376,22 +377,22 @@
       "deep": "Straighten your arms — the elbows are well bent"
     },
     {
-      "id": "backSag",
+      "id": "rockBack",
       "measure": "back",
       "side": "above",
-      "setup": true,
-      "label": "Back sagging",
-      "text": "Lift your belly — your back is sagging",
-      "deep": "Belly up — your back is sagging toward the floor"
+      "label": "Rocking back",
+      "text": "Keep your trunk still — weight over hands and knees",
+      "deep": "Stay still — you are rocking back onto your knees",
+      "when": "rep"
     },
     {
-      "id": "backRound",
+      "id": "rockFwd",
       "measure": "back",
       "side": "below",
-      "setup": true,
-      "label": "Back rounding",
-      "text": "Flatten your back",
-      "deep": "Flatten your back — it is rounding up"
+      "label": "Rocking forward",
+      "text": "Keep your trunk still",
+      "deep": "Stay still — you are rocking forward onto your hands",
+      "when": "rep"
     },
     {
       "id": "kneeOpen",
@@ -465,13 +466,13 @@
     "kneeMin": 80,
     "kneeMax": 100,
     "liftMin": 165,
-    "overMax": 5,
+    "overMax": 8,
     "armMin": 85,
     "armMax": 105,
     "elbowMin": 165,
-    "backLevel": 10,
-    "raiseAt": 120,
-    "downAt": 105,
+    "backLevel": 8,
+    "raiseAt": 125,
+    "downAt": 112,
     "holdTargetSec": 2,
     "callAtSec": [],
     "repCount": 10,

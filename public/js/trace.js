@@ -166,7 +166,8 @@
     const segs = [];
     if (move.reps) {
       let cur = null, lastReps = 0, pauseFrom = rows[0].t;
-      const setup = move.setup || [];
+      /* the faults judged at rest — at all times, or only between reps — in the move's order */
+      const setup = (move.faults || []).filter((id) => (move.setup || []).includes(id) || (move.when && move.when[id] === 'between'));
       rows.forEach((r, i) => {
         const ph = r.out && r.out.phase, active = ph === 'up' || ph === 'lower';
         if (active && !cur) cur = { t0: r.t, i0: i, before: { t0: pauseFrom, t1: r.t }, holdMs0: r.out.holdMs || 0, lowerAt: null };

@@ -35,15 +35,15 @@
     "hint": "Standing: hips pushed back, trunk tipped forward with a flat back and soft knees, and back up.",
     "start": "Stand the phone up on the floor. Stand tall side on to it, feet hip-width apart, hands on your hips.",
     "position": "Stand tall side on to the phone, feet hip-width apart, knees soft, hands on the hips or a dowel held along the spine touching the head, upper back and tailbone.",
-    "top": "The trunk tipped forward to fifty to ninety degrees with the back flat and long, the hips pushed back, the knees soft and the shins upright.",
+    "top": "The trunk tipped forward about halfway — forty to seventy five degrees — with the back long and the head in line, the hips pushed back, the knees soft and the shins upright.",
     "howto": [
-      "Stand tall, knees soft, weight through the heels.",
-      "Push the hips straight back — as if closing a drawer with your bottom — and let the trunk tip forward. The back stays flat and long; the shins stay upright.",
-      "Go as far as the back stays flat, to around horizontal, and hold for the count.",
-      "Drive the hips forward to stand tall again. The rep counts there."
+      "Stand tall, feet hip-width, knees soft, weight through the whole foot.",
+      "Push the hips straight back — as if closing a drawer with your bottom — and let the trunk tip forward. The back stays long, the head in line; the shins stay upright.",
+      "Go about halfway down — stop where the backs of the thighs pull or the back would round — and hold for the count.",
+      "Drive the hips forward to stand tall again, finishing with the glutes, not by leaning back. The rep counts there."
     ],
     "cannot": "The lower back rounding a little under a flat-looking trunk: it sees the trunk angle, the knees, the shins and the head dropping. A dowel along the spine tells you what it cannot.",
-    "about": "Hip hinge — standing side on: the hinge, as the hip-to-shoulder line off vertical, 50–90° at the bottom; a rep is under way past 25 and counts when the trunk is back under 12; the knees soft, 150–178° — more bend is a squat; the back long, as the angle at the shoulder between the ear and the hip at least 140° — the head dropping is the back rounding; and the shins upright, at least 75° from the floor. Hold two seconds at the bottom. The pattern behind lifting safely, and the first thing a physio reteaches a back that hurts bending.",
+    "about": "Hip hinge — standing side on: the hinge, as the hip-to-shoulder line off vertical, 40–75° at the bottom; a rep is under way past 25 and counts when the trunk is back under 12; the knees soft, 150–172° during the rep — more bend is a squat; the back long, the head and upper back within 20° of the line they had standing and not craning up more than 15°; the shins upright, no more than 105° from the floor; and no leaning back past upright between reps. Hold two seconds at the bottom. The pattern behind lifting safely, and the first thing a physio reteaches a back that hurts bending.",
     "lost": "Stand side on to the camera, the whole body in",
     "lower": "Stand up slowly",
     "early": "Hold it at the bottom next time",
@@ -51,7 +51,7 @@
     "safety": "Only as far as the back stays flat. If the back rounds or the hamstrings pull hard, stop higher.",
     "easier": "A smaller hinge; hands on the hips; a shorter hold.",
     "harder": "A longer hold; a slower return; a light weight held at the shins.",
-    "mistakes": "Squatting — bending the knees instead of pushing the hips back; rounding the back; letting the head drop; the shins tipping forward."
+    "mistakes": "Squatting — bending the knees instead of pushing the hips back; rounding the back; looking up or letting the head drop; the shins tipping forward; leaning back to finish."
   },
   "muscles": {
     "glute": 0.8,
@@ -82,8 +82,8 @@
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "heel",
+    "to": "toe"
   },
   "side": {
     "pick": "clearest"
@@ -94,14 +94,18 @@
       "shoulder",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "heel",
+      "toe"
     ],
     "needed": [
       "ear",
       "shoulder",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "heel",
+      "toe"
     ],
     "bones": [
       [
@@ -169,6 +173,31 @@
       ]
     },
     {
+      "key": "upright",
+      "label": "standing tall",
+      "hud": "TALL",
+      "note": "no lean back",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "band": {
+        "min": "leanBackMax"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "leanBackMax",
+          "label": "Leaning back standing, at most (degrees, negative)",
+          "min": -25,
+          "max": -2
+        }
+      ],
+      "why": "The trunk off plumb while standing between reps, + forward: finishing the rep by leaning back past upright, instead of standing tall on the glutes, reads below 0."
+    },
+    {
       "key": "knee",
       "label": "knees soft",
       "hud": "KNEE",
@@ -205,27 +234,35 @@
       "key": "back",
       "label": "back long",
       "hud": "BACK",
-      "note": "flat",
-      "kind": "angle",
+      "note": "in line",
+      "kind": "bend",
       "a": "ear",
       "b": "shoulder",
       "c": "hip",
       "band": {
-        "min": "backMin"
+        "lo": "lookUp",
+        "hi": "roundMax"
       },
       "scale": [
-        90,
-        180
+        -40,
+        50
       ],
-      "why": "The angle at the shoulder between the ear and the hip: the head in line with the back reads 160–180; it falls as the head and upper back round forward.",
+      "why": "How far the shoulder sits off the line from the ear to the hip, as its change since standing: + the head and upper back dropping (the back rounding), − the head craning up. The lower back under a flat-looking trunk is not seen.",
       "settings": [
         {
-          "key": "backMin",
-          "label": "Ear–shoulder–hip angle, at least",
-          "min": 110,
-          "max": 175
+          "key": "lookUp",
+          "label": "Head lifted off the back's line, at most (degrees, negative)",
+          "min": -40,
+          "max": -5
+        },
+        {
+          "key": "roundMax",
+          "label": "Head and upper back dropped, at most (degrees from the start)",
+          "min": 5,
+          "max": 45
         }
-      ]
+      ],
+      "fromStart": "change"
     },
     {
       "key": "shin",
@@ -236,19 +273,19 @@
       "at": "ankle",
       "to": "knee",
       "band": {
-        "min": "shinMin"
+        "max": "shinMax"
       },
       "scale": [
         40,
         90
       ],
-      "why": "The ankle-to-knee line from the floor: a hinge keeps it near 90; the knees travelling forward lays it down, which is a squat.",
+      "why": "The ankle-to-knee line from the floor: 90 is the shin upright, more the knee travelling forward over the toes — a squat, not a hinge.",
       "settings": [
         {
-          "key": "shinMin",
-          "label": "Shin angle from the floor, at least",
-          "min": 50,
-          "max": 89
+          "key": "shinMax",
+          "label": "Shin from the floor, at most (90 is upright)",
+          "min": 91,
+          "max": 140
         }
       ]
     }
@@ -280,6 +317,14 @@
   },
   "faults": [
     {
+      "id": "leanBack",
+      "measure": "upright",
+      "side": "below",
+      "when": "between",
+      "label": "Leaning back",
+      "text": "Stand tall — finish with the glutes, don’t lean back"
+    },
+    {
       "id": "hingeLow",
       "measure": "hinge",
       "side": "below",
@@ -293,7 +338,7 @@
       "measure": "hinge",
       "side": "above",
       "label": "Too far",
-      "text": "Not below horizontal",
+      "text": "Not so far — about halfway down is enough",
       "deep": "",
       "tone": "down"
     },
@@ -315,25 +360,33 @@
       "text": "Soften the knees",
       "deep": "",
       "tone": "plain",
-      "when": "always"
+      "when": "rep"
     },
     {
       "id": "rounding",
       "measure": "back",
-      "side": "below",
+      "side": "above",
       "label": "Back rounding",
-      "text": "Long spine — chest forward, eyes a little ahead",
-      "deep": "The back is rounding — come up to where it stays flat",
+      "text": "Keep the back long — chest and head in line",
+      "deep": "The back is rounding — come up to where it stays long",
       "tone": "plain",
       "when": "rep"
     },
     {
+      "id": "lookUp",
+      "measure": "back",
+      "side": "below",
+      "when": "rep",
+      "label": "Looking up",
+      "text": "Don’t look up — keep the back of the head long"
+    },
+    {
       "id": "shinsFwd",
       "measure": "shin",
-      "side": "below",
+      "side": "above",
       "label": "Shins tipping",
       "text": "Shins upright — push the hips back",
-      "deep": "",
+      "deep": "The knees are travelling forward — push the hips back instead",
       "tone": "plain",
       "when": "rep"
     }
@@ -357,12 +410,10 @@
     }
   ],
   "defaults": {
-    "hingeMin": 50,
-    "hingeMax": 90,
+    "hingeMin": 40,
+    "hingeMax": 75,
     "kneeMin": 150,
-    "kneeMax": 178,
-    "backMin": 140,
-    "shinMin": 75,
+    "kneeMax": 172,
     "raiseAt": 25,
     "downAt": 12,
     "holdTargetSec": 2,
@@ -371,7 +422,11 @@
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "shinMax": 105,
+    "lookUp": -15,
+    "roundMax": 20,
+    "leanBackMax": -5
   },
   "settings": [
     {

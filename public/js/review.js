@@ -690,6 +690,8 @@ Moves.ready.then(function () {
     const s = Math.min(r.width / box.w, r.height / box.h) * 0.94;
     return { s, tx: r.width / 2 - (box.x + box.w / 2) * s, ty: r.height / 2 - (box.y + box.h / 2) * s, w: r.width, h: r.height };
   }
+  /* the wall reaches above the figure's highest point, so a hand walking up it stays on it */
+  function wallTopOf() { let top = 164; for (const K of [fig.A, fig.B]) for (const k in K || {}) if (Array.isArray(K[k])) top = Math.min(top, K[k][1]); return Math.min(34, top - 10); }
   function drawEditor() {
     const dpr = Math.min(2, window.devicePixelRatio || 1), r = edit.getBoundingClientRect();
     if (!r.width) return;
@@ -700,7 +702,7 @@ Moves.ready.then(function () {
     ctx.save(); ctx.translate(T.tx, T.ty); ctx.scale(T.s, T.s);
     if (ev !== 'camera') { drawOtherView(ctx, K, T); ctx.restore(); ctx.fillStyle = C.dim; ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.textBaseline = 'top'; ctx.fillText((kf === 'A' ? 'A \u2014 the start' : 'B \u2014 the end') + (ev === 'top' ? ' \u00b7 from above: drag down toward the camera, up away' : ' \u00b7 isometric: a look, not editable'), 8, 8); return; }
     ctx.strokeStyle = C.line; ctx.lineWidth = 2 / T.s; ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
-    if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
+    if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, wallTopOf()); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
     /* the other keyframe sits behind, faint, so an edit is seen against where the body was */
     const other = fig[kf === 'A' ? 'B' : 'A'];
     if (other && !fig.hold) {
@@ -742,7 +744,7 @@ Moves.ready.then(function () {
     } else {
       const [dx, dy] = [Figure.ISO[0] * 60, Figure.ISO[1] * 60], nx = Figure.ISO[0] * -12, ny = Figure.ISO[1] * -12;
       ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.beginPath(); ctx.moveTo(216 + nx, 164 + ny); ctx.lineTo(400 + nx, 164 + ny); ctx.lineTo(400 + dx, 164 + dy); ctx.lineTo(216 + dx, 164 + dy); ctx.closePath(); ctx.fill(); ctx.stroke();
-      if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, 34); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
+      if (fig.wall != null) { ctx.lineWidth = 3 / T.s; ctx.beginPath(); ctx.moveTo(fig.wall, wallTopOf()); ctx.lineTo(fig.wall, 164); ctx.stroke(); }
     }
     const other = fig[kf === 'A' ? 'B' : 'A'];
     if (other && !fig.hold) line(other, 'rgba(90,169,255,.22)', 3);

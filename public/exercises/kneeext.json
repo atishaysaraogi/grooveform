@@ -1,7 +1,7 @@
 {
   "v": 1,
   "id": "kneeext",
-  "name": "Dynamic quads",
+  "name": "Seated knee extension",
   "order": 12,
   "status": "ready",
   "category": "Knee and hip",
@@ -34,13 +34,13 @@
     "position": "Sit tall on a sturdy chair, side on to the phone, back away from the backrest, feet flat, hands resting on the seat.",
     "top": "One knee locked out fully straight, the thigh still resting on the seat, toes pulled up, trunk tall.",
     "howto": [
-      "Sit tall on the chair, side on to the phone, thighs supported, feet flat.",
-      "Straighten the knee nearest the phone until it is locked out fully straight, toes pulled up toward you.",
-      "Hold for the count with the thigh still on the seat — the knee, not the hip, does the lifting — and the trunk tall, not leaning back.",
-      "Lower slowly to the floor. The rep counts there. Do a set on one leg, then the other."
+      "Sit tall on the chair, side on to the phone, back supported or upright, thighs on the seat, feet flat.",
+      "Pull the toes up and straighten the knee nearest the phone until it is fully straight.",
+      "Hold for five seconds with the thigh still on the seat — the knee, not the hip, does the lifting — and the trunk still, not leaning back.",
+      "Lower slowly, over two seconds. The rep counts when the foot is back down. Do a set on one leg, then the other."
     ],
     "cannot": "The kneecap tracking and the last few degrees of a stiff knee: it sees the knee angle, the thigh on the seat, the trunk and the toes. Lock out as far as the knee allows.",
-    "about": "Dynamic quads — sitting side on: the knee angle between hip and ankle, at least 165° at the top (fully straight); the thigh staying on the seat, as the knee's rise above the hip within ±12°; the trunk within ±15° of vertical, so the back does not lean to help; and the foot's angle at the heel, 60–105°, toes up. The rep is under way once the knee opens past 130° and counts when it is back under 105°. Hold five seconds at the top, lower slowly.",
+    "about": "Seated knee extension (long arc quad) — sitting side on: the knee angle between hip and ankle, at least 165° at the top (fully straight); the thigh staying on the seat, the knee no more than 8° above where it started; the trunk within ±15° of vertical, and not leaning back more than 8° during the lift to help; and the foot's angle at the heel, 60–105°, toes up. The rep is under way once the knee opens past 130° and counts when it is back under 105°. Hold five seconds at the top, lower over two.",
     "lost": "Sit side on to the camera, whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -48,7 +48,7 @@
     "safety": "Stop if the knee hurts under the kneecap; straighten less far or hold for less. Keep the movement slow.",
     "easier": "A shorter hold; straighten as far as is comfortable.",
     "harder": "An ankle weight; a band around the ankle to the chair leg; a longer hold.",
-    "mistakes": "Not straightening fully; the thigh lifting off the seat; leaning back; swinging the leg up."
+    "mistakes": "Not straightening fully; the thigh lifting off the seat; leaning back or slumping to help; swinging the leg up and dropping it."
   },
   "muscles": {
     "thigh": 1,
@@ -56,30 +56,128 @@
     "abs": 0.2
   },
   "figure": {
-    "pose": {
+    "points": {
+      "view": "side",
       "A": {
-        "torso": 0,
-        "thigh": 90,
-        "shin": 0,
-        "foot": 0,
-        "uarm": 10,
-        "farm": 30,
-        "thighF": 90,
-        "shinF": 0,
-        "footF": 0
+        "h": [
+          275,
+          62
+        ],
+        "sh": [
+          275,
+          84
+        ],
+        "hip": [
+          275,
+          128
+        ],
+        "kn": [
+          305,
+          128
+        ],
+        "an": [
+          305,
+          158
+        ],
+        "ft": [
+          319,
+          158
+        ],
+        "el": [
+          279,
+          109
+        ],
+        "wr": [
+          291,
+          130
+        ],
+        "knF": [
+          305,
+          131
+        ],
+        "anF": [
+          301,
+          161
+        ],
+        "ftF": [
+          315,
+          161
+        ],
+        "elF": [
+          275,
+          110
+        ],
+        "wrF": [
+          286,
+          131
+        ]
       },
       "B": {
-        "torso": 0,
-        "thigh": 90,
-        "shin": 90,
-        "foot": 80,
-        "uarm": 10,
-        "farm": 30,
-        "thighF": 90,
-        "shinF": 0,
-        "footF": 0
+        "h": [
+          275,
+          62
+        ],
+        "sh": [
+          275,
+          84
+        ],
+        "hip": [
+          275,
+          128
+        ],
+        "kn": [
+          305,
+          128
+        ],
+        "an": [
+          335,
+          128
+        ],
+        "ft": [
+          337,
+          114
+        ],
+        "el": [
+          279,
+          109
+        ],
+        "wr": [
+          291,
+          130
+        ],
+        "knF": [
+          305,
+          131
+        ],
+        "anF": [
+          301,
+          161
+        ],
+        "ftF": [
+          315,
+          161
+        ],
+        "elF": [
+          275,
+          110
+        ],
+        "wrF": [
+          286,
+          131
+        ]
       },
-      "anchor": "ftF"
+      "hold": false,
+      "side": "both",
+      "flip": false,
+      "props": [
+        {
+          "kind": "box",
+          "x": 261,
+          "y": 134,
+          "w": 42,
+          "h": 30
+        }
+      ]
     }
   },
   "facing": {
@@ -184,7 +282,7 @@
       "a": "hip",
       "b": "knee",
       "band": {
-        "sym": "thighLift"
+        "max": "thighLift"
       },
       "scale": [
         -30,
@@ -193,12 +291,13 @@
       "settings": [
         {
           "key": "thighLift",
-          "label": "Knee above the hip, at most",
+          "label": "Thigh lifted off the seat, at most (degrees from the start)",
           "min": 3,
           "max": 30
         }
       ],
-      "why": "The hip-to-knee line off level: the knee rising above the hip is the thigh lifting off the seat, the hip flexors doing the work instead of the knee."
+      "why": "The line from the hip to the knee, as its change since the start: + the knee rising — the thigh lifting off the seat to help. Read against the start, so the chair's height does not move it.",
+      "fromStart": "change"
     },
     {
       "key": "torso",
@@ -224,6 +323,32 @@
         }
       ],
       "why": "The hip-to-shoulder line off plumb, positive leaning forward: leaning back is the trunk helping the leg up."
+    },
+    {
+      "key": "sway",
+      "label": "trunk still",
+      "hud": "STILL",
+      "note": "no lean back",
+      "kind": "tilt",
+      "base": "hip",
+      "top": "shoulder",
+      "fromStart": "change",
+      "band": {
+        "min": "swayBack"
+      },
+      "scale": [
+        -30,
+        30
+      ],
+      "settings": [
+        {
+          "key": "swayBack",
+          "label": "Leaning back during the lift, at most (degrees, negative)",
+          "min": -25,
+          "max": -3
+        }
+      ],
+      "why": "The trunk line, as its change since the start: leaning back (or slumping) to help the knee straighten reads below 0."
     },
     {
       "key": "foot",
@@ -301,6 +426,14 @@
       "tone": "plain"
     },
     {
+      "id": "swayBack",
+      "measure": "sway",
+      "side": "below",
+      "when": "rep",
+      "label": "Leaning back to lift",
+      "text": "Keep still — let the knee do the work"
+    },
+    {
       "id": "thighLift",
       "measure": "thigh",
       "side": "above",
@@ -355,7 +488,7 @@
   ],
   "defaults": {
     "kneeMin": 165,
-    "thighLift": 12,
+    "thighLift": 8,
     "torsoLean": 15,
     "footMin": 60,
     "footMax": 105,
@@ -365,9 +498,10 @@
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
-    "lowerSec": 1,
+    "lowerSec": 2,
     "restSec": 2,
-    "deepAt": 10
+    "deepAt": 10,
+    "swayBack": -8
   },
   "settings": [
     {

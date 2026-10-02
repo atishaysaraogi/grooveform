@@ -18,6 +18,8 @@ const judge = (r, o) => M.judge(r, cfg(o));
 /* A plank seen from the side, built backwards from the angles it should read.
      stack  the upper arm's lean off vertical, + = shoulder ahead of the elbow
      sag    how far the hip sits off the shoulder→ankle line, + = hips piked up
+     knee   the knee angle, 180 straight
+     head   the head off the line of the back, + = dropping toward the floor
      facing +1 = head to the image right, -1 = mirrored
 
    It is built from the shoulder down the arm and then along the body, and the
@@ -34,7 +36,7 @@ const judge = (r, o) => M.judge(r, cfg(o));
 
    Lengths are shares of the frame height; x is divided by the aspect on the way out,
    because that is how a pose model reports it. */
-function body({ stack = 0, sag = 0, facing = 1, shoulderAt = [0.62, 0.42], vis = 0.95,
+function body({ stack = 0, sag = 0, knee = 180, head = 0, facing = 1, shoulderAt = [0.62, 0.42], vis = 0.95,
                 upper = 0.18, torso = 0.27, legs = 0.26, fore = 0.13 } = {}) {
   const P = {};
   P.shoulder = { x: shoulderAt[0], y: shoulderAt[1] };
@@ -49,11 +51,16 @@ function body({ stack = 0, sag = 0, facing = 1, shoulderAt = [0.62, 0.42], vis =
      means the far end drops, which is a turn the other way from the sign. */
   const a = -sag * D * facing, ca = Math.cos(a), sa = Math.sin(a);
   const leg = { x: dir.x * ca - dir.y * sa, y: dir.x * sa + dir.y * ca };
-  P.ankle = { x: P.hip.x + legs * leg.x, y: P.hip.y + legs * leg.y };
   P.knee = { x: P.hip.x + legs * 0.55 * leg.x, y: P.hip.y + legs * 0.55 * leg.y };
+  /* the shin swung down off the thigh's line by the knee's bend: a bent knee drops toward the floor */
+  const k = (180 - knee) * D * facing, ck = Math.cos(k), sk = Math.sin(k);
+  const shin = { x: leg.x * ck - leg.y * sk, y: leg.x * sk + leg.y * ck };
+  P.ankle = { x: P.knee.x + legs * 0.45 * shin.x, y: P.knee.y + legs * 0.45 * shin.y };
   P.heel = { x: P.ankle.x - facing * 0.02, y: P.ankle.y + 0.035 };
   P.toe = { x: P.ankle.x - facing * 0.05, y: P.ankle.y + 0.055 };
-  P.ear = { x: P.shoulder.x + facing * 0.05, y: P.shoulder.y - 0.04 };
+  /* the head carried on the line of the back, tipped by `head` toward the floor */
+  const h = head * D * facing, ch = Math.cos(h), sh = Math.sin(h), up = { x: -dir.x, y: -dir.y };
+  P.ear = { x: P.shoulder.x + 0.06 * (up.x * ch - up.y * sh), y: P.shoulder.y + 0.06 * (up.x * sh + up.y * ch) };
 
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
   /* both sides get the same body: side-on the two limbs sit on top of each other */
@@ -87,11 +94,11 @@ test('the shoulder over the elbow is read as the upper arm off vertical, signed 
   assert.ok(back.points.shoulder.x < back.points.elbow.x, 'negative puts it behind the elbow');
 });
 
-test('the shoulder belongs over the elbow or a little in front, not behind it', () => {
+test('the shoulder belongs over the elbow or a little in front, not well behind it', () => {
   const g = (stack) => judge(readOf({ stack })).good.stack;
   assert.equal(g(-20), false, 'well behind the elbow');
-  assert.equal(g(-6), false);
-  assert.equal(g(-4), true, 'a few degrees behind is inside the read\'s own noise');
+  assert.equal(g(-11), false);
+  assert.equal(g(-9), true, 'up to ten degrees behind is allowed');
   assert.equal(g(0), true, 'stacked');
   assert.equal(g(14), true, 'slightly in front');
   assert.equal(g(16), false, 'too far in front');
@@ -113,11 +120,24 @@ test('the hip is read against the shoulder-to-ankle line, and the sign says up o
   assert.ok(Math.abs(flat.points.hip.y - onLine(flat)) < 1e-9, 'zero is a hip on it');
 });
 
-test('the hip is allowed five degrees either side of the line', () => {
+test('the hip is allowed seven degrees below the line and ten above it', () => {
+  /* five either way is under three centimetres at the hip, inside the model's wobble; a sag
+     loads the lower back, a small pike does not */
   const g = (sag) => judge(readOf({ sag })).good.line;
-  assert.equal(g(0), true); assert.equal(g(4), true); assert.equal(g(-4), true);
-  assert.equal(g(6), false, 'piked'); assert.equal(g(-6), false, 'sagging');
+  assert.equal(g(0), true); assert.equal(g(10), true); assert.equal(g(-7), true);
+  assert.equal(g(11), false, 'piked'); assert.equal(g(-8), false, 'sagging');
   assert.equal(g(20), false); assert.equal(g(-20), false);
+});
+
+test('the knees are straight and the head in line with the back', () => {
+  const at = (o) => judge(readOf(o));
+  assert.ok(Math.abs(readOf({ knee: 150 }).knee - 150) < 0.01, 'the knee reads as posed: ' + readOf({ knee: 150 }).knee);
+  assert.ok(Math.abs(readOf({}).head) < 0.01 && Math.abs(readOf({ head: 25, facing: -1 }).head - 25) < 0.01, 'and the head: ' + readOf({ head: 25, facing: -1 }).head);
+  assert.equal(at({ knee: 165 }).good.knee, true); assert.ok(at({ knee: 150 }).faults.kneeBent > 0, 'knees bent');
+  assert.equal(at({ knee: 150 }).inPosition, false, 'a bent knee is not the plank');
+  assert.ok(at({ head: 30 }).faults.headDrop > 0 && at({ head: -30 }).faults.headUp > 0, 'dropping, craning');
+  assert.equal(at({ head: 30 }).inPosition, true, 'the head is said, not a stop to the clock');
+  assert.equal(M.defaults.holdTargetSec, 30, 'thirty seconds to start');
 });
 
 test('a reading in degrees of bend does not change with how far away the camera is', () => {
@@ -131,7 +151,7 @@ test('a reading in degrees of bend does not change with how far away the camera 
 test('in position means both at once', () => {
   assert.equal(judge(readOf({ stack: 6, sag: 2 })).inPosition, true);
   assert.equal(judge(readOf({ stack: -15, sag: 0 })).inPosition, false, 'shoulders behind the elbows');
-  assert.equal(judge(readOf({ stack: 0, sag: 9 })).inPosition, false, 'hips piked');
+  assert.equal(judge(readOf({ stack: 0, sag: 12 })).inPosition, false, 'hips piked');
   assert.equal(judge(readOf({ stack: 0, sag: -9 })).inPosition, false, 'hips sagging');
 });
 
@@ -171,7 +191,7 @@ test('hips above the line are told to come down, hips below it to lift', () => {
 test('the shoulders are called before the hips, being what the hips are measured from', () => {
   const c = Coach0();
   /* shoulders barely out, hips miles out: the base still goes first */
-  const first = play(c, { stack: -7, sag: 25 }, 1200);
+  const first = play(c, { stack: -12, sag: 25 }, 1200);
   assert.equal(first.said[0].id, 'stackback', 'said: ' + JSON.stringify(first.said.map((x) => x.text)));
   assert.match(first.said[0].text, /shoulders over your elbows/i);
   /* fix the shoulders and the hips are what is left to say */
@@ -209,8 +229,8 @@ test('coming out of the plank pauses the countdown rather than running it down',
 });
 
 test('the bands are settings, not rules baked into the code', () => {
-  const strict = Coach0({ hipLine: 2 });
-  assert.equal(judge(readOf({ sag: 4 }), { hipLine: 2 }).good.line, false, 'narrowed, four degrees is out');
+  const strict = Coach0({ hipPike: 2 });
+  assert.equal(judge(readOf({ sag: 4 }), { hipPike: 2 }).good.line, false, 'narrowed, four degrees is out');
   assert.equal(judge(readOf({ sag: 4 })).good.line, true, 'and the default band is unchanged');
-  assert.equal(strict.cfg.hipLine, 2);
+  assert.equal(strict.cfg.hipPike, 2);
 });

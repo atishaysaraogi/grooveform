@@ -26,31 +26,31 @@
   "phone": {
     "orientation": "wide",
     "view": "side",
-    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to where your legs will be. The hips and legs are enough: the top half of you can be out of the picture.",
+    "placement": "Lay the phone on its side on the floor, two or three metres away, side on to you. Shoulders to feet have to be in the picture.",
     "distance": "two or three metres",
     "height": "on the floor"
   },
   "words": {
-    "hint": "Lying on your back, both legs straight, one lifted to thirty to forty five degrees.",
-    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, both legs straight, toes pulled up.",
-    "position": "Lie on your back, side on to the phone, both legs straight and together on the floor, toes pulled up toward you. The camera needs your hips and legs; the rest of you can be out of the picture.",
-    "top": "One straight leg lifted thirty to forty five degrees off the floor, knee locked, toes up, the other leg still flat.",
+    "hint": "Lying on your back, one straight leg lifted fifteen to forty five degrees, the other knee bent or straight.",
+    "start": "Lay the phone on its side on the floor. Lie on your back side on to it, one leg straight, the other bent or straight.",
+    "position": "Lie on your back, side on to the phone, the working leg straight on the floor, toes pulled up. Bend the other knee with the foot flat if your back prefers it; it can stay straight. Shoulders to feet in the picture.",
+    "top": "One straight leg lifted fifteen to forty five degrees off the floor, knee locked, toes up, the other foot still on the floor.",
     "howto": [
-      "Lie on your back with both legs straight. Pull the toes of both feet toward you.",
-      "Tighten the thigh of the working leg so the knee is locked straight, then lift the whole leg to thirty to forty five degrees — about the height of a bent knee.",
-      "Hold at the top for the count with the knee straight, the toes up and the other leg flat on the floor.",
+      "Lie on your back. Bend the other knee with the foot flat on the floor — or keep it straight if that is comfortable. Pull the toes of the working foot toward you.",
+      "Tighten the thigh so the knee is locked straight, then lift the whole leg until the heel is about a ruler's length off the floor — never past forty five degrees, the height of the other knee.",
+      "Hold at the top for five seconds, knee straight, toes up, the other foot on the floor.",
       "Lower slowly, keeping the knee straight, until the heel is back on the floor. The rep counts there."
     ],
-    "cannot": "Whether the lower back is flat on the floor and whether the thigh muscle is truly tight: it sees the knee angle, the lift against the other leg and the toes. Press the back down yourself.",
-    "about": "Straight leg raise — lying on your back side on, both legs straight: the lift, as the angle at the hip between the lifted knee and the resting knee, 30–45° at the top — measured against the other leg rather than the floor, so a phone that is not quite level does not move it; feet to shoulders must be in the picture (the model reads the two knees 8–15° apart even at rest, so the top allows 48 and the return counts under 15); the lifted knee at least 165° so the leg stays straight; the resting knee at least 160°; and the foot's angle at the heel, 60–105°, toes pulled up. The knee and the toes are coached before the lift is asked for. Hold two seconds at the top, lower slowly, and the rep counts when the heel is down. The toes pulled back and the resting leg straight are coached, but the rep is the knee and the lift: a rep with the toes pointed is counted and told about. With both legs down the far knee hides behind the near one; it then reads as lying on the floor, and the frame is not lost.",
+    "cannot": "Whether the lower back is flat on the floor, the leg rolling out, and whether the thigh is truly tight: it sees the knee angle, the lift, the toes and the other foot. Press the back down yourself.",
+    "about": "Straight leg raise — lying on your back side on, the working leg straight, the other knee bent with the foot flat or straight: the lift, as the change in the angle at the hip between the shoulder and the knee since the start, 15–45° at the top (leaflets give the heel 10–20 cm off the floor; 45° is the height of a bent knee); the lifted knee at least 165° so the leg stays straight; the other heel kept down, whether that leg is straight or bent; and the foot's angle at the heel, 60–105°, toes pulled up. The knee and the toes are coached before the lift is asked for. Hold five seconds at the top, lower over two, and the rep counts when the heel is down. The working leg is the straight one lifted: a bent knee sits higher but is not the one measured.",
     "lost": "Lie down side on to the camera, feet to shoulders in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
     "holdLabel": "Hold at the top for",
-    "safety": "Stop if the lower back or the front of the hip pinches. Press the lower back into the floor; bend the other knee if it will not stay down.",
+    "safety": "Stop if the lower back or the front of the hip pinches. Bend the other knee with the foot flat — it keeps the back flat.",
     "easier": "A smaller lift; a shorter hold; no weight.",
     "harder": "A longer hold; an ankle weight; slower lowering.",
-    "mistakes": "The knee bending on the way up; lifting past forty five; toes pointing away; the other leg lifting or bending; the back arching."
+    "mistakes": "The knee bending on the way up; lifting past forty five; swinging the leg up; toes pointing away; the other leg lifting; the back arching."
   },
   "muscles": {
     "thigh": 1,
@@ -90,10 +90,10 @@
     "to": "knee"
   },
   "side": {
-    "pick": "highest",
-    "joint": "knee",
+    "pick": "measure",
+    "measure": "working",
     "hold": {
-      "margin": 0.25,
+      "margin": 10,
       "frames": 5
     }
   },
@@ -106,7 +106,9 @@
       "heel",
       "toe",
       "other.knee",
-      "other.ankle"
+      "other.ankle",
+      "other.hip",
+      "other.heel"
     ],
     "needed": [
       "shoulder",
@@ -187,28 +189,27 @@
     },
     {
       "key": "lift",
-      "label": "lift off the other leg",
+      "label": "leg lift",
       "hud": "LIFT",
       "note": "at the top",
       "kind": "angle",
-      "a": "other.knee",
+      "a": "shoulder",
       "b": "hip",
       "c": "knee",
-      "unseen": 0,
       "band": {
         "lo": "liftMin",
         "hi": "liftMax"
       },
       "scale": [
-        0,
-        90
+        -10,
+        80
       ],
       "settings": [
         {
           "key": "liftMin",
           "label": "Lift at the top, at least (degrees)",
-          "min": 10,
-          "max": 60
+          "min": 5,
+          "max": 40
         },
         {
           "key": "liftMax",
@@ -217,34 +218,70 @@
           "max": 80
         }
       ],
-      "why": "The angle at the hip between the lifted knee and the resting knee: near 0 with both legs on the floor, 45 lifted forty five. The resting leg is the floor line, so the phone need not be level; feet to shoulders have to be seen. Also the progress measurement. Side on, the pose model sets the two knees a little apart even with both legs down — a recorded take read 8 to 15 at rest — so the return counts under 15, the lift is under way past 22, and the top allows three degrees past 45 for the same wobble. Side on with both legs down, the far knee is hidden behind the near one and the model stops trusting it (a recorded take read it at 23–43% for six seconds of lying still); a leg the camera cannot see beside its twin is lying on it, so the lift then reads 0 — the start — rather than the frame being lost. It has to be seen for a lift to count, and it is, once the legs part."
+      "why": "How far the working leg has lifted: the angle at the hip between the shoulder and the knee, as its change from rest (which follows a resting leg that settles), turned so a lift reads up. 0 with the leg on the floor, 45 lifted forty five. Read from the working leg alone, so the other knee may be straight or bent with the foot flat; shoulders to feet have to be seen. Also the progress measurement.",
+      "times": -1,
+      "fromStart": "rest"
     },
     {
-      "key": "rest",
-      "label": "resting knee",
+      "key": "other",
+      "label": "other foot down",
       "hud": "OTHER",
-      "note": "straight",
-      "kind": "angle",
-      "a": "other.hip",
-      "b": "other.knee",
-      "c": "other.ankle",
+      "note": "stays down",
+      "kind": "distance",
+      "axis": "y",
+      "a": "hip",
+      "b": "other.heel",
+      "per": [
+        "other.knee",
+        "other.ankle"
+      ],
+      "times": 100,
+      "fromStart": "change",
       "optional": true,
       "band": {
-        "min": "restMin"
+        "max": "otherLiftMax"
       },
       "scale": [
-        90,
-        180
+        -20,
+        60
       ],
       "settings": [
         {
-          "key": "restMin",
-          "label": "Resting knee, at least (180 is straight)",
-          "min": 120,
-          "max": 179
+          "key": "otherLiftMax",
+          "label": "Other heel lifted, at most (% of the shin)",
+          "min": 5,
+          "max": 40
         }
       ],
-      "why": "The other leg stays straight and down: it is the line the lift is measured from. Optional: when the model cannot see it the lift is still read."
+      "why": "The other heel's height, as its change since the start, as a share of that shin: it stays on the floor whether that leg is straight or bent with the foot flat. Optional: when the model cannot see it the lift is still read."
+    },
+    {
+      "key": "working",
+      "label": "working leg",
+      "hud": "LEG",
+      "note": "picks the side",
+      "kind": "sum",
+      "terms": [
+        {
+          "kind": "angle",
+          "a": "shoulder",
+          "b": "hip",
+          "c": "knee",
+          "times": -1
+        },
+        {
+          "kind": "angle",
+          "a": "hip",
+          "b": "knee",
+          "c": "ankle"
+        }
+      ],
+      "offset": 0,
+      "scale": [
+        -90,
+        90
+      ],
+      "why": "Not judged: it picks the working leg. The hip's bend less the knee's bend — about 45 for a straight leg lifted forty five, 0 for a straight leg on the floor, below 0 for a knee bent with the foot flat — so the straight lifted leg is measured even though a bent knee sits higher."
     },
     {
       "key": "foot",
@@ -326,22 +363,21 @@
       "tone": "plain"
     },
     {
-      "id": "restBend",
-      "measure": "rest",
-      "side": "below",
-      "setup": true,
-      "label": "Other knee bending",
-      "text": "Keep the other leg straight and flat",
-      "deep": "Press the other leg down straight — it is bending",
-      "tone": "plain"
+      "id": "otherLift",
+      "measure": "other",
+      "side": "above",
+      "when": "rep",
+      "label": "Other leg lifting",
+      "text": "Keep the other foot on the floor",
+      "deep": "The other leg is coming up — press it down"
     },
     {
       "id": "liftHigh",
       "measure": "lift",
       "side": "above",
       "label": "Too high",
-      "text": "Not so high — forty five at most",
-      "deep": "Lower it — past forty five degrees",
+      "text": "Not so high — forty five degrees at most",
+      "deep": "Lower it — no higher than the other knee",
       "tone": "down"
     },
     {
@@ -349,18 +385,12 @@
       "measure": "lift",
       "side": "below",
       "label": "Lift short",
-      "text": "Lift a little higher — thirty degrees at least",
-      "deep": "Higher — up to between thirty and forty five",
+      "text": "Lift a little higher",
+      "deep": "Higher — the heel about a ruler's length off the floor",
       "tone": "up"
     }
   ],
   "draw": [
-    {
-      "kind": "line",
-      "from": "hip",
-      "to": "other.knee",
-      "good": "rest"
-    },
     {
       "kind": "arc",
       "measure": "lift",
@@ -379,20 +409,20 @@
   ],
   "defaults": {
     "kneeMin": 165,
-    "restMin": 160,
-    "liftMin": 30,
-    "liftMax": 48,
+    "liftMin": 15,
+    "liftMax": 45,
     "footMin": 60,
     "footMax": 105,
-    "raiseAt": 22,
-    "downAt": 15,
-    "holdTargetSec": 2,
+    "raiseAt": 10,
+    "downAt": 5,
+    "holdTargetSec": 5,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
-    "lowerSec": 1,
+    "lowerSec": 2,
     "restSec": 2,
-    "deepAt": 10
+    "deepAt": 10,
+    "otherLiftMax": 15
   },
   "settings": [
     {
@@ -404,8 +434,8 @@
     {
       "key": "raiseAt",
       "label": "Lift that counts as under way (degrees)",
-      "min": 5,
-      "max": 40
+      "min": 4,
+      "max": 30
     },
     {
       "key": "lowerSec",

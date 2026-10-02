@@ -37,21 +37,21 @@
     "position": "Kneel on all fours side on to the phone, hands under the shoulders, knees under the hips, back flat like a table top, eyes down.",
     "top": "One leg reached straight back and the opposite arm straight forward, both level with the back — the foot no higher than the hips — the back flat and the hips square to the floor.",
     "howto": [
-      "On all fours, hands under shoulders, knees under hips, back flat. Brace the stomach gently.",
-      "Reach one leg straight back and the opposite arm straight forward until both are level with your back. No higher: the foot stays at hip height.",
-      "Hold for the count without the back sagging or arching, and the hips square — imagine a glass of water on your lower back.",
+      "On all fours, hands under shoulders, knees under hips, back flat, head in line. Brace the stomach gently — stiffen, don’t hollow.",
+      "Reach one leg straight back, pushing through the heel, and the opposite arm straight forward until both are level with your back. No higher: the foot stays at hip height.",
+      "Hold for the count without the trunk moving and with the hips square — imagine a glass of water on your lower back.",
       "Bring them back slowly to all fours. The rep counts there. Then the other side."
     ],
-    "cannot": "The hips rotating and the lower back arching: it sees the leg and arm heights and the hip-to-shoulder line from the side. Keep both hip bones pointing at the floor yourself.",
-    "about": "Bird dog — on all fours side on: the leg, as how far the hip-to-knee line is lifted from hanging straight down, 75–100° at the top (90 is level with the back; higher and the lower back is arching to lift it); a rep is under way past 45 and counts when the knee is back under 20; the opposite arm, shoulder to wrist, 70–110°, level; and the back, as the hip-to-shoulder line off level read against where it was at the start, within 8° either way — sagging or arching. Hold five seconds at the top. The nearest leg to the phone is the one measured, the far arm with it.",
+    "cannot": "The hips rotating, the lower back arching and the head: it sees the leg and arm heights, the reaching knee and the hip-to-shoulder line from the side. Keep both hip bones pointing at the floor and your eyes to the floor yourself.",
+    "about": "Bird dog — on all fours side on: the leg, as how far the hip-to-knee line is lifted from hanging straight down, 75–95° at the top (90 is level with the back; higher and the lower back arches to lift it); a rep is under way past 45 and counts when the knee is back under 20; the reaching knee at least 155°, the leg long; the opposite arm, shoulder to wrist, 70–110°, level; and the trunk, as the hip-to-shoulder line read against where it was at the start, within 8° either way — the chest dropping or the body rocking back. Hold six seconds at the top (McGill: no more than seven or eight). The leg lifted is the one measured, the opposite arm with it.",
     "lost": "Kneel on all fours side on to the camera, the whole body in",
     "lower": "Bring them back slowly",
     "early": "Hold it out there next time",
     "holdLabel": "Hold out for",
     "safety": "The back should feel nothing; if it does, lift less high or do the leg alone first.",
     "easier": "The leg alone, then the arm alone; a shorter hold; a lower reach.",
-    "harder": "A longer hold; the elbow and knee drawn together under the body between reps; a small weight on the ankle.",
-    "mistakes": "Lifting the leg above the hips and arching the back; letting the back sag; rotating the hips open; looking up; rushing."
+    "harder": "A longer hold, up to seven or eight seconds; sweep the hand and the knee lightly along the floor between reps instead of resting; make a fist with the reaching hand.",
+    "mistakes": "Lifting the leg above the hips and arching the back; bending the reaching knee; the chest sinking into the supporting shoulder; rotating the hips open; looking up; rushing."
   },
   "muscles": {
     "back": 0.8,
@@ -111,7 +111,8 @@
       "shoulder",
       "other.wrist",
       "hip",
-      "knee"
+      "knee",
+      "ankle"
     ],
     "needed": [
       "shoulder",
@@ -172,6 +173,33 @@
       ]
     },
     {
+      "key": "knee",
+      "label": "leg long",
+      "hud": "KNEE",
+      "note": "straight",
+      "kind": "angle",
+      "a": "hip",
+      "b": "knee",
+      "c": "ankle",
+      "optional": true,
+      "band": {
+        "min": "kneeMin"
+      },
+      "scale": [
+        90,
+        180
+      ],
+      "settings": [
+        {
+          "key": "kneeMin",
+          "label": "Reaching knee, at least (180 is straight)",
+          "min": 120,
+          "max": 179
+        }
+      ],
+      "why": "The reaching leg's knee: the leg pushed long through the heel reads near 180; a bent knee lets the thigh look level without the reach."
+    },
+    {
       "key": "arm",
       "label": "opposite arm lifted",
       "hud": "ARM",
@@ -220,7 +248,7 @@
         -30,
         30
       ],
-      "why": "The hip-to-shoulder line off level, as the change from the start: the back sagging (the shoulders dropping) or arching with the lift.",
+      "why": "The hip-to-shoulder line, as its change since the start: the chest sinking toward the supporting hand reads down, the body rocking back toward the heels reads up. There is no landmark on the lower back, so an arch is not seen — keep the leg at hip height and it does not come.",
       "settings": [
         {
           "key": "backMax",
@@ -243,7 +271,8 @@
   "inPosition": [
     "leg",
     "arm",
-    "back"
+    "back",
+    "knee"
   ],
   "prompt": {
     "id": "raise",
@@ -266,8 +295,16 @@
       "side": "above",
       "label": "Leg too high",
       "text": "Not so high — the leg level with your back, no higher",
-      "deep": "The foot is above the hips and the back is arching — lower the leg to hip height",
+      "deep": "The foot is above the hips — lower the leg to hip height",
       "tone": "down"
+    },
+    {
+      "id": "kneeBent",
+      "measure": "knee",
+      "side": "below",
+      "when": "top",
+      "label": "Leg bent",
+      "text": "Straighten the leg — push the heel back"
     },
     {
       "id": "armLow",
@@ -288,21 +325,21 @@
       "tone": "down"
     },
     {
-      "id": "backSag",
+      "id": "chestDrop",
       "measure": "back",
       "side": "below",
-      "label": "Back sagging",
-      "text": "Keep the back flat — brace the stomach",
-      "deep": "",
+      "label": "Chest dropping",
+      "text": "Push the floor away — chest up",
+      "deep": "The chest is sinking toward the floor — push the floor away",
       "tone": "plain",
       "when": "rep"
     },
     {
-      "id": "backArch",
+      "id": "rockBack",
       "measure": "back",
       "side": "above",
-      "label": "Back arching",
-      "text": "Keep the back flat — don’t arch to lift",
+      "label": "Rocking back",
+      "text": "Keep your trunk still — weight over hands and knees",
       "deep": "",
       "tone": "plain",
       "when": "rep"
@@ -323,19 +360,20 @@
   ],
   "defaults": {
     "legMin": 75,
-    "legMax": 100,
+    "legMax": 95,
     "armMin": 70,
     "armMax": 110,
     "backMax": 8,
     "raiseAt": 45,
     "downAt": 20,
-    "holdTargetSec": 5,
+    "holdTargetSec": 6,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "kneeMin": 155
   },
   "settings": [
     {

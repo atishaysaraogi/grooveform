@@ -1,7 +1,7 @@
 {
   "v": 1,
   "id": "quadset",
-  "name": "Static quads",
+  "name": "Inner range quads",
   "order": 11,
   "status": "ready",
   "category": "Knee and hip",
@@ -35,13 +35,13 @@
     "position": "Lie on your back, side on to the phone. A rolled towel or a foam roller under the working knee, so the knee is bent over it and the heel rests on the floor. The other leg straight along the floor.",
     "top": "The leg straight in one line, the heel lifted off the floor, the toes pulled up toward you, for the count.",
     "howto": [
-      "Lie on your back with a rolled towel or a foam roller under one knee. The knee should be bent over it: if the leg is still nearly straight, prop the knee higher.",
-      "Pull the toes of that foot back toward you and straighten the knee, lifting the heel off the floor until the leg is in one line.",
+      "Lie on your back with a rolled towel or a foam roller, about 15 cm across, under one knee. The knee should be bent over it: if the leg is still nearly straight, prop the knee higher.",
+      "Pull the toes of that foot back toward you and straighten the knee, lifting the heel off the floor until the leg is in one line. The back of the knee stays on the roll.",
       "Hold for the count — five seconds — breathing.",
-      "Lower the heel back to the floor and let the thigh go before the next one."
+      "Lower the heel slowly back to the floor and let the thigh go before the next one."
     ],
-    "cannot": "How hard the thigh is working: it sees the knee straighten and the toes come up, which go with the contraction. Press as hard as is comfortable.",
-    "about": "Static quads over a roll — lying on your back side on: the knee angle between hip and ankle, 150 or so at rest over the roll and 180 straight; a rep is under way past 165 and counts when the knee is back under 160; at the top the knee at least 170 and the foot's angle at the heel, between toe and knee, 100 or less with the toes pulled up. Between reps the knee must rest under 160, or the roll is too low. Hold five seconds at the top.",
+    "cannot": "How hard the thigh is working: it sees the knee straighten, the thigh stay on the roll and the toes come up, which go with the contraction. Press as hard as is comfortable.",
+    "about": "Inner range quads (static quads over a roll) — lying on your back side on: the knee angle between hip and ankle, 150 or so at rest over the roll and 180 straight; a rep is under way past 165 and counts when the knee is back under 160; at the top the knee at least 170, the back of the knee still on the roll (the thigh no more than 6° off where it started), and the foot's angle at the heel, between toe and knee, 100 or less with the toes pulled up. Between reps the knee must rest under 160, or the roll is too low. Hold five seconds at the top, lower over two.",
     "lost": "Lie down side on to the camera, feet to shoulders in the picture",
     "lower": "And lower the heel",
     "early": "Hold it straight for the full count next time",
@@ -49,7 +49,7 @@
     "safety": "Nothing should hurt. The roll takes the knee out of full extension, which is what makes this gentle: keep it under the knee, not the thigh or the calf.",
     "easier": "A shorter hold; a lower roll.",
     "harder": "A longer hold; a bigger roll; an ankle weight.",
-    "mistakes": "Lifting the whole leg from the hip instead of straightening the knee; forgetting to pull the toes up; letting the roll slip down the calf."
+    "mistakes": "Lifting the whole leg from the hip instead of straightening the knee; not straightening fully; dropping the heel instead of lowering it; forgetting to pull the toes up; letting the roll slip down the calf."
   },
   "muscles": {
     "thigh": 1,
@@ -316,6 +316,34 @@
       "why": "The same angle, judged only between reps: the knee must rest bent over the roll, under 160. Past that the roll is too low or has slipped, and the exercise is a leg raise, not a quad set."
     },
     {
+      "key": "thigh",
+      "label": "thigh on the roll",
+      "hud": "THIGH",
+      "note": "stays down",
+      "kind": "angle",
+      "a": "shoulder",
+      "b": "hip",
+      "c": "knee",
+      "times": -1,
+      "fromStart": "change",
+      "band": {
+        "max": "thighMax"
+      },
+      "scale": [
+        -10,
+        40
+      ],
+      "settings": [
+        {
+          "key": "thighMax",
+          "label": "Thigh lifted off the roll, at most (degrees)",
+          "min": 2,
+          "max": 20
+        }
+      ],
+      "why": "The angle at the hip between the shoulder and the knee, as its change since the start, turned so a lift reads up: the back of the knee stays on the roll and only the lower leg moves. Lifting the whole leg from the hip reads here."
+    },
+    {
       "key": "foot",
       "label": "toe, heel, knee",
       "hud": "TOES",
@@ -373,6 +401,15 @@
       "when": "between"
     },
     {
+      "id": "thighLift",
+      "measure": "thigh",
+      "side": "above",
+      "when": "rep",
+      "label": "Thigh lifting",
+      "text": "Keep the back of the knee on the roll",
+      "deep": "Straighten from the knee — the whole leg is lifting"
+    },
+    {
       "id": "kneeBend",
       "measure": "knee",
       "side": "below",
@@ -403,18 +440,19 @@
     }
   ],
   "defaults": {
-    "kneeMin": 175,
+    "kneeMin": 170,
     "restMax": 160,
     "footMax": 100,
-    "raiseAt": 170,
+    "raiseAt": 165,
     "downAt": 160,
     "holdTargetSec": 5,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
-    "lowerSec": 0,
+    "lowerSec": 2,
     "restSec": 3,
-    "deepAt": 10
+    "deepAt": 10,
+    "thighMax": 6
   },
   "settings": [
     {

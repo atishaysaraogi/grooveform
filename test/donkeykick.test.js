@@ -1,6 +1,6 @@
 'use strict';
-/* The donkey kick: hands under shoulders, arms straight, back level, one knee kept
-   bent and the thigh lifted to the back's line and no further. Every number the
+/* The donkey kick: hands under shoulders, arms straight, the trunk still, one knee
+   kept bent and the thigh lifted to the back's line and no further. Every number the
    app acts on is held against a body posed to exactly that number. Run: npm test */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -101,40 +101,57 @@ test('the leg being measured is the one that is up, whichever side it is', () =>
 const TOP = { lift: 172, knee: 90 };
 const at = (o) => judge(readOf(Object.assign({}, TOP, o)));
 
-test('the top: at least 165 at the hip, edge included, and the thigh no more than five above the back', () => {
+test('the top: at least 165 at the hip, edge included, and the thigh no more than eight above the back', () => {
   assert.equal(at({ lift: 165 }).good.lift, true);
   assert.equal(at({ lift: 164 }).good.lift, false);
   assert.ok(at({ lift: 150 }).faults.liftLow > 0);
   assert.ok(Math.abs(readOf({ lift: 180, knee: 90 }).over) < 0.01, 'in line is zero over: ' + readOf({ lift: 180, knee: 90 }).over);
   assert.ok(Math.abs(readOf(TOP).over + 8) < 0.01, 'eight short of the line reads eight under it');
-  assert.equal(at({ over: 5 }).good.over, true, 'five above the line is allowed');
-  assert.equal(at({ over: 6 }).good.over, false);
+  assert.equal(at({ over: 8 }).good.over, true, 'eight above the line is allowed');
+  assert.equal(at({ over: 9 }).good.over, false);
   const past = at({ over: 12 });
   assert.ok(past.faults.liftHigh > 0 && past.faults.liftLow == null, 'past the line is too high, not too low: ' + JSON.stringify(past.faults));
   assert.match(M.cues.liftHigh.text, /not so high/i);
 });
 
-test('the knee stays at a right angle, ten degrees either way; the arms plumb, the elbows straight, the back level', () => {
+test('the knee stays at a right angle, ten degrees either way; the arms plumb, the elbows straight, the trunk still', () => {
   assert.equal(at({ knee: 80 }).good.knee, true); assert.equal(at({ knee: 100 }).good.knee, true);
   assert.equal(at({ knee: 79 }).good.knee, false); assert.equal(at({ knee: 101 }).good.knee, false);
   assert.ok(at({ knee: 120 }).faults.kneeOpen > 0); assert.ok(at({ knee: 60 }).faults.kneeShut > 0);
   assert.equal(at({ arm: 85 }).good.arm, true); assert.equal(at({ arm: 105 }).good.arm, true);
   assert.ok(at({ arm: 75 }).faults.armBack > 0, 'shoulders behind the wrists'); assert.ok(at({ arm: 115 }).faults.armFwd > 0, 'ahead of them');
   assert.equal(at({ elbow: 165 }).good.elbow, true); assert.ok(at({ elbow: 150 }).faults.elbowBent > 0);
-  assert.equal(at({ back: 10 }).good.back, true); assert.equal(at({ back: -10 }).good.back, true);
-  assert.ok(at({ back: 15 }).faults.backSag > 0, 'shoulders above hips: sagging'); assert.ok(at({ back: -15 }).faults.backRound > 0, 'hips above shoulders: rounding');
+  /* the trunk line is read against the start in a set; posed alone, its change is the reading */
+  assert.equal(at({ back: 8 }).good.back, true); assert.equal(at({ back: -8 }).good.back, true);
+  assert.ok(at({ back: 12 }).faults.rockBack > 0, 'shoulders rising over the hips: rocking back'); assert.ok(at({ back: -12 }).faults.rockFwd > 0, 'falling: rocking forward');
 });
 
-test('the position is everything together, with the leg actually up; the order is hands, arms, back, then the leg', () => {
+test('the trunk is read against where it was at the start: a table-top with long arms is not a sag', () => {
+  /* the arms are longer than the thighs, so a correct table-top has the shoulders ten to twenty
+     degrees above the hips; that is the start, and only moving from it during the kick is said */
+  assert.ok(M.fromStart.some((x) => x.key === 'back' && x.how === 'change'));
+  const c = new Core.Coach(M, { readyMs: 2000 });
+  const stepT = (o, t) => c.step(read(body(o), c.cfg), t);
+  let t = 0, said = [];
+  const run = (o, ms) => { for (const end = t + ms; t < end; t += 33) { const out = stepT(o, t); if (out.cue) said.push(out.cue); } };
+  run({ back: 16, lift: 90 }, 3500);
+  run({ back: 16, lift: 172 }, 2500);
+  assert.ok(!said.some((x) => x.id === 'rockBack' || x.id === 'rockFwd'), 'a still trunk at sixteen: ' + JSON.stringify(said.map((x) => x.text)));
+  run({ back: 30, lift: 172 }, 2000);
+  assert.ok(said.some((x) => x.id === 'rockBack'), 'fourteen more is rocking: ' + JSON.stringify(said.map((x) => x.text)));
+});
+
+test('the position is everything together, with the leg actually up; the order is hands and arms, then the trunk, then the leg', () => {
   assert.equal(at({}).inPosition, true);
   assert.equal(at({ knee: 120 }).inPosition, false);
   assert.equal(at({ elbow: 140 }).inPosition, false);
   assert.equal(at({ back: 15 }).inPosition, false);
   assert.equal(at({ lift: 150 }).inPosition, false);
-  assert.equal(at({ lift: 115 }).raised, false); assert.equal(at({ lift: 120 }).raised, true);
-  assert.equal(at({ lift: 106 }).atStart, false); assert.equal(at({ lift: 105 }).atStart, true);
-  assert.deepEqual(M.faults, ['lost', 'armBack', 'armFwd', 'elbowBent', 'backSag', 'backRound', 'raise', 'kneeOpen', 'kneeShut', 'liftHigh', 'liftLow']);
-  assert.deepEqual(M.setup, ['armBack', 'armFwd', 'elbowBent', 'backSag', 'backRound']);
+  /* a table-top with the shoulders above the hips reads 100–115 at the hip: the start is under 112 */
+  assert.equal(at({ lift: 124 }).raised, false); assert.equal(at({ lift: 125 }).raised, true);
+  assert.equal(at({ lift: 113 }).atStart, false); assert.equal(at({ lift: 112 }).atStart, true);
+  assert.deepEqual(M.faults, ['lost', 'armBack', 'armFwd', 'elbowBent', 'raise', 'rockBack', 'rockFwd', 'kneeOpen', 'kneeShut', 'liftHigh', 'liftLow']);
+  assert.deepEqual(M.setup, ['armBack', 'armFwd', 'elbowBent']);
   assert.equal(M.camera, 'wide'); assert.equal(M.defaults.repCount, 10); assert.equal(M.defaults.holdTargetSec, 2); assert.equal(M.alternate, true);
 });
 
@@ -145,7 +162,7 @@ function play(c, o, ms, t0) {
   for (; t < t0 + ms; t += 33) { last = step(c, o, t); if (last.cue) said.push(last.cue); }
   return { said, last, t };
 }
-const REST = {}, HALFWAY = { lift: 112 };
+const REST = {}, HALFWAY = { lift: 118 };
 const texts = (p) => JSON.stringify(p.said.map((x) => x.text));
 const settle = (c, t0) => play(c, REST, 2300, t0).t;
 

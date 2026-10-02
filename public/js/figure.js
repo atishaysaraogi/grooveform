@@ -25,7 +25,7 @@
        uarm, farm  from straight down, + = forward
        *F  the far limb (defaults to the near one, set a few pixels back so it shows behind)
        face  'right' (default) or 'left' — which way the body faces on screen */
-  function sidePose(a) {
+  function sidePose(a, farBack) {
     const dir = a.face === 'left' ? -1 : 1;
     const g = (k, d) => (a[k] === undefined ? d : a[k]);
     const t = g('torso', 0), th = g('thigh', 0), sh = g('shin', 0), ft = g('foot', 0), ua = g('uarm', 0), fa = g('farm', 0);
@@ -44,8 +44,29 @@
     const footF = { x: anF.x + Math.cos(ftF * D) * dir * L.foot, y: anF.y - Math.sin(ftF * D) * L.foot };
     const elF = at(shoulder, uaF, L.uarm, true), wrF = at(elF, faF, L.farm, true);
     const sameF = thF === th && shF === sh && uaF === ua && faF === fa;
-    const off = (p) => (sameF ? { x: p.x + back.x, y: p.y + back.y } : p);
-    return { h: head, sh: shoulder, hip, kn, an, ft: foot, el, wr, knF: off(knF), anF: off(anF), ftF: off(footF), elF: off(elF), wrF: off(wrF), dir, sameF };
+    /* a far limb drawn exactly over the near one would not show, so it sits a few pixels back.
+       Which far limbs sit back is decided for the pair of keyframes (fromAngles), so a limb that
+       matches the near one in one keyframe and not the other does not jump or stretch between them */
+    /* moved back, then each bone brought back to its own length down the chain, so the far
+       limb leans a little behind the near one instead of stretching or shrinking as it turns */
+    const sitBack = (on, root, pts, lens) => {
+      if (!on) return pts;
+      let prev = root;
+      return pts.map((p, i) => {
+        const q = { x: p.x + back.x, y: p.y + back.y }, dx = q.x - prev.x, dy = q.y - prev.y, d = Math.hypot(dx, dy) || 1;
+        prev = { x: prev.x + dx / d * lens[i], y: prev.y + dy / d * lens[i] };
+        return prev;
+      });
+    };
+    const [knF2, anF2, ftF2] = sitBack(farBack ? farBack.leg : sameF, hip, [knF, anF, footF], [L.thigh, L.shin, L.foot]);
+    const [elF2, wrF2] = sitBack(farBack ? farBack.arm : sameF, shoulder, [elF, wrF], [L.uarm, L.farm]);
+    return { h: head, sh: shoulder, hip, kn, an, ft: foot, el, wr, knF: knF2, anF: anF2, ftF: ftF2, elF: elF2, wrF: wrF2, dir, sameF };
+  }
+  /* for a pair of keyframes: a far limb sits back if it lies over the near one in either */
+  function farBackOf(A, B) {
+    const same = (a, keys) => keys.every(([f, n]) => a[f] === undefined || a[f] === a[n]);
+    const leg = [['thighF', 'thigh'], ['shinF', 'shin'], ['footF', 'foot']], arm = [['uarmF', 'uarm'], ['farmF', 'farm']];
+    return { leg: same(A, leg) || same(B, leg), arm: same(A, arm) || same(B, arm) };
   }
 
   const FLOOR_Y = 161, CENTRE_X = 306;
@@ -75,7 +96,8 @@
 
   /* pose: { A: angles, B: angles, wall: 'behind'|'ahead'|null, hold } → the keyframes as points */
   function fromAngles(pose) {
-    const rawA = sidePose(pose.A || {}), rawB = sidePose(pose.B || pose.A || {});
+    const fb = farBackOf(pose.A || {}, pose.B || pose.A || {});
+    const rawA = sidePose(pose.A || {}, fb), rawB = sidePose(pose.B || pose.A || {}, fb);
     const { A, B, anchor } = placePair(rawA, rawB, pose);
     let wall = null;
     if (pose.wall) {

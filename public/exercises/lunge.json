@@ -31,13 +31,13 @@
     "position": "Stand side on to the phone, tall, feet hip-width, hands on your hips.",
     "top": "The front thigh level with the front knee over the ankle, the back knee just off the floor, the trunk upright.",
     "howto": [
-      "Stand tall, hands on your hips. Take a long step forward with the leg nearest the phone.",
-      "Lower straight down until the front thigh is level — front knee at a right angle, stacked over the ankle, not drifting past the toes.",
-      "The back knee hovers just above the floor; the trunk stays upright with the chest up.",
+      "Stand tall, hands on your hips. Take a long step forward with the leg nearest the phone, landing heel first.",
+      "Lower straight down until the front thigh is level — the front knee at a right angle over the ankle, in line with the second toe.",
+      "The back knee hovers just above the floor; the trunk stays upright and the front heel stays down.",
       "Push through the front heel back to standing. The rep counts there. Do a set on one leg, then the other."
     ],
     "cannot": "The back knee and the front knee caving inward: it judges the leg nearest the phone — its knee angle, its shin against vertical — and the trunk. Take a long enough step yourself.",
-    "about": "Forward lunge — standing side on, the leg nearest the phone stepping forward: the front knee angle between hip and ankle, 80–100° at the bottom; the front shin, as the knee's lean forward of the ankle, at most 20°, so the knee stays over the ankle; and the trunk within ±15° of vertical. The rep is under way once the front knee bends past 120° and counts when it is straight again past 160°.",
+    "about": "Forward lunge — standing side on, the leg nearest the phone stepping forward: the front knee angle between hip and ankle, 80–100° at the bottom; the front shin, as the knee's lean forward of the ankle, at most 20°, so the knee stays over the ankle rather than the ball of the foot; the trunk within ±15° of vertical; and the front heel down, read against the start — a step too short lifts it. The rep is under way once the front knee bends past 120° and counts when it is straight again past 160°.",
     "lost": "Step into the camera, side on",
     "lower": "Push back up",
     "early": "Go all the way down next time",
@@ -45,7 +45,7 @@
     "safety": "Stop if the front knee hurts at the front; take a longer step and keep the shin nearer vertical. Hold a chair for balance if you need to.",
     "easier": "A shorter drop; a hand on a chair; a pause at the top.",
     "harder": "Dumbbells at the sides; a slower lowering; a longer pause at the bottom.",
-    "mistakes": "The front knee drifting past the toes; leaning the trunk forward; a short step; not getting the front thigh level."
+    "mistakes": "The front knee travelling well ahead of the foot; the front heel lifting (the step is too short); leaning the trunk forward; not getting the front thigh level."
   },
   "muscles": {
     "thigh": 1,
@@ -232,6 +232,33 @@
       "why": "The hip-to-shoulder line off plumb, positive leaning forward over the front leg."
     },
     {
+      "key": "heel",
+      "label": "front heel down",
+      "hud": "HEEL",
+      "note": "stays down",
+      "kind": "rise",
+      "a": "toe",
+      "b": "heel",
+      "fromStart": "change",
+      "optional": true,
+      "band": {
+        "max": "heelMax"
+      },
+      "scale": [
+        -20,
+        50
+      ],
+      "settings": [
+        {
+          "key": "heelMax",
+          "label": "Front heel lifted, at most (degrees from the start)",
+          "min": 3,
+          "max": 30
+        }
+      ],
+      "why": "The front foot's heel against its toe, as the change since the start: a step too short puts the weight on the ball of the front foot and lifts its heel."
+    },
+    {
       "key": "reach",
       "label": "leg ahead of the hip",
       "hud": "REACH",
@@ -264,12 +291,20 @@
   },
   "faults": [
     {
+      "id": "frontHeel",
+      "measure": "heel",
+      "side": "above",
+      "when": "top",
+      "label": "Front heel lifting",
+      "text": "Front heel down — take a longer step"
+    },
+    {
       "id": "kneeOver",
       "measure": "shin",
       "side": "above",
-      "label": "Knee past the ankle",
-      "text": "Knee back over your ankle — take a longer step",
-      "deep": "Longer step — the knee is well past your toes",
+      "label": "Knee too far forward",
+      "text": "Take a longer step — knee over the ankle",
+      "deep": "Longer step — the knee is well ahead of the foot",
       "tone": "walking out"
     },
     {
@@ -334,6 +369,11 @@
       "size": 0.6
     }
   ],
+  "inPosition": [
+    "knee",
+    "shin",
+    "torso"
+  ],
   "defaults": {
     "kneeMin": 80,
     "kneeMax": 100,
@@ -347,7 +387,8 @@
     "setCount": 3,
     "lowerSec": 0,
     "restSec": 2,
-    "deepAt": 12
+    "deepAt": 12,
+    "heelMax": 10
   },
   "settings": [
     {

@@ -30,15 +30,15 @@
     "hint": "Phone on its side on the floor, side on to you, lying down with your knees bent and feet flat.",
     "start": "Lay the phone on its side on the floor. I will wait while you get set up: lie down side on to it, knees bent.",
     "position": "Lie on your back, side on to the phone, knees bent, feet flat on the floor, arms by your sides.",
-    "top": "Hips lifted until knees, hips and shoulders make one line, no higher, heels and toes down.",
+    "top": "Hips lifted until knees, hips and shoulders make one straight line, no higher, heels and toes down, knees over the feet.",
     "howto": [
-      "Lie on your back, knees bent, feet flat and hip-width, heels a hand from your hips.",
-      "Press through the heels and lift the hips until knees, hips and shoulders make one line. No higher.",
-      "Squeeze at the top for the count, heels and toes down.",
+      "Lie on your back, knees bent, feet flat and hip-width, heels about a hand from your hips, arms by your sides.",
+      "Squeeze the buttocks, press through the heels and lift the hips until knees, hips and shoulders make one straight line. No higher — past the line the lower back arches.",
+      "Hold at the top for the count, heels and toes down, knees in line with the feet.",
       "Lower slowly — the rep counts when the hips are back on the floor."
     ],
-    "cannot": "Whether the glutes or the lower back are doing the work: it sees the height and the line, not the muscle. If the back pinches, stop.",
-    "about": "Glute bridge — lying on your back side on, knees bent, feet flat, phone on its side: the shin's angle at the heel between toe and knee, allowed 85–110°, which is where your feet are; the angle at the hip between knee and shoulder, at least 160° at the top; how far the hip rises above the knee, at most 3°; and the foot's line off the floor, ±10° once the model's own slant of about 9° is taken off (the heel landmark sits above the sole) — checked first, then the shin, then the hip. Hold two seconds at the top, lower slowly, and the rep counts when the hips are back down.",
+    "cannot": "Whether the buttocks or the lower back are doing the work, the knees falling in or out (toward the camera) and the pelvis dropping on one side: it sees the line from knees to shoulders, the feet and where they are. If the back pinches, stop.",
+    "about": "Glute bridge — lying on your back side on, knees bent, feet flat, phone on its side: the hips lifted until the hip angle between knee and shoulder is at least 160° at the top, and no more than 8° above the straight line from the knees to the shoulders — past it the lower back arches; the feet, judged at rest between reps, where they can be moved: the shin's angle at the heel between toe and knee 85–122° (more is the feet too far out, and the hamstrings take over); and the feet flat, the heel-to-toe line within 12° of where it was at the start, which also takes off the model's own slant. A rep is under way once the hip angle passes 150° and counts when it is back under 140°. Hold three seconds at the top, lower slowly.",
     "lost": "Lie down side on to the camera, whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -46,7 +46,7 @@
     "safety": "Stop if the lower back pinches. The lift comes from the glutes, not from arching the back.",
     "easier": "A smaller lift; a shorter hold at the top.",
     "harder": "A weight across the hips; a longer hold; one leg at a time.",
-    "mistakes": "Pushing the hips past the knees; heels lifting; feet too far out."
+    "mistakes": "Pushing the hips past the line and arching the lower back; heels or toes lifting; feet too far out (the hamstrings cramp); knees falling in or out."
   },
   "muscles": {
     "glute": 1,
@@ -60,31 +60,31 @@
         "h": [380, 144],
         "sh": [362, 150],
         "hip": [289, 145],
-        "kn": [255, 98],
-        "an": [254, 150],
-        "ft": [230, 157],
+        "kn": [253, 99],
+        "an": [242, 150],
+        "ft": [218, 157],
         "el": [325, 155],
         "wr": [288, 158],
-        "knF": [254, 101],
-        "anF": [252, 149],
-        "ftF": [230, 158],
-        "elF": [323, 144],
-        "wrF": [295, 149]
+        "knF": [251, 101],
+        "anF": [240, 152],
+        "ftF": [216, 159],
+        "elF": [322, 151],
+        "wrF": [291, 155]
       },
       "B": {
         "h": [380, 144],
         "sh": [362, 150],
-        "hip": [296, 122],
-        "kn": [255, 98],
-        "an": [254, 150],
-        "ft": [230, 157],
+        "hip": [295, 121],
+        "kn": [242, 98],
+        "an": [242, 150],
+        "ft": [218, 157],
         "el": [325, 155],
         "wr": [288, 158],
-        "knF": [254, 101],
-        "anF": [252, 149],
-        "ftF": [230, 158],
-        "elF": [325, 155],
-        "wrF": [287, 158]
+        "knF": [240, 100],
+        "anF": [240, 152],
+        "ftF": [216, 159],
+        "elF": [322, 151],
+        "wrF": [291, 155]
       },
       "hold": false,
       "side": "both",
@@ -191,14 +191,14 @@
           "max": 170
         }
       ],
-      "why": "Where the feet are: over the band the knee leans toward the head (feet too far out), under it the knee is out over the toes (feet too close). Not judged while a heel or toe is off the floor."
+      "why": "The shin against the foot, at the heel, judged at rest between reps, where the feet can be moved: about 105–115 with the heels a hand from the hips, past 122 with them half a metre out (the hamstrings take over and cramp), under 85 only with the heels under the hips."
     },
     {
       "key": "hip",
       "label": "knee, hip, shoulder",
       "hud": "HIP",
       "note": "at the top",
-      "kind": "angle",
+      "kind": "bend",
       "a": "knee",
       "b": "hip",
       "c": "shoulder",
@@ -214,29 +214,31 @@
           "max": 179
         }
       ],
-      "why": "The top of the rep: straight is 180, and the line is asked for to within twenty degrees. Also the progress measurement: the lift is called at raiseAt, the return at downAt."
+      "why": "The angle at the hip between the knee and the shoulder, read on past straight: 180 is one line from the knees to the shoulders, more is the hip pushed above it, so the reading keeps rising as the hips go past the line instead of turning back. Also the progress measurement: under way past 150, down under 140.",
+      "offset": 180
     },
     {
       "key": "over",
-      "label": "hip above knee",
-      "hud": "RISE",
+      "label": "hips over the line",
+      "hud": "LINE",
       "note": "at most",
-      "kind": "rise",
+      "kind": "bend",
       "a": "knee",
       "b": "hip",
       "band": {
         "max": "overMax"
       },
-      "scale": [-40, 40],
+      "scale": [-60, 30],
       "settings": [
         {
           "key": "overMax",
-          "label": "Hip above the knee, at most",
+          "label": "Hips above the knee-to-shoulder line, at most (degrees)",
           "min": 0,
-          "max": 20
+          "max": 30
         }
       ],
-      "why": "The rise of the knee-to-hip line: level is 0. The hips are not to go higher than the knees; the three degrees are for the pose model's wobble."
+      "why": "How far the hip sits off the straight line from the knee to the shoulder, signed: 0 is one line, + the hip pushed above it (the lower back arching to make height), − short of it. About −45 lying down; a correct top reads within a few degrees of 0 (real photos: −3).",
+      "c": "shoulder"
     },
     {
       "key": "foot",
@@ -256,16 +258,10 @@
           "label": "Foot off the floor, at most",
           "min": 2,
           "max": 30
-        },
-        {
-          "key": "footBias",
-          "label": "Heel landmark above the sole, degrees (the model's slant)",
-          "min": 0,
-          "max": 20
         }
       ],
-      "why": "The foot line, heel against toe: heels lifting tilt it one way, toes lifting the other. Checked first, because the feet decide what the hips can do. The pose model puts its heel landmark at the back of the heel bone, a few centimetres above the sole, and its toe landmark on the floor, so a flat foot reads about nine degrees heel-up; footBias takes that off. A recorded set read +8 to +10 flat and −3 with the toes visibly up, which is how the nine was found.",
-      "bias": "footBias"
+      "why": "The heel against the toe, as the change since the start: + the heel lifting, − the toes. Read against the start, so the model's own slant of a flat foot (about nine degrees toe-up) is taken off by itself.",
+      "fromStart": "change"
     }
   ],
   "progress": {
@@ -307,33 +303,33 @@
       "id": "feetFar",
       "measure": "shin",
       "side": "above",
-      "setup": true,
       "requires": [
         "foot"
       ],
       "label": "Feet too far out",
       "text": "Walk your feet in",
-      "deep": "Walk your feet in toward you — they are well out"
+      "deep": "Walk your feet in toward you — they are well out",
+      "when": "between"
     },
     {
       "id": "feetClose",
       "measure": "shin",
       "side": "below",
-      "setup": true,
       "requires": [
         "foot"
       ],
       "label": "Feet too close",
       "text": "Walk your feet out a little",
-      "deep": "Walk your feet out — your knees are out over your toes"
+      "deep": "Walk your feet out — your knees are out over your toes",
+      "when": "between"
     },
     {
       "id": "hipHigh",
       "measure": "over",
       "side": "above",
-      "label": "Hips above knees",
-      "text": "Not so high — hips no higher than your knees",
-      "deep": "Lower your hips — they are well above your knees"
+      "label": "Hips too high",
+      "text": "Not so high — stop at one line, knees to shoulders",
+      "deep": "Lower the hips a little — the back is arching"
     },
     {
       "id": "hipLow",
@@ -341,7 +337,10 @@
       "side": "below",
       "label": "Hips short of the line",
       "text": "Lift your hips higher",
-      "deep": "Higher — knees, hips and shoulders in one line"
+      "deep": "Higher — knees, hips and shoulders in one line",
+      "unless": [
+        "hipHigh"
+      ]
     }
   ],
   "draw": [
@@ -375,20 +374,19 @@
   ],
   "defaults": {
     "shinMin": 85,
-    "shinMax": 110,
+    "shinMax": 122,
     "hipMin": 160,
-    "overMax": 3,
-    "footFlat": 10,
+    "overMax": 8,
+    "footFlat": 12,
     "raiseAt": 150,
     "downAt": 140,
-    "holdTargetSec": 2,
+    "holdTargetSec": 3,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
     "lowerSec": 1,
     "restSec": 2,
-    "deepAt": 10,
-    "footBias": 9
+    "deepAt": 10
   },
   "settings": [
     {

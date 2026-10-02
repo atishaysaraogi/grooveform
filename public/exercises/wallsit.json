@@ -38,7 +38,7 @@
       "Slide back up when the time is called."
     ],
     "cannot": "Whether your lower back is pressed flat: it sees the line from hip to shoulder, not the curve between. Weight through the heels is yours to feel.",
-    "about": "Wall sit — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, plumb at 90° and allowed 85–95°, where past 95° your heels are ahead of your knees and under 85° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.",
+    "about": "Wall sit — the angle at your knee between hip and ankle, which should sit in 85–110°; the angle your shin makes with the floor, from the knee to the ankle, plumb at 90° and allowed 80–100°, where past 100° your feet are ahead of your knees and under 80° they are behind them; and how far the line from your hip to your shoulder leans off vertical, allowed ±12°.",
     "lost": "Step into the camera, side on",
     "safety": "Stop if the knees hurt at the front. Slide up rather than standing straight up.",
     "easier": "Sit higher: a knee angle nearer 110°. A shorter hold.",
@@ -72,12 +72,12 @@
         "h": [334, 53],
         "sh": [334, 77],
         "hip": [336, 119],
-        "kn": [290, 118],
+        "kn": [290, 114],
         "an": [290, 160],
         "ft": [274, 161],
         "el": [328, 101],
         "wr": [322, 123],
-        "knF": [295, 123],
+        "knF": [295, 119],
         "anF": [295, 160],
         "ftF": [280, 161],
         "elF": [333, 103],
@@ -189,11 +189,7 @@
       "note": "floor",
       "kind": "floor",
       "at": "knee",
-      "to": [
-        "heel",
-        "ankle"
-      ],
-      "optional": true,
+      "to": "ankle",
       "band": {
         "lo": "shinMin",
         "hi": "shinMax"
@@ -213,7 +209,7 @@
           "max": 140
         }
       ],
-      "why": "The shin against the floor, taken to the heel, or to the ankle when the heel is not trusted. Over 90 the heel is ahead of the knee (feet too far out), under it behind (feet too far in)."
+      "why": "The shin against the floor, taken from the knee to the ankle: 90 is plumb — the knee over the ankle. Over 90 the feet are ahead of the knees (too far from the wall), under it behind them."
     },
     {
       "key": "back",
@@ -227,10 +223,7 @@
       "band": {
         "sym": "backTilt"
       },
-      "scale": [
-        -40,
-        40
-      ],
+      "scale": [-40, 40],
       "settings": [
         {
           "key": "backTilt",
@@ -249,7 +242,7 @@
       "side": "above",
       "label": "Feet ahead of knees",
       "text": "Bring your feet back",
-      "deep": "Bring your feet back — your heels are well ahead of your knees",
+      "deep": "Bring your feet back — they are well ahead of your knees",
       "tone": "walking in"
     },
     {
@@ -258,7 +251,7 @@
       "side": "below",
       "label": "Feet behind knees",
       "text": "Bring your feet forward",
-      "deep": "Walk your feet further out — your heels are behind your knees",
+      "deep": "Walk your feet further out — they are behind your knees",
       "tone": "walking out"
     },
     {
@@ -321,8 +314,8 @@
   "defaults": {
     "kneeMin": 85,
     "kneeMax": 110,
-    "shinMin": 85,
-    "shinMax": 95,
+    "shinMin": 80,
+    "shinMax": 100,
     "backTilt": 12,
     "setCount": 3,
     "holdTargetSec": 60,

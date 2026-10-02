@@ -31,17 +31,17 @@
   },
   "words": {
     "hint": "Facing a wall, the fingers of one hand walked up it as high as is comfortable, then down.",
-    "start": "Stand the phone up on the floor. Face a wall an arm’s length away, side on to the phone, fingertips on it at waist height.",
+    "start": "Stand the phone up on the floor. Face a wall, a little less than arm’s length away, side on to the phone, fingertips on it.",
     "position": "Stand facing a wall about three-quarters of an arm’s length away, side on to the phone, the working arm nearest it. Fingertips on the wall at waist height, elbow a little bent.",
     "top": "The arm walked up the wall as high as is comfortable — aim for the arm level with the shoulder or above — the trunk tall and still, the shoulder down away from the ear.",
     "howto": [
-      "Face the wall, fingertips on it at waist height, elbow slightly bent.",
+      "Face the wall, about three-quarters of an arm’s length away, fingertips on it at waist height, elbow slightly bent.",
       "Walk the fingers up the wall like a spider, slowly, as high as is comfortable. The fingers do the work, not the shoulder muscles.",
       "Hold at the top for the count. Keep the trunk tall — no leaning back — and the shoulder down, away from the ear.",
-      "Walk the fingers back down slowly. The rep counts when the hand is back at waist height."
+      "Walk the fingers back down slowly, helped by the other hand if you need. The rep counts when the hand is back at waist height."
     ],
     "cannot": "Whether the fingers or the shoulder muscles are doing the lifting, and whether the shoulder blade is moving well: it sees how high the arm goes, the trunk, the elbow and the shoulder rising toward the ear.",
-    "about": "Wall walk — standing side on: the reach, as the angle at the shoulder between the hip and the wrist, at least 120° at the top (the arm level with the shoulder is 90; a healthy shoulder reaches 170); a rep is under way past 90 and counts when the hand is back under 40; the trunk within 12° of upright either way, so leaning back to gain height is called; the elbow at least 150°; and the shoulder kept down, as the ear-to-shoulder distance against the trunk at least 85% of what it was at the start — a shrug shortens it. Hold two seconds at the top. The top is the setting to move as the shoulder frees: a physio lowers it to 100 in the early weeks and raises it as the range returns.",
+    "about": "Wall walk — standing side on, facing the wall: the reach, as the angle at the shoulder between the hip and the wrist, at least 110° at the top (the arm level with the shoulder is 90; a healthy shoulder reaches 170); a rep is under way past 90 and counts when the hand is back under 40; the trunk no more than 12° back or 20° in from upright, so leaning back to gain height is called; the elbow at least 125° at the top — fingertips on the wall bend it on the way up; and the shoulder kept down, the ear-to-shoulder distance at least 78% of what it was at the start — a shrug shortens it. Hold three seconds at the top. The top is the setting to move as the shoulder frees: a physio lowers it to 100 in the early weeks and raises it as the range returns.",
     "lost": "Stand side on to the camera facing the wall, the whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -57,34 +57,125 @@
     "arm": 0.3
   },
   "figure": {
-    "pose": {
+    "points": {
+      "view": "side",
       "A": {
-        "torso": 2,
-        "thigh": 0,
-        "shin": 0,
-        "foot": 0,
-        "uarm": 25,
-        "farm": 35,
-        "uarmF": 0,
-        "farmF": 0
+        "h": [
+          297,
+          32
+        ],
+        "sh": [
+          296,
+          54
+        ],
+        "hip": [
+          295,
+          98
+        ],
+        "kn": [
+          295,
+          128
+        ],
+        "an": [
+          295,
+          158
+        ],
+        "ft": [
+          309,
+          158
+        ],
+        "el": [
+          297,
+          80
+        ],
+        "wr": [
+          321,
+          76
+        ],
+        "knF": [
+          291,
+          128
+        ],
+        "anF": [
+          291,
+          158
+        ],
+        "ftF": [
+          305,
+          161
+        ],
+        "elF": [
+          296,
+          80
+        ],
+        "wrF": [
+          296,
+          104
+        ]
       },
       "B": {
-        "torso": 2,
-        "thigh": 0,
-        "shin": 0,
-        "foot": 0,
-        "uarm": 150,
-        "farm": 165,
-        "uarmF": 0,
-        "farmF": 0
+        "h": [
+          297,
+          32
+        ],
+        "sh": [
+          296,
+          54
+        ],
+        "hip": [
+          295,
+          98
+        ],
+        "kn": [
+          295,
+          128
+        ],
+        "an": [
+          295,
+          158
+        ],
+        "ft": [
+          309,
+          158
+        ],
+        "el": [
+          313,
+          35
+        ],
+        "wr": [
+          321,
+          12
+        ],
+        "knF": [
+          291,
+          128
+        ],
+        "anF": [
+          291,
+          158
+        ],
+        "ftF": [
+          305,
+          161
+        ],
+        "elF": [
+          296,
+          80
+        ],
+        "wrF": [
+          296,
+          104
+        ]
       },
-      "wall": "ahead",
-      "anchor": "ft"
+      "hold": false,
+      "side": "both",
+      "flip": false,
+      "wall": 321
     }
   },
   "facing": {
     "from": "hip",
-    "to": "shoulder"
+    "to": "wrist"
   },
   "side": {
     "pick": "highest",
@@ -177,7 +268,8 @@
       "base": "hip",
       "top": "shoulder",
       "band": {
-        "sym": "leanMax"
+        "lo": "leanBackMax",
+        "hi": "leanInMax"
       },
       "scale": [
         -40,
@@ -186,10 +278,16 @@
       "why": "The hip-to-shoulder line off vertical, + toward the wall. Leaning back (negative) is the classic cheat for height.",
       "settings": [
         {
-          "key": "leanMax",
-          "label": "Trunk within ± of upright (degrees)",
-          "min": 5,
-          "max": 30
+          "key": "leanBackMax",
+          "label": "Leaning back, at most (negative)",
+          "min": -30,
+          "max": -3
+        },
+        {
+          "key": "leanInMax",
+          "label": "Leaning in, at most",
+          "min": 3,
+          "max": 35
         }
       ]
     },
@@ -209,7 +307,7 @@
         90,
         180
       ],
-      "why": "The arm long on the wall: under 150 the elbow is bent and pushing.",
+      "why": "Straight is 180. Judged at the top only: with the fingertips on the wall the elbow has to bend as the hand passes shoulder height, and straightens again above it.",
       "settings": [
         {
           "key": "elbowMin",
@@ -261,7 +359,7 @@
     "atStart": true,
     "ranges": {
       "elbow": [
-        150,
+        120,
         180
       ]
     }
@@ -284,7 +382,7 @@
       "text": "Keep the arm long — elbow nearly straight",
       "deep": "",
       "tone": "plain",
-      "when": "always"
+      "when": "top"
     },
     {
       "id": "flexLow",
@@ -339,19 +437,20 @@
     }
   ],
   "defaults": {
-    "flexMin": 120,
-    "leanMax": 12,
-    "elbowMin": 150,
-    "shrugMin": 85,
+    "flexMin": 110,
+    "elbowMin": 125,
+    "shrugMin": 78,
     "raiseAt": 90,
     "downAt": 40,
-    "holdTargetSec": 2,
+    "holdTargetSec": 3,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "leanBackMax": -12,
+    "leanInMax": 20
   },
   "settings": [
     {

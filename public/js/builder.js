@@ -488,6 +488,11 @@ Moves.ready.then(function () {
   const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: m.axis ? { range: [-20, 20], min: -10, max: 10, sym: 10 } : { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
   const settingLabel = (m, words) => `${cap((describe(m).what || m.key))}, ${words}`;
   const ensureSetting = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: settingLabel(m, words), min: Math.round(lo), max: Math.round(hi) }); };
+  /* a fault silenced by another names it in `unless`: when that one is gone, so is the mention */
+  function pruneUnless() {
+    const ids = new Set(draft.faults.map((x) => x.id));
+    for (const x of draft.faults) if (x.unless) { x.unless = x.unless.filter((id) => ids.has(id)); if (!x.unless.length) delete x.unless; }
+  }
   function clearBand(m) {
     for (const s of m.settings || []) { if (!(draft.settings || []).some((t) => t.key === s.key) && !['raiseAt', 'downAt'].includes(s.key)) delete draft.defaults[s.key]; }
     delete m.band; delete m.settings; delete m.scale; delete m.note;
@@ -509,12 +514,13 @@ Moves.ready.then(function () {
     else if (kind === 'max') f(base + 'High', 'above');
     else if (kind === 'sym') { f(base + 'Over', 'above'); f(base + 'Under', 'below'); }
     else { f(base + 'Low', 'below'); f(base + 'High', 'above'); }
+    pruneUnless();
   }
   function setRole(m, role) {
     const d = draft, was = roleOf(m);
     if (was === 'progress' && role !== 'progress') { delete d.progress; delete d.defaults.raiseAt; delete d.defaults.downAt; d.settings = d.settings.filter((s) => s.key !== 'raiseAt'); }
     m.role = role;
-    if (role === 'reading') { clearBand(m); return; }
+    if (role === 'reading') { clearBand(m); pruneUnless(); return; }
     if (role === 'progress') {
       const prev = d.measurements.find((q) => q !== m && roleOf(q) === 'progress'); if (prev) prev.role = 'hold';
       const def = bandDefault(m).range;
@@ -650,6 +656,7 @@ Moves.ready.then(function () {
     if (roleOf(m) === 'progress') { delete draft.progress; delete draft.defaults.raiseAt; delete draft.defaults.downAt; draft.settings = draft.settings.filter((s) => s.key !== 'raiseAt'); }
     draft.measurements = draft.measurements.filter((q) => q !== m);
     dropRefs(m.key);
+    pruneUnless();
     /* the landmarks it alone used go too, when the lists are the file's own (derived lists are rebuilt) */
     if (!draft.auto.landmarks && draft.landmarks) {
       const gone = lmRefs(m).filter((n) => !draft.measurements.some((q) => lmRefs(q).includes(n)));

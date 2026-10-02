@@ -147,20 +147,73 @@
     out.head = out.h; delete out.h;
     return out;
   }
-  // Rebuild the pose at k by interpolating each bone's angle and length, not its endpoints.
-  function tween(A, B, k, view) {
+  /* Rebuild the pose at k by interpolating each bone's angle and length, not its endpoints,
+     so a free limb swings through an arc and keeps its length. Three things a person's body
+     does that plain angles do not:
+     - a point that is in the same place at both keyframes stays there (a hand or foot on the
+       floor, a shoulder on the mat) — it does not wander off and back between them;
+     - a hand or foot that touches the floor, or the wall, at both keyframes but moves (a heel
+       sliding, fingers walking up a wall, a foot stepping) travels straight along it, lifted a
+       little if it is a step, and the knee or elbow bends to suit, the limb keeping its length;
+     - the head goes with the shoulders, so it does not sink into them as the trunk tips. */
+  var LIMBS = {
+    side: [['hip', 'kn', 'an', 'ft'], ['hip', 'knF', 'anF', 'ftF'], ['sh', 'el', 'wr'], ['sh', 'elF', 'wrF']],
+    front: [['hipL', 'knL', 'anL'], ['hipR', 'knR', 'anR'], ['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR']]
+  };
+  var STILL = 1.5, FLOOR_TOUCH = 156, WALL_TOUCH = 6, STEP = 30, STEP_LIFT = 9;
+  function neckBase(P, view) { return view === 'side' ? P.sh : (P.shL && P.shR ? lerpP(P.shL, P.shR, 0.5) : null); }
+  function cross(o, a, b) { return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x); }
+  /* the middle joint of a two-bone limb from its root to its end, bent the way it is bent at the keyframes */
+  function bend(R, E, a, b, sign) {
+    var dx = E.x - R.x, dy = E.y - R.y, d = Math.hypot(dx, dy) || 1e-6;
+    if (d >= a + b - 1e-3) return at(R, Math.atan2(dy, dx), a);
+    var c = Math.max(-1, Math.min(1, (a * a + d * d - b * b) / (2 * a * d))), al = Math.acos(c), base = Math.atan2(dy, dx);
+    var m1 = at(R, base + al, a), m2 = at(R, base - al, a);
+    return (cross(R, m1, E) > 0) === (sign > 0) ? m1 : m2;
+  }
+  function tween(A, B, k, view, opts) {
     if (!B || k <= 0) return A;
-    var out = {};
+    if (k >= 1) return B;
+    var out = {}, wall = opts && typeof opts.wall === 'number' ? opts.wall : null;
+    var still = function (p) { return A[p] && B[p] && len(A[p], B[p]) <= STILL; };
     ROOTS[view].forEach(function (r) { out[r] = lerpP(A[r], B[r], k); });
-    out.head = B.head ? lerpP(A.head, B.head, k) : A.head;
     CHAINS[view].forEach(function (c) {
       var child = c[0], parent = c[1];
       if (!A[child] || !A[parent]) return;
+      if (still(child)) { out[child] = { x: A[child].x, y: A[child].y }; return; }
       var a0 = ang(A[parent], A[child]), l0 = len(A[parent], A[child]);
       var a1 = (B[child] && B[parent]) ? ang(B[parent], B[child]) : a0;
       var l1 = (B[child] && B[parent]) ? len(B[parent], B[child]) : l0;
       out[child] = at(out[parent] || A[parent], a0 + shortest(a0, a1) * k, lerp(l0, l1, k));
     });
+    /* the limbs whose end is held, or touches the floor or the wall at both keyframes */
+    (LIMBS[view] || []).forEach(function (L) {
+      var r = L[0], m = L[1], e = L[2], f = L[3];
+      if (!A[r] || !A[m] || !A[e] || !B[r] || !B[m] || !B[e] || !out[r]) return;
+      var end;
+      if (still(e)) end = { x: A[e].x, y: A[e].y };
+      else if (A[e].y >= FLOOR_TOUCH && B[e].y >= FLOOR_TOUCH) {
+        end = lerpP(A[e], B[e], k);
+        if (len(A[e], B[e]) > STEP) end.y -= STEP_LIFT * Math.sin(Math.PI * k);
+      } else if (wall !== null && Math.abs(A[e].x - wall) <= WALL_TOUCH && Math.abs(B[e].x - wall) <= WALL_TOUCH) end = lerpP(A[e], B[e], k);
+      else return;
+      var sA = cross(A[r], A[m], A[e]), sB = cross(B[r], B[m], B[e]);
+      var sign = Math.abs(sA) > 1 ? sA : sB;
+      if (Math.abs(sign) <= 1) { out[e] = end; return; }   // straight at both: nothing to bend
+      out[m] = bend(out[r], end, lerp(len(A[r], A[m]), len(B[r], B[m]), k), lerp(len(A[m], A[e]), len(B[m], B[e]), k), sign);
+      out[e] = end;
+      /* the foot comes along with the ankle, at its own angle — or stays where it is planted */
+      if (f && A[f]) {
+        if (still(f)) out[f] = { x: A[f].x, y: A[f].y };
+        else if (B[f]) { var fa0 = ang(A[e], A[f]), fa1 = ang(B[e], B[f]); out[f] = at(end, fa0 + shortest(fa0, fa1) * k, lerp(len(A[e], A[f]), len(B[e], B[f]), k)); }
+      }
+    });
+    /* the head on the neck: its angle and distance from the shoulders, carried with them */
+    var nA = neckBase(A, view), nB = neckBase(B, view), nO = neckBase(out, view);
+    if (A.head && B.head && nA && nB && nO) {
+      var h0 = ang(nA, A.head), h1 = ang(nB, B.head);
+      out.head = at(nO, h0 + shortest(h0, h1) * k, lerp(len(nA, A.head), len(nB, B.head), k));
+    } else out.head = B.head ? lerpP(A.head, B.head, k) : A.head;
     return out;
   }
 
@@ -324,6 +377,7 @@
     var A = unify(data.A, view), B = data.B ? unify(data.B, view) : null;
     if (cfg.belly !== 1 && cfg.belly !== -1) cfg.belly = bellyOf(A, B);   // decided once, not frame by frame
     var wall = data.wall || null, props = data.props || [], ctx = canvas.getContext('2d');
+    var wallTop = Math.min(34, Math.min.apply(null, [A, B].filter(Boolean).reduce(function (ys, K) { Object.keys(K).forEach(function (k) { if (K[k] && typeof K[k].y === 'number') ys.push(K[k].y); }); return ys; }, [164])) - 10);
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var rec = { raf: 0, io: null, visible: true, t: reduce ? 1.4 : 0, last: null };
 
@@ -364,7 +418,7 @@
       else if (u < 6) { var k = (u - 3) / 3; p = 1 - (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2); }
       else p = 0;
 
-      var pose = tween(A, B, p, view);
+      var pose = tween(A, B, p, view, { wall: wall });
       var drive = cfg.hold ? 0.72 + 0.28 * p : Math.pow(p, 0.75);
       var heats = {};
       REGIONS.forEach(function (k) { heats[k] = REST + (cfg.w[k] || 0) * drive * 0.93; });
@@ -378,7 +432,7 @@
       ctx.scale(s, s);
       ctx.strokeStyle = P.floor; ctx.lineWidth = 2 / s; ctx.lineCap = 'butt';
       ctx.beginPath(); ctx.moveTo(216, 164); ctx.lineTo(400, 164); ctx.stroke();
-      if (wall) { ctx.lineWidth = 3 / s; ctx.beginPath(); ctx.moveTo(wall, 34); ctx.lineTo(wall, 164); ctx.stroke(); }
+      if (wall) { ctx.lineWidth = 3 / s; ctx.beginPath(); ctx.moveTo(wall, wallTop); ctx.lineTo(wall, 164); ctx.stroke(); }
       drawProps(ctx, props, P, s);
       drawFigure(ctx, pose, P, heats, view, cfg);
       ctx.restore();

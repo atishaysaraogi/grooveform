@@ -1,5 +1,6 @@
 'use strict';
-/* The standing knee raise: two right angles, a ten second hold, and ten reps.
+/* The standing knee raise: the thigh up to level, the lower leg hanging under the knee,
+   the trunk tall, a ten second hold, and ten reps.
    Same discipline as the holds — every number the app acts on is checked against a
    body posed to exactly that number. Run: npm test */
 const test = require('node:test');
@@ -18,6 +19,7 @@ const judge = (r, o) => M.judge(r, cfg(o));
      thigh  how far the raised thigh has come off straight down: 0 standing, 90 level
      knee   the angle at that knee, between hip and ankle
      foot   the angle at that heel, between the toe and the knee
+     lean   the trunk off plumb, + forward
      facing +1 = toes to the image right, -1 = mirrored
      up     'L' or 'R' — which leg is the raised one
 
@@ -33,7 +35,7 @@ const judge = (r, o) => M.judge(r, cfg(o));
 
    The other leg is left standing straight underneath, as the one holding the
    person up. */
-function body({ thigh = 0, knee = 180, foot = 85, facing = 1, up = 'R', vis = 0.95,
+function body({ thigh = 0, knee = 180, foot = 85, lean = 0, facing = 1, up = 'R', vis = 0.95,
                 hipAt = [0.28, 0.42], thighLen = 0.11, shinLen = 0.10, heelDrop = 0.02,
                 footLen = 0.05, torso = 0.18 } = {}) {
   const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
@@ -50,7 +52,7 @@ function body({ thigh = 0, knee = 180, foot = 85, facing = 1, up = 'R', vis = 0.
   };
   const raised = leg(thigh, knee, foot);
   const stood = leg(0, 180, 90);            // the other leg, straight down, foot flat
-  const shoulder = { x: hipAt[0], y: hipAt[1] - torso };
+  const shoulder = { x: hipAt[0] + facing * torso * Math.sin(lean * D), y: hipAt[1] - torso * Math.cos(lean * D) };
   const ear = { x: shoulder.x + facing * 0.012, y: shoulder.y - 0.06 };
 
   const lm = []; for (let i = 0; i < 33; i++) lm.push({ x: 0.5, y: 0.5, z: 0, visibility: 0.2 });
@@ -65,27 +67,30 @@ function body({ thigh = 0, knee = 180, foot = 85, facing = 1, up = 'R', vis = 0.
 }
 const readOf = (o) => read(body(o));
 
-test('standing still reads a thigh hanging straight down and a straight knee', () => {
+test('standing still reads a thigh hanging straight down, a straight knee, a plumb shin and an upright trunk', () => {
   const r = readOf({});
   assert.ok(r.ok);
   assert.ok(Math.abs(r.thigh) < 0.01, 'the thigh hangs: ' + r.thigh);
   assert.ok(Math.abs(r.knee - 180) < 0.01, 'the knee is straight: ' + r.knee);
-  assert.ok(Math.abs(r.foot - 90) < 0.01, 'the standing foot reads a right angle to the shin: ' + r.foot);
+  assert.ok(Math.abs(r.shin) < 0.01, 'the shin is plumb: ' + r.shin);
+  assert.ok(Math.abs(r.lean) < 0.01, 'the trunk upright: ' + r.lean);
   const v = judge(r);
   assert.equal(v.atStart, true, 'and that is the start of a rep');
   assert.equal(v.raised, false);
   assert.equal(v.inPosition, false);
 });
 
-test('the three angles are read back as posed, and are independent of each other', () => {
+test('the angles are read back as posed: the lower leg off plumb is what the thigh and the knee leave it', () => {
   for (const thigh of [15, 45, 70, 90]) {
     for (const knee of [90, 120, 180]) {
-      for (const foot of [70, 95, 130]) {
+      for (const lean of [-10, 0, 12]) {
         for (const facing of [1, -1]) {
-          const r = read(body({ thigh, knee, foot, facing }));
+          const r = read(body({ thigh, knee, lean, facing }));
           assert.ok(Math.abs(r.thigh - thigh) < 0.01, `thigh ${thigh} read ${r.thigh.toFixed(2)}`);
           assert.ok(Math.abs(r.knee - knee) < 0.01, `knee ${knee} read ${r.knee.toFixed(2)} (thigh ${thigh}, facing ${facing})`);
-          assert.ok(Math.abs(r.foot - foot) < 0.01, `foot ${foot} read ${r.foot.toFixed(2)} (facing ${facing})`);
+          /* the foot out in front of the knee reads below zero, tucked back above it */
+          assert.ok(Math.abs(r.shin - (180 - thigh - knee)) < 0.01, `shin read ${r.shin.toFixed(2)} (thigh ${thigh}, knee ${knee}, facing ${facing})`);
+          assert.ok(Math.abs(r.lean - lean) < 0.01, `lean ${lean} read ${r.lean.toFixed(2)} (facing ${facing})`);
         }
       }
     }
@@ -103,62 +108,47 @@ test('the leg being measured is the one that is raised, whichever side it is', (
   assert.ok(Math.abs(still.thigh) < 0.01);
 });
 
-test('a right angle at the knee, ten degrees either way', () => {
-  /* the edge of the band is inside it: ten degrees allowed has to allow ten */
+test('the lower leg hangs under the knee, twenty degrees either way', () => {
+  /* the edge of the band is inside it */
   const g = (o) => judge(readOf(Object.assign({ thigh: 85 }, o))).good;
-  assert.equal(g({ knee: 90 }).knee, true, 'a right angle');
-  assert.equal(g({ knee: 80 }).knee, true, 'and the edges of the ten allowed');
-  assert.equal(g({ knee: 100 }).knee, true);
-  assert.equal(g({ knee: 79 }).knee, false);
-  assert.equal(g({ knee: 101 }).knee, false);
+  assert.equal(g({ knee: 95 }).shin, true, 'hanging plumb');
+  assert.equal(g({ knee: 115 }).shin, true, 'and the edges of the twenty allowed');
+  assert.equal(g({ knee: 75 }).shin, true);
+  assert.equal(g({ knee: 116 }).shin, false);
+  assert.equal(g({ knee: 74 }).shin, false);
 });
 
-test('the foot cues say which way the foot is wrong, and do not promise a right angle', () => {
-  for (const id of ['toesDown', 'toesUp']) {
-    const c = M.cues[id];
-    assert.ok(c.deep, id + ' has words for a foot well out');
-    /* the band is 85 to 110, so it is not a right angle and the cue must not say it is */
-    assert.doesNotMatch(c.deep, /square|right angle/i, id + ' deep: ' + c.deep);
-  }
-  assert.match(M.cues.toesDown.deep, /pointing away/i);
-  assert.match(M.cues.toesUp.deep, /too far up/i);
+test('the thigh comes up to level or near it — the knee\'s angle no longer stands in for it', () => {
+  /* a thigh at sixty with the shin plumb reads a knee of 120: the fix is to lift higher, not
+     to bend the knee, and that is what is said */
+  const f = (o) => judge(readOf(Object.assign({ thigh: 85, knee: 95 }, o))).faults;
+  assert.ok(f({ thigh: 60, knee: 120 }).thighLow > 0, 'lift higher');
+  assert.equal(f({ thigh: 60, knee: 120 }).kneeOpen, undefined, 'and nothing about the knee while the thigh is low');
+  assert.equal(f({ thigh: 75, knee: 105 }).thighLow, undefined, 'seventy five is in');
+  assert.match(M.cues.thighLow.text, /higher/i);
+  assert.ok(M.measurements.find((m) => m.key === 'knee') && !M.bands.some((b) => b.key === 'knee'), 'the knee is drawn, not judged');
+  assert.ok(!M.faults.includes('toesDown') && !M.faults.includes('toesUp'), 'no source sets where the foot should be, so it is not judged');
 });
 
-test('the foot is taken at the heel, between the toe and the knee, and allowed 60 to 100', () => {
-  const g = (foot) => judge(readOf({ thigh: 85, knee: 90, foot })).good.foot;
-  assert.equal(g(59), false);
-  assert.equal(g(60), true, 'the low edge is inside');
-  assert.equal(g(85), true);
-  assert.equal(g(100), true, 'and so is the high one');
-  assert.equal(g(101), false);
-  assert.equal(g(140), false, 'a foot well past it');
-  /* it is the angle at the HEEL, not at the ankle: the two are different numbers on
-     a real body, and the one being judged is the one asked for */
-  const r = readOf({ thigh: 85, knee: 90, foot: 85 });
-  const atAnkle = Core.angleAt(r.points.knee, r.points.ankle, r.points.toe);
-  assert.ok(Math.abs(r.foot - 85) < 0.01, 'the heel reads what was posed');
-  assert.ok(Math.abs(atAnkle - 85) > 1, 'and the ankle reads something else: ' + atAnkle.toFixed(1));
-});
-
-test('a knee that is too straight is told to bend, and toes that point are told to come up', () => {
-  const f = (o) => judge(readOf(Object.assign({ thigh: 85, knee: 90, foot: 85 }, o))).faults;
-  assert.ok(f({ knee: 125 }).kneeOpen > 0, 'too open');
-  assert.ok(f({ knee: 65 }).kneeShut > 0, 'too shut');
-  assert.ok(f({ foot: 130 }).toesDown > 0, 'toes pointed away');
-  assert.ok(f({ foot: 45 }).toesUp > 0, 'toes pulled too far up');
+test('a foot out in front or tucked back is told to hang, and the trunk to stand tall', () => {
+  const f = (o) => judge(readOf(Object.assign({ thigh: 85, knee: 95 }, o))).faults;
+  assert.ok(f({ knee: 125 }).kneeOpen > 0, 'out in front');
+  assert.ok(f({ knee: 65 }).kneeShut > 0, 'tucked back');
+  assert.match(M.cues.kneeOpen.text, /hang/i);
+  assert.ok(f({ lean: -12 }).leanBack > 0, 'leaning back to lift the knee');
+  assert.ok(f({ lean: 20 }).leanFwd > 0, 'or folding forward');
+  assert.equal(f({ lean: -8 }).leanBack, undefined, 'eight back is the edge');
   assert.deepEqual(f({}), {}, 'and nothing at all when it is right');
 });
 
-test('the position is the two right angles together, with the knee actually up', () => {
-  assert.equal(judge(readOf({ thigh: 85, knee: 90, foot: 85 })).inPosition, true);
-  assert.equal(judge(readOf({ thigh: 85, knee: 115, foot: 85 })).inPosition, false, 'knee out');
-  assert.equal(judge(readOf({ thigh: 85, knee: 90, foot: 130 })).inPosition, false, 'foot out');
-  /* the two right angles can be made with the heel tucked up behind, which is not a
-     knee raise — so the thigh has to have come up for any of it to count */
-  const tucked = judge(readOf({ thigh: 10, knee: 90, foot: 85 }));
-  assert.equal(tucked.good.knee, true, 'the angles are right');
-  assert.equal(tucked.good.foot, true);
-  assert.equal(tucked.inPosition, false, 'and it is still not the position');
+test('the position is the thigh up, the lower leg hanging and the trunk tall, with the knee actually up', () => {
+  assert.equal(judge(readOf({ thigh: 85, knee: 95 })).inPosition, true);
+  assert.equal(judge(readOf({ thigh: 85, knee: 125 })).inPosition, false, 'foot out in front');
+  assert.equal(judge(readOf({ thigh: 70, knee: 110 })).inPosition, false, 'thigh low');
+  assert.equal(judge(readOf({ thigh: 85, knee: 95, lean: -12 })).inPosition, false, 'leaning back');
+  /* a heel tucked up behind is not a knee raise: the thigh has to have come up */
+  const tucked = judge(readOf({ thigh: 10, knee: 90 }));
+  assert.equal(tucked.inPosition, false);
   assert.equal(tucked.raised, false);
 });
 
@@ -261,30 +251,34 @@ test('standing still is prompted to start, and that prompt is not counted as a c
   assert.deepEqual(c.summary().cues, {}, 'and nothing was wrong with anything');
 });
 
-test('the knee and the foot are only corrected once the knee is actually up', () => {
-  /* standing with a pointed toe is not a fault: there is no rep under way */
-  const still = new Core.Coach(M, { readyMs: 2000, readyMs: 2000 });
-  const a = play(still, { thigh: 0, knee: 180, foot: 140 }, 2000, 0);
-  assert.deepEqual(a.said.filter((x) => /toes|knee/i.test(x.id)).map((x) => x.id), []);
-  /* the same foot with the knee up is */
-  const upc = new Core.Coach(M, { readyMs: 2000, readyMs: 2000 });
+test('the lean and the lower leg are only corrected once the knee is actually up', () => {
+  /* standing leaning back is not a fault: there is no rep under way */
+  const still = new Core.Coach(M, { readyMs: 2000 });
+  const a = play(still, { thigh: 0, knee: 180, lean: -14 }, 4000, 0);
+  assert.deepEqual(a.said.filter((x) => /lean|knee/i.test(x.id)).map((x) => x.id), []);
+  /* the same lean with the knee up is */
+  const upc = new Core.Coach(M, { readyMs: 2000 });
   let t = settle(upc, 0); ({ t } = play(upc, DOWN, 700, t));
-  const b = play(upc, { thigh: 88, knee: 90, foot: 140 }, 2500, t);
-  assert.ok(b.said.some((x) => x.id === 'toesDown'), 'said: ' + JSON.stringify(b.said.map((x) => x.text)));
+  const b = play(upc, { thigh: 88, knee: 90, lean: -14 }, 2500, t);
+  assert.ok(b.said.some((x) => x.id === 'leanBack'), 'said: ' + JSON.stringify(b.said.map((x) => x.text)));
 });
 
-test('the knee is corrected before the foot, being what the foot hangs off', () => {
-  const c = new Core.Coach(M, { readyMs: 2000, readyMs: 2000 });
+test('the trunk is corrected before the knee\'s height, and the height before the lower leg', () => {
+  const c = new Core.Coach(M, { readyMs: 2000 });
   let t = settle(c, 0); ({ t } = play(c, DOWN, 700, t));
-  const r = play(c, { thigh: 88, knee: 130, foot: 140 }, 2000, t);
-  const first = r.said.filter((x) => /knee|toes/i.test(x.id))[0];
-  assert.equal(first.id, 'kneeOpen', 'said: ' + JSON.stringify(r.said.map((x) => x.text)));
+  const r = play(c, { thigh: 70, knee: 140, lean: -15 }, 2000, t);
+  const first = r.said.filter((x) => /lean|thigh|knee/i.test(x.id))[0];
+  assert.equal(first.id, 'leanBack', 'said: ' + JSON.stringify(r.said.map((x) => x.text)));
+  const c2 = new Core.Coach(M, { readyMs: 2000 });
+  t = settle(c2, 0); ({ t } = play(c2, DOWN, 700, t));
+  const r2 = play(c2, { thigh: 70, knee: 140 }, 2000, t);
+  assert.equal(r2.said.filter((x) => /thigh|knee/i.test(x.id))[0].id, 'thighLow', 'said: ' + JSON.stringify(r2.said.map((x) => x.text)));
 });
 
 test('the bands are settings, not rules baked into the code', () => {
-  const loose = { kneeMin: 70, kneeMax: 120 };
-  assert.equal(judge(readOf({ thigh: 85, knee: 110 }), loose).good.knee, true, 'widened, 110 is in');
-  assert.equal(judge(readOf({ thigh: 85, knee: 110 })).good.knee, false, 'and the default band is unchanged');
+  const loose = { shinTilt: 40 };
+  assert.equal(judge(readOf({ thigh: 85, knee: 125 }), loose).good.shin, true, 'widened, thirty degrees out is in');
+  assert.equal(judge(readOf({ thigh: 85, knee: 125 })).good.shin, false, 'and the default band is unchanged');
   /* how far the thigh must come up is a setting too, and is not marked either way */
   assert.equal(judge(readOf({ thigh: 30, knee: 90, foot: 85 })).raised, false);
   assert.equal(judge(readOf({ thigh: 30, knee: 90, foot: 85 }), { raiseAt: 25 }).raised, true);

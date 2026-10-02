@@ -41,8 +41,8 @@
       "Hold for the count with the chest still facing the phone.",
       "Turn back slowly. The rep counts when the hand is pointing forward again."
     ],
-    "cannot": "The shoulder joint itself: it reads the turn from how much of the forearm the camera sees, the elbow leaving the side and the chest turning. Keep the elbow pinned yourself.",
-    "about": "Shoulder turn-out — facing the phone: the turn, as the elbow-to-wrist length the camera sees against the upper arm, as a percent — a forearm pointing at the phone is foreshortened to almost nothing, one turned fully out to the side shows its whole length (about 100); the top is at least 50 (a quarter turn); a rep is under way past 30 and counts when back under 20. The elbow kept in, as the elbow-to-hip distance against the trunk at most 45%; the elbow bent to 70–110°; and the chest facing the phone, as the shoulder width at least 85% of what it was at the start — turning the body narrows it. Hold two seconds. A frozen shoulder manages a few inches: set the top low and raise it.",
+    "cannot": "The shoulder joint itself, and how bent the elbow is while the hand points at the phone: it reads the turn from how far the hand moves out from the elbow, the elbow swinging away from the side, the shoulder lifting and the chest turning. Keep the elbow pinned yourself.",
+    "about": "Shoulder turn-out — facing the phone, the elbow at the side bent to a right angle: the turn, as how far the wrist sits outward of the elbow against the upper arm — 0 with the hand pointing at the phone, about 40 at 30° of turn — at least 25 at the top; a rep is under way past 8 and counts when back under 4. The elbow kept at the side, the angle between it and the trunk no more than 15° off where it started; the elbow not opening past 120°; the working shoulder no more than 7° up from the start; and the chest facing the phone, the shoulder width at least 85% of what it was at the start — turning the body narrows it. Hold five seconds. A frozen shoulder manages a few inches: set the top low and raise it.",
     "lost": "Stand facing the camera, both arms in the picture",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -208,8 +208,12 @@
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "other.shoulder",
+    "to": "shoulder",
+    "words": [
+      "outward",
+      "inward"
+    ]
   },
   "side": {
     "pick": "measure",
@@ -283,48 +287,84 @@
         "min": "turnMin"
       },
       "scale": [
-        0,
-        120
+        -20,
+        90
       ],
-      "why": "The elbow-to-wrist length as the camera sees it, against the upper arm: pointing at the phone it is foreshortened to 10–30; turned fully out to the side it shows its whole length, about 100. Also the progress measurement.",
+      "why": "How far the wrist sits outward of the elbow, as a share of the upper arm: 0 with the hand pointing at the phone, about 14 at 10° of turn, 27 at 20°, 39 at 30°, 56 at 45°, 78 fully out (the forearm is shorter than the upper arm). Below 0 the hand has turned in, across the body.",
       "settings": [
         {
           "key": "turnMin",
-          "label": "Forearm seen at the top, % of the upper arm, at least",
-          "min": 20,
-          "max": 110
+          "label": "Turn at the hold, at least (% of the upper arm)",
+          "min": 10,
+          "max": 80
+        },
+        {
+          "key": "raiseAt",
+          "label": "Turn that starts a rep",
+          "min": 4,
+          "max": 30
+        },
+        {
+          "key": "downAt",
+          "label": "Turn that ends it",
+          "min": 1,
+          "max": 20
         }
-      ]
+      ],
+      "axis": "x"
     },
     {
       "key": "tuck",
-      "label": "elbow from the hip, % of trunk",
+      "label": "elbow off the side",
       "hud": "ELBOW",
       "note": "tucked in",
-      "kind": "distance",
-      "a": "elbow",
-      "b": "hip",
-      "per": [
-        "shoulder",
-        "hip"
-      ],
-      "times": 100,
+      "kind": "angle",
+      "a": "hip",
+      "b": "shoulder",
       "band": {
         "max": "elbowOut"
       },
       "scale": [
-        0,
-        100
+        -10,
+        60
       ],
-      "why": "The elbow-to-hip distance against the trunk: an elbow against the ribs sits around 30; drifting out to the side it grows. Past 45 it has left the side.",
+      "why": "The angle at the shoulder between the hip and the elbow, as its change since the start: the upper arm swinging out from the side. Read against the start, so a towel roll under the elbow is not called a fault. Forward or back drift is toward the camera and not seen.",
       "settings": [
         {
           "key": "elbowOut",
-          "label": "Elbow from the hip, % of the trunk, at most",
-          "min": 20,
-          "max": 80
+          "label": "Elbow away from the side, at most (degrees from the start)",
+          "min": 5,
+          "max": 40
         }
-      ]
+      ],
+      "c": "elbow",
+      "fromStart": "change"
+    },
+    {
+      "key": "shrug",
+      "label": "shoulder rise",
+      "hud": "SHRUG",
+      "note": "at most",
+      "kind": "rise",
+      "a": "other.shoulder",
+      "b": "shoulder",
+      "fromStart": "change",
+      "band": {
+        "max": "shrugMax"
+      },
+      "scale": [
+        -20,
+        30
+      ],
+      "settings": [
+        {
+          "key": "shrugMax",
+          "label": "Shoulder rise from the start, at most",
+          "min": 3,
+          "max": 20
+        }
+      ],
+      "why": "The line between the shoulders, as its change since the start: the working shoulder lifting toward the ear to help the turn."
     },
     {
       "key": "bend",
@@ -336,21 +376,14 @@
       "b": "elbow",
       "c": "wrist",
       "band": {
-        "lo": "bendMin",
-        "hi": "bendMax"
+        "max": "bendMax"
       },
       "scale": [
         30,
         180
       ],
-      "why": "The elbow at a right angle, 70–110: straighter and the band is being pushed rather than the shoulder turned.",
+      "why": "The elbow angle, judged only for opening out: while the hand points at the phone the forearm is seen end-on and the elbow always looks more bent than it is, so a bent elbow cannot be told from the front; a forearm that drops, straightening the elbow, still reads open.",
       "settings": [
-        {
-          "key": "bendMin",
-          "label": "Elbow angle, at least",
-          "min": 40,
-          "max": 100
-        },
         {
           "key": "bendMax",
           "label": "Elbow angle, at most",
@@ -398,13 +431,7 @@
     "direction": "up"
   },
   "ready": {
-    "atStart": true,
-    "ranges": {
-      "bend": [
-        60,
-        120
-      ]
-    }
+    "atStart": true
   },
   "inPosition": [
     "turn",
@@ -418,16 +445,6 @@
   },
   "faults": [
     {
-      "id": "bendOff",
-      "measure": "bend",
-      "side": "below",
-      "label": "Elbow too bent",
-      "text": "Elbow to a right angle",
-      "deep": "",
-      "tone": "plain",
-      "when": "always"
-    },
-    {
       "id": "bendOpen",
       "measure": "bend",
       "side": "above",
@@ -435,7 +452,7 @@
       "text": "Keep the elbow bent to a right angle",
       "deep": "",
       "tone": "plain",
-      "when": "always"
+      "when": "rep"
     },
     {
       "id": "turnLow",
@@ -455,6 +472,14 @@
       "deep": "The elbow has come away from your side — pin it to your ribs",
       "tone": "plain",
       "when": "rep"
+    },
+    {
+      "id": "shrug",
+      "measure": "shrug",
+      "side": "above",
+      "when": "rep",
+      "label": "Shoulder hiking",
+      "text": "Shoulder down — turn the arm, don’t lift the shoulder"
     },
     {
       "id": "chestTurn",
@@ -481,20 +506,20 @@
     }
   ],
   "defaults": {
-    "turnMin": 50,
-    "elbowOut": 45,
-    "bendMin": 70,
-    "bendMax": 110,
+    "turnMin": 25,
+    "elbowOut": 15,
+    "bendMax": 120,
     "chestMin": 85,
-    "raiseAt": 30,
-    "downAt": 20,
-    "holdTargetSec": 2,
+    "raiseAt": 8,
+    "downAt": 4,
+    "holdTargetSec": 5,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "shrugMax": 7
   },
   "settings": [
     {

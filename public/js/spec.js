@@ -43,8 +43,9 @@
    — the chain of cause, not size. Each names its measurement and which side
    of the band it is (`above` or `below`); `requires` names measurements that
    must be good before it is judged; `unless` names faults that silence it.
-   `setup` faults are coached at the start position, before the movement is
-   asked for. The prompt asks for the movement and is never red.
+   `setup` (`when: always`) and `between` faults are coached at the start
+   position, before the movement is asked for. The prompt asks for the movement
+   and is never red.
    --------------------------------------------------------------------------- */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory();
@@ -191,8 +192,12 @@
     const whenOf = (x) => x.when || (x.setup ? 'always' : 'top');
     const when = {}; for (const x of faults) when[x.id] = whenOf(x);
     const setupIds = faults.filter((x) => whenOf(x) === 'always').map((x) => x.id);
-    const moveIds = faults.filter((x) => whenOf(x) !== 'always').map((x) => x.id);
-    const order = ['lost'].concat(reps ? setupIds.concat([prompt.id], moveIds) : faults.map((x) => x.id));
+    /* a fault judged at rest between reps is a correction of the start position too: it is said
+       before the call to move, not talked over by it */
+    const atRest = (x) => whenOf(x) === 'always' || whenOf(x) === 'between';
+    const firstIds = faults.filter(atRest).map((x) => x.id);
+    const moveIds = faults.filter((x) => !atRest(x)).map((x) => x.id);
+    const order = ['lost'].concat(reps ? firstIds.concat([prompt.id], moveIds) : faults.map((x) => x.id));
 
     const cues = {};
     for (const x of faults) cues[x.id] = strip({ label: x.label, text: x.text, deep: x.deep, tone: x.tone });
@@ -336,6 +341,8 @@
         const dir = p.direction === 'down' ? -1 : 1;
         v.raised = x != null && (dir > 0 ? x >= upAt - EDGE : x <= upAt + EDGE);
         v.atStart = x != null && (dir > 0 ? x <= downAt + EDGE : x >= downAt - EDGE);
+        /* where the rep is, for the coach to see a rep that is on its way back down */
+        if (x != null) v.progress = { x, dir, downAt };
         v.inPosition = v.raised && holds.every((k) => good[k] !== false);
       } else v.inPosition = holds.every((k) => good[k] !== false);
       return v;
@@ -537,6 +544,13 @@
         }
         break; }
       case 'bend': {
+        if (m.offset === 180 && m.b) {
+          /* a joint's angle read on past straight: 180 plus the joint's bend off the line through it */
+          const row = namedAngle(m);
+          what = `${row ? row.what : `the angle at ${pointWords(m.b)} between ${pointWords(m.a)} and ${pointWords(m.c)}`}, read on past 180`;
+          meaning = '180° is a straight line; more is the joint pushed past it, less is bent.'; short = row ? row.short : PLAIN(first(m.b)); zero = 'straight';
+          break;
+        }
         what = m.b ? `${pointWords(m.b)} off the straight line from ${pointWords(m.a)} to ${pointWords(m.c)}` : 'a point off a line';
         meaning = '0° is on the line; + above the line, − below it.'; short = camel(`${PLAIN(first(m.b))} line`); zero = 'the line'; named = !!m.b;
         break; }
@@ -549,14 +563,23 @@
     }
     /* how it is read */
     const how = m.fromStart;
-    if (how === 'change') { what += ', as the change since the start'; meaning = `0 is as at the start; + more than at the start, − less.`; zero = 'the start'; short += 'Change'; }
+    /* the sign words of the reading itself ('+ the heel up, − the toes up'), turned round when the
+       file reverses the sign, so a change still says which way is which */
+    const signs = (() => {
+      const i = meaning.indexOf(';'), part = i >= 0 ? meaning.slice(i + 1).trim() : '';
+      if (!/^\+ /.test(part) || !/ − /.test(part)) return null;
+      if (!(m.times < 0)) return part;
+      const [plus, minus] = part.replace(/\.$/, '').slice(2).split(/, − /);
+      return minus ? `+ ${minus}, − ${plus}.` : null;
+    })();
+    if (how === 'change') { what += ', as the change since the start'; meaning = `0 is as at the start; ${signs || '+ more than at the start, − less.'}`; zero = 'the start'; short += 'Change'; }
     else if (how === 'ratio') { what += ', as % of its start'; meaning = '100 is as at the start; less means it has turned toward or away from the camera.'; short += 'Ratio'; }
     else if (how === 'peak') { what += ', as % of its peak this set'; meaning = '100 is the most it has been this set.'; short += 'Peak'; }
     else if (how === 'belowPeak') { what += ', below its peak this set'; meaning = '0 is the most it has been this set; − is under it.'; short += 'Drop'; }
-    else if (how === 'rest') { what += ', as the change from rest'; meaning = '0 is as at rest (the rest position follows slowly while the reading is near it).'; zero = 'rest'; short += 'Rest'; }
+    else if (how === 'rest') { what += ', as the change from rest'; meaning = `0 is as at rest (the rest position follows slowly while the reading is near it)${signs ? '; ' + signs : '.'}`; zero = 'rest'; short += 'Rest'; }
     /* the arithmetic, said out loud */
     const notes = [];
-    if (m.offset) notes.push(`plus ${fmtN(m.offset)}`);
+    if (m.offset && !(m.kind === 'bend' && m.offset === 180)) notes.push(`plus ${fmtN(m.offset)}`);
     if (m.times != null && m.times !== 1 && !(m.kind === 'distance' && m.times === 100)) notes.push(m.times === -1 ? 'sign reversed' : `× ${fmtN(m.times)}`);
     if (m.bias != null) { const s = typeof m.bias === 'string' ? ((file.defaults || {})[m.bias] != null ? `${fmtN(file.defaults[m.bias])}° (${m.bias})` : m.bias) : `${fmtN(m.bias)}°`; notes.push(`less the model's slant of ${s}`); }
     if (m.unseen != null) notes.push(`reads ${fmtN(m.unseen)} when a point it needs is hidden`);
@@ -583,7 +606,7 @@
     if (!e) return `${cap(d.what)} is only shown, never judged.`;
     const W = cap(whenWords(file, when || whenOfM(file, m)));
     const rule = e.kind === 'range' ? `between ${fmtN(e.lo)}${u} and ${fmtN(e.hi)}${u}` : e.kind === 'min' ? `at least ${fmtN(e.lo)}${u}` : e.kind === 'max' ? `at most ${fmtN(e.hi)}${u}` : `within ${fmtN(e.n)}${u} of ${d.zero || 'zero'}`;
-    return `${W}, ${d.what}${/, as |, below /.test(d.what) ? ',' : ''} must be ${rule}.`;
+    return `${W}, ${d.what}${/, as |, below |, read on /.test(d.what) ? ',' : ''} must be ${rule}.`;
   }
   /* 'Over 10° (the heel up)' — the edge a fault sits on, and what crossing it looks like */
   function edgeWords(file, m, side, value) {
@@ -654,9 +677,18 @@
   function faultTemplate(file, m, side) {
     const d = describe(m, file), over = side === 'above';
     const B = m.b ? cap(pointWords(m.b, true)) : 'It', b = m.b ? pointWords(m.b, true) : 'it';
-    if (m.fromStart === 'change' || m.fromStart === 'rest') return over ? { label: `${cap(d.short.replace(/Change|Rest$/, ''))} risen from the start`.slice(0, 26), text: 'Back to where you started' } : { label: `${cap(d.short.replace(/Change|Rest$/, ''))} dropped from the start`.slice(0, 26), text: 'Back to where you started' };
+    /* a foot read against its start is still heels or toes lifting */
+    if (m.kind === 'rise' && FOOT(m) && (m.fromStart === 'change' || m.fromStart === 'rest')) return over ? { label: 'Heels lifting', text: 'Keep the heels down' } : { label: 'Toes lifting', text: 'Keep the toes down' };
+    if (m.fromStart === 'change' || m.fromStart === 'rest') {
+      /* said by the part that moved: the segment of a line, the joint of an angle */
+      const two = m.kind === 'angle' ? null : m.a && m.b ? [m.a, m.b] : m.base && m.top ? [m.base, m.top] : m.at && m.to ? [m.at, m.to] : m.from && m.to ? [m.from, m.to] : null;
+      const row = m.kind === 'angle' ? namedAngle(m) : null;
+      const S = cap(two ? segmentOf(first(two[0]), first(two[1])).seg.replace(/^the /, '') : row ? row.short + ' angle' : 'reading');
+      return over ? { label: `${S} up from start`.slice(0, 26), text: 'Back to where you started' } : { label: `${S} down from start`.slice(0, 26), text: 'Back to where you started' };
+    }
     if (m.fromStart === 'ratio') return over ? { label: 'Turning away', text: 'Keep the chest facing the phone' } : { label: 'Body turning', text: 'Keep the chest facing the phone' };
-    switch (m.kind) {
+    /* a joint angle read on past straight is still that joint's angle */
+    switch (m.kind === 'bend' && m.offset === 180 ? 'angle' : m.kind) {
       case 'rise': if (FOOT(m)) return over ? { label: 'Heels lifting', text: 'Keep the heels down' } : { label: 'Toes lifting', text: 'Keep the toes down' };
         return over ? { label: `${B} lifting`, text: `Keep ${b} down` } : { label: `${B} dropping`, text: `Keep ${b} up` };
       case 'tilt': { const [fwd, back] = dirWords(file); if (/shin/.test(d.what)) return over ? { label: 'Knee past the ankle', text: 'Knee back over the ankle' } : { label: 'Shin leaning back', text: 'Knee over the ankle' }; if (/arm/.test(d.what)) return over ? { label: 'Shoulders ahead of elbows', text: 'Shoulders over the elbows' } : { label: 'Shoulders behind elbows', text: 'Shoulders over the elbows' }; return over ? { label: `Leaning ${fwd}`.slice(0, 26), text: 'Stay tall' } : { label: `Leaning ${back}`.slice(0, 26), text: 'Stay tall' }; }

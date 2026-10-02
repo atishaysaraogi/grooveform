@@ -19,8 +19,8 @@ const ASPECT = 16 / 9;
 
 /* A body side-on, built backwards from the angles it should read.
      knee   the angle wanted at the knee, between hip and ankle
-     shin   the angle wanted between the knee→heel line and the floor: 90 is plumb,
-            more than 90 puts the heel ahead of the knee, less puts it behind
+     shin   the angle wanted between the knee→ankle line and the floor: 90 is plumb,
+            more than 90 puts the foot ahead of the knee, less puts it behind
      tilt   how far the torso leans off vertical, + = the way the knees point
      facing +1 = knees to the image right, -1 = mirrored
 
@@ -79,13 +79,13 @@ test('it reads the same angle on a body facing the other way', () => {
   }
 });
 
-test('the knee angle is taken to the ankle, so where the heel sits does not move it', () => {
+test('the knee angle and the shin are taken to the ankle, so where the heel sits moves neither', () => {
   const clean = readOf({ knee: 90, shin: 90 });
   const real = readOf({ knee: 90, shin: 90, heelOff: [-0.03, 0.012] });
   assert.ok(Math.abs(real.knee - clean.knee) < 1e-9, 'the knee reading is untouched by the heel');
-  /* the shin is the reading that does depend on it, and it moves as the heel moves */
-  assert.ok(Math.abs(real.shin - clean.shin) > 2, 'the shin reading follows the heel: '
-    + clean.shin.toFixed(1) + ' → ' + real.shin.toFixed(1));
+  /* the heel sits 5–7 cm behind the ankle: taken to the heel, a knee over the ankle read 82–84
+     and was told the feet were behind the knees */
+  assert.ok(Math.abs(real.shin - clean.shin) < 1e-9, 'nor is the shin: ' + clean.shin.toFixed(1) + ' → ' + real.shin.toFixed(1));
 });
 
 test('torso lean is signed: + when the shoulders go the way the knees point', () => {
@@ -123,20 +123,21 @@ test('the shin is read against the floor, plumb at ninety, and the side of ninet
   }
   /* the geometry behind the number, checked on the points rather than trusted */
   const ahead = readOf({ shin: 115 }), behind = readOf({ shin: 65 }), plumb = readOf({ shin: 90 });
-  assert.ok(ahead.points.heel.x > ahead.points.knee.x, 'above ninety the heel is ahead of the knee');
-  assert.ok(behind.points.heel.x < behind.points.knee.x, 'below ninety it is behind it');
-  assert.ok(Math.abs(plumb.points.heel.x - plumb.points.knee.x) < 1e-9, 'at ninety it is under it');
+  assert.ok(ahead.points.ankle.x > ahead.points.knee.x, 'above ninety the ankle is ahead of the knee');
+  assert.ok(behind.points.ankle.x < behind.points.knee.x, 'below ninety it is behind it');
+  assert.ok(Math.abs(plumb.points.ankle.x - plumb.points.knee.x) < 1e-9, 'at ninety it is under it');
 });
 
-test('the shin band is 85 to 95 degrees', () => {
+test('the shin band is 80 to 100 degrees', () => {
+  /* ten either way: five was the model's own error, and stuttered the clock */
   const feet = (shin) => { const v = W.judge(readOf({ shin })); return v.faults.feetback != null ? 'out' : v.faults.feetfwd != null ? 'in' : 'good'; };
-  assert.equal(feet(65), 'in', 'heels well behind the knees');
-  assert.equal(feet(84), 'in');
-  assert.equal(feet(86), 'good');
+  assert.equal(feet(65), 'in', 'feet well behind the knees');
+  assert.equal(feet(79), 'in');
+  assert.equal(feet(81), 'good');
   assert.equal(feet(90), 'good', 'plumb');
-  assert.equal(feet(94), 'good');
-  assert.equal(feet(96), 'out');
-  assert.equal(feet(120), 'out', 'heels well ahead of the knees');
+  assert.equal(feet(99), 'good');
+  assert.equal(feet(101), 'out');
+  assert.equal(feet(120), 'out', 'feet well ahead of the knees');
 });
 
 test('heels ahead of the knees are told to bring the feet back, heels behind to bring them forward', () => {
@@ -158,8 +159,8 @@ test('faults are corrected in the order of the chain: feet, then knee, then back
     return said[0].id;
   };
   /* the feet come first however small their error is beside the others */
-  assert.equal(first({ knee: 145, shin: 97, tilt: 40 }), 'feetback', 'feet barely out, knee and back miles out');
-  assert.equal(first({ knee: 50, shin: 83, tilt: -40 }), 'feetfwd');
+  assert.equal(first({ knee: 145, shin: 102, tilt: 40 }), 'feetback', 'feet barely out, knee and back miles out');
+  assert.equal(first({ knee: 50, shin: 78, tilt: -40 }), 'feetfwd');
   /* with the feet right, the knee is next — again however small beside the back */
   assert.equal(first({ knee: 112, shin: 90, tilt: 40 }), 'high', 'knee barely out, back miles out');
   assert.equal(first({ knee: 83, shin: 90, tilt: -40 }), 'low');
@@ -170,11 +171,11 @@ test('faults are corrected in the order of the chain: feet, then knee, then back
   assert.equal(first({ vis: 0.1 }), 'lost');
 });
 
-test('an untrusted heel hands the shin over to the ankle rather than guessing', () => {
+test('the shin is taken to the ankle, so an untrusted heel changes nothing', () => {
   const r = readOf({ shin: 92, heelVis: 0.1 });
   assert.equal(r.of.shin.to, 'ankle', 'the reading says which point it came from');
-  assert.ok(Math.abs(r.shin - 92) < 0.01, 'and the ankle is on the same line, so it reads the same');
-  assert.equal(readOf({ shin: 92 }).of.shin.to, 'heel', 'a trusted heel is used');
+  assert.ok(Math.abs(r.shin - 92) < 0.01, 'and reads as posed');
+  assert.equal(readOf({ shin: 92 }).of.shin.to, 'ankle', 'a trusted heel is not used either');
 });
 
 test('the back is judged against vertical, to twelve degrees either way', () => {
@@ -185,7 +186,7 @@ test('the back is judged against vertical, to twelve degrees either way', () => 
 
 test('in position means all three at once', () => {
   assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 92 })).inPosition, true);
-  assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 98 })).inPosition, false, 'three degrees past the shin band is out');
+  assert.equal(W.judge(readOf({ knee: 95, tilt: 4, shin: 103 })).inPosition, false, 'three degrees past the shin band is out');
   assert.equal(W.judge(readOf({ knee: 95, tilt: 25 })).inPosition, false, 'good depth and feet, bad back');
   assert.equal(W.judge(readOf({ knee: 130, tilt: 0 })).inPosition, false, 'good back and feet, bad depth');
   assert.equal(W.judge(readOf({ knee: 95, tilt: 0, shin: 115 })).inPosition, false, 'good depth and back, feet too far out');

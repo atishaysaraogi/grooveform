@@ -41,8 +41,8 @@
       "Breathe in and let the back dip down, lifting the head gently.",
       "Keep cycling slowly. It is a motion exercise, not a stretch: five to eight cycles are enough."
     ],
-    "cannot": "The curve of the spine itself: it reads the head dropping and lifting with the shoulders, the arms and the hips staying over the knees. Move the whole spine, not just the neck.",
-    "about": "Cat–camel — on all fours side on: the round, as the shoulder-to-ear line off level read against where it was at the start, −45 to −15° at the cat (the head tucked and hanging); a cycle is under way once the head has dropped 10 past the start and counts when it is back within 4; the arms straight, the elbow at least 160°; and the hips over the knees, the knee-to-hip line 75–105° from the floor — rocking back onto the heels is a different stretch. No hold: this is motion, the gentlest thing a sore back can do.",
+    "cannot": "The curve of the spine itself: it follows your head as the beat of the movement, with the arms and the hips staying over the knees. A nod alone would count — start each curve from the tailbone and let the head follow.",
+    "about": "Cat–camel — on all fours side on: the round, as the shoulder-to-ear line off level read against where it was at the start, at least 15° down at the cat (the head tucked and hanging); a cycle is under way once the head has dropped 10 past the start and counts when it is back within 4; the head not cranking up more than 30° in the dip; the arms straight, the elbow at least 160°; and the hips over the knees, the knee-to-hip line 75–105° from the floor — rocking back onto the heels is a different stretch. No hold: this is motion, the gentlest thing a sore back can do. Eight cycles, once.",
     "lost": "Kneel on all fours side on to the camera, the whole body in",
     "lower": "And let it down — head up",
     "early": "Round up a little further next time",
@@ -50,7 +50,7 @@
     "safety": "Gentle and slow, inside the pain-free range. No pushing at either end.",
     "easier": "A smaller movement; fewer cycles.",
     "harder": "Nothing — it is a warm-up. Move on to the bird dog.",
-    "mistakes": "Pushing hard into the end of either curve; moving only the neck; rocking back onto the heels; rushing."
+    "mistakes": "Moving only the neck while the back stays flat; pushing hard into the end of either curve; cranking the head up in the dip; rocking back onto the heels; rushing."
   },
   "muscles": {
     "back": 0.6,
@@ -61,7 +61,7 @@
     "pose": {
       "A": {
         "torso": 60,
-        "neck": 20,
+        "neck": 0,
         "thigh": 0,
         "shin": -90,
         "foot": 180,
@@ -75,7 +75,7 @@
       },
       "B": {
         "torso": 66,
-        "neck": -75,
+        "neck": 65,
         "thigh": 0,
         "shin": -90,
         "foot": 180,
@@ -163,28 +163,47 @@
       "b": "ear",
       "fromStart": "change",
       "band": {
-        "lo": "roundMin",
-        "hi": "roundMax"
+        "max": "roundMax"
       },
       "scale": [
         -60,
         40
       ],
-      "why": "The shoulder-to-ear line off level, as the change from the start: the head tucking and hanging as the back rounds reads negative, lifting with the dip positive. Also the progress measurement, read downward.",
+      "why": "The shoulder-to-ear line off level, as the change from the start: the head tucking and hanging as the back rounds reads negative, lifting with the dip positive. The head follows the spine, so it is the beat of the movement; the curve itself is not seen. Also the progress measurement.",
       "settings": [
         {
-          "key": "roundMin",
-          "label": "Head dropped at the cat, furthest (degrees from the start)",
-          "min": -70,
-          "max": -20
-        },
-        {
           "key": "roundMax",
-          "label": "Head dropped at the cat, at least",
+          "label": "Head dropped at the cat, at least (degrees from the start, negative)",
           "min": -40,
           "max": -5
         }
       ]
+    },
+    {
+      "key": "neck",
+      "label": "neck easy",
+      "hud": "NECK",
+      "note": "at most",
+      "kind": "rise",
+      "a": "shoulder",
+      "b": "ear",
+      "fromStart": "change",
+      "band": {
+        "max": "headMax"
+      },
+      "scale": [
+        -60,
+        60
+      ],
+      "settings": [
+        {
+          "key": "headMax",
+          "label": "Head lifted in the dip, at most (degrees from the start)",
+          "min": 10,
+          "max": 60
+        }
+      ],
+      "why": "The same shoulder-to-ear line, judged the other way: in the camel the head lifts gently with the dip; past 30 from the start the neck is cranking up on its own."
     },
     {
       "key": "elbow",
@@ -281,6 +300,14 @@
       "when": "always"
     },
     {
+      "id": "headHigh",
+      "measure": "neck",
+      "side": "above",
+      "when": "always",
+      "label": "Neck cranking",
+      "text": "Easy with the neck — let the back dip, the head just follows"
+    },
+    {
       "id": "roundLow",
       "measure": "round",
       "side": "above",
@@ -288,15 +315,6 @@
       "text": "Tuck the chin and round the back up a little more",
       "deep": "",
       "tone": "up"
-    },
-    {
-      "id": "roundHigh",
-      "measure": "round",
-      "side": "below",
-      "label": "Pushing too far",
-      "text": "Easy — don’t push the round",
-      "deep": "",
-      "tone": "down"
     },
     {
       "id": "rocking",
@@ -333,7 +351,6 @@
     }
   ],
   "defaults": {
-    "roundMin": -45,
     "roundMax": -15,
     "elbowMin": 160,
     "hipsMin": 75,
@@ -342,11 +359,12 @@
     "downAt": -4,
     "holdTargetSec": 0,
     "callAtSec": [],
-    "repCount": 10,
-    "setCount": 3,
+    "repCount": 8,
+    "setCount": 1,
     "deepAt": 10,
     "lowerSec": 1,
-    "restSec": 2
+    "restSec": 2,
+    "headMax": 30
   },
   "settings": [
     {

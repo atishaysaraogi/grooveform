@@ -31,22 +31,22 @@
     "hint": "Facing the phone, one arm drawn across the chest with the other hand, held.",
     "start": "Stand the phone up on the floor. Stand facing it, draw one arm across your chest with the other hand, and hold.",
     "position": "Stand facing the phone. Bring the stiff arm across your chest and use the other hand above the elbow to draw it gently further, until a stretch is felt at the back of the shoulder.",
-    "top": "The hand drawn across to the far shoulder, the shoulders level and the chest still facing the phone, held.",
+    "top": "The arm drawn across the chest, elbow toward the other shoulder, held by the other hand on the upper arm; shoulders level and the chest facing the phone.",
     "howto": [
       "Stand facing the phone. Lift the stiff arm to about chest height and bring it across your body.",
-      "With the other hand above the elbow, draw it gently further across until you feel the stretch at the back of the shoulder.",
+      "With the other hand on the upper arm, just above the elbow, draw it gently further across until you feel the stretch at the back of the shoulder.",
       "Hold for the count. Shoulders level — don’t let the stretching shoulder hike up — and the chest facing the phone.",
       "Release, rest, and repeat."
     ],
-    "cannot": "How strong the stretch feels: it sees the hand across the chest, the shoulders level and the chest facing the phone.",
-    "about": "Cross-body stretch — facing the phone: the reach, as the wrist-to-far-shoulder distance against the trunk, at most 45% (the hand at or past the far shoulder); the stretching shoulder within 10° of level with the other, since it hikes up under the pull; and the chest facing the phone, as the shoulder width at least 80% of its width at the start. The clock runs while all three are right. Twenty seconds a hold, three holds.",
+    "cannot": "How strong the stretch feels, and where your hand holds — keep it on the upper arm, not the forearm or the elbow joint. It sees how far across the elbow is, the shoulders level and the chest facing the phone; a turn of the whole body is not seen.",
+    "about": "Cross-body stretch — facing the phone: how far across, as the elbow's distance from its own shoulder toward the other, at least 40% of the shoulder width (about 30° across the chest); the stretching shoulder within 10° of where it started, since it hikes up under the pull; and the chest facing the phone, the shoulder width at least 85% of its width at the start. The clock runs while all three are right. Twenty seconds a hold, three holds.",
     "lost": "Stand facing the camera, both arms in the picture",
     "holdLabel": "Hold the stretch for",
     "hold": "That is it — hold the stretch",
     "safety": "A pull at the back of the shoulder, not a pinch at the front. Ease off if it pinches.",
     "easier": "Less pull; a shorter hold.",
     "harder": "A longer hold; a little more draw across.",
-    "mistakes": "Pulling at the elbow joint rather than above it; the shoulder hiking up; turning the body toward the arm instead of drawing it across."
+    "mistakes": "Turning the body instead of drawing the arm across; hiking the shoulder; pulling on the forearm or pressing on the elbow joint — hold the upper arm."
   },
   "muscles": {
     "shoulder": 0.8,
@@ -132,8 +132,12 @@
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "other.shoulder",
+    "to": "shoulder",
+    "words": [
+      "outward",
+      "inward"
+    ]
   },
   "side": {
     "pick": "measure",
@@ -172,7 +176,7 @@
       "hip"
     ],
     "limb": {
-      "shoulder|hip": "reach",
+      "shoulder|hip": "level",
       "other.shoulder|other.hip": "chest"
     }
   },
@@ -190,22 +194,43 @@
         "hip"
       ],
       "times": 100,
-      "band": {
-        "max": "reachMax"
-      },
       "scale": [
         0,
         150
       ],
-      "why": "The wrist-to-far-shoulder distance against the trunk: the hand across at the far shoulder reads under 45; an arm hanging by the side reads over 100.",
+      "why": "The hand to the far shoulder, as a share of the trunk: not judged, it picks the working arm (the one drawn across).",
+      "settings": []
+    },
+    {
+      "key": "cross",
+      "label": "elbow across",
+      "hud": "ACROSS",
+      "note": "at least",
+      "kind": "distance",
+      "axis": "x",
+      "a": "shoulder",
+      "b": "elbow",
+      "per": [
+        "shoulder",
+        "other.shoulder"
+      ],
+      "times": -100,
+      "band": {
+        "min": "crossMin"
+      },
+      "scale": [
+        -20,
+        100
+      ],
       "settings": [
         {
-          "key": "reachMax",
-          "label": "Hand from the far shoulder, % of the trunk, at most",
-          "min": 20,
-          "max": 100
+          "key": "crossMin",
+          "label": "Elbow across the body, at least (% of shoulder width)",
+          "min": 10,
+          "max": 90
         }
-      ]
+      ],
+      "why": "How far the elbow has come across from its own shoulder toward the other, as a share of the shoulder width: about 30 with the arm 20° across, 45 at 30°, 60 at 40°. It reads the stretch whether the elbow is bent or straight."
     },
     {
       "key": "across",
@@ -248,7 +273,8 @@
           "min": 4,
           "max": 25
         }
-      ]
+      ],
+      "fromStart": "change"
     },
     {
       "key": "chest",
@@ -283,18 +309,18 @@
     }
   ],
   "inPosition": [
-    "reach",
+    "cross",
     "level",
     "chest"
   ],
   "faults": [
     {
       "id": "reachShort",
-      "measure": "reach",
-      "side": "above",
+      "measure": "cross",
+      "side": "below",
       "label": "Draw further",
-      "text": "Draw the arm further across, to the far shoulder",
-      "deep": "Use the other hand above the elbow to bring it across",
+      "text": "Draw the arm further across your chest",
+      "deep": "Further across — draw the elbow toward the other shoulder",
       "tone": "plain"
     },
     {
@@ -310,8 +336,8 @@
       "id": "dropped",
       "measure": "level",
       "side": "below",
-      "label": "Shoulders off level",
-      "text": "Shoulders level",
+      "label": "Side-bending",
+      "text": "Stay upright — don’t lean to the side",
       "deep": "",
       "tone": "plain"
     },
@@ -334,16 +360,16 @@
     }
   ],
   "defaults": {
-    "reachMax": 45,
     "levelMax": 10,
-    "chestMin": 80,
+    "chestMin": 85,
     "holdTargetSec": 20,
     "callAtSec": [
       10
     ],
     "setCount": 3,
     "repCount": 10,
-    "deepAt": 10
+    "deepAt": 10,
+    "crossMin": 40
   },
   "settings": [
     {

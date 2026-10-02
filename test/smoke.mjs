@@ -31,7 +31,7 @@ function aspect() {
 const SIDE = { L: { ear:7, shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31 },
                R: { ear:8, shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32 } };
 window.__pose = { move: 'wallsit', knee: 90, shin: 90, tilt: 0, stack: 0, sag: 0,
-                  thigh: 0, kneeUp: 180, foot: 90, bShin: 95, dip: 50, hipAng: 130, bFoot: 0,
+                  thigh: 0, kneeUp: 180, foot: 90, kLean: 0, bShin: 95, dip: 50, hipAng: 130, bFoot: 0,
                   dBack: 0, dArm: 90, dElbow: 180, dLift: 90, dOver: null, dKnee: 90, vis: 0.95 };
 
 function wallsitBody(o, f) {
@@ -62,7 +62,7 @@ function plankBody(o, f) {
     knee: { x: hip.x + legs * 0.55 * leg.x, y: hip.y + legs * 0.55 * leg.y },
     heel: { x: ankle.x - f * 0.02, y: ankle.y + 0.035 },
     toe: { x: ankle.x - f * 0.05, y: ankle.y + 0.055 },
-    ear: { x: shoulder.x + f * 0.05, y: shoulder.y - 0.04 } };
+    ear: { x: shoulder.x - 0.06 * dir.x, y: shoulder.y - 0.06 * dir.y } };   // the head carried on the line of the back
 }
 function kneeraiseBody(o, f) {
   const thighLen = 0.17, shinLen = 0.16, heelDrop = 0.03, footLen = 0.08, torso = 0.22, hipAt = [0.22, 0.42];
@@ -78,7 +78,7 @@ function kneeraiseBody(o, f) {
     return { hip, knee, ankle, heel,
       toe: { x: heel.x + footLen * fd.x, y: heel.y + footLen * fd.y } };
   };
-  const shoulder = { x: hipAt[0], y: hipAt[1] - torso };
+  const lean = (o.kLean || 0) * D, shoulder = { x: hipAt[0] + f * torso * Math.sin(lean), y: hipAt[1] - torso * Math.cos(lean) };
   const top = { shoulder, ear: { x: shoulder.x + f * 0.012, y: shoulder.y - 0.06 } };
   /* two legs, not one copied: the raised one and the one holding him up. That is
      what makes the app's choice of which leg to measure a real choice here. */
@@ -237,7 +237,7 @@ try {
     assert.equal(await page.evaluate(() => document.getElementById('ex-fig').getAttribute('data-anat')), 'bridge', 'the figure is this exercise\'s');
     assert.equal(await page.isVisible('.brand'), true, 'the mark stays on the bar');
     const bubbles = await page.$$eval('#bubbles .bubble', (l) => l.map((b) => b.textContent.replace(/\s+/g, ' ').trim()));
-    assert.deepEqual(bubbles, ['Reps10', 'Sets3', 'Hold at top2 s', 'Weightnone'].map((x) => x), 'reps, sets, the hold at the top, the load: ' + JSON.stringify(bubbles));
+    assert.deepEqual(bubbles, ['Reps10', 'Sets3', 'Hold at top3 s', 'Weightnone'].map((x) => x), 'reps, sets, the hold at the top, the load: ' + JSON.stringify(bubbles));
     /* a tap moves a bubble to its next choice, and writes the setting the coach reads */
     await page.click('#bubbles .bubble[data-key="reps"]');
     assert.equal(await page.inputValue('#cfg-repCount'), '15');
@@ -273,7 +273,7 @@ try {
     /* back to the wall sit, the way the rest of the suite expects to find the page */
     await pick('wallsit');
     assert.equal(await page.textContent('#band-knee'), '85–110', 'the band asked for is the band shown');
-    assert.equal(await page.textContent('#band-shin'), '85–95');
+    assert.equal(await page.textContent('#band-shin'), '80–100');
     assert.equal(await page.textContent('#band-back'), '±12');
     assert.equal(await page.textContent('#hold-v'), '60.0', 'the full minute is still to do');
     assert.equal(await page.evaluate(() => window.__app.cfg().angles), false, 'angles off the picture by default');
@@ -591,9 +591,10 @@ try {
     await pick('plank');
     await page.waitForSelector('#read-stack', { state: 'attached' });
     await oneSet();
-    assert.equal(await page.textContent('#band-stack'), '-5 to 15', 'the shoulder band');
-    assert.equal(await page.textContent('#band-line'), '±5', 'the hip band');
-    assert.equal(await page.$('#read-knee'), null, 'and the wall sit\'s readings are gone');
+    assert.equal(await page.textContent('#band-stack'), '-10 to 15', 'the shoulder band');
+    assert.equal(await page.textContent('#band-line'), '-7 to 10', 'the hip band: a sag is less allowed than a pike');
+    /* a count, not a handle: a failed assert prints its value, and a handle is the whole browser */
+    assert.equal(await page.locator('#read-shin, #read-back').count(), 0, 'and the wall sit\'s own readings are gone');
     await startSession();
     await page.waitForFunction(() => document.getElementById('v-line').textContent !== '—', null, { timeout: 10000 });
     assert.ok(Math.abs(Number(await page.textContent('#v-line'))) <= 1, 'a straight plank reads zero at the hip');
@@ -658,8 +659,8 @@ try {
   });
 
   await step('the settings change what is judged', async () => {
-    await setCfg('cfg-hipLine', '2');
-    assert.equal(await page.textContent('#band-line'), '±2');
+    await setCfg('cfg-hipPike', '2');
+    assert.equal(await page.textContent('#band-line'), '-7 to 2');
     await startSession();
     await set({ stack: 0, sag: 4 });
     await page.waitForFunction(() => /hip off/i.test(document.getElementById('state').textContent), null, { timeout: 8000 });
@@ -788,8 +789,9 @@ try {
   await step('the knee raise counts reps rather than holding one position', async () => {
     await set({ move: 'kneeraise', thigh: 0, kneeUp: 180, foot: 85 });
     await page.waitForSelector('#read-reps', { state: 'attached' });
-    assert.equal(await page.textContent('#band-knee'), '80\u2013100', 'a right angle at the knee, ten either way');
-    assert.equal(await page.textContent('#band-foot'), '60\u2013100', 'and the foot, taken at the heel');
+    assert.equal(await page.textContent('#band-thigh'), '\u2265 75', 'the thigh up to level, or near it');
+    assert.equal(await page.textContent('#band-shin'), '\u00b120', 'the lower leg hanging under the knee');
+    assert.equal(await page.textContent('#band-lean'), '-8 to 15', 'and the trunk tall');
     /* the clock belongs to the exercise: ten seconds a rep here, not the minute the
        plank was just using */
     assert.equal(await page.inputValue('#cfg-target'), '10');
@@ -829,13 +831,14 @@ try {
     await page.waitForFunction(() => document.getElementById('rep-v').textContent === '1', null, { timeout: 8000 });
   });
 
-  await step('a knee held out of line is corrected, and the knee before the foot', async () => {
-    await set({ thigh: 88, kneeUp: 130, foot: 140 });
-    await saw('bend your knee');
-    await heard('bend your knee');
-    await set({ thigh: 88, kneeUp: 90, foot: 140 });
-    await saw('pull your toes up');
-    await heard('pull your toes up');
+  await step('a foot swung out in front is told to hang, and leaning back to stand tall', async () => {
+    await set({ thigh: 88, kneeUp: 130, foot: 85 });
+    await saw('lower leg hang');
+    await heard('lower leg hang');
+    await set({ thigh: 88, kneeUp: 90, foot: 85, kLean: -14 });
+    await saw('stand tall');
+    await heard('stand tall');
+    await set({ kLean: 0 });
   });
 
   await step('the set ends when the reps are done', async () => {
@@ -862,11 +865,11 @@ try {
     await pick('bridge');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Glute bridge', null, { timeout: 5000 });
     await page.waitForSelector('#read-over', { state: 'attached' });
-    assert.equal(await page.textContent('#band-shin'), '85\u2013110', 'the shin at the heel');
+    assert.equal(await page.textContent('#band-shin'), '85\u2013122', 'the shin at the heel, judged at rest');
     assert.equal(await page.textContent('#band-hip'), '\u2265 160', 'the line at the top');
-    assert.equal(await page.textContent('#band-over'), '\u2264 3', 'the hips no higher than the knees');
-    assert.equal(await page.textContent('#band-foot'), '\u00b110', 'the feet flat');
-    assert.equal(await page.inputValue('#cfg-target'), '2', 'a two second squeeze at the top');
+    assert.equal(await page.textContent('#band-over'), '\u2264 8', 'the hips no higher than the line from the knees to the shoulders');
+    assert.equal(await page.textContent('#band-foot'), '\u00b112', 'the feet flat');
+    assert.equal(await page.inputValue('#cfg-target'), '3', 'a three second squeeze at the top');
     assert.equal(await page.textContent('#target-label'), 'Hold at the top for');
     /* a wide frame is what it wants, and the stand-in gives one, so no notice */
     await wait(400);
@@ -884,22 +887,22 @@ try {
     assert.deepEqual(box.slice(0, 4), [0, 0, box[4], box[5]], 'the stage is the whole screen: ' + box.join(','));
     assert.equal(await page.isVisible('#finish-full'), true, 'with the finish button on it');
     assert.ok(Math.abs(Number(await page.textContent('#v-hip')) - 130) <= 1, 'lying there reads the hip angle');
-    assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the knee');
-    /* feet too far out — the shin angle over its band — said before the lift is
-       asked for, and only once the opening words are done and the person has been
+    assert.ok(Math.abs(Number(await page.textContent('#v-over')) + 50) <= 1, 'and the hip fifty below the line from the knees to the shoulders');
+    /* feet too far out — the shin angle over its band, judged at rest — said before the
+       lift is asked for, and only once the opening words are done and the person has been
        at the start for three seconds */
     assert.match(await cue(), /I will wait while you get set up/i, 'the opening words');
-    await set({ bShin: 125 });                    // fifteen past the band, so the stronger words
+    await set({ bShin: 125 });                    // three past the band
     await saw('walk your feet in', 18000);
     await heard('walk your feet in');
     await set({ bShin: 95 });
     await saw('lift your hips');
   });
 
-  await step('a bridge lifted past the knees is told so, and a rep counts on the way down', async () => {
-    await set({ bShin: 95, dip: -10, hipAng: 150, bFoot: 0 });
-    await saw('no higher than your knees');
-    await heard('no higher than your knees');
+  await step('a bridge pushed past the line is told so, and a rep counts on the way down', async () => {
+    await set({ bShin: 95, dip: 5, hipAng: 196, bFoot: 0 });   // sixteen past the line from the knees to the shoulders
+    await saw('stop at one line');
+    await heard('stop at one line');
     await set({ bShin: 95, dip: 5, hipAng: 170, bFoot: 0 });
     await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
     assert.equal(await page.textContent('#rep-v'), '0', 'the top is not the rep');
@@ -960,17 +963,17 @@ try {
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Knee raise', null, { timeout: 5000 });
   });
 
-  await step('the donkey kick: hands and back coached before the kick, the kick judged at the top, the sets alternate legs', async () => {
+  await step('the donkey kick: the arms coached before the kick, the kick judged at the top, the sets alternate legs', async () => {
     await set({ move: 'donkeykick', dBack: 0, dArm: 90, dElbow: 180, dLift: 90, dOver: null, dKnee: 90 });
     await pick('donkeykick');
     await page.waitForFunction(() => document.getElementById('veil-title').textContent === 'Donkey kick', null, { timeout: 5000 });
     await page.waitForSelector('#read-lift', { state: 'attached' });
     assert.equal(await page.textContent('#band-knee'), '80\u2013100');
     assert.equal(await page.textContent('#band-lift'), '\u2265 165');
-    assert.equal(await page.textContent('#band-over'), '\u2264 5');
+    assert.equal(await page.textContent('#band-over'), '\u2264 8');
     assert.equal(await page.textContent('#band-arm'), '85\u2013105');
     assert.equal(await page.textContent('#band-elbow'), '\u2265 165');
-    assert.equal(await page.textContent('#band-back'), '\u00b110');
+    assert.equal(await page.textContent('#band-back'), '\u00b18', 'the trunk still, against the start');
     await setCfg('cfg-repCount', '1');
     await setCfg('cfg-setCount', '2');
     await startSession();
@@ -990,7 +993,7 @@ try {
     /* a good kick, held, lowered, counted — and with one rep to the set, the set ends */
     await set({ dOver: null, dLift: 172, dKnee: 90 });
     await page.waitForFunction(() => /lower slowly/i.test(document.getElementById('cue').textContent), null, { timeout: 12000 });
-    await set({ dLift: 112 }); await wait(1300);
+    await set({ dLift: 118 }); await wait(1300);
     await set({ dLift: 90 });
     await page.waitForFunction(() => window.__app.session.between, null, { timeout: 8000 });
     /* the next set is the other leg, and says so */
@@ -1030,11 +1033,11 @@ try {
     await page.waitForSelector('#measures .mcard');
     assert.match(await page.textContent('#build-note'), /bridge\.json · as in the library/, 'an untouched copy of the library\'s file');
     /* the stand-in bodies are in every page of this context: a clean rep and a rep
-       past the knees, as traces at fifteen frames a second */
+       past the line, as traces at fifteen frames a second */
     const traces = await page.evaluate(() => {
       const mk = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 66) { Object.assign(window.__pose, { move: 'bridge' }, pose); frames.push({ t, lm: window.__poseSource() }); } return frames; };
       const REST = { bShin: 95, dip: 50, hipAng: 130, bFoot: 0 }, TOP = { bShin: 95, dip: 5, hipAng: 170, bFoot: 0 }, HALF = { bShin: 95, dip: 25, hipAng: 145, bFoot: 0 };
-      return { clean: mk([[REST, 4500], [TOP, 3500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 4500], [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 1500]]) };
+      return { clean: mk([[REST, 4500], [TOP, 4500], [HALF, 1300], [REST, 1500]]), high: mk([[REST, 4500], [Object.assign({}, TOP, { hipAng: 194 }), 4500], [HALF, 1300], [REST, 1500]]) };
     });
     page.__traces = traces;
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
@@ -1048,39 +1051,39 @@ try {
     assert.match(reps[0], /^Rep 1 .*held .*clean/, 'counted, held, clean: ' + reps[0]);
     /* a second recording: listed beside the first, its reps grouped under its name */
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
-    await page.waitForFunction(() => /Hips above knees/.test(document.getElementById('reps').textContent), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Hips too high/.test(document.getElementById('reps').textContent), null, { timeout: 5000 });
     const [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
     assert.equal(await page.$$eval('#rec-list li', (l) => l.length), 2, 'two recordings listed');
     assert.equal(await page.$$eval('#reps .rec-group', (l) => l.length), 2, 'and two groups of reps');
     const high = `#reps li.rep[data-rec="${r2}"]`;
     const rep1 = await page.$eval(high, (x) => x.textContent.replace(/\s+/g, ' ').trim());
-    assert.match(rep1, /Hips above knees \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
-    /* the person classifies the rep: with the hips past the knees. The allowance of three already
+    assert.match(rep1, /Hips too high \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
+    /* the person classifies the rep: with the hips past the line. The allowance of eight already
        divides it from the clean recording's rep, so the number is recommended as it is */
     assert.match(await page.textContent('#recommend-note'), /nothing classified yet — 2 reps/);
     await page.click(`${high} .rep-label .btn[data-v="hipHigh"]`);
     await page.waitForFunction(() => /from 1 classified rep in 2 recordings/.test(document.getElementById('recommend-note').textContent), null, { timeout: 5000 });
-    const recRow = async () => (await page.$$eval('#recommend tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /^Hips above knees/.test(t));
-    assert.match(await recRow(), /\| 3° \| — \| 1: \d+° \| 0 false alarms, 0 missed \| fine as it is/, 'the marked rep reaches past the edge, nothing to move: ' + await recRow());
+    const recRow = async () => (await page.$$eval('#recommend tr', (l) => l.map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' | ')))).find((t) => /^Hips too high/.test(t));
+    assert.match(await recRow(), /\| 8° \| — \| 1: \d+° \| 0 false alarms, 0 missed \| fine as it is/, 'the marked rep reaches past the edge, nothing to move: ' + await recRow());
     const recLine = () => page.$eval('#measures .rec[data-fault="hipHigh"]', (n) => n.className + ' | ' + n.textContent.replace(/\s+/g, ' ').trim());
-    assert.match(await recLine(), /^rec fine \| ✓ 3° agrees with your verdicts/, 'and the fault\'s own row says so, under the number: ' + await recLine());
+    assert.match(await recLine(), /^rec fine \| ✓ 8° agrees with your verdicts/, 'and the fault\'s own row says so, under the number: ' + await recLine());
     assert.equal(await page.$eval(`${high} .rep-label .btn[data-v="hipHigh"]`, (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
     assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time, with its recording');
     /* a number moved on the card: every recording judged again, and the row disagrees */
     await page.evaluate(() => window.__builder.setNumber('overMax', 15));
     /* the recordings are judged again on the next frame, not at once: wait for the redraw */
-    const rowSays = (re) => page.waitForFunction((src) => [...document.querySelectorAll('#recommend tr')].some((r) => /^Hips above knees/.test(r.textContent.trim()) && new RegExp(src).test([...r.cells].map((c) => c.textContent.trim()).join(' | '))), re.source, { timeout: 5000 });
+    const rowSays = (re) => page.waitForFunction((src) => [...document.querySelectorAll('#recommend tr')].some((r) => /^Hips too high/.test(r.textContent.trim()) && new RegExp(src).test([...r.cells].map((c) => c.textContent.trim()).join(' | '))), re.source, { timeout: 5000 });
     await rowSays(/\| 15° \|.*move to \d+/);
     assert.match(await page.$eval(high, (x) => x.textContent), /clean/, 'the rep reads clean under the new number');
     assert.match(await recRow(), /0 false alarms, 1 missed \| move to \d+/, 'the marked rep is missed at fifteen: ' + await recRow());
     assert.match(await recLine(), /^rec move \| .*1 missed\. Move the number to \d+°/, await recLine());
     const suggested = Number((await recLine()).match(/Move the number to (\d+)°/)[1]);
-    assert.ok(suggested < 12 && suggested >= 3, 'under the marked rep, over the clean one: ' + suggested);
+    assert.ok(suggested < 14 && suggested > -10, 'under the marked rep, over the clean one: ' + suggested);
     /* Apply writes the draft's own number: the input in the sentence, the file, the coach's copy */
     await page.click('#measures .rec[data-fault="hipHigh"] button[data-key="overMax"]');
     await page.waitForFunction((v) => Number(document.getElementById('def-overMax').value) === v, suggested, { timeout: 5000 });
     await rowSays(/fine as it is/);
-    assert.match(await page.$eval(high, (x) => x.textContent), /Hips above knees/, 'and the rep flags again');
+    assert.match(await page.$eval(high, (x) => x.textContent), /Hips too high/, 'and the rep flags again');
     assert.match(await recRow(), /fine as it is/);
     assert.equal(await page.evaluate(() => Moves.bridge.draft === true && Moves.bridge.defaults.overMax), suggested, 'the draft laid over the library carries it');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ontrack.draft')).defaults.overMax), suggested, 'and it is kept in this browser');
@@ -1106,7 +1109,7 @@ try {
     /* pooled: one recommendation from the two recordings, with the reps it was made from */
     assert.match(await page.textContent('#recommend-note'), /from 2 classified reps in 2 recordings/);
     const line = await page.$eval('#measures .rec[data-fault="hipHigh"]', (n) => n.className + ' | ' + n.textContent.replace(/\s+/g, ' ').trim());
-    assert.match(line, /^rec fine \| ✓ 3° agrees .*clean reps -?\d+° \(1\), marked \d+° \(1\)/, line);
+    assert.match(line, /^rec fine \| ✓ 8° agrees .*clean reps -?\d+° \(1\), marked \d+° \(1\)/, line);
     assert.equal(await page.$$eval('#measures .rec[data-fault="hipHigh"] details li', (l) => l.length), 2, 'by rep: one from each recording');
     assert.equal(await page.evaluate(() => window.__review.recommend().recordings), 2);
     /* a recording's tag is the verdict its reps start with, dashed; a tap makes it the person's */
@@ -1118,17 +1121,18 @@ try {
     await page.click(chip);
     assert.equal(await page.$eval(chip, (b) => b.getAttribute('aria-pressed') + ' ' + b.classList.contains('provisional')), 'true false', 'confirmed');
     assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh']);
-    /* a measure the exercise does not have: the bridge without its hip-over-knee reading no longer
-       tells the two apart, and the studio finds the geometry that would */
+    /* a measure the exercise does not have: the bridge without its hip-over-the-line reading, and
+       the studio finds the geometry that tells the two apart */
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean 2'), traces.clean);
     await page.waitForFunction(() => window.__review.recordings.length === 3, null, { timeout: 5000 });
     const r3 = await page.evaluate(() => window.__review.recordings[2].id);
     await page.click(`#reps li.rep[data-rec="${r3}"] .rep-label .btn[data-v="clean"]`);
-    await page.evaluate(() => { const c = [...document.querySelectorAll('#measures .mcard')].find((x) => /hip over the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
+    await page.evaluate(() => { const c = [...document.querySelectorAll('#measures .mcard')].find((x) => /off the straight line from the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
     await page.waitForFunction(() => !JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
-    await page.waitForFunction(() => document.querySelectorAll('#suggest .suggest-row').length >= 1, null, { timeout: 15000 });
-    const first = await page.$eval('#suggest .suggest-row', (n) => n.textContent.replace(/\s+/g, ' ').trim());
-    assert.match(first, /hip|knee|thigh/i, 'the hips over the knees, found again: ' + first);
+    await page.waitForFunction(() => document.querySelectorAll('#suggest .suggest-row button[data-act="add"]').length >= 1, null, { timeout: 15000 });
+    /* the hip angle already built tells them apart too, and is said so; the first new geometry is the one offered */
+    const first = await page.$eval('#suggest .suggest-row:has(button[data-act="add"])', (n) => n.textContent.replace(/\s+/g, ' ').trim());
+    assert.match(first, /hip|knee|thigh|shoulder/i, 'the hips past the line, found again: ' + first);
     assert.match(first, /clean reps .*marked reps .*suggest at (most|least)/, first);
     const before = await page.$$eval('#measures .mcard', (l) => l.length);
     await page.click('#suggest .suggest-row button[data-act="add"]');
@@ -1234,7 +1238,7 @@ try {
     await page.click('#plan-items .plan-item:nth-child(3) a.btn');
     await page.waitForFunction(() => location.hash === '#/plan/knee-early/3' && document.getElementById('ex-title').textContent === 'Straight leg raise', null, { timeout: 5000 });
     assert.match(await page.textContent('#plan-banner'), /Step 3 of 5.*range 70%.*Next: Clamshell/s, 'the banner: the step, the changes, the next');
-    assert.equal(await page.textContent('#band-lift'), '25.5–38.1', 'the top band seven tenths of the way out from the return line (15, 30–48)');
+    assert.equal(await page.textContent('#band-lift'), '12–33', 'the top band seven tenths of the way out from the return line (5, 15–45)');
     assert.deepEqual(await page.$$eval('#coaches li.off', (l) => l.map((x) => x.textContent)), ['Toes pointing away — left alone']);
     assert.equal(await page.$eval('#adj-rom', (i) => i.disabled), true, 'a library programme is not changed in place');
     /* copied, it is the person's: a step adjusted, and the plan in a link */
@@ -1273,11 +1277,12 @@ try {
     /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose
        lists are its own and not rebuilt — so nothing is left pointing at it */
     assert.ok(JSON.parse(await page.inputValue('#build-json')).draw.some((g) => g.measure === 'over'), 'the bridge draws its hips-over-knees reading');
-    await page.evaluate(() => { const c = [...document.querySelectorAll('.mcard')].find((x) => /hip over the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
+    await page.evaluate(() => { const c = [...document.querySelectorAll('.mcard')].find((x) => /off the straight line from the knee/.test(x.textContent)); c.querySelector('.rowtools .btn:last-child').click(); });
     await page.waitForFunction(() => !JSON.parse(document.getElementById('build-json').value).measurements.some((m) => m.key === 'over'), null, { timeout: 5000 });
     const less = JSON.parse(await page.inputValue('#build-json'));
     assert.ok(!less.draw.some((g) => g.measure === 'over' || g.good === 'over'), 'its drawing went with it: ' + JSON.stringify(less.draw));
     assert.ok(!less.faults.some((f) => f.measure === 'over'), 'and its fault');
+    assert.ok(!less.faults.some((f) => (f.unless || []).includes('hipHigh')), 'and the fault it silenced no longer names it');
     assert.equal(await page.$$eval('#problems li.error', (l) => l.length), 0, 'and nothing is left dangling');
     assert.match(await page.textContent('#build-note'), /bridge\.json · edited/, 'the first edit made it a draft');
     await page.click('#build-drop'); await page.evaluate(() => window.__builder.fromLibrary('bridge'));   // the library's bridge back, and a fresh copy of it for the rest
@@ -1377,7 +1382,7 @@ try {
     /* and the plank's own band, changed two exercises ago, is still its own */
     await pick('plank');
     await page.waitForSelector('#read-line', { state: 'attached' });
-    assert.equal(await page.textContent('#band-line'), '±2', 'each exercise keeps its own settings');
+    assert.equal(await page.textContent('#band-line'), '-7 to 2', 'each exercise keeps its own settings');
   });
 
   await step('the pose model has a thread of its own, and it answers', async () => {

@@ -34,22 +34,22 @@
     "hint": "Lying on your back, one knee hugged in to the chest and held, the other leg flat.",
     "start": "Lay the phone on its side on the floor. Lie on your back side on to it and hug one knee in to your chest.",
     "position": "Lie on your back side on to the phone, the working leg nearest it. Hug that knee in toward the chest with both hands behind the thigh; the other leg stays flat on the floor.",
-    "top": "The knee drawn in close to the chest, the other leg flat and straight, the head and shoulders down, held.",
+    "top": "The knee drawn in close to the chest, the hands behind the thigh, the other foot on the floor, the head and shoulders down, held.",
     "howto": [
-      "Lie on your back, both legs straight.",
-      "Bring one knee up and hug it in toward the chest with both hands behind the thigh, until a stretch is felt in the lower back and the buttock.",
-      "Hold for the count, breathing, with the other leg flat on the floor and the head down.",
+      "Lie on your back, both knees bent with the feet flat — or the other leg straight if that is comfortable.",
+      "Bring one knee up and hug it in toward the chest with both hands behind the thigh, just below the knee, until a stretch is felt in the lower back and the buttock.",
+      "Hold for the count, breathing slowly, with the head and shoulders resting on the floor and the other foot down.",
       "Lower the leg slowly, then the other side."
     ],
-    "cannot": "How the lower back feels and whether the shoulders are relaxed: it sees how close the knee is and whether the other leg stays down.",
-    "about": "Knee to chest — lying on the back side on: the hug, as the angle at the hip between the shoulder and the knee, at most 60° (the knee drawn in close; the leg flat is 180); and the other leg flat, its knee at least 160°. The clock runs while both are right. Thirty seconds a hold, three holds each side.",
+    "cannot": "How the lower back feels and where the hands hold — behind the thigh, not over the kneecap: it sees how close the knee is, the other foot staying down and the head and shoulders staying on the floor.",
+    "about": "Knee to chest — lying on the back side on: the hug, as the angle at the hip between the shoulder and the knee, at most 75° (the leg flat is 180; full hip bend is about 60); the other foot staying on the floor, whether that leg is straight or bent; the shoulders not curling up off the floor (the hip-to-shoulder line within 8° of the start) and the head resting down (within 15°). The clock runs while the hug, the other foot and the shoulders are right. Thirty seconds a hold, three holds each side.",
     "lost": "Lie on your back side on to the camera, the whole body in",
     "holdLabel": "Hold the stretch for",
     "hold": "That is it — hold and breathe",
-    "safety": "A stretch, not a strain: hold behind the thigh, not over the kneecap. Stop if the pain travels down the leg.",
+    "safety": "A stretch, not a strain: hold behind the thigh, not over the kneecap. Stop if the pain travels down the leg. With osteoporosis, ask your physio first: curling the spine forward is often advised against.",
     "easier": "The other knee bent with the foot flat; a shorter hold; less pull.",
     "harder": "A longer hold; the knee drawn a little closer; both knees together.",
-    "mistakes": "The other leg lifting or bending; pulling on the shin or kneecap; lifting the head; holding the breath."
+    "mistakes": "Curling the head and shoulders up to meet the knee; the other leg lifting; pulling on the shin or kneecap; bouncing; holding the breath."
   },
   "muscles": {
     "glute": 0.6,
@@ -58,23 +58,33 @@
   },
   "figure": {
     "pose": {
+      "hold": true,
+      "anchor": "h",
+      "belly": -1,
       "A": {
         "torso": 90,
         "neck": 0,
-        "thigh": 150,
-        "shin": -150,
+        "thigh": -90,
+        "shin": -90,
         "foot": 90,
+        "uarm": -90,
+        "farm": -90,
         "thighF": -90,
         "shinF": -90,
-        "footF": 90,
-        "uarm": 120,
-        "farm": 150,
-        "uarmF": 120,
-        "farmF": 150
+        "footF": 90
       },
-      "hold": true,
-      "anchor": "h",
-      "belly": -1
+      "B": {
+        "torso": 90,
+        "neck": 0,
+        "thigh": 135,
+        "shin": -95,
+        "foot": 100,
+        "uarm": -82.3,
+        "farm": -171.2,
+        "thighF": -90,
+        "shinF": -90,
+        "footF": 90
+      }
     }
   },
   "facing": {
@@ -96,7 +106,9 @@
       "other.hip",
       "knee",
       "other.knee",
-      "other.ankle"
+      "other.ankle",
+      "ear",
+      "other.heel"
     ],
     "needed": [
       "shoulder",
@@ -150,7 +162,7 @@
         20,
         180
       ],
-      "why": "The angle at the hip between the shoulder and the knee: 180 with the leg flat, under 60 with the knee hugged in close.",
+      "why": "The angle at the hip between the shoulder and the knee: 180 lying flat, about 60 at full hip bend. 75 or less is a close hug.",
       "settings": [
         {
           "key": "hugMax",
@@ -162,37 +174,113 @@
     },
     {
       "key": "other",
-      "label": "other leg straight",
+      "label": "other foot down",
       "hud": "OTHER",
-      "note": "flat",
-      "kind": "angle",
-      "a": "other.hip",
-      "b": "other.knee",
-      "c": "other.ankle",
+      "note": "stays down",
+      "kind": "distance",
+      "axis": "y",
+      "a": "hip",
+      "b": "other.heel",
+      "per": [
+        "other.knee",
+        "other.ankle"
+      ],
+      "times": 100,
+      "fromStart": "change",
       "optional": true,
       "band": {
-        "min": "otherMin"
+        "max": "otherLiftMax"
       },
       "scale": [
-        90,
-        180
+        -20,
+        60
       ],
-      "why": "The resting leg’s knee: it bends and lifts to let the hugged knee come in. Not read when hidden behind the near leg.",
       "settings": [
         {
-          "key": "otherMin",
-          "label": "Other knee, at least (180 is straight)",
-          "min": 130,
-          "max": 179
+          "key": "otherLiftMax",
+          "label": "Other heel lifted, at most (% of the shin)",
+          "min": 5,
+          "max": 40
         }
-      ]
+      ],
+      "why": "The other heel's height, as its change since the start, as a share of that shin: the other leg stays down, straight or bent with the foot flat."
+    },
+    {
+      "key": "head",
+      "label": "head down",
+      "hud": "HEAD",
+      "note": "stays down",
+      "kind": "rise",
+      "a": "shoulder",
+      "b": "ear",
+      "fromStart": "change",
+      "optional": true,
+      "band": {
+        "max": "headMax"
+      },
+      "scale": [
+        -20,
+        60
+      ],
+      "settings": [
+        {
+          "key": "headMax",
+          "label": "Head lifted, at most (degrees from the start)",
+          "min": 5,
+          "max": 40
+        }
+      ],
+      "why": "The line from the shoulder to the ear, as its change since the start: the head lifting off the floor reads up."
+    },
+    {
+      "key": "curl",
+      "label": "shoulders down",
+      "hud": "CURL",
+      "note": "stay down",
+      "kind": "rise",
+      "a": "hip",
+      "b": "shoulder",
+      "fromStart": "change",
+      "band": {
+        "max": "curlMax"
+      },
+      "scale": [
+        -20,
+        40
+      ],
+      "settings": [
+        {
+          "key": "curlMax",
+          "label": "Shoulders lifted, at most (degrees from the start)",
+          "min": 3,
+          "max": 30
+        }
+      ],
+      "why": "The line from the hip to the shoulder, as its change since the start: the shoulders curling up off the floor to reach the knee reads up."
     }
   ],
   "inPosition": [
     "hug",
-    "other"
+    "other",
+    "curl"
   ],
   "faults": [
+    {
+      "id": "curlUp",
+      "measure": "curl",
+      "side": "above",
+      "when": "top",
+      "label": "Curling up",
+      "text": "Shoulders down on the floor — bring the knee to you"
+    },
+    {
+      "id": "headUp",
+      "measure": "head",
+      "side": "above",
+      "when": "top",
+      "label": "Head lifting",
+      "text": "Rest your head on the floor"
+    },
     {
       "id": "hugLoose",
       "measure": "hug",
@@ -203,13 +291,12 @@
       "tone": "plain"
     },
     {
-      "id": "otherBent",
+      "id": "otherLift",
       "measure": "other",
-      "side": "below",
+      "side": "above",
+      "when": "top",
       "label": "Other leg lifting",
-      "text": "Keep the other leg flat and straight",
-      "deep": "",
-      "tone": "plain"
+      "text": "Keep the other foot on the floor"
     }
   ],
   "draw": [
@@ -220,15 +307,17 @@
     }
   ],
   "defaults": {
-    "hugMax": 60,
-    "otherMin": 160,
+    "hugMax": 75,
     "holdTargetSec": 30,
     "callAtSec": [
       10
     ],
     "setCount": 3,
     "repCount": 10,
-    "deepAt": 10
+    "deepAt": 10,
+    "otherLiftMax": 15,
+    "headMax": 15,
+    "curlMax": 8
   },
   "settings": [
     {

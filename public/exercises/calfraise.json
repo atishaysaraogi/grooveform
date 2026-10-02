@@ -34,13 +34,13 @@
     "position": "Stand tall side on to the phone, feet hip-width apart and pointing forward, a hand resting lightly on a wall or chair back for balance.",
     "top": "Up on the balls of both feet, heels as high as they go, knees straight, the body tall and still over the toes.",
     "howto": [
-      "Stand tall, feet hip-width apart, a hand resting on something for balance — not pulling on it.",
-      "Rise up onto the balls of both feet, slowly, heels as high as they will go. Keep the knees straight and the body tall.",
+      "Stand tall, feet hip-width apart, fingertips resting on something for balance — not pulling on it.",
+      "Rise up onto the balls of both feet, slowly, heels as high as they will go, the weight over the big toes. Knees straight but not locked, the body tall.",
       "Hold at the top for the count.",
-      "Lower slowly, taking a slow count, until the heels touch the floor. The rep counts there."
+      "Lower slowly, over three seconds, until the heels touch the floor. The rep counts there."
     ],
     "cannot": "The ankle rolling outward and how much weight the hand takes: it sees the heel rising, the knee and the lean.",
-    "about": "Heel raise — standing side on: the rise, as the angle of the toe-to-heel line off level, at least 35° at the top (flat reads near 0); a rep is under way past 15 and counts when the heel is back under 8; the knee at least 165°, straight but not locked; and the body within 10° of upright. Hold one second at the top, lower on a slow count.",
+    "about": "Heel raise — standing side on: the rise, as the change in the toe-to-heel line from rest, at least 20° at the top (a heel lifted 8–12 cm reads about 20–30); a rep is under way past 8 and counts when the heel is back under 4; the knee at least 165°, straight but not locked; and the body within 10° of upright. Hold one second at the top, lower over three.",
     "lost": "Stand side on to the camera, the whole body in",
     "lower": "Lower slowly",
     "early": "Hold it at the top next time",
@@ -48,7 +48,7 @@
     "safety": "Keep a hand near something to steady yourself. Stop if the Achilles tendon or the calf sharpens.",
     "easier": "Both hands on support; a smaller rise; fewer reps.",
     "harder": "One leg at a time; a longer hold; a slower lowering; a weight in the free hand.",
-    "mistakes": "Bending the knees to get height; leaning forward onto the support; rolling onto the outside of the foot; dropping the heels."
+    "mistakes": "Bending the knees to get height; leaning forward onto the support; rolling onto the outside of the foot; bouncing; dropping the heels."
   },
   "muscles": {
     "calf": 1,
@@ -76,8 +76,8 @@
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "heel",
+    "to": "toe"
   },
   "side": {
     "pick": "clearest"
@@ -156,15 +156,16 @@
         -10,
         70
       ],
-      "why": "The toe-to-heel line off level: flat on the floor it reads near 0, up on the ball of the foot 40–60. Also the progress measurement.",
+      "why": "The toe-to-heel line, as its change from rest: flat on the floor reads 0, a heel lifted 8–12 cm about 20–30. Read against rest, so the model's own slant of a flat foot is taken off. Also the progress measurement.",
       "settings": [
         {
           "key": "heelMin",
-          "label": "Heel raised at the top, at least (degrees)",
-          "min": 10,
-          "max": 65
+          "label": "Heel raised at the top, at least (degrees from rest)",
+          "min": 8,
+          "max": 50
         }
-      ]
+      ],
+      "fromStart": "rest"
     },
     {
       "key": "knee",
@@ -242,7 +243,7 @@
       "measure": "knee",
       "side": "below",
       "label": "Knees bending",
-      "text": "Keep the knees straight",
+      "text": "Keep the knees straight — not locked",
       "deep": "",
       "tone": "plain",
       "when": "rep"
@@ -290,13 +291,13 @@
     }
   ],
   "defaults": {
-    "heelMin": 35,
+    "heelMin": 20,
     "kneeMin": 165,
     "leanMax": 10,
-    "raiseAt": 15,
-    "downAt": 8,
+    "raiseAt": 8,
+    "downAt": 4,
     "holdTargetSec": 1,
-    "lowerSec": 2,
+    "lowerSec": 3,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,

@@ -35,13 +35,13 @@
     "position": "Sit on the front half of a firm chair, side on to the phone, feet flat and a little back under the knees, arms folded across the chest.",
     "top": "Standing fully upright — knees and hips straight, the trunk tall — before sitting back down under control.",
     "howto": [
-      "Sit toward the front of the chair, feet flat and slightly back, arms folded.",
-      "Lean forward — nose over toes — and stand up, pushing through the heels, without using your hands.",
+      "Sit toward the front of a firm chair, feet flat, hip-width and just behind the knees, arms folded across your chest.",
+      "Lean forward — nose over toes — and stand up, pushing through the whole foot, without using your hands.",
       "Stand all the way up, tall, and hold for the count.",
-      "Sit back down slowly, taking a slow count, reaching the hips back to the seat. The rep counts when you are sitting."
+      "Sit back down slowly, over three seconds, reaching the hips back to the seat. The rep counts when you are sitting."
     ],
     "cannot": "How much the hands or the momentum help: it sees the knee straightening, the trunk at the top and the shins. Keep the arms folded yourself.",
-    "about": "Sit to stand — side on to the chair: the knee angle, from about 90 sitting; a rep is under way past 140 and counts once the knee is back under 110 on the seat; at the top at least 165° — standing fully up; the trunk at the top within 15° of upright; and the shins no further forward than 60° from the floor through the rep. Hold one second standing, sit on a slow count. A quick test of leg strength and the most useful exercise for stairs and getting about.",
+    "about": "Sit to stand — side on to the chair: the knee angle, from about 90 sitting; a rep is under way past 140 and counts once the knee is back under 110 on the seat; at the top at least 165° — standing fully up; the trunk at the top within 15° of upright; the feet, while sitting, just behind the knees (the shin at least 85° from the floor); and the heels down, read against the start. Hold one second standing, sit over three. A quick test of leg strength and the most useful exercise for stairs and getting about.",
     "lost": "Sit side on to the camera, the whole body in",
     "lower": "Sit down slowly",
     "early": "Stand all the way up next time",
@@ -49,7 +49,7 @@
     "safety": "A firm chair that will not slide. Use the hands if you need them, and a higher seat makes it easier.",
     "easier": "A higher seat or a cushion; a hand on the thigh; fewer reps.",
     "harder": "A lower seat; a slower sit; a weight held at the chest; one leg doing more.",
-    "mistakes": "Pushing off with the hands; dropping into the seat; not standing fully upright; knees caving inward; feet too far forward."
+    "mistakes": "Pushing off with the hands; rocking to get up; dropping into the seat; not standing fully upright; heels lifting; feet too far forward; knees caving inward."
   },
   "muscles": {
     "thigh": 1,
@@ -57,30 +57,133 @@
     "calf": 0.2
   },
   "figure": {
-    "pose": {
+    "points": {
+      "view": "side",
       "A": {
-        "torso": 12,
-        "neck": -5,
-        "thigh": 88,
-        "shin": -5,
-        "foot": 0,
-        "uarm": 70,
-        "farm": -70
+        "h": [
+          292,
+          62
+        ],
+        "sh": [
+          289,
+          84
+        ],
+        "hip": [
+          280,
+          127
+        ],
+        "kn": [
+          310,
+          128
+        ],
+        "an": [
+          307,
+          158
+        ],
+        "ft": [
+          321,
+          158
+        ],
+        "el": [
+          314,
+          93
+        ],
+        "wr": [
+          291,
+          101
+        ],
+        "knF": [
+          310,
+          132
+        ],
+        "anF": [
+          303,
+          161
+        ],
+        "ftF": [
+          317,
+          161
+        ],
+        "elF": [
+          312,
+          97
+        ],
+        "wrF": [
+          289,
+          104
+        ]
       },
       "B": {
-        "torso": 0,
-        "thigh": 0,
-        "shin": 0,
-        "foot": 0,
-        "uarm": 70,
-        "farm": -70
+        "h": [
+          307,
+          32
+        ],
+        "sh": [
+          307,
+          54
+        ],
+        "hip": [
+          307,
+          98
+        ],
+        "kn": [
+          307,
+          128
+        ],
+        "an": [
+          307,
+          158
+        ],
+        "ft": [
+          321,
+          158
+        ],
+        "el": [
+          332,
+          63
+        ],
+        "wr": [
+          309,
+          71
+        ],
+        "knF": [
+          304,
+          128
+        ],
+        "anF": [
+          304,
+          158
+        ],
+        "ftF": [
+          317,
+          161
+        ],
+        "elF": [
+          330,
+          67
+        ],
+        "wrF": [
+          307,
+          74
+        ]
       },
-      "anchor": "ft"
+      "hold": false,
+      "side": "both",
+      "flip": false,
+      "props": [
+        {
+          "kind": "box",
+          "x": 268,
+          "y": 133,
+          "w": 36,
+          "h": 31
+        }
+      ]
     }
   },
   "facing": {
-    "from": "hip",
-    "to": "shoulder"
+    "from": "heel",
+    "to": "toe"
   },
   "side": {
     "pick": "clearest"
@@ -90,13 +193,17 @@
       "shoulder",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "heel",
+      "toe"
     ],
     "needed": [
       "shoulder",
       "hip",
       "knee",
-      "ankle"
+      "ankle",
+      "heel",
+      "toe"
     ],
     "bones": [
       [
@@ -121,7 +228,8 @@
     "limb": {
       "shoulder|hip": "lean",
       "hip|knee": "knee",
-      "knee|ankle": "knee"
+      "knee|ankle": "knee",
+      "heel|toe": "heel"
     }
   },
   "measurements": [
@@ -191,7 +299,7 @@
         30,
         90
       ],
-      "why": "The ankle-to-knee line from the floor: feet too far forward lay the shin down and make standing harder on the knees.",
+      "why": "The ankle-to-knee line from the floor, judged sitting: 90 is the shin upright, more the feet tucked behind the knees. Under 85 the feet are out in front, which makes standing harder on the knees and the back.",
       "settings": [
         {
           "key": "shinMin",
@@ -200,6 +308,33 @@
           "max": 88
         }
       ]
+    },
+    {
+      "key": "heel",
+      "label": "heels down",
+      "hud": "HEEL",
+      "note": "stay down",
+      "kind": "rise",
+      "a": "toe",
+      "b": "heel",
+      "fromStart": "change",
+      "optional": true,
+      "band": {
+        "max": "heelLift"
+      },
+      "scale": [
+        -20,
+        50
+      ],
+      "settings": [
+        {
+          "key": "heelLift",
+          "label": "Heel lifted, at most (degrees from the start)",
+          "min": 3,
+          "max": 30
+        }
+      ],
+      "why": "The heel against the toe, as the change since the start: rising onto the toes to stand reads up."
     }
   ],
   "progress": {
@@ -221,6 +356,14 @@
     "tone": "up"
   },
   "faults": [
+    {
+      "id": "heelLift",
+      "measure": "heel",
+      "side": "above",
+      "when": "always",
+      "label": "Heels lifting",
+      "text": "Heels down — push through the whole foot"
+    },
     {
       "id": "kneeLow",
       "measure": "knee",
@@ -253,10 +396,10 @@
       "measure": "shin",
       "side": "below",
       "label": "Feet too far forward",
-      "text": "Bring the feet back under the knees",
+      "text": "Feet back a little — just behind the knees",
       "deep": "",
       "tone": "plain",
-      "when": "always"
+      "when": "between"
     }
   ],
   "draw": [
@@ -274,16 +417,17 @@
   "defaults": {
     "kneeMin": 165,
     "leanMax": 15,
-    "shinMin": 60,
+    "shinMin": 85,
     "raiseAt": 140,
     "downAt": 110,
     "holdTargetSec": 1,
-    "lowerSec": 2,
+    "lowerSec": 3,
     "callAtSec": [],
     "repCount": 10,
     "setCount": 3,
     "deepAt": 10,
-    "restSec": 2
+    "restSec": 2,
+    "heelLift": 10
   },
   "settings": [
     {

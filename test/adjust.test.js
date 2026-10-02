@@ -9,15 +9,15 @@ const Moves = require('../public/js/moves.js');
 test('an ignored fault is never on, and a band whose faults are all ignored no longer holds the position', () => {
   const M = Moves.proneraise;
   const base = Object.assign({}, Core.COMMON, M.defaults);
-  const r = { ok: true, lift: -3, knee: 180, hip: 0, foot: 150 };   // a good lift with the toes pointed away
+  const r = { ok: true, lift: -4, knee: 140, hip: 0 };   // a good lift with the knee bent
   let v = M.judge(r, base);
-  assert.ok(v.faults.footHigh != null, 'the toes are called'); assert.equal(v.inPosition, false, 'and hold the position');
-  v = M.judge(r, Core.adjust(M, base, { ignore: ['footHigh'] }));
-  assert.equal(v.faults.footHigh, undefined, 'ignored: not called');
-  assert.equal(v.inPosition, true, 'and the foot no longer holds the position');
-  assert.ok(v.good.foot === false, 'the band itself still reads, for the picture');
-  const c = Core.adjust(M, base, { ignore: ['footHigh', 'nosuch', 'lost', 'raise'] });
-  assert.deepEqual(c.ignore, ['footHigh'], 'only faults the move has, never the prompt or lost');
+  assert.ok(v.faults.kneeBend != null, 'the knee is called'); assert.equal(v.inPosition, false, 'and holds the position');
+  v = M.judge(r, Core.adjust(M, base, { ignore: ['kneeBend'] }));
+  assert.equal(v.faults.kneeBend, undefined, 'ignored: not called');
+  assert.equal(v.inPosition, true, 'and the knee no longer holds the position');
+  assert.ok(v.good.knee === false, 'the band itself still reads, for the picture');
+  const c = Core.adjust(M, base, { ignore: ['kneeBend', 'nosuch', 'lost', 'raise'] });
+  assert.deepEqual(c.ignore, ['kneeBend'], 'only faults the move has, never the prompt or lost');
 });
 
 test('the range of motion scales the top band and the under-way line from the return line', () => {
