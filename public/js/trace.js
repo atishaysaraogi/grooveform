@@ -209,6 +209,127 @@
     }));
   }
 
+  /* ---- the reps classified by a person, and the numbers that follow ----
+     A label is what a person said of one rep (or of one movement that fell short of a
+     rep): { t0, t1, tag: 'clean' | 'faults' | 'skip' | 'rep', faults: [ids] }. It is kept by its
+     time, not by its index, so the same label finds its rep again after a band edge moves
+     and the reps are cut afresh. 'skip' is a stretch that was not an attempt at all; 'rep'
+     marks a short movement that was one, which the lift line should have let through. */
+  const overlap = (a, b) => Math.max(0, Math.min(a.t1, b.t1) - Math.max(a.t0, b.t0));
+  function labelOf(labels, seg) {
+    let best = null, most = 0;
+    for (const l of labels || []) { const o = overlap(l, seg); if (o > most && o >= 0.5 * Math.min(l.t1 - l.t0, seg.t1 - seg.t0)) { best = l; most = o; } }
+    return best;
+  }
+  /* the most extreme level a reading held for `ms` inside a window: the frames sorted from
+     the far end and walked until their time adds up — a one-frame spike is not a level */
+  function sustained(samples, side, ms) {
+    const s = samples.slice().sort((a, b) => (side === 'above' ? b.v - a.v : a.v - b.v));
+    let acc = 0; for (const x of s) { acc += x.dt; if (acc >= ms) return x.v; }
+    return s.length ? s[s.length - 1].v : null;
+  }
+  /* the frames a fault is judged on inside a rep, as the coach judges it: at the top (raised),
+     through the rep, in the pause before it, or both */
+  function windowOf(result, move, rep, id) {
+    const w = (move.when && move.when[id]) || 'top', rows = result.rows;
+    const inRep = (r) => r.t >= rep.t0 && r.t <= rep.t1;
+    const before = (r) => !!rep.before && r.t >= rep.before.t0 && r.t < rep.before.t1;
+    if (w === 'between') return rows.filter(before);
+    if (w === 'always') return rows.filter((r) => inRep(r) || before(r));
+    if (w === 'rep' || !move.reps) return rows.filter(inRep);
+    return rows.filter((r) => inRep(r) && r.verdict && r.verdict.ok && r.verdict.raised);
+  }
+  const unitOf = (m) => { const kind = m ? m.kind : 'angle'; return ['angle', 'tilt', 'floor', 'down', 'bend'].includes(kind) ? '\u00b0' : kind === 'distance' ? '%' : ''; };
+  const nameOfM = (m) => m.of || m.key;
+  /* For every fault, the edge that would agree with the person: clean reps (and reps marked
+     with other faults) must stay inside it, reps marked with the fault must cross it. In the
+     fault's own direction: the clean reps' furthest level is one wall, the marked reps'
+     nearest is the other; an edge between them with a little room is recommended, the current
+     one kept when it already does the job, and when the two overlap the cut that gets most reps
+     right, with the ones it gets wrong counted. The lift line is checked the same way against
+     the reps a person called reps. */
+  function recommend(move, result, reps, labels, misses) {
+    const cfg = result.cfg, persist = cfg.persistMs || 0;
+    const byKey = {}; for (const m of move.measurements || []) byKey[m.key] = m;
+    const settings = settingsOf(move); const settingOf = (k) => settings.find((x) => x.key === k) || null;
+    const labelled = reps.map((rep) => ({ rep, label: labelOf(labels, rep) })).filter((x) => x.label && x.label.tag !== 'skip');
+    const tagOf = (rep) => { const l = labelOf(labels, rep); return l ? l.tag : null; };
+    const out = { labelled: labelled.length, skipped: reps.filter((rep) => tagOf(rep) === 'skip').length, unlabelled: reps.filter((rep) => !tagOf(rep)).length, faults: [], lines: [] };
+    for (const f of (move.spec && move.spec.faults) || []) {
+      const m = byKey[f.measure]; if (!m || !m.band || !['above', 'below'].includes(f.side)) continue;
+      const b = m.band, sym = !!b.sym, key = f.side === 'above' ? (b.sym || b.hi || b.max) : (b.sym || b.lo || b.min);
+      if (!key || typeof cfg[key] !== 'number') continue;
+      const unit = unitOf(m), step = unit === '\u00b0' ? 1 : unit === '%' ? 1 : 0.5;
+      /* in the fault's own direction: 'above' as it is, 'below' with the sign turned, a symmetric band as the distance from zero */
+      const sign = sym || f.side === 'above' ? 1 : -1;
+      const toward = (v) => (sym ? Math.abs(v) : v * sign);
+      const edgeNow = toward(cfg[key]);
+      const clean = [], bad = [];
+      for (const { rep, label } of labelled) {
+        const rows = windowOf(result, move, rep, f.id), samples = [];
+        for (let i = 0; i < rows.length; i++) { const r = rows[i], v = r.reading && r.reading.ok ? r.reading[nameOfM(m)] : null; if (v == null) continue; samples.push({ v: toward(v), dt: i ? Math.max(0, rows[i].t - rows[i - 1].t) : 33 }); }
+        if (!samples.length) continue;
+        const v = sustained(samples, 'above', persist); if (v == null) continue;
+        const has = label.tag === 'faults' && (label.faults || []).includes(f.id);
+        (has ? bad : clean).push({ v, n: rep.n, t0: rep.t0, fired: rep.faults.some((x) => x.id === f.id) });
+      }
+      if (!clean.length && !bad.length) continue;
+      const cMax = clean.length ? Math.max(...clean.map((x) => x.v)) : -Infinity, fMin = bad.length ? Math.min(...bad.map((x) => x.v)) : Infinity;
+      const nowFalse = clean.filter((x) => x.fired).length, nowMiss = bad.filter((x) => !x.fired).length;
+      const round = (v) => Math.round(v / step) * step;
+      let value, status, wrongClean = 0, wrongBad = 0;
+      const ok = (T) => T >= cMax - 1e-9 && T < fMin;
+      if (cMax < fMin) {
+        if (ok(edgeNow) && !nowFalse && !nowMiss) { value = edgeNow; status = 'fine'; }
+        else {
+          const span = fMin - cMax, margin = Number.isFinite(span) ? Math.min(step, span / 4) : step;
+          const low = clean.length ? cMax + margin : -Infinity, high = bad.length ? fMin - margin : Infinity;
+          let T = Math.min(Math.max(edgeNow, low), high);
+          if (!Number.isFinite(T)) T = Number.isFinite(low) ? low : high;
+          T = round(T);
+          if (!ok(T)) T = Number.isFinite(span) ? (cMax + fMin) / 2 : T;   // the rounding crossed a wall: the middle, unrounded
+          value = T; status = 'move';
+        }
+      } else {
+        /* the clean and the marked reps overlap: the cut that gets the most right, nearest the edge now */
+        const vals = [...new Set(clean.concat(bad).map((x) => x.v))].sort((a, b) => a - b);
+        const cands = [vals[0] - step].concat(vals.slice(1).map((v, i) => (vals[i] + v) / 2), [vals[vals.length - 1] + step]);
+        let best = null;
+        for (const T of cands) {
+          const wc = clean.filter((x) => x.v > T).length, wb = bad.filter((x) => x.v <= T).length, score = wc + wb;
+          if (!best || score < best.score || (score === best.score && Math.abs(T - edgeNow) < Math.abs(best.T - edgeNow))) best = { T, score, wc, wb };
+        }
+        value = round(best.T); wrongClean = best.wc; wrongBad = best.wb; status = 'overlap';
+      }
+      /* back into the setting's own direction and range */
+      let setting = sym ? value : value * sign;
+      const sdef = settingOf(key); if (sdef) setting = Math.min(sdef.max, Math.max(sdef.min, setting));
+      setting = Math.round(setting * 10) / 10;
+      const after = (T) => ({ false: clean.filter((x) => x.v > T).length, miss: bad.filter((x) => x.v <= T).length });
+      const a = after(sym ? setting : setting * sign);
+      out.faults.push({ id: f.id, label: f.label || f.id, measure: m.label || m.key, key, setting: sdef ? sdef.label : key, unit, side: f.side, sym,
+        now: cfg[key], value: setting, status: status === 'fine' ? 'fine' : setting === Math.round(cfg[key] * 10) / 10 ? 'fine' : status,
+        clean: { n: clean.length, lo: clean.length ? Math.min(...clean.map((x) => x.v)) * (sym ? 1 : sign) : null, hi: clean.length ? Math.max(...clean.map((x) => x.v)) * (sym ? 1 : sign) : null },
+        bad: { n: bad.length, lo: bad.length ? Math.min(...bad.map((x) => x.v)) * (sym ? 1 : sign) : null, hi: bad.length ? Math.max(...bad.map((x) => x.v)) * (sym ? 1 : sign) : null },
+        nowFalse, nowMiss, afterFalse: a.false, afterMiss: a.miss });
+    }
+    /* the lift line: every rep a person called a rep has to cross it */
+    const P = progressOf(move, cfg);
+    if (P && P.raiseAt != null) {
+      const peaks = labelled.filter((x) => x.rep.why && x.rep.why.peak != null).map((x) => x.rep.why.peak)
+        .concat((misses || []).filter((mm) => { const l = labelOf(labels, mm); return l && l.tag === 'rep'; }).map((mm) => mm.peak));
+      if (peaks.length) {
+        const nearest = P.dir > 0 ? Math.min(...peaks) : Math.max(...peaks);
+        const short = P.dir > 0 ? nearest < P.raiseAt : nearest > P.raiseAt;
+        const sdef = settingOf(move.spec.progress.raiseAt);
+        let value = P.raiseAt;
+        if (short) { value = nearest - P.dir * Math.max(1, Math.abs(nearest - P.downAt) * 0.1); if (sdef) value = Math.min(sdef.max, Math.max(sdef.min, value)); value = Math.round(value); }
+        out.lines.push({ key: move.spec.progress.raiseAt, setting: sdef ? sdef.label : 'a rep starts past', measure: P.label, unit: P.unit, now: P.raiseAt, value, status: short ? 'move' : 'fine', nearest, n: peaks.length });
+      }
+    }
+    return out;
+  }
+
   /* ---- a trace on disk: compact arrays, one file ---- */
   function pack(meta, frames) {
     return Object.assign({ v: 1 }, meta, {
@@ -223,5 +344,5 @@
     return { meta, frames };
   }
 
-  return { settingsOf, defaults, bandRange, run, stretches, faultIds, verdicts, reps, misses, progressOf, pack, unpack };
+  return { settingsOf, defaults, bandRange, run, stretches, faultIds, verdicts, reps, misses, progressOf, pack, unpack, labelOf, sustained, recommend };
 });

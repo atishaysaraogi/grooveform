@@ -563,6 +563,22 @@ preview runs beside it. The figure downloads as the JSON a move carries.
 `trace.js` is the pure part — run a move over a trace, the fault stretches, the
 takes' verdicts, a trace to and from a file — and `trace.test.js` holds it.
 
+**Classify, and the numbers follow.** Under each rep the Recordings tab lists,
+a row of chips: *Clean*, each fault the exercise knows, *Not a rep*; under a
+movement that fell short of a rep, *This was a rep*. Mark the reps as you see
+them on the video and the panel below recommends, for every fault, the edge
+that agrees with you: the reps you called clean (or marked with other faults)
+must stay inside it, the reps you marked with the fault must cross it. The
+level a rep reached is the most extreme one it held for the persist time, the
+coach's own bar for a fault worth saying, so a one-frame spike does not count.
+The edge is kept where it is when it already divides the two, moved just past
+the clean reps or just short of the marked ones when it does not, and where
+the two overlap the cut that gets most reps right is given with what it gets
+wrong; the lift line is held to the movements you called reps. *Apply* puts a
+number into the panel and the recording is judged again at once. Your labels
+stay with the recording in the browser and go into the trace file and the
+takes file (`Trace.recommend`, `test/trace.test.js`).
+
 ## Running it
 
 **Which version a phone is running.** The script URLs carry a version stamp

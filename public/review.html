@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-10-01h">
+<html lang="en" data-v="2026-10-02a">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Build &amp; review</title>
-<link rel="stylesheet" href="styles.css?v=2026-10-01h">
+<link rel="stylesheet" href="styles.css?v=2026-10-02a">
 </head>
 <body class="review">
 <header class="bar">
@@ -158,7 +158,15 @@
     <section class="panel">
       <h2>Rep by rep <span class="tiny" id="reps-note"></span></h2>
       <p class="tiny">Each rep the coach saw — counted, or an attempt it dropped — with why it counted or did not (how far it got against the lines, how long the hold clock ran against the hold asked, which band broke the position), then every fault it had on the screen inside it and from when to when, whether the fault was said and at what moment, and the set-up faults in the pause before it. A fault has to hold for the persist time to be listed, as it has to before it is said; a flicker shorter than that is left out. Move a number above and this changes with it. Tap a rep to go to it.</p>
+      <p class="tiny"><b>Classify each rep</b> as you see it on the video — clean, or the faults it really had, or not a rep at all — and the numbers below are recommended from your verdicts. Your labels stay with the recording on this browser and go into the trace file when you save it.</p>
       <ol class="reps" id="reps"></ol>
+    </section>
+
+    <section class="panel">
+      <h2>Recommended numbers <span class="tiny" id="recommend-note"></span></h2>
+      <p class="tiny">For every fault, the edge that agrees with your verdicts: the reps you called clean (or marked with other faults) have to stay inside it, the reps you marked with the fault have to cross it. The edge is kept where it is when it already does that, moved just past the clean reps or just short of the marked ones when it does not, and where the two overlap the cut that gets most reps right is given with what it gets wrong. The lift line is held to the movements you called reps. Apply puts a number into the panel above; the recording is judged again at once.</p>
+      <div class="scroll-x"><table class="verdicts recommend" id="recommend"></table></div>
+      <div class="row"><button class="btn" id="recommend-all" hidden>Apply every recommendation</button></div>
     </section>
 
     <section class="panel">
@@ -179,19 +187,19 @@
 
 </main>
 
-<script src="js/core.js?v=2026-10-01h"></script>
-<script src="js/spec.js?v=2026-10-01h"></script>
-<script src="js/moves.js?v=2026-10-01h"></script>
-<script src="js/trace.js?v=2026-10-01h"></script>
-<script src="js/overlay.js?v=2026-10-01h"></script>
-<script src="js/sound.js?v=2026-10-01h"></script>
-<script src="js/codec.js?v=2026-10-01h"></script>
-<script src="js/mp4.js?v=2026-10-01h"></script>
-<script src="js/speech.js?v=2026-10-01h"></script>
-<script src="js/mixdown.js?v=2026-10-01h"></script>
-<script src="js/figure.js?v=2026-10-01h"></script>
-<script src="js/anatomy.js?v=2026-10-01h"></script>
-<script src="js/review.js?v=2026-10-01h"></script>
-<script src="js/builder.js?v=2026-10-01h"></script>
+<script src="js/core.js?v=2026-10-02a"></script>
+<script src="js/spec.js?v=2026-10-02a"></script>
+<script src="js/moves.js?v=2026-10-02a"></script>
+<script src="js/trace.js?v=2026-10-02a"></script>
+<script src="js/overlay.js?v=2026-10-02a"></script>
+<script src="js/sound.js?v=2026-10-02a"></script>
+<script src="js/codec.js?v=2026-10-02a"></script>
+<script src="js/mp4.js?v=2026-10-02a"></script>
+<script src="js/speech.js?v=2026-10-02a"></script>
+<script src="js/mixdown.js?v=2026-10-02a"></script>
+<script src="js/figure.js?v=2026-10-02a"></script>
+<script src="js/anatomy.js?v=2026-10-02a"></script>
+<script src="js/review.js?v=2026-10-02a"></script>
+<script src="js/builder.js?v=2026-10-02a"></script>
 </body>
 </html>

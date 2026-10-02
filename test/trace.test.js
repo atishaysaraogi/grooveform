@@ -150,3 +150,77 @@ test('an attempt is accounted for: how far it got, its hold against the target, 
   assert.ok(misses[0].share >= 0.4 && misses[0].share < 1 && misses[0].t0 > reps[0].t1 && misses[0].t1 < reps[1].t0, 'between the rep and the attempt: ' + JSON.stringify(misses[0]));
   assert.equal(Trace.misses(r, Object.assign({}, M, { reps: false })).length, 0, 'a hold has no reps to fall short of');
 });
+
+test('reps classified by a person: the edge that agrees with them is recommended, the current one kept when it already does', () => {
+  /* four reps: two clean at the top, one with the hips past the knees (dip -12), one not high enough (hipAng 150) */
+  const frames = take([[REST, 3000],
+    [TOP, 3500], [HALF, 1300], [REST, 2600],
+    [Object.assign({}, TOP, { dip: -12 }), 3500], [HALF, 1300], [REST, 2600],
+    [TOP, 3500], [HALF, 1300], [REST, 2600],
+    [Object.assign({}, TOP, { hipAng: 150 }), 3500], [HALF, 1300], [REST, 2600]]);
+  const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
+  const reps = Trace.reps(r, M);
+  assert.equal(reps.length, 4, 'four reps: ' + reps.map((x) => x.n + (x.counted ? '' : '!')).join(','));
+  const labels = [
+    { t0: reps[0].t0, t1: reps[0].t1, tag: 'clean' },
+    { t0: reps[1].t0, t1: reps[1].t1, tag: 'faults', faults: ['hipHigh'] },
+    { t0: reps[2].t0, t1: reps[2].t1, tag: 'clean' },
+    { t0: reps[3].t0, t1: reps[3].t1, tag: 'faults', faults: ['hipLow'] },
+  ];
+  assert.equal(Trace.labelOf(labels, reps[1]), labels[1], 'a label finds its rep by its time');
+  assert.equal(Trace.labelOf(labels, { t0: reps[1].t1 + 50, t1: reps[1].t1 + 400 }), null, 'and not a stretch beside it');
+  const rec = Trace.recommend(M, r, reps, labels, Trace.misses(r, M));
+  assert.equal(rec.labelled, 4); assert.equal(rec.unlabelled, 0);
+  const high = rec.faults.find((f) => f.id === 'hipHigh'), low = rec.faults.find((f) => f.id === 'hipLow');
+  assert.ok(high && low, rec.faults.map((f) => f.id).join(','));
+  /* hips past the knees: the clean reps sit about five below the knee line, the marked rep about twelve above; the
+     allowance of three already divides them, so it stays */
+  assert.equal(high.key, 'overMax'); assert.equal(high.status, 'fine'); assert.equal(high.value, high.now);
+  assert.equal(high.clean.n, 3, 'the hipLow rep counts as clean for this fault'); assert.equal(high.bad.n, 1);
+  assert.ok(high.clean.hi < 0 && high.bad.lo > 8, `clean up to ${high.clean.hi}, marked from ${high.bad.lo}`);
+  assert.equal(high.nowFalse, 0); assert.equal(high.nowMiss, 0);
+  /* not high enough: the marked rep's hip reaches about 150, the clean ones 170; the line of 160 already divides them */
+  assert.equal(low.key, 'hipMin'); assert.equal(low.status, 'fine'); assert.equal(low.side, 'below');
+  assert.ok(low.bad.hi < 155 && low.clean.lo > 165, `marked up to ${low.bad.hi}, clean from ${low.clean.lo}`);
+  /* the allowance moved to fifteen: the marked rep no longer fires, and the recommendation brings it back between the walls */
+  const r2 = Trace.run(M, { readyMs: 2000, overMax: 15 }, frames, ASPECT), reps2 = Trace.reps(r2, M);
+  const rec2 = Trace.recommend(M, r2, reps2, labels, []);
+  const high2 = rec2.faults.find((f) => f.id === 'hipHigh');
+  assert.equal(high2.nowMiss, 1, 'at fifteen the marked rep is missed');
+  assert.equal(high2.status, 'move'); assert.ok(high2.value > high2.clean.hi && high2.value < high2.bad.lo, `recommended ${high2.value} between ${high2.clean.hi} and ${high2.bad.lo}`);
+  assert.equal(high2.afterMiss, 0); assert.equal(high2.afterFalse, 0);
+  /* the line moved the other way, to minus two: the clean reps fire; the recommendation lifts it just past them */
+  const r3 = Trace.run(M, { readyMs: 2000, overMax: -8 }, frames, ASPECT), reps3 = Trace.reps(r3, M);
+  const rec3 = Trace.recommend(M, r3, reps3, labels, []);
+  const high3 = rec3.faults.find((f) => f.id === 'hipHigh');
+  assert.ok(high3.nowFalse >= 1, 'clean reps fire at minus eight: ' + high3.nowFalse);
+  assert.equal(high3.status, 'move'); assert.ok(high3.value >= high3.clean.hi && high3.value < high3.bad.lo, `lifted to ${high3.value}`);
+  assert.equal(high3.afterFalse, 0);
+  /* a person who calls a clean rep faulty and a faulty rep clean: the two overlap, and the best cut is reported with what it gets wrong */
+  const mixed = [{ t0: reps[0].t0, t1: reps[0].t1, tag: 'faults', faults: ['hipHigh'] }, { t0: reps[1].t0, t1: reps[1].t1, tag: 'clean' }, { t0: reps[2].t0, t1: reps[2].t1, tag: 'clean' }];
+  const rec4 = Trace.recommend(M, r, reps, mixed, []);
+  const high4 = rec4.faults.find((f) => f.id === 'hipHigh');
+  assert.equal(high4.status, 'overlap'); assert.equal(high4.afterFalse + high4.afterMiss, 1, 'one rep is on the wrong side whatever the cut');
+  /* a stretch marked as not a rep is left out of everything */
+  const rec5 = Trace.recommend(M, r, reps, labels.map((l, i) => (i === 1 ? Object.assign({}, l, { tag: 'skip' }) : l)), []);
+  assert.equal(rec5.skipped, 1);
+  const high5 = rec5.faults.find((f) => f.id === 'hipHigh');
+  assert.equal(high5.bad.n, 0, 'no rep marked with it is left'); assert.equal(high5.clean.n, 3); assert.equal(high5.status, 'fine', 'and the edge is quiet on the clean ones, which is all that can be said');
+  /* the sustained level: a one-frame spike is not a level */
+  assert.equal(Trace.sustained([{ v: 10, dt: 33 }, { v: 2, dt: 33 }, { v: 3, dt: 33 }, { v: 2, dt: 33 }], 'above', 60), 3);
+  assert.equal(Trace.sustained([{ v: 10, dt: 33 }, { v: 2, dt: 33 }], 'below', 60), 10);
+});
+
+test('the lift line: a movement the person called a rep has to cross it', () => {
+  /* a rep, then a smaller one that only gets to a hip angle of 150 — short of the 160 line the file starts a rep at */
+  const frames = take([[REST, 3000], [TOP, 3500], [HALF, 1300], [REST, 2600], [{ shin: 95, dip: 28, hipAng: 146 }, 2500], [REST, 2600]]);
+  const r = Trace.run(M, { readyMs: 2000 }, frames, ASPECT);
+  const reps = Trace.reps(r, M), misses = Trace.misses(r, M);
+  assert.equal(reps.length, 1); assert.equal(misses.length, 1, 'the small one fell short: ' + JSON.stringify(misses.map((m) => m.peak)));
+  const rec = Trace.recommend(M, r, reps, [{ t0: reps[0].t0, t1: reps[0].t1, tag: 'clean' }, { t0: misses[0].t0, t1: misses[0].t1, tag: 'rep' }], misses);
+  const line = rec.lines[0];
+  assert.ok(line && line.key === 'raiseAt' && line.status === 'move', JSON.stringify(rec.lines));
+  assert.ok(line.value < misses[0].peak && line.value > 140, `the line comes down to ${line.value}, under the small rep's ${misses[0].peak}`);
+  const rec2 = Trace.recommend(M, r, reps, [{ t0: reps[0].t0, t1: reps[0].t1, tag: 'clean' }], misses);
+  assert.equal(rec2.lines[0].status, 'fine', 'without the person\'s word the line stands');
+});
