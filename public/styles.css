@@ -446,10 +446,13 @@ body.review code { font: 500 .85em ui-monospace, SFMono-Regular, Menlo, monospac
 /* ---- the review page: a rep classified, and the numbers recommended ---- */
 .reps .rep-label { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .reps .rep-label .lbl { font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
-.reps .rep-label .btn { padding: 3px 10px; font-size: .8rem; min-height: 0; border-radius: 999px; }
-.reps .rep-label .btn[aria-pressed="true"] { border-color: var(--accent); background: rgba(90,169,255,.18); color: var(--ink); }
-.reps .rep-label .btn.fault[aria-pressed="true"] { border-color: var(--bad); background: rgba(255,92,108,.18); }
-.reps .rep-label .btn.clean[aria-pressed="true"] { border-color: var(--good); background: rgba(53,208,127,.18); }
+/* the verdict chips, in the list and under the video alike: the one chosen is filled and ticked */
+.rep-label .btn { padding: 3px 10px; font-size: .8rem; min-height: 0; border-radius: 999px; }
+.rep-label .btn[aria-pressed="true"] { border-color: var(--accent); background: rgba(90,169,255,.22); color: var(--ink); }
+.rep-label .btn.fault[aria-pressed="true"] { border-color: var(--bad); background: rgba(255,92,108,.24); }
+.rep-label .btn.clean[aria-pressed="true"] { border-color: var(--good); background: rgba(53,208,127,.24); }
+.rep-label .btn[aria-pressed="true"]::after { content: ' ✓'; font-weight: 900; }
+#stage-verdict .rep-label .btn { padding: 5px 12px; font-size: .86rem; border-width: 2px; }
 .reps .rep.skipped { opacity: .55; }
 .recommend td.move { color: var(--warn); font-weight: 700; } .recommend td.fine { color: var(--good); } .recommend td.overlap { color: var(--bad); font-weight: 700; }
 .recommend .btn.tiny-btn { padding: 2px 8px; font-size: .78rem; min-height: 0; }
@@ -473,7 +476,7 @@ body.studio .bar .note.bad { color: var(--bad); }
   /* the columns dissolve into one, in the owner's order: the drawing, the recordings and the stage, the reps, then the builder */
   .studio-grid .col { display: contents; }
   #fig-panel { order: 1; } #recordings-panel { order: 2; } #stage-wrap { order: 3; } #reps-panel { order: 4; }
-  #measures-panel { order: 5; } #suggest-panel { order: 6; } #exercise-panel { order: 7; } #numbers-panel { order: 8; } #problems-panel { order: 9; } #file-panel { order: 10; }
+  #measures-panel { order: 5; } #start-panel { order: 5; } #suggest-panel { order: 6; } #exercise-panel { order: 7; } #numbers-panel { order: 8; } #problems-panel { order: 9; } #file-panel { order: 10; }
   .stage.small { max-height: 40vh; }
 }
 #fig-demo { max-width: none; }
@@ -533,6 +536,17 @@ body.studio .bar .note.bad { color: var(--bad); }
 .lm-sides .btn[aria-pressed="true"] { border-color: var(--accent); background: rgba(90,169,255,.14); }
 .lm-help { font-size: .76rem; color: var(--muted); line-height: 1.35; }
 .lm-body { display: grid; gap: 6px; }
+/* the start position */
+#start-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+#start-form .w, #start-form .check span { white-space: normal; min-width: 0; }
+#start-form .check { display: flex; gap: 8px; align-items: center; font-weight: 700; }
+#start-form .start-rules { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+#start-form .start-rules .check { font-weight: 500; align-items: flex-start; flex: 1 1 280px; }
+#start-form .check input { flex: none; margin-top: 3px; }
+#start-form input.wide { flex: 1 1 260px; min-width: 200px; }
+#start-seen { margin-top: 8px; display: grid; gap: 3px; }
+#start-seen:empty { display: none; }
+#start-seen .linkbtn { margin-left: 6px; }
 .rep-label .btn.other[aria-pressed="true"] { border-color: var(--warn); background: rgba(255,181,69,.18); }
 /* measures not yet built */
 .suggest-group h3 { font: 800 .9rem var(--font-body); margin: 10px 0 4px; }

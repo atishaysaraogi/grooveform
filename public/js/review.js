@@ -282,43 +282,62 @@ Moves.ready.then(function () {
   $('prev-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.max(0, focusRep - 1)); };
   $('next-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.min(shown.reps.length - 1, focusRep + 1)); };
 
-  /* ---------- one rep at a time: playing stops at the end of a rep not yet judged, and waits there
-     until it is judged or played again. Play while it waits replays the rep; once judged, play goes on
-     to the next, and Clean or Not a rep goes on by itself. ---------- */
-  let waitRep = null, inRep = null, repLoop = 0;
+  /* ---------- one rep at a time: with the box ticked, playing stops at the end of every rep and
+     waits there, for a verdict or for play. Play on a rep without a verdict shows it again; on one
+     with a verdict it goes on to the next; Clean or Not a rep goes on by itself. The end of a rep is
+     watched on every video frame, every screen frame and every timeupdate, whichever the browser
+     gives: a full-screen video or a busy page can starve one of them, and a check that throws must
+     not stop the watching. ---------- */
+  let waitRep = null, inRep = null, repLoop = 0, frameLoop = 0;
   const oneRep = () => !!($('one-rep') && $('one-rep').checked);
-  const judgedRep = (rec, r) => { const l = Trace.labelOf(rec.labels, r); return !!l && !l.provisional; };
+  const labelFor = (rec, r) => { const l = Trace.labelOf(rec.labels, r); return l && !l.provisional ? l : null; };
+  const judgedRep = (rec, r) => !!labelFor(rec, r);
   const repAtTime = (t) => { const reps = shown ? shown.reps : []; for (let i = 0; i < reps.length; i++) if (t >= reps[i].t0 && t < reps[i].t1) return i; return null; };
+  const faultName = (id) => (id[0] === '+' ? id.slice(1) : (move.cues[id] && move.cues[id].label) || id);
+  const verdictWords = (l) => (l.tag === 'clean' ? 'Clean' : l.tag === 'skip' ? 'not a rep' : l.tag === 'rep' ? 'a rep' : (l.faults || []).map(faultName).join(', '));
   function setWait(i) {
     waitRep = i;
     const el = $('rep-wait'); if (!el) return;
-    const r = i != null && shown ? shown.reps[i] : null;
-    el.textContent = !r ? '' : judgedRep(shown, r) ? `${repName(r, shown)}: judged — add any other fault, or play for the next rep` : `${repName(r, shown)}: give your verdict, or play to see it again`;
+    const r = i != null && shown ? shown.reps[i] : null, l = r ? labelFor(shown, r) : null;
+    el.textContent = !r ? '' : l ? `${repName(r, shown)}: ${verdictWords(l)} — add or change the verdict, or play for the next rep` : `${repName(r, shown)}: give your verdict, or play to see it again`;
   }
-  function watchRep() {
-    cancelAnimationFrame(repLoop);
-    const tick = () => {
-      if (video.paused || video.ended || !shown) return;
-      const t = video.currentTime * 1000, r = inRep != null ? shown.reps[inRep] : null;
-      if (oneRep() && r && t >= r.t1 && !judgedRep(shown, r)) {
+  /* the playhead against the reps; called as often as the browser allows, so it does nothing twice */
+  function checkPlay() {
+    if (!shown || video.paused || video.ended) return;
+    const t = video.currentTime * 1000;
+    try {
+      const r = inRep != null ? shown.reps[inRep] : null;
+      if (oneRep() && r && t >= r.t1) {
         const i = inRep; inRep = null;
-        video.pause(); video.currentTime = r.t1 / 1000;
+        /* stopped just past the end, so play on a judged rep does not land back inside it */
+        video.pause(); video.currentTime = (r.t1 + 30) / 1000;
         focusRep = i; setWait(i); drawOverlay(r.t1); drawLanes(); renderReps();
         return;
       }
       /* the rep in play is the one under the video: its chips and what the coach saw in it */
       const now = repAtTime(t);
       if (now !== inRep) { inRep = now; if (now != null && now !== focusRep) { focusRep = now; renderReps(); } }
-      repLoop = requestAnimationFrame(tick);
-    };
-    repLoop = requestAnimationFrame(tick);
+    } catch (e) { console.error('one rep at a time:', e); }
   }
+  function watchPlay() {
+    cancelAnimationFrame(repLoop);
+    const tick = () => { if (video.paused || video.ended) return; checkPlay(); repLoop = requestAnimationFrame(tick); };
+    repLoop = requestAnimationFrame(tick);
+    if (video.requestVideoFrameCallback) {
+      if (frameLoop && video.cancelVideoFrameCallback) video.cancelVideoFrameCallback(frameLoop);
+      const each = () => { if (video.paused || video.ended) return; checkPlay(); frameLoop = video.requestVideoFrameCallback(each); };
+      frameLoop = video.requestVideoFrameCallback(each);
+    }
+  }
+  video.addEventListener('timeupdate', checkPlay);
+  /* a jump on the timeline is not the end of a rep: the rep in play is found again from where it lands */
+  video.addEventListener('seeking', () => { inRep = null; });
   video.addEventListener('play', () => {
     const r = waitRep != null && shown ? shown.reps[waitRep] : null;
-    /* still waiting at the rep's end and not judged: play shows it again */
+    /* waiting at the rep's end without a verdict: play shows it again */
     if (r && !judgedRep(shown, r) && Math.abs(video.currentTime * 1000 - r.t1) < 400) { video.currentTime = r.t0 / 1000; inRep = waitRep; }
     setWait(null);
-    watchRep();
+    watchPlay();
   });
   $('replay-rep').onclick = () => {
     if (!shown || !video.duration) return;
@@ -1014,6 +1033,8 @@ Moves.ready.then(function () {
     get recordings() { return recordings; }, get shown() { return shown; }, get trace() { return trace; }, get result() { return result; }, get move() { return move; },
     get labels() { return shown ? shown.labels : []; },
     get fig() { return figureJson(); }, get ev() { return ev; }, editBox: fitBox, editTransform, setFig, animLoad, animChanged, refreshMoves, setMove, rerun, judgeAll,
+    /* a moment in a recording, on the stage: from the builder's start-position lines */
+    seek(t, id) { const rec = id ? recordings.find((r) => r.id === id) : shown; if (rec && rec !== shown) show(rec); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } },
     /* a trace handed in by a test, or by the builder's own tools: it becomes a recording and is shown */
     loadTrace(frames, aspect, name) { return addRecording({ frames, aspect, name: name || 'trace', source: 'test', duration: frames.length ? frames[frames.length - 1].t : 0 }); },
     loadTakes, show(id) { const r = recordings.find((x) => x.id === id); if (r) show(r); }, remove: removeRecording, focus: (id, i) => { const r = recordings.find((x) => x.id === id); if (r) focusOn(r, i); },

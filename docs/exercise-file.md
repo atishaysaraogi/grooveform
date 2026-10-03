@@ -392,12 +392,23 @@ the toes pointed and got nothing for it). The prompt asks for the movement
 and is never red.
 
 `ready` is the start position: nothing is coached until it has been held for
-the set-up wait (`readyMs`). `ready.nudge` is what the start needs, in words:
-when the person is seen but not at the start for six seconds the coach says
-it, then again on the slow clock — the quad set's "bend the knee over a
-rolled towel or a foam roller". By default a rep move's start is being below
-`downAt` and a hold's is being seen; `ranges` adds readings that must be in
-range (the bridge: lying with the knees bent).
+the set-up wait (`defaults.readyMs`, three seconds unless the file says).
+`ready.nudge` is what the start needs, in words: when the person is seen but
+not at the start for `defaults.nudgeSec` (six unless said) the coach says it,
+then again on the slow clock — the quad set's "bend the knee over a rolled
+towel or a foam roller". By default a rep move's start is being below
+`downAt` and a hold's is being seen; `atStart: false` drops that, and
+`ranges` adds readings that must be in range (the bridge: lying with the
+knees bent). With no rule (`atStart: false`, no `ranges`) being seen is the
+start; with no rule and `readyMs: 0` there is no start position at all, and
+the coaching begins on the first frame the body is seen — the set-up wait's
+checks of the framing, the light and the room go with it.
+
+The studio shows all of it in **The start position**, under the
+measurement cards: the time, each rule (the rep's measure back at its start
+line, each measurement's range, one added from a list), the words and when
+they are said, a switch for none at all, and for each recording loaded when
+it was in the start position and when its coaching began.
 
 ## Faults
 

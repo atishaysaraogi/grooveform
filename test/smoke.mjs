@@ -1072,6 +1072,7 @@ try {
     const recLine = () => page.$eval('#measures .rec[data-fault="hipHigh"]', (n) => n.className + ' | ' + n.textContent.replace(/\s+/g, ' ').trim());
     assert.match(await recLine(), /^rec fine \| ✓ 8° agrees with your verdicts/, 'and the fault\'s own row says so, under the number: ' + await recLine());
     assert.equal(await page.$eval(`${high} .rep-label .btn[data-v="hipHigh"]`, (b) => b.getAttribute('aria-pressed')), 'true', 'the chip shows the verdict');
+    assert.equal(await page.$eval('#stage-verdict .btn[data-v="hipHigh"]', (b) => b.getAttribute('aria-pressed') + ' ' + getComputedStyle(b).borderColor), 'true rgb(255, 92, 108)', 'and under the video, where the rep is in focus, the chosen chip reads as chosen');
     assert.deepEqual(await page.evaluate(() => window.__review.recordings[1].labels.map((l) => l.tag + ':' + l.faults.join(','))), ['faults:hipHigh'], 'kept by time, with its recording');
     /* a number moved on the card: every recording judged again, and the row disagrees */
     await page.evaluate(() => window.__builder.setNumber('overMax', 15));
@@ -1231,6 +1232,55 @@ try {
     await page.waitForSelector('#picker .item');
   });
 
+  await step('one rep at a time: the video stops at the end of every rep and waits for a verdict or for play', async () => {
+    /* two reps of the bridge, and a stand-in film as long as them on the stage */
+    const take = await page.evaluate(() => {
+      const mk = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 66) { Object.assign(window.__pose, { move: 'bridge' }, pose); frames.push({ t, lm: window.__poseSource() }); } return frames; };
+      const REST = { bShin: 95, dip: 50, hipAng: 130, bFoot: 0 }, TOP = { bShin: 95, dip: 5, hipAng: 170, bFoot: 0 }, HALF = { bShin: 95, dip: 25, hipAng: 145, bFoot: 0 };
+      return mk([[REST, 3000], [TOP, 4000], [HALF, 1300], [REST, 1500], [TOP, 4000], [HALF, 1300], [REST, 2400]]);
+    });
+    const id = await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'two reps').id, take);
+    await page.click(`#rec-list li[data-rec="${id}"] button[data-act="show"]`);
+    const reps = await page.evaluate(() => window.__review.shown.reps.map((r) => [r.t0, r.t1]));
+    assert.equal(reps.length, 2, 'two reps broken out: ' + JSON.stringify(reps));
+    await page.evaluate(async (ms) => {
+      const c = document.createElement('canvas'); c.width = 160; c.height = 90; const ctx = c.getContext('2d');
+      const rec = new MediaRecorder(c.captureStream(30), { mimeType: 'video/webm' }); const parts = []; rec.ondataavailable = (e) => parts.push(e.data);
+      rec.start(); const t0 = performance.now();
+      await new Promise((res) => { const f = () => { ctx.fillStyle = '#123'; ctx.fillRect(0, 0, 160, 90); if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(); }; f(); });
+      rec.stop(); await new Promise((r) => (rec.onstop = r));
+      const v = document.getElementById('clip'); v.src = URL.createObjectURL(new Blob(parts, { type: 'video/webm' }));
+      await new Promise((r) => (v.onloadedmetadata = r));
+      /* a recorder's webm says its length only once read through */
+      if (!isFinite(v.duration)) { v.currentTime = 1e6; await new Promise((r) => (v.onseeked = r)); v.currentTime = 0; await new Promise((r) => (v.onseeked = r)); }
+    }, take[take.length - 1].t + 300);
+    const S = () => page.evaluate(() => { const v = document.getElementById('clip'); return { t: v.currentTime * 1000, paused: v.paused, wait: document.getElementById('rep-wait').textContent }; });
+    const stopped = () => page.waitForFunction(() => document.getElementById('clip').paused, null, { timeout: 30000 });
+    assert.equal(await page.isChecked('#one-rep'), true, 'on unless unticked');
+    await page.evaluate(() => { const v = document.getElementById('clip'); v.currentTime = 0; v.play(); });
+    await stopped();
+    let s = await S();
+    assert.ok(Math.abs(s.t - reps[0][1]) < 150, `stopped at the end of the first rep: ${s.t.toFixed(0)} against ${reps[0][1]}`);
+    assert.match(s.wait, /give your verdict, or play to see it again$/);
+    await page.evaluate(() => document.getElementById('clip').play()); await wait(300);
+    s = await S();
+    assert.ok(!s.paused && s.t < reps[0][1] - 1000, 'play on a rep without a verdict shows it again: ' + s.t.toFixed(0));
+    await stopped();
+    await page.click('#stage-verdict .btn[data-v="clean"]'); await wait(300);
+    assert.equal((await S()).paused, false, 'Clean goes on by itself');
+    await stopped();
+    s = await S();
+    assert.ok(Math.abs(s.t - reps[1][1]) < 150, `and stops at the end of the next: ${s.t.toFixed(0)} against ${reps[1][1]}`);
+    /* a rep that already has a verdict stops too, and play goes on from it */
+    await page.evaluate(() => { const v = document.getElementById('clip'); v.currentTime = 0; v.play(); });
+    await stopped();
+    assert.match((await S()).wait, /: Clean — add or change the verdict, or play for the next rep$/);
+    await page.evaluate(() => document.getElementById('clip').play()); await wait(300);
+    s = await S();
+    assert.ok(!s.paused && s.t > reps[0][1], 'from a rep with a verdict, play goes on to the next: ' + s.t.toFixed(0));
+    await page.evaluate(() => document.getElementById('clip').pause());
+  });
+
   await step('programmes: a bundle lists its steps, a step opens with its range and its faults left alone, a copy is adjusted and travels as a link', async () => {
     await page.goto(base + '/');
     await page.waitForFunction(() => document.querySelectorAll('#plan-list .plan').length >= 6, null, { timeout: 8000 });
@@ -1281,6 +1331,19 @@ try {
     if (await page.isVisible('#build-drop')) { await page.click('#build-drop'); }
     await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     assert.deepEqual(await page.$$eval('#problems li.error', (l) => l.length), 0, 'the library\'s own file has no errors');
+    /* the start position, in a section of its own: the rep back at its start and the shin in its range, held three seconds */
+    assert.equal(await page.textContent('#start-note'), 'held 3 s');
+    assert.equal(await page.isChecked('#start-form [data-at="ready.atStart"] input'), true, 'the rep back at its start');
+    assert.deepEqual(await page.$$eval('#start-form [data-at^="ready.ranges."]', (l) => l.map((n) => n.dataset.at)), ['ready.ranges.shin'], 'and the shin in its range');
+    await page.check('#start-form label[data-at="ready"] input');
+    let jr = JSON.parse(await page.inputValue('#build-json'));
+    assert.deepEqual([jr.defaults.readyMs, jr.ready], [0, { atStart: false }], 'none: no time and no rule, so the coaching begins on the first frame seen');
+    assert.equal(await page.textContent('#start-note'), 'none — coached from the first frame');
+    await page.uncheck('#start-form label[data-at="ready"] input');
+    jr = JSON.parse(await page.inputValue('#build-json'));
+    assert.deepEqual([jr.defaults.readyMs, jr.ready], [undefined, { atStart: true, ranges: { shin: [45, 150] } }], 'and back as it was');
+    await page.click('#build-drop');
+    await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose
        lists are its own and not rebuilt — so nothing is left pointing at it */
     assert.ok(JSON.parse(await page.inputValue('#build-json')).draw.some((g) => g.measure === 'over'), 'the bridge draws its hips-over-knees reading');

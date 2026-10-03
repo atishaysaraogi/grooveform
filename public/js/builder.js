@@ -775,6 +775,7 @@ Moves.ready.then(function () {
   /* the values at A and B on the cards, without rebuilding the form */
   function refreshValues() {
     if (!draft) return;
+    startFeedback();
     document.querySelectorAll('[data-val]').forEach((n) => { const m = draft.measurements.find((q) => q.key === n.dataset.val); if (!m) return; const { A, B } = valuesAB(m); n.innerHTML = `A <b>${fmt(A, m)}</b> · B <b>${fmt(B, m)}</b>`; });
     document.querySelectorAll('[data-edge]').forEach((n) => { const [key, side] = n.dataset.edge.split('|'); const m = draft.measurements.find((q) => q.key === key); if (!m || !m.band) return; n.textContent = edgeOf(m, side); });
   }
@@ -797,8 +798,113 @@ Moves.ready.then(function () {
     const d = draft; d.auto = d.auto || {};
     d.words = d.words || {}; d.phone = d.phone || {}; d.landmarks = d.landmarks || {}; d.measurements = d.measurements || []; d.faults = d.faults || [];
     d.defaults = d.defaults || {}; d.settings = d.settings || []; d.draw = d.draw || []; d.muscles = d.muscles || {}; d.figure = d.figure || {};
-    renderMeasures(); renderDerived(); renderExercise(); renderNumbers();
+    renderMeasures(); renderStartPos(); renderDerived(); renderExercise(); renderNumbers();
     refreshValues();
+  }
+
+  /* ================= the start position =================
+     What the coach waits for before it says or counts anything. In the file it is `ready` — what
+     counts as the start: the rep's measure back at its start line (`atStart`), measurements in a
+     range (`ranges`), and the words said to someone seen but not in it (`nudge`) — and
+     `defaults.readyMs`, how long it is held. With no rules, being seen is the start; with no rules
+     and no time, the coaching begins on the first frame the body is seen. */
+  const readyMsOf = () => (draft.defaults.readyMs != null ? draft.defaults.readyMs : Core.COMMON.readyMs);
+  const startRanges = () => (draft.ready && draft.ready.ranges) || {};
+  /* a rep move's start is its measure back at the start line unless the file says otherwise */
+  const usesAtStart = () => { const d = draft, R = d.ready; return d.type === 'reps' && (!R || !(R.ranges || R.atStart != null) || !!R.atStart); };
+  const noStart = () => readyMsOf() === 0 && !usesAtStart() && !Object.keys(startRanges()).length;
+  let startWas = null;   // the start position as it was before "none" was ticked, put back when it is unticked
+  function setReady(fn) {
+    const d = draft, reps = d.type === 'reps', R = Object.assign({}, d.ready || {});
+    if (reps && R.atStart == null) R.atStart = usesAtStart();   // said outright once anything about it is edited
+    fn(R);
+    if (R.ranges && !Object.keys(R.ranges).length) delete R.ranges;
+    if (!reps) delete R.atStart;
+    if (!R.nudge) delete R.nudge;
+    if (Object.keys(R).length) d.ready = R; else delete d.ready;
+  }
+  function renderStartPos() {
+    const host = $('start-form'); if (!host || !draft) return; host.innerHTML = '';
+    const d = draft, reps = d.type === 'reps', none = noStart();
+    const box = (checked, label, onchange, at) => { const lab = el('label', 'check'); if (at) lab.dataset.at = at; const c = el('input'); c.type = 'checkbox'; c.checked = checked; c.onchange = () => { if (!touch()) { c.checked = checked; return; } onchange(c.checked); commit(true); }; lab.appendChild(c); lab.appendChild(el('span', null, esc(label))); return lab; };
+    host.appendChild(box(none, 'No start position: the coaching begins on the first frame they are seen', (on) => {
+      if (on) { startWas = { id: d.id, readyMs: d.defaults.readyMs, ready: d.ready ? JSON.parse(JSON.stringify(d.ready)) : null }; d.defaults.readyMs = 0; setReady((R) => { R.atStart = false; delete R.ranges; delete R.nudge; }); }
+      else if (startWas && startWas.id === d.id) { if (!startWas.readyMs) delete d.defaults.readyMs; else d.defaults.readyMs = startWas.readyMs; if (startWas.ready) d.ready = startWas.ready; else delete d.ready; startWas = null; }
+      else { d.defaults.readyMs = Core.COMMON.readyMs; setReady((R) => { if (reps) R.atStart = true; }); }
+    }, 'ready'));
+    $('start-note').textContent = none ? 'none — coached from the first frame' : `held ${+(readyMsOf() / 1000).toFixed(1)} s`;
+    if (none) { host.appendChild(el('p', 'tiny muted', 'The counting, the clocks and the corrections start the moment the body is in the picture. The set-up wait’s checks of the framing, the light and the room for the movement go with it.')); startFeedback(); return; }
+    /* how long */
+    const hold = el('div', 'sentence'); hold.dataset.at = 'defaults.readyMs';
+    hold.appendChild(words('Before the coaching begins they hold it, still and seen, for'));
+    hold.appendChild(num(+(readyMsOf() / 1000).toFixed(2), (v) => { d.defaults.readyMs = Math.max(0, Math.round((v == null ? Core.COMMON.readyMs / 1000 : v) * 1000)); }, null, 'seconds; 0: the moment it is reached'));
+    hold.appendChild(words('seconds (0: the moment it is reached). Meanwhile nothing is judged, counted or said but the framing, the light and the room for the movement.'));
+    host.appendChild(hold);
+    /* what counts */
+    host.appendChild(el('div', 'tiny-h', 'It is the start position when all of these hold'));
+    const list = el('div', 'start-rules');
+    if (reps) {
+      const P = d.progress && d.measurements.find((q) => q.key === d.progress.measure);
+      const down = !!(d.progress && d.progress.direction === 'down');
+      const row = el('div', 'sentence'); row.dataset.at = 'ready.atStart';
+      row.appendChild(box(usesAtStart(), P ? `the rep’s own measure back at its start: ${describe(P).what} ${down ? 'at least' : 'at most'}` : 'the rep’s own measure back at its start (no measurement tracks the rep yet)', (on) => setReady((R) => { R.atStart = on; })));
+      if (P) {
+        row.appendChild(num(d.defaults.downAt, (v) => { d.defaults.downAt = v; }, 'downAt', 'the line a rep ends at: the same number as on the card that tracks the rep'));
+        row.appendChild(words(describe(P).unit + ' (the line a rep ends at)'));
+      }
+      list.appendChild(row);
+    }
+    for (const [k, range] of Object.entries(startRanges())) {
+      const m = d.measurements.find((q) => q.key === k), u = m ? describe(m).unit : '';
+      const row = el('div', 'sentence'); row.dataset.at = 'ready.ranges.' + k;
+      row.appendChild(words((m ? describe(m).what : k) + ' between'));
+      row.appendChild(num(range[0], (v) => { d.ready.ranges[k][0] = v; }, null, 'the lowest it may be at the start')); row.appendChild(words(u + ' and'));
+      row.appendChild(num(range[1], (v) => { d.ready.ranges[k][1] = v; }, null, 'the highest it may be at the start')); row.appendChild(words(u));
+      row.appendChild(btn('✕', () => { if (!touch()) return; setReady((R) => { R.ranges = Object.assign({}, R.ranges); delete R.ranges[k]; }); commit(true); }, 'tiny-btn'));
+      list.appendChild(row);
+    }
+    const free = d.measurements.filter((m) => !(m.key in startRanges()) && filled(m));
+    if (free.length) {
+      const add = el('div', 'sentence'); add.appendChild(words('and'));
+      const sel = el('select', 'inline'); sel.dataset.at = 'ready.add';
+      for (const m of free) { const o = el('option', null, esc(describe(m).what || m.key)); o.value = m.key; sel.appendChild(o); }
+      add.appendChild(sel); add.appendChild(words('in a range'));
+      add.appendChild(btn('Add', () => {
+        if (!touch()) return;
+        const m = d.measurements.find((q) => q.key === sel.value); if (!m) return;
+        const { A } = valuesAB(m), tol = TOL(m), base = A != null ? A : (m.band ? d.defaults[m.band.lo || m.band.min || m.band.max || m.band.sym] : 0);
+        setReady((R) => { R.ranges = Object.assign({}, R.ranges, { [m.key]: [Math.round(base - tol), Math.round(base + tol)] }); });
+        commit(true);
+      }, 'tiny-btn'));
+      list.appendChild(add);
+    }
+    if (!usesAtStart() && !Object.keys(startRanges()).length) list.appendChild(el('p', 'tiny muted', 'No rule: being seen is the start position, so the wait is only the time above.'));
+    host.appendChild(list);
+    /* what is said to someone seen but not in it */
+    const nz = el('div', 'sentence'); nz.dataset.at = 'ready.nudge';
+    nz.appendChild(words('Seen but not in it for'));
+    nz.appendChild(num(d.defaults.nudgeSec != null ? d.defaults.nudgeSec : 6, (v) => { if (v == null) delete d.defaults.nudgeSec; else d.defaults.nudgeSec = v; }, null, 'seconds'));
+    nz.appendChild(words('s, say'));
+    nz.appendChild(text(d.ready && d.ready.nudge, (v) => setReady((R) => { R.nudge = String(v || '').trim(); }), 'nothing — or what the start needs: “Knees bent, feet flat”', 'wide'));
+    nz.appendChild(words(`then every ${d.defaults.lostEverySec || Core.COMMON.lostEverySec || 15} s while it lasts.`));
+    host.appendChild(nz);
+    /* the opening words are where they are told how to start */
+    if (d.words && d.words.start) { const p = el('p', 'tiny muted'); p.appendChild(document.createTextNode(`They are told how to start by the opening words: “${d.words.start}” `)); const a = el('button', 'linkbtn', 'edit them'); a.type = 'button'; a.onclick = () => goTo('words.start'); p.appendChild(a); host.appendChild(p); }
+    startFeedback();
+  }
+  /* in each recording loaded: when the start position was held and the coaching began */
+  function startFeedback() {
+    const host = $('start-seen'); if (!host) return; host.innerHTML = '';
+    const R = window.__review, recs = R && R.recordings ? R.recordings.filter((r) => r.result && r.result.rows.length) : [];
+    for (const rec of recs) {
+      const at = rec.result.rows.find((x) => x.out && x.out.ready), line = el('div', 'tiny');
+      if (at) {
+        const from = Math.max(rec.result.rows[0].t, at.t - readyMsOf());
+        line.appendChild(el('span', null, `<b>${esc(rec.name)}</b>: in the start position from ${(from / 1000).toFixed(1)} s, coaching from ${(at.t / 1000).toFixed(1)} s`));
+        const b = el('button', 'linkbtn', 'show'); b.type = 'button'; b.onclick = () => R.seek(from, rec.id); line.appendChild(b);
+      } else line.appendChild(el('span', null, `<b>${esc(rec.name)}</b>: the start position was never held for ${(readyMsOf() / 1000).toFixed(1)} s — nothing in it is coached or counted`));
+      host.appendChild(line);
+    }
   }
   /* bare controls for a sentence: a select, a number, words */
   const pick = (value, options, onchange, title, structural, at) => { const sel = el('select', 'inline'); for (const [v, t] of options) { const it = el('option', null, esc(t)); it.value = v; sel.appendChild(it); } sel.value = value == null ? '' : String(value); if (title) sel.title = title; if (at) sel.dataset.at = at; sel.onchange = () => { if (!touch()) { sel.value = value == null ? '' : String(value); return; } onchange(sel.value); commit(!!structural); }; return sel; };
@@ -1091,6 +1197,7 @@ Moves.ready.then(function () {
   let lastRec = null;
   function showRecommendations(rec) {
     lastRec = rec;
+    startFeedback();   // the recordings were judged again: when each one's coaching began may have moved
     const haveRecs = !!(window.__review && window.__review.recordings && window.__review.recordings.length);
     const fmtV = (v, u) => (v == null ? '—' : (Math.abs(v) >= 100 || u === '°' ? Math.round(v) : +v.toFixed(1)) + (u || ''));
     const range = (x, u) => (x && x.n ? (Math.abs(x.lo - x.hi) < 0.05 ? fmtV(x.lo, u) : `${fmtV(x.lo, u)}–${fmtV(x.hi, u)}`) + ` (${x.n})` : 'none');
