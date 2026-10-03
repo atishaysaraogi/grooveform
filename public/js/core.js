@@ -455,10 +455,27 @@
        moment, and again every `lostEverySec` for as long as it stays so — not
        every few seconds like a correction. The clocks stop. A frame with nobody in
        it never counts toward being ready. */
+    /* A new set, in a recording read whole (the studio, countAll): the phone starts every set with a
+       fresh coach, so the set-up wait and every reference taken in it start again — the start
+       position's baselines, the floor, the side. The count carries on. */
+    newSet() {
+      this.ready = false; this.readySince = 0; this.base = null; this.repRaw = null; delete this.cfg.floorAt;
+      this.phase = 'down'; this.repHoldMs = 0; this.countedAt = 0; this.inSince = 0; this.runMs = 0; this.downSince = 0;
+      this.since = {}; this.offSince = 0; this.lastNudge = 0; this.peak = null; this.awaySince = 0;
+      this.sets = (this.sets || 1) + 1;
+      if (typeof this.move.reset === 'function') this.move.reset();
+    }
     gate(r, t, v) {
       const cfg = this.cfg, reps = !!this.move.reps;
+      /* the studio: out of sight, or away from the start without a rep, for setBreakSec after the coaching
+         began is the break between two sets */
+      if (cfg.countAll && this.ready) {
+        const away = !v.ok || (reps && this.phase === 'down' && !v.atStart);
+        if (away) { if (!this.awaySince) this.awaySince = t; } else this.awaySince = 0;
+        if (this.awaySince && t - this.awaySince >= (cfg.setBreakSec == null ? 8 : cfg.setBreakSec) * 1000) this.newSet();
+      }
       const targetMs = cfg.holdTargetSec * 1000;
-      const shape = (extra) => Object.assign({ reading: r, verdict: v, holding: false, cue: null, done: false, leftMs: targetMs, targetMs, active: [],
+      const shape = (extra) => Object.assign({ reading: r, verdict: v, holding: false, cue: null, done: false, leftMs: targetMs, targetMs, active: [], set: this.sets || 1,
         ready: this.ready, holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs },
         reps ? { phase: this.ready ? this.phase : 'setup', resting: false, reps: this.reps, repTarget: cfg.repCount, done: this.phase === 'done',
           leftMs: Math.max(0, targetMs - this.repHoldMs) } : { done: this.holdMs >= targetMs, leftMs: Math.max(0, targetMs - this.holdMs) }, extra);
@@ -583,7 +600,7 @@
       }
 
       if (!cue) cue = this.correct(on, t);
-      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs, ready: true,
+      return { reading: r, verdict: v, holding, cue, done, leftMs, targetMs, ready: true, set: this.sets || 1,
         active: this.active(on),
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };
     }
@@ -626,11 +643,13 @@
     countRep(t, remark) {
       const total = this.cfg.repCount;
       this.reps += 1; this.repHoldMs = 0;
-      /* countAll (the studio): every rep in a recording is counted and judged, past the set's number */
+      /* countAll (the studio): every rep in a recording is counted and judged, past the set's number;
+         the end of a set is still said where the phone would say it */
       this.phase = this.reps >= total && !this.cfg.countAll ? 'done' : 'down';
       this.countedAt = t;
       const tail = remark ? ` \u2014 ${remark}` : '';
-      return this.phase === 'done'
+      const ends = this.cfg.countAll ? total > 0 && this.reps % total === 0 : this.phase === 'done';
+      return ends
         ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
         : this.offer('count' + this.reps, t, String(this.reps) + tail, true);
     }
@@ -722,7 +741,7 @@
       const resting = this.phase === 'down' && this.countedAt && t - this.countedAt < (cfg.restSec || 0) * 1000;
       if (!cue && !resting) cue = this.correct(on, t);
 
-      return { reading: r, verdict: v, holding, cue, phase: this.phase, ready: true,
+      return { reading: r, verdict: v, holding, cue, phase: this.phase, ready: true, set: this.sets || 1,
         done: this.phase === 'done', leftMs, targetMs, active: this.active(on), resting,
         reps: this.reps, repTarget: total,
         holdMs: this.holdMs, runMs: this.runMs, bestMs: this.bestMs };

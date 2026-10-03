@@ -37,19 +37,20 @@ Moves.ready.then(function () {
      changes (another exercise, not an edit of this one — tuning against the verdicts is what
      they are for). A saved trace brings its verdicts back only to the exercise they were given
      under (the library exercise a draft came from, so renaming a draft keeps them). */
-  const lineage = () => (window.__builder && window.__builder.source) || move.id;
+  const lineage = () => (window.__builder && window.__builder.lineage) || move.id;
   try { localStorage.removeItem('ontrack.labels'); } catch { }   // verdicts this browser kept before: forgotten
   function loadLabels(rec) {
     rec.labels = [];
     const mine = rec.fileFor == null || rec.fileFor === lineage() || rec.fileFor === move.id;
+    const had = (Array.isArray(rec.fileLabels) && rec.fileLabels.length) || rec.tag;
     if (mine && Array.isArray(rec.fileLabels) && rec.fileLabels.length) rec.labels = rec.fileLabels.map((l) => Object.assign({}, l, { faults: (l.faults || []).slice() }));
-    else if (!mine && Array.isArray(rec.fileLabels) && rec.fileLabels.length) note(`${rec.name}: its verdicts were given under another exercise (${rec.fileFor}), so it starts without them`);
+    else if (!mine && had) { rec.fileLabels = null; rec.tag = null; note(`${rec.name}: its verdicts were given under another exercise (${rec.fileFor}), so it starts without them`); }
     rec.dirty = false;
   }
   /* a verdict given or changed: not in any file yet, so leaving the page asks first */
   function saveLabels(rec) { rec.dirty = true; }
   window.addEventListener('beforeunload', (e) => {
-    if (!recordings.some((r) => r.dirty && r.labels.some((l) => !l.provisional))) return;
+    if (!recordings.some((r) => r.dirty && r.labels.length)) return;   // a verdict, or a whole-recording tag, given since the last save
     e.preventDefault(); e.returnValue = '';
   });
   /* a rep's label replaced whole, since a label is by time */
@@ -68,11 +69,13 @@ Moves.ready.then(function () {
   function refreshMoves() { const cur = $('move').value; $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${esc(m.name)}${m.draft ? ' (draft)' : ''}</option>`).join(''); $('move').value = Moves[cur] ? cur : move.id; }
   /* the builder hands over the compiled move to judge with; every recording is judged again */
   let lastLineage = null;
-  function setMove(m) {
+  function setMove(m, lin) {
     move = m || move; $('move').value = move.id;
-    /* another exercise: every recording starts again with no verdicts and no tag, its faults being another exercise's */
-    if (lineage() !== lastLineage) {
-      const first = lastLineage == null; lastLineage = lineage();
+    /* another exercise: every recording starts again with no verdicts and no tag, its faults being another
+       exercise's. Which exercise it is comes from the builder (a draft keeps its identity through a rename) */
+    lin = lin || lineage();
+    if (lin !== lastLineage) {
+      const first = lastLineage == null; lastLineage = lin;
       for (const r of recordings) { if (!first) { r.fileLabels = null; r.tag = null; } loadLabels(r); }
     }
     rerun();
@@ -183,7 +186,8 @@ Moves.ready.then(function () {
   /* a trace file, a takes file (the old Takes and the rule), or a bundle of traces: each becomes a recording */
   function takeIn(packed, fallbackName) {
     const { meta, frames } = Trace.unpack(packed);
-    if (meta.move && Moves[meta.move] && meta.move !== move.id && !recordings.length && window.__builder) window.__builder.open(meta.move);
+    const want = meta.lineage && Moves[meta.lineage] ? meta.lineage : meta.move;   // the exercise its verdicts were given under
+    if (want && Moves[want] && want !== move.id && want !== lineage() && !recordings.length && window.__builder) window.__builder.open(want);
     return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFor: meta.lineage || meta.move || null, tag: meta.tag || null });
   }
   function loadTakes(d) {
@@ -213,7 +217,7 @@ Moves.ready.then(function () {
     loadLabels(rec);
     judgeOne(rec);
     /* an old takes file tagged the whole take: its reps start with that verdict, dashed, until a tap confirms it */
-    if (rec.tag && !rec.labels.length) { for (const r of rec.reps) rec.labels.push({ t0: r.t0, t1: r.t1, tag: rec.tag === 'clean' ? 'clean' : 'faults', faults: rec.tag === 'clean' ? [] : [rec.tag], provisional: true }); saveLabels(rec); }
+    if (rec.tag && !rec.labels.length) { for (const r of rec.reps) rec.labels.push({ t0: r.t0, t1: r.t1, tag: rec.tag === 'clean' ? 'clean' : 'faults', faults: rec.tag === 'clean' ? [] : [rec.tag], provisional: true }); rec.dirty = false; }   // the file's own tag: nothing new to save
     $('save-all').disabled = false;
     if (!shown) show(rec); else { renderRecList(); renderReps(); renderRecommend(); renderSuggest(); }
     return rec;
@@ -704,7 +708,7 @@ Moves.ready.then(function () {
     Overlay.draw(ctx, {
       W: overlay.width, H: overlay.height, source: null, aspect: trace.aspect,
       move, cfg: Object.assign({}, Trace.defaults(move), { mirror: false, angles: true, setCount: 1, showPoints: allPoints() }),
-      reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1, points: f ? f.lm : null,
+      reading: r.reading, verdict: r.verdict, out: r.out, setNo: (r.out && r.out.set) || 1, points: f ? f.lm : null,
       banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues, noCue: true,
     });
     stageCue(t, r);
@@ -1007,7 +1011,7 @@ Moves.ready.then(function () {
         const row = rowAt(t * 1000);
         if (overlayOn) {
           Overlay.draw(ctx, { W, H, source: { image: video, w: video.videoWidth, h: video.videoHeight, quarter: 0, mirror: false },
-            move, cfg, reading: row && row.reading, verdict: row && row.verdict, out: row && row.out, setNo: 1,
+            move, cfg, reading: row && row.reading, verdict: row && row.verdict, out: row && row.out, setNo: (row && row.out && row.out.set) || 1,
             points: (frameAt(t * 1000) || {}).lm || null,
             banner: Overlay.bannerAt(cues, t * 1000, isCorrection), now: t * 1000, rec: false, cues: move.cues });
         } else ctx.drawImage(video, 0, 0, W, H);

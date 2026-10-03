@@ -1107,7 +1107,9 @@ try {
     const pressed = () => page.$$eval('#reps .rep-label .btn[aria-pressed="true"]', (l) => l.map((b) => b.dataset.v).join(','));
     /* a clean slate: a verdict given, then the page opened again and the same recordings loaded — none comes back */
     await page.click(`#reps li.rep[data-rec="${(await page.evaluate(() => window.__review.recordings[0].id))}"] .rep-label .btn[data-v="clean"]`);
+    const asked = page.waitForEvent('dialog', { predicate: (d) => d.type() === 'beforeunload', timeout: 5000 });
     await page.reload();
+    await asked;   // a verdict not saved to a file: leaving asks first
     await page.waitForSelector('#measures .mcard');
     await page.click('#build-drop');
     await page.waitForFunction(() => /as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
@@ -1127,12 +1129,15 @@ try {
     /* another exercise: every verdict goes; back to this one, they stay gone */
     await page.click(`#reps li.rep[data-rec="${r1}"] .rep-label .btn[data-v="clean"]`);
     assert.equal(await pressed(), 'clean');
+    await page.selectOption(`#rec-list li[data-rec="${r2}"] select.tag`, 'hipHigh');
     await page.selectOption('#move', 'sideraise');
     await page.waitForFunction(() => window.__review.move.id === 'sideraise' || /side/i.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
-    assert.equal(await page.evaluate(() => window.__review.recordings.every((r) => !r.labels.length)), true, 'another exercise: no verdicts');
+    assert.equal(await page.evaluate(() => window.__review.recordings.every((r) => !r.labels.length && !r.tag)), true, 'another exercise: no verdicts, no tags');
     await page.selectOption('#move', 'bridge');
     await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
-    assert.equal(await pressed(), '', 'and back: still none');
+    assert.equal(await page.evaluate(() => window.__review.recordings.every((r) => !r.labels.length && !r.tag)), true, 'and back: still none');
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));   // the redraw the switch scheduled
+    assert.equal(await pressed(), '', 'and none shown either');
     /* the rest of this step: the two recordings loaded afresh, in order, and their verdicts given — the clean take clean, the high one too high */
     await page.evaluate(() => { for (const r of [...window.__review.recordings]) window.__review.remove(r.id); });
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
@@ -1275,6 +1280,7 @@ try {
     await page.evaluate((i) => window.__review.show(i), id);
     const reps = await page.evaluate(() => window.__review.shown.reps.map((r) => [r.t0, r.t1]));
     assert.equal(reps.length, 2, 'two reps broken out: ' + JSON.stringify(reps));
+    assert.equal(await page.evaluate(() => window.__review.shown.result.cfg.countAll), true, 'the studio counts every rep, past the set\'s number');
     await page.evaluate(async (ms) => {
       const c = document.createElement('canvas'); c.width = 160; c.height = 90; const ctx = c.getContext('2d');
       const rec = new MediaRecorder(c.captureStream(30), { mimeType: 'video/webm' }); const parts = []; rec.ondataavailable = (e) => parts.push(e.data);
