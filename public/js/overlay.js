@@ -167,7 +167,7 @@
     }
     /* which set this is, and under it the reps counted so far */
     const setNo = st.setNo || 0, setCount = cfg.setCount || 1;
-    if (setNo) leftEnd = L(`SET ${setNo} of ${setCount}`, out.between ? 'done' : '', C.ink);
+    if (setNo) leftEnd = L(setNo > setCount ? `SET ${setNo}` : `SET ${setNo} of ${setCount}`, out.between ? 'done' : '', C.ink);
     /* the studio counts on past the set's number: then the count alone, and what a set is under it */
     const past = out.reps > out.repTarget;
     if (setNo && move.reps) leftEnd = L(past ? `REP ${out.reps}` : `REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : past ? `a set is ${out.repTarget}` : '', C.ink);

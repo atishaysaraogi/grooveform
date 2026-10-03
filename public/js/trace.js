@@ -450,12 +450,17 @@
       const ok = {}; const good = (n) => (ok[n] == null ? (ok[n] = Core.trusted(pointIn(rd, n), cfg)) : ok[n]);
       cands.forEach((m, j) => { if (need[j].every(good)) out[j][i] = sm[j].of('x', Spec.measure(bare[j], ctx).x); });
     });
+    /* a change from the start is taken against each set's own start, as the coach takes it (the studio
+       starts a new set after a break): the second before each set's coaching began */
     const ri = rows.findIndex((r) => r.out && r.out.ready);
+    const setOf = (r) => (r.out && r.out.set) || 1, first = {};
+    rows.forEach((r, i) => { if (r.out && r.out.ready && first[setOf(r)] == null) first[setOf(r)] = i; });
     cands.forEach((m, j) => {
       if (!m.fromStart) return;
-      let base = null;
-      if (ri >= 0) { const pick = []; for (let k = ri; k >= 0 && rows[k].t > rows[ri].t - 1000; k--) if (out[j][k] != null) pick.push(out[j][k]); base = pick.length >= 3 ? median(pick) : null; }
-      out[j] = base == null ? null : out[j].map((v) => (v == null ? null : v - base));
+      const base = {};
+      for (const sn of Object.keys(first)) { const at = first[sn], pick = []; for (let k = at; k >= 0 && rows[k].t > rows[at].t - 1000; k--) if (out[j][k] != null) pick.push(out[j][k]); base[sn] = pick.length >= 3 ? median(pick) : null; }
+      if (base[1] == null && base[Object.keys(first)[0]] == null) { out[j] = null; return; }
+      out[j] = out[j].map((v, i) => { const b = base[setOf(rows[i])]; return v == null || b == null ? null : v - b; });
     });
     return { series: out, ready: ri >= 0 };
   }

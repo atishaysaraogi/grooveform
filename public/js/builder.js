@@ -188,10 +188,6 @@ Moves.ready.then(function () {
     draft = clone(json);
     draft.auto = auto || draft.auto || {};   // a loaded or copied file is the person's: nothing in it is the template's
     draft.source = opts.source !== undefined ? opts.source : (draft.source || null);
-    /* which exercise this is, whatever it is renamed to: a library copy is its library exercise; a new
-       one from a pose, or a loaded file of no library exercise, is a new identity, kept with the draft.
-       The studio's verdicts belong to it, and are cleared only when it changes */
-    draft.lineage = opts.lineage || draft.source || draft.lineage || ('new:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
     draft.touched = !!opts.touched;
     draft.figure = { points: figurePoints(draft) }; delete draft.figure.pose;
     inferRoles();
@@ -210,7 +206,7 @@ Moves.ready.then(function () {
     for (const m of draft.measurements || []) { m.role = m.key === pk ? 'progress' : !m.band ? 'reading' : (!pos || pos.includes(m.key)) ? 'hold' : 'note'; m.named = true; m.short = m.short || m.label || m.key; }
   }
   /* the file as it is written: the builder's bookkeeping left out */
-  function fileOf() { const f = clone(draft); delete f.auto; delete f.source; delete f.lineage; delete f.touched; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; delete m.named; } return f; }
+  function fileOf() { const f = clone(draft); delete f.auto; delete f.source; delete f.touched; for (const m of f.measurements || []) { delete m.role; delete m.short; delete m.autoBand; delete m.named; } return f; }
   /* the first edit: the copy becomes the draft. One draft at a time: a draft of another exercise
      still parked is dropped, after asking */
   function touch() {
@@ -223,7 +219,6 @@ Moves.ready.then(function () {
   }
   /* the move the recordings are judged with: the draft laid over the library when it is whole, else the library's own */
   const judged = () => Moves[draft.id] || (source() && Moves[source()]) || Moves.list[0];
-  const lineageOf = () => (draft && (draft.lineage || draft.source || draft.id)) || judged().id;
 
   /* every change comes here: the derived parts are brought up to date, the file is
      checked, the problems listed, the draft kept, and when whole laid over the library */
@@ -246,7 +241,7 @@ Moves.ready.then(function () {
       try { localStorage.setItem(DRAFT, JSON.stringify(draft)); } catch { }
       if (!errors.length) { try { Moves.draft(file); } catch (e) { note.textContent = 'Could not compile: ' + (e.message || e); } }
     }
-    if (window.__review) { window.__review.refreshMoves(); window.__review.setMove(judged(), lineageOf()); }
+    if (window.__review) { window.__review.refreshMoves(); window.__review.setMove(judged()); }
     if (structural) render(); else refreshValues();
     mark(problems);
     $('measures-note').textContent = `${draft.measurements.length} measurement${draft.measurements.length === 1 ? '' : 's'} · ${draft.faults.length} fault${draft.faults.length === 1 ? '' : 's'}`;
@@ -807,7 +802,7 @@ Moves.ready.then(function () {
     const host = $('build-start'); if (!host) return; host.innerHTML = '';
     host.appendChild(el('p', 'tiny', 'Pick how the person starts and which way the phone looks at them. Everything else follows from it and can be changed. The exercise open now stays as it is until you edit the new one.'));
     const g = el('div', 'pose-pick');
-    for (const p of POSES) { const b = btn(`${poseSvg(figureOfPose(p))}<span>${esc(p.name)}</span>`, () => { if (touched() && !window.confirm(`Start a new exercise? The draft of “${draft.name}” would be dropped — download it first if you want it.`)) return; Moves.draft(null); start(fromPose(p), AUTO(), { source: null, touched: true }); $('start-over').open = false; $('exercise-panel').open = true; $('fig-edit').open = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }, null); g.appendChild(b); }
+    for (const p of POSES) { const b = btn(`${poseSvg(figureOfPose(p))}<span>${esc(p.name)}</span>`, () => { if (touched() && !window.confirm(`Start a new exercise? The draft of “${draft.name}” would be dropped — download it first if you want it.`)) return; Moves.draft(null); if (window.__review && window.__review.newExercise) window.__review.newExercise(); start(fromPose(p), AUTO(), { source: null, touched: true }); $('start-over').open = false; $('exercise-panel').open = true; $('fig-edit').open = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }, null); g.appendChild(b); }
     host.appendChild(g);
   }
 
@@ -1290,6 +1285,9 @@ Moves.ready.then(function () {
       const j = JSON.parse(await f.text());
       if (j && j.move && j.defaults && !j.measurements) { /* a numbers file from an earlier studio: its numbers into the open exercise */ if (touch()) { Object.assign(draft.defaults, j.defaults); commit(true); } return; }
       if (touched() && !window.confirm(`Replace the draft of “${draft.name}” with this file? Download it first if you want it.`)) return;
+      /* another exercise's file: the studio's verdicts go; the same exercise's (or a draft of the same library one) keeps them */
+      const same = draft && (j.id === draft.id || (source() && j.id === source()));
+      if (!same && window.__review && window.__review.newExercise) window.__review.newExercise();
       Moves.draft(null);
       start(j, {}, { source: Moves[j.id] && !Moves[j.id].draft ? j.id : null, touched: true });
     } catch (err) { $('build-note').textContent = 'Not an exercise file: ' + (err.message || err); }
@@ -1301,7 +1299,7 @@ Moves.ready.then(function () {
   /* the library's own numbers back into the draft, the rest of the edit kept */
   $('numbers-reset').onclick = () => { const lib = source() && ((Moves.library && Moves.library[source()]) || Moves[source()]); if (!lib || !touch()) return; for (const [k, v] of Object.entries(lib.spec.defaults || {})) if (k in draft.defaults) draft.defaults[k] = v; commit(true); };
   $('build-apply-json').onclick = () => {
-    try { const j = JSON.parse($('build-json').value); if (!touch()) return; start(j, draft ? draft.auto : {}, { source: source(), lineage: draft && draft.lineage, touched: true }); }
+    try { const j = JSON.parse($('build-json').value); if (!touch()) return; start(j, draft ? draft.auto : {}, { source: source(), touched: true }); }
     catch (e) { $('build-note').textContent = 'That is not JSON: ' + (e.message || e); }
   };
   /* a keyframe from the frame the video is on: the landmarks of that moment, as the figure's points */
@@ -1331,7 +1329,7 @@ Moves.ready.then(function () {
   }
 
   /* handed to the studio before the first exercise opens, so its very first look at the exercise sees which one it is */
-  window.__builder = { get draft() { return draft; }, get source() { return source(); }, get lineage() { return lineageOf(); }, get touched() { return touched(); }, start, open, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, addMeasure, fillSlot, setShape, setRole, setBand, fromDrawing, fromRecording, setNumber, setNumbers, showRecommendations, addDiscovered, addFaultOn, fileOf, link, download, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
+  window.__builder = { get draft() { return draft; }, get source() { return source(); }, get touched() { return touched(); }, start, open, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, addMeasure, fillSlot, setShape, setRole, setBand, fromDrawing, fromRecording, setNumber, setNumbers, showRecommendations, addDiscovered, addFaultOn, fileOf, link, download, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
   if (window.__studio) Object.assign(window.__studio, { builder: window.__builder });
   /* a draft kept from last time comes back; otherwise the exercise in the address, or the first */
   let kept = null;

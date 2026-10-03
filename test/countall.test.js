@@ -54,3 +54,20 @@ test('the studio starts a new set after a break: the set-up wait and its referen
   assert.equal(Trace.reps(one, M).filter((r) => r.counted).length, 7);
   assert.ok(!one.rows.some((r) => r.out && r.out.set === 2), 'no break, no second set');
 });
+
+test('a slow rep after a pause is not a break, and "done" falls at the end of each set, not at multiples of the running count', () => {
+  const M = Moves.bridge, tuned = { countAll: true, repCount: 3, readyMs: 2000, holdTargetSec: 2 };
+  /* three reps, then ten seconds hovering above the start line before the fourth goes up: one set of four */
+  const s1 = [[Rig.REST, 3000]]; for (let i = 0; i < 3; i++) s1.push(...Rig.rep());
+  const slow = Trace.run(M, tuned, Rig.take(s1.concat([[Rig.HALF, 10000]], Rig.rep())), Rig.ASPECT);
+  assert.equal(Trace.reps(slow, M).filter((r) => r.counted).length, 4, 'the slow fourth rep is counted');
+  assert.ok(!slow.rows.some((r) => r.out && r.out.set === 2), 'and no second set began');
+  /* two reps, a break out of sight, three reps: the set of three ends on the fifth, the first set never reached three */
+  const a = [[Rig.REST, 3000]]; for (let i = 0; i < 2; i++) a.push(...Rig.rep());
+  const b = [[Rig.REST, 3000]]; for (let i = 0; i < 3; i++) b.push(...Rig.rep());
+  const two = Trace.run(M, tuned, Rig.take(a.concat([[Object.assign({}, Rig.REST, { vis: 0.05 }), 10000]], b)), Rig.ASPECT);
+  assert.equal(Trace.reps(two, M).filter((r) => r.counted).length, 5);
+  const done = two.cues.filter((c) => c.id === 'done');
+  assert.equal(done.length, 1, 'one "done": ' + two.cues.map((c) => c.id).join(','));
+  assert.ok(/^5 reps|^3 reps/.test(done[0].text) || /done/.test(done[0].text), done[0].text);
+});

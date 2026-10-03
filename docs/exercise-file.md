@@ -480,7 +480,7 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 |---|---|---|
 | `holdTargetSec` | 60 | a hold's target; a rep's hold at the top |
 | `holdShort` | `"stop"` | a rep back down before its hold at the top was done: `"stop"` does not count it and says the `early` words; `"note"` counts it and says them on the count |
-| `setBreakSec` | 8 | the studio only: out of sight, or away from the start without a rep, this long after the coaching began is a break between sets — the set-up wait and its references start again, as the phone starts each set afresh, and the count carries on |
+| `setBreakSec` | 8 | the studio only: out of sight this long, or away from the start without a rep this long and then back at it, after the coaching began, is a break between sets — the set-up wait and its references start again, as the phone starts each set afresh, and the count carries on |
 | `callAtSec` | [45, 30, 10, 5] | seconds left at which the time is called |
 | `repCount` | — | reps in a set (10 in every file so far) |
 | `setCount` | 3 | sets in a session |
@@ -554,19 +554,23 @@ home, the draft's `defaults`.
 The recordings are judged by the coach as the phone runs it, with two
 differences: every rep in a recording is counted and judged, however many a
 set asks for (the end of each set is still said where the phone would say
-it), and a break — out of sight, or away from the start without a rep, for
-`setBreakSec` — starts a new set, with its own set-up wait and references,
-as the phone starts each set afresh.
+it), and a break starts a new set, with its own set-up wait and references,
+as the phone starts each set afresh: out of sight for `setBreakSec` (a
+hold's only once it is done), or away from the start without a rep for that
+long and then back at the start — a slow rep begun in the meantime is no
+break.
 
 The verdicts given on reps belong to the loaded recording and to the
 exercise. Nothing about them is kept in the browser: a recording removed and
 loaded again, or the page opened again, starts with none, and every
-recording's verdicts and tag are cleared when the studio changes to another
-exercise. Renaming or editing the exercise keeps them — tuning against them
-is what they are for; a new exercise from a pose, or a loaded file of no
-library exercise, is another exercise. A saved trace keeps its verdicts and
-the exercise they were given under, and gives them back only to that
-exercise. Leaving the page with verdicts not saved to a file asks first.
+recording's verdicts and tag are cleared when the person changes to another
+exercise: picks another in the list, starts one from a pose, or loads another
+exercise's file. Renaming or editing the exercise keeps them — tuning against
+them is what they are for. A saved trace keeps its verdicts with the
+exercise's id and the library exercise it came from, and gives them back
+only to that exercise or a draft of the same library one; loaded first, it
+opens its exercise, unless a draft is being edited. Leaving the page with
+verdicts or a tag not saved to a file asks first.
 
 Under each fault's row the studio says where its number should sit, from the
 reps classified across every recording (`Trace.recommend(move, runs)`), and
@@ -582,7 +586,7 @@ in the labels as `"+Feet sliding"`; one click writes the suggested
 measurement and a fault for it into the draft, and the labels follow the new
 id.
 
-Files: a trace (`Trace.pack`, one recording with its labels, its tag and the exercise they were given under), and the
+Files: a trace (`Trace.pack`, one recording with its labels, its tag, and the exercise's `move` id and library `source` they were given under), and the
 session — the old takes format, `{ v: 1, kind: "takes", move, draft, takes:
 […] }` — holding every recording, its verdicts and the draft, written by
 *Save all traces* and read back by *Load traces*. An old takes file loads

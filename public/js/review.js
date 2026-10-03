@@ -33,19 +33,26 @@ Moves.ready.then(function () {
   /* ---------- the person's verdicts, per recording ----------
      kept by time, with the recording, for as long as it is loaded, and in its trace file when
      it is saved. Nothing is remembered elsewhere: a video removed and loaded again, or the page
-     opened again, starts with no verdicts, and so does every recording when the exercise
-     changes (another exercise, not an edit of this one — tuning against the verdicts is what
-     they are for). A saved trace brings its verdicts back only to the exercise they were given
-     under (the library exercise a draft came from, so renaming a draft keeps them). */
-  const lineage = () => (window.__builder && window.__builder.lineage) || move.id;
+     opened again, starts with no verdicts, and so does every recording when the person changes
+     to another exercise — picks another in the list, starts one from a pose, loads another
+     exercise's file (newExercise). Editing or renaming this one keeps them: tuning against the
+     verdicts is what they are for. A saved trace gives its verdicts back only to the exercise
+     they were given under: the same exercise, or a draft of the same library exercise. */
   try { localStorage.removeItem('ontrack.labels'); } catch { }   // verdicts this browser kept before: forgotten
+  /* the exercise open now, as the names a trace may carry: the draft's own id and the library exercise it came from */
+  const openIds = () => { const b = window.__builder, d = b && b.draft; return new Set(d ? [d.id, b.source].filter(Boolean) : [move.id]); };
+  const isMine = (rec) => { if (!rec.fileFrom || !rec.fileFrom.length) return true; const ids = openIds(); return rec.fileFrom.some((id) => ids.has(id)); };
   function loadLabels(rec) {
     rec.labels = [];
-    const mine = rec.fileFor == null || rec.fileFor === lineage() || rec.fileFor === move.id;
-    const had = (Array.isArray(rec.fileLabels) && rec.fileLabels.length) || rec.tag;
+    const mine = isMine(rec), had = (Array.isArray(rec.fileLabels) && rec.fileLabels.length) || rec.tag;
     if (mine && Array.isArray(rec.fileLabels) && rec.fileLabels.length) rec.labels = rec.fileLabels.map((l) => Object.assign({}, l, { faults: (l.faults || []).slice() }));
-    else if (!mine && had) { rec.fileLabels = null; rec.tag = null; note(`${rec.name}: its verdicts were given under another exercise (${rec.fileFor}), so it starts without them`); }
+    else if (!mine && had) { rec.fileLabels = null; rec.tag = null; note(`${rec.name}: its verdicts were given under another exercise (${rec.fileFrom.join(' / ')}), so it starts without them`); }
     rec.dirty = false;
+  }
+  /* another exercise: every recording starts again with no verdicts and no tag, its faults being another exercise's */
+  function newExercise() {
+    for (const r of recordings) { r.fileLabels = null; r.tag = null; r.labels = []; r.dirty = false; }
+    renderRecList(); renderReps(); renderRecommend(); renderSuggest();
   }
   /* a verdict given or changed: not in any file yet, so leaving the page asks first */
   function saveLabels(rec) { rec.dirty = true; }
@@ -68,16 +75,8 @@ Moves.ready.then(function () {
   /* ---------- the exercise's list in the bar ---------- */
   function refreshMoves() { const cur = $('move').value; $('move').innerHTML = Moves.list.map((m) => `<option value="${m.id}">${esc(m.name)}${m.draft ? ' (draft)' : ''}</option>`).join(''); $('move').value = Moves[cur] ? cur : move.id; }
   /* the builder hands over the compiled move to judge with; every recording is judged again */
-  let lastLineage = null;
-  function setMove(m, lin) {
+  function setMove(m) {
     move = m || move; $('move').value = move.id;
-    /* another exercise: every recording starts again with no verdicts and no tag, its faults being another
-       exercise's. Which exercise it is comes from the builder (a draft keeps its identity through a rename) */
-    lin = lin || lineage();
-    if (lin !== lastLineage) {
-      const first = lastLineage == null; lastLineage = lin;
-      for (const r of recordings) { if (!first) { r.fileLabels = null; r.tag = null; } loadLabels(r); }
-    }
     rerun();
   }
   function save(blob, name) {
@@ -186,9 +185,10 @@ Moves.ready.then(function () {
   /* a trace file, a takes file (the old Takes and the rule), or a bundle of traces: each becomes a recording */
   function takeIn(packed, fallbackName) {
     const { meta, frames } = Trace.unpack(packed);
-    const want = meta.lineage && Moves[meta.lineage] ? meta.lineage : meta.move;   // the exercise its verdicts were given under
-    if (want && Moves[want] && want !== move.id && want !== lineage() && !recordings.length && window.__builder) window.__builder.open(want);
-    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFor: meta.lineage || meta.move || null, tag: meta.tag || null });
+    /* the first recording, of another exercise than the one open: that exercise is opened, unless a draft is being edited */
+    const from = [meta.move, meta.source].filter(Boolean), want = meta.source && Moves[meta.source] ? meta.source : meta.move;
+    if (want && Moves[want] && !recordings.length && window.__builder && !window.__builder.touched && !isMine({ fileFrom: from })) window.__builder.open(want);
+    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFrom: [meta.move, meta.source].filter(Boolean), tag: meta.tag || null });
   }
   function loadTakes(d) {
     if (!d || !Array.isArray(d.takes)) throw new Error('not a takes file');
@@ -201,7 +201,7 @@ Moves.ready.then(function () {
     }
     e.target.value = '';
   };
-  const packed = (rec) => Trace.pack({ move: move.id, lineage: lineage(), aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
+  const packed = (rec) => Trace.pack({ move: (window.__builder && window.__builder.draft && window.__builder.draft.id) || move.id, source: (window.__builder && window.__builder.source) || undefined, aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
   function saveTrace(rec) { rec.dirty = false; save(new Blob([JSON.stringify(packed(rec))], { type: 'application/json' }), `${move.id}-${String(rec.name).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-trace.json`); }
   $('save-all').onclick = () => {
     if (!recordings.length) return;
@@ -1037,14 +1037,14 @@ Moves.ready.then(function () {
   }
   $('render-demo').onclick = renderDemo;
 
-  $('move').onchange = () => { if (window.__builder) window.__builder.open($('move').value); };
+  $('move').onchange = () => { if (!window.__builder) return; if ($('move').value !== move.id) newExercise(); window.__builder.open($('move').value); };
   $('fig-edit').addEventListener('toggle', () => { if ($('fig-edit').open) requestAnimationFrame(() => animChanged()); });
   window.addEventListener('resize', () => { if ($('fig-edit').open) drawEditor(); });
 
   window.__review = {
     get demo() { return demo; },
     get recordings() { return recordings; }, get shown() { return shown; }, get trace() { return trace; }, get result() { return result; }, get move() { return move; },
-    get labels() { return shown ? shown.labels : []; },
+    get labels() { return shown ? shown.labels : []; }, newExercise,
     get fig() { return figureJson(); }, get ev() { return ev; }, editBox: fitBox, editTransform, setFig, animLoad, animChanged, refreshMoves, setMove, rerun, judgeAll,
     /* a moment in a recording, on the stage: from the builder's start-position lines */
     seek(t, id) { const rec = id ? recordings.find((r) => r.id === id) : shown; if (rec && rec !== shown) show(rec); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } },

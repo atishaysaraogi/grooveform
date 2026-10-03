@@ -462,17 +462,29 @@
       this.ready = false; this.readySince = 0; this.base = null; this.repRaw = null; delete this.cfg.floorAt;
       this.phase = 'down'; this.repHoldMs = 0; this.countedAt = 0; this.inSince = 0; this.runMs = 0; this.downSince = 0;
       this.since = {}; this.offSince = 0; this.lastNudge = 0; this.peak = null; this.awaySince = 0;
-      this.sets = (this.sets || 1) + 1;
+      this.sets = (this.sets || 1) + 1; this.setFrom = this.reps; this.breakDue = false;
+      if (!this.move.reps) { this.holdMs = 0; this.bestMs = 0; this.called = {}; this.holdDue = 0; this.wasIn = false; }   // a hold's set: its own clock
       if (typeof this.move.reset === 'function') this.move.reset();
     }
     gate(r, t, v) {
       const cfg = this.cfg, reps = !!this.move.reps;
-      /* the studio: out of sight, or away from the start without a rep, for setBreakSec after the coaching
-         began is the break between two sets */
+      /* the studio: a break between two sets, setBreakSec long after the coaching began. Out of sight that long
+         is one at once (a hold's only once it was done: an unfinished hold carries on). Away from the start in
+         the picture that long might be a slow rep, so it is one only when the person is back at the start
+         with no rep begun; a rep begun cancels it */
       if (cfg.countAll && this.ready) {
-        const away = !v.ok || (reps && this.phase === 'down' && !v.atStart);
-        if (away) { if (!this.awaySince) this.awaySince = t; } else this.awaySince = 0;
-        if (this.awaySince && t - this.awaySince >= (cfg.setBreakSec == null ? 8 : cfg.setBreakSec) * 1000) this.newSet();
+        const brk = (cfg.setBreakSec == null ? 8 : cfg.setBreakSec) * 1000;
+        const off = reps && this.phase === 'down' && !v.atStart;
+        if (!v.ok || off) {
+          if (!this.awaySince) this.awaySince = t;
+          if (t - this.awaySince >= brk) {
+            if (!v.ok && (reps || this.holdMs >= cfg.holdTargetSec * 1000)) this.newSet();
+            else if (off) this.breakDue = true;
+          }
+        } else {
+          if (this.breakDue && reps && this.phase === 'down' && v.atStart) this.newSet();
+          this.awaySince = 0; this.breakDue = false;
+        }
       }
       const targetMs = cfg.holdTargetSec * 1000;
       const shape = (extra) => Object.assign({ reading: r, verdict: v, holding: false, cue: null, done: false, leftMs: targetMs, targetMs, active: [], set: this.sets || 1,
@@ -648,7 +660,8 @@
       this.phase = this.reps >= total && !this.cfg.countAll ? 'done' : 'down';
       this.countedAt = t;
       const tail = remark ? ` \u2014 ${remark}` : '';
-      const ends = this.cfg.countAll ? total > 0 && this.reps % total === 0 : this.phase === 'done';
+      const k = this.reps - (this.setFrom || 0);   // the reps of this set: the studio's count carries on across sets
+      const ends = this.cfg.countAll ? total > 0 && k % total === 0 : this.phase === 'done';
       return ends
         ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
         : this.offer('count' + this.reps, t, String(this.reps) + tail, true);
@@ -855,7 +868,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03i';
+  const VER = '2026-10-03j';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
