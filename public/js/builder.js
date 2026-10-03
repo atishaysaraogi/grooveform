@@ -277,7 +277,7 @@ Moves.ready.then(function () {
         if (n.tagName === 'LABEL' || n.tagName === 'DIV') n.appendChild(el('em', 'at-msg ' + cls, esc(p.message)));
         else { if (n.dataset.atTitle == null) n.dataset.atTitle = n.title || ''; n.title = p.message; }
         for (let a = n.parentElement; a && a.id !== 'build-form'; a = a.parentElement) {
-          if (a.tagName !== 'DETAILS') continue;
+          if (a.tagName !== 'DETAILS' && !(a.classList && a.classList.contains('mcard'))) continue;
           if (cls === 'bad') { a.classList.remove('has-warn'); a.classList.add('has-bad'); } else if (!a.classList.contains('has-bad')) a.classList.add('has-warn');
         }
       }
@@ -290,7 +290,7 @@ Moves.ready.then(function () {
   }
   function goTo(at) {
     const n = placesOf(at)[0]; if (!n) return;
-    for (let a = n.parentElement; a; a = a.parentElement) if (a.tagName === 'DETAILS') a.open = true;
+    for (let a = n.parentElement; a; a = a.parentElement) { if (a.tagName === 'DETAILS') a.open = true; if (a.classList && a.classList.contains('mcard') && a.classList.contains('collapsed')) { const m = draft.measurements.find((q) => q.key === a.dataset.key); if (m) toggleCard(m, true); } }
     n.scrollIntoView({ block: 'center', behavior: 'smooth' });
     n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
     const f = n.matches('input,select,textarea') ? n : n.querySelector('input,select,textarea');
@@ -763,11 +763,28 @@ Moves.ready.then(function () {
   const WHEN_OPTS = [['top', 'at the top of the rep'], ['rep', 'through the rep'], ['always', 'at all times, before the rep too'], ['between', 'between reps, at rest']];
   const whenOpts = () => WHEN_OPTS.map(([v, t]) => [v, v === 'top' && draft.words && draft.words.atTop ? draft.words.atTop : t]);
 
+  /* which cards are closed: every card of a file as it is opened, a card added since open */
+  let shutFor = null; const shutKeys = new Set();
+  const isShut = (m) => shutKeys.has(m.key) && !(editing && editing.m === m);
+  function toggleCard(m, open) {
+    const now = open != null ? !open : !shutKeys.has(m.key);
+    if (now) shutKeys.add(m.key); else shutKeys.delete(m.key);
+    const c = document.querySelector(`#measures .mcard[data-key="${m.key}"]`); if (!c) return;
+    c.classList.toggle('collapsed', now); c.querySelector('.mbody').hidden = now;
+    const t = c.querySelector('.fold'); t.textContent = now ? '▸' : '▾'; t.setAttribute('aria-expanded', String(!now)); t.title = now ? 'Open this measurement' : 'Close this measurement';
+    foldAllLabel();
+  }
+  const foldAllLabel = () => { const b = $('measures-fold'); if (b && draft) b.textContent = draft.measurements.some((q) => !shutKeys.has(q.key)) ? 'Close all' : 'Open all'; };
   function renderMeasures() {
     const host = $('measures'); host.innerHTML = '';
     const d = draft;
+    const who = (d.id || '') + '|' + (source() || '');
+    if (shutFor !== who) { shutFor = who; shutKeys.clear(); for (const m of d.measurements) shutKeys.add(m.key); }
+    const all = $('measures-fold');
+    if (all) { all.hidden = !d.measurements.length; all.onclick = () => { const open = !draft.measurements.some((q) => !shutKeys.has(q.key)); for (const q of draft.measurements) toggleCard(q, open); }; }
     if (!d.measurements.length) host.appendChild(el('p', 'tiny', d.type === 'reps' ? 'Nothing measured yet. Add one and make it the one that tracks the rep.' : 'Nothing measured yet. Add what has to be right for the hold.'));
     d.measurements.forEach((m, i) => host.appendChild(card(m, i)));
+    foldAllLabel();
   }
   function card(m, i) {
     const d = draft, role = roleOf(m), desc = describe(m), u = desc.unit, at = `measurements[${i}]`;
@@ -775,7 +792,12 @@ Moves.ready.then(function () {
     /* the head: what it is, its values at A and B, the tools */
     const head = el('div', 'mhead');
     /* the head says what the geometry is, in words; the file's own short label, when it differs, is under More */
-    head.appendChild(el('b', 'what', esc(desc.named ? desc.what : (m.label || m.key))));
+    const shut = isShut(m);
+    if (shut) cardEl.classList.add('collapsed');
+    const tog = btn(shut ? '▸' : '▾', () => toggleCard(m), 'tiny-btn ghost fold'); tog.title = shut ? 'Open this measurement' : 'Close this measurement'; tog.setAttribute('aria-expanded', String(!shut));
+    head.appendChild(tog);
+    const title = el('b', 'what', esc(desc.named ? desc.what : (m.label || m.key))); title.onclick = () => toggleCard(m); title.style.cursor = 'pointer';
+    head.appendChild(title);
     head.appendChild(el('span', 'mvals', '')); head.lastChild.dataset.val = m.key;
     const tools = el('span', 'rowtools');
     tools.appendChild(btn('↑', () => { if (i > 0 && touch()) { [d.measurements[i - 1], d.measurements[i]] = [d.measurements[i], d.measurements[i - 1]]; commit(true); } }, 'tiny-btn'));
@@ -783,6 +805,10 @@ Moves.ready.then(function () {
     tools.appendChild(btn('✕', () => { if (touch()) { removeMeasure(m); commit(true); } }, 'tiny-btn'));
     head.appendChild(tools);
     cardEl.appendChild(head);
+    /* closed, the head says in a line what the card holds: what it is for and the faults on it */
+    const fl = d.faults.filter((x) => x.measure === m.key).map((x) => x.label || x.id);
+    head.appendChild(el('span', 'msum', esc([({ progress: 'tracks the rep', hold: 'must be right to hold', note: 'a note', reading: 'just shown' })[role] || role].concat(fl.length ? [fl.join(', ')] : []).join(' · '))));
+    const inner = el('div', 'mbody'); inner.hidden = shut; cardEl.appendChild(inner);
     /* sentence 1 — what is measured, and how it is read */
     const what = el('div', 'sentence what');
     what.appendChild(words('Measure'));
@@ -798,14 +824,14 @@ Moves.ready.then(function () {
     for (const tok of SENTENCE[shape] || SENTENCE.angle) { if (tok === 'per') what.appendChild(slotBtn('per', 'a limb')); else if (SLOTS[m.kind].some(([k]) => k === tok)) what.appendChild(slotBtn(tok, (SLOTS[m.kind].find(([k]) => k === tok) || [])[1])); else what.appendChild(words(tok)); }
     what.appendChild(words(', read'));
     what.appendChild(pick(m.fromStart || '', [['', 'as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been this set'], ['belowPeak', 'as how far under the most it has been this set'], ['rest', 'as the change from the rest position (which follows slowly)']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; m.named = false; nameIt(m); }, 'the coach reads the value when the set-up wait ends and from then on gives the change from it, or the percentage of it', true, at + '.fromStart'));
-    cardEl.appendChild(what);
+    inner.appendChild(what);
     /* the meaning line: what the number is, which way is which */
-    if (desc.meaning || desc.notes.length) cardEl.appendChild(el('div', 'meaning', esc([desc.meaning].concat(desc.notes.map((n) => cap(n) + '.')).filter(Boolean).join(' '))));
+    if (desc.meaning || desc.notes.length) inner.appendChild(el('div', 'meaning', esc([desc.meaning].concat(desc.notes.map((n) => cap(n) + '.')).filter(Boolean).join(' '))));
     /* what it is for */
     const roles = d.type === 'reps'
       ? [['progress', 'tracks the rep', 'the count follows this one: a rep is under way past one line and counts when it is back past the other'], ['hold', 'must be right to hold', 'the hold clock at the top runs only while this is inside its rule; out of it is a fault'], ['note', 'a note', 'called when it is out, but the count goes on'], ['reading', 'just shown', 'on the picture only, never judged']]
       : [['hold', 'must be right to hold', 'the hold clock runs only while this is inside its rule'], ['note', 'a note', 'called when it is out, but the clock goes on'], ['reading', 'just shown', 'on the picture only, never judged']];
-    cardEl.appendChild(chips(roles, role, (v) => { if (!touch()) return; setRole(m, v); commit(true); }));
+    inner.appendChild(chips(roles, role, (v) => { if (!touch()) return; setRole(m, v); commit(true); }));
     /* the rep's two lines */
     if (role === 'progress') {
       const row = el('div', 'sentence progress'); row.dataset.at = 'progress';
@@ -813,8 +839,8 @@ Moves.ready.then(function () {
       row.appendChild(words('The rep is under way once it')); row.appendChild(pick(d.progress.direction || 'up', [['up', 'rises past'], ['down', 'falls under']], (v) => { d.progress.direction = v; }, '', true));
       row.appendChild(num(d.defaults.raiseAt, (v) => { d.defaults.raiseAt = v; }, 'raiseAt', 'the rep is under way once the reading passes this')); row.appendChild(words(u));
       row.appendChild(words(`and counts once it is back ${dn ? 'over' : 'under'}`)); row.appendChild(num(d.defaults.downAt, (v) => { d.defaults.downAt = v; }, 'downAt', 'the rep counts once the reading is back past this')); row.appendChild(words(u));
-      cardEl.appendChild(row);
-      const rec = el('div', 'rec'); rec.dataset.recKey = 'raiseAt'; cardEl.appendChild(rec);
+      inner.appendChild(row);
+      const rec = el('div', 'rec'); rec.dataset.recKey = 'raiseAt'; inner.appendChild(rec);
     }
     if (role !== 'reading') {
       const kind = Spec.bandKind(m.band) || 'none';
@@ -827,7 +853,7 @@ Moves.ready.then(function () {
         if (kind === 'range') { n('lo', 'the lower edge'); row.appendChild(words('and')); n('hi', 'the upper edge'); }
         else if (kind === 'min') n('min', 'the edge'); else if (kind === 'max') n('max', 'the edge'); else { n('sym', 'either side of zero'); row.appendChild(words(`of ${desc.zero || 'zero'}`)); }
       }
-      cardEl.appendChild(row);
+      inner.appendChild(row);
       /* the start position: a second rule, judged before the coaching begins */
       const sr = el('div', 'sentence start'); sr.dataset.at = `ready.ranges.${m.key}`;
       const range = d.ready && d.ready.ranges && d.ready.ranges[m.key];
@@ -839,7 +865,7 @@ Moves.ready.then(function () {
       } else {
         const g = btn('○ add a start-position rule', () => { if (!touch()) return; const { A } = valuesAB(m); const tol = TOL(m); const base = A != null ? A : (m.band ? d.defaults[m.band.lo || m.band.min || m.band.max || m.band.sym] : 0); d.ready = d.ready || {}; d.ready.ranges = d.ready.ranges || {}; d.ready.ranges[m.key] = [Math.round(base - tol), Math.round(base + tol)]; commit(true); }, 'tiny-btn ghost'); g.title = 'judged in the set-up wait, before the coaching begins'; sr.appendChild(g);
       }
-      cardEl.appendChild(sr);
+      inner.appendChild(sr);
       /* the faults: one row each, the edge in words, then the words the coach uses */
       const fs = d.faults.filter((x) => x.measure === m.key);
       for (const x of fs) {
@@ -865,14 +891,14 @@ Moves.ready.then(function () {
         const otherF = d.faults.filter((q) => q !== x);
         if (otherF.length) { const un = el('div', 'sentence'); un.appendChild(words('not while one of these is on:')); un.appendChild(chipsMulti(otherF.map((q) => [q.id, q.label || q.id]), x.unless || [], (set) => { if (set.length) x.unless = set; else delete x.unless; })); ex.appendChild(un); }
         row.appendChild(ex);
-        cardEl.appendChild(row);
-        const rec = el('div', 'rec'); rec.dataset.fault = x.id; rec.dataset.recKey = edgeKeyOf(m, x.side) || ''; cardEl.appendChild(rec);
+        inner.appendChild(row);
+        const rec = el('div', 'rec'); rec.dataset.fault = x.id; rec.dataset.recKey = edgeKeyOf(m, x.side) || ''; inner.appendChild(rec);
       }
       const acts = el('div', 'row');
       if (m.band) acts.appendChild(btn('Add a fault', () => { if (!touch()) return; const side = fs.some((q) => q.side === 'above') && !fs.some((q) => q.side === 'below') ? 'below' : 'above'; const t = W.faultTemplate(d, m, side); d.faults.push(Object.assign({ id: uniqueFaultId(m.key + 'Fault'), measure: m.key, side, label: t.label.slice(0, 26), text: t.text, tone: 'plain' }, whenOf(m) !== 'top' ? { when: whenOf(m) } : {})); commit(true); }, 'tiny-btn'));
       if (filled(m)) acts.appendChild(btn('Numbers from the drawing', () => { if (!touch()) return; fromDrawing(m); commit(true); }, 'tiny-btn'));
       if (filled(m) && window.__review && window.__review.shown) acts.appendChild(btn('Numbers from the recording', () => { if (!touch()) return; if (fromRecording(m)) commit(true); }, 'tiny-btn'));
-      cardEl.appendChild(acts);
+      inner.appendChild(acts);
     }
     /* more: the names, the arithmetic, the gate, the meter */
     const more = details('More about this measurement');
@@ -893,7 +919,7 @@ Moves.ready.then(function () {
       gg.appendChild(field('…and at most', gt.max, (v) => { if (m.gate) { if (v == null || v === '') delete m.gate.max; else m.gate.max = isNaN(Number(v)) ? v : Number(v); } }, { at: at + '.gate.max' })); }
     if (m.band) { gg.appendChild(field('meter from', (m.scale || [])[0], (v) => { m.scale = [v, (m.scale || [])[1]]; }, { type: 'number', at: at + '.scale' })); gg.appendChild(field('meter to', (m.scale || [])[1], (v) => { m.scale = [(m.scale || [])[0], v]; }, { type: 'number', at: at + '.scale' })); }
     gg.appendChild(field('why (a note for the file)', m.why, (v) => { m.why = v; }, { type: 'textarea', rows: 2, wide: true }));
-    more.appendChild(gg); cardEl.appendChild(more);
+    more.appendChild(gg); inner.appendChild(more);
     return cardEl;
   }
   const chipsMulti = (items, current, onchange) => { const c = el('div', 'chips'); const set = new Set(current); for (const [v, t] of items) { const b = btn(t, () => { if (!touch()) return; if (set.has(v)) set.delete(v); else set.add(v); onchange([...set]); commit(true); }); b.setAttribute('aria-pressed', String(set.has(v))); c.appendChild(b); } return c; };

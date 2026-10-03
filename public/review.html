@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en" data-v="2026-10-03a">
+<html lang="en" data-v="2026-10-03b">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>OnTrack — Studio</title>
-<link rel="stylesheet" href="styles.css?v=2026-10-03a">
+<link rel="stylesheet" href="styles.css?v=2026-10-03b">
 </head>
 <body class="review studio">
 <header class="bar" id="bar">
@@ -69,7 +69,7 @@
     </section>
 
     <section class="panel" id="measures-panel">
-      <h2>What is measured <span class="tiny" id="measures-note"></span> <button class="btn tiny-btn" id="numbers-reset" type="button" hidden title="Every number back to the library file's, the rest of your edit kept">The library's numbers</button></h2>
+      <h2>What is measured <span class="tiny" id="measures-note"></span> <button class="btn tiny-btn" id="measures-fold" type="button" hidden>Close all</button> <button class="btn tiny-btn" id="numbers-reset" type="button" hidden title="Every number back to the library file's, the rest of your edit kept">The library's numbers</button></h2>
       <p class="tiny">One card a measurement: what is measured and how it is read, what it is for, when it must be right and between what, and the faults on either side. Classify the reps on the right and every fault's row says where its number should sit.</p>
       <div class="strip" id="rec-summary"><span id="recommend-note"></span><button class="btn" id="recommend-all" type="button" style="display:none">Apply every recommendation</button></div>
       <div id="measures"></div>
@@ -124,6 +124,9 @@
         <button class="btn tiny-btn" id="prev-rep" type="button" title="The rep before">◀ rep</button>
         <button class="btn tiny-btn" id="next-rep" type="button" title="The next rep">rep ▶</button>
         <span class="tiny" id="stage-rep"></span>
+        <button class="btn tiny-btn" id="replay-rep" type="button" title="Play this rep again">↻ replay rep</button>
+        <label class="one-rep" title="Stop at the end of each rep you have not judged yet, until you judge it or play it again"><input type="checkbox" id="one-rep" checked> one rep at a time</label>
+        <span id="rep-wait" aria-live="polite"></span>
       </div>
       <div id="stage-verdict"></div>
       <canvas id="lanes" height="10"></canvas>
@@ -189,20 +192,20 @@
 </div>
 <video id="reader" playsinline muted hidden></video>
 
-<script src="js/core.js?v=2026-10-03a"></script>
-<script src="js/spec.js?v=2026-10-03a"></script>
-<script src="js/moves.js?v=2026-10-03a"></script>
-<script src="js/share.js?v=2026-10-03a"></script>
-<script src="js/trace.js?v=2026-10-03a"></script>
-<script src="js/overlay.js?v=2026-10-03a"></script>
-<script src="js/sound.js?v=2026-10-03a"></script>
-<script src="js/codec.js?v=2026-10-03a"></script>
-<script src="js/mp4.js?v=2026-10-03a"></script>
-<script src="js/speech.js?v=2026-10-03a"></script>
-<script src="js/mixdown.js?v=2026-10-03a"></script>
-<script src="js/figure.js?v=2026-10-03a"></script>
-<script src="js/anatomy.js?v=2026-10-03a"></script>
-<script src="js/review.js?v=2026-10-03a"></script>
-<script src="js/builder.js?v=2026-10-03a"></script>
+<script src="js/core.js?v=2026-10-03b"></script>
+<script src="js/spec.js?v=2026-10-03b"></script>
+<script src="js/moves.js?v=2026-10-03b"></script>
+<script src="js/share.js?v=2026-10-03b"></script>
+<script src="js/trace.js?v=2026-10-03b"></script>
+<script src="js/overlay.js?v=2026-10-03b"></script>
+<script src="js/sound.js?v=2026-10-03b"></script>
+<script src="js/codec.js?v=2026-10-03b"></script>
+<script src="js/mp4.js?v=2026-10-03b"></script>
+<script src="js/speech.js?v=2026-10-03b"></script>
+<script src="js/mixdown.js?v=2026-10-03b"></script>
+<script src="js/figure.js?v=2026-10-03b"></script>
+<script src="js/anatomy.js?v=2026-10-03b"></script>
+<script src="js/review.js?v=2026-10-03b"></script>
+<script src="js/builder.js?v=2026-10-03b"></script>
 </body>
 </html>

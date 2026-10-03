@@ -244,7 +244,7 @@ Moves.ready.then(function () {
   }
   let shownUrl = null;
   function show(rec) {
-    shown = rec; trace = rec; result = rec.result; focusRep = null;
+    shown = rec; trace = rec; result = rec.result; focusRep = null; setWait(null); inRep = null;
     if (shownUrl) { URL.revokeObjectURL(shownUrl); shownUrl = null; }
     if (rec.file) { shownUrl = URL.createObjectURL(rec.file); video.src = shownUrl; } else { video.removeAttribute('src'); video.load(); }
     $('render-demo').disabled = !rec.file;
@@ -274,12 +274,55 @@ Moves.ready.then(function () {
   function focusOn(rec, i) {
     if (rec !== shown) show(rec);
     focusRep = i; const r = rec.reps[i]; if (!r) return;
+    setWait(null); inRep = null;
     if (video.duration) video.currentTime = r.t0 / 1000; else { drawOverlay(r.t0); }
     drawLanes(); renderReps(); renderStageBar();
     if (window.innerWidth < 900) $('stage-wrap').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   $('prev-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.max(0, focusRep - 1)); };
   $('next-rep').onclick = () => { if (shown && shown.reps.length) focusOn(shown, focusRep == null ? 0 : Math.min(shown.reps.length - 1, focusRep + 1)); };
+
+  /* ---------- one rep at a time: playing stops at the end of a rep not yet judged, and waits there
+     until it is judged or played again. Play while it waits replays the rep; once judged, play goes on
+     to the next, and Clean or Not a rep goes on by itself. ---------- */
+  let waitRep = null, inRep = null, repLoop = 0;
+  const oneRep = () => !!($('one-rep') && $('one-rep').checked);
+  const judgedRep = (rec, r) => { const l = Trace.labelOf(rec.labels, r); return !!l && !l.provisional; };
+  const repAtTime = (t) => { const reps = shown ? shown.reps : []; for (let i = 0; i < reps.length; i++) if (t >= reps[i].t0 && t < reps[i].t1) return i; return null; };
+  function setWait(i) {
+    waitRep = i;
+    const el = $('rep-wait'); if (!el) return;
+    const r = i != null && shown ? shown.reps[i] : null;
+    el.textContent = !r ? '' : judgedRep(shown, r) ? `${repName(r, shown)}: judged — add any other fault, or play for the next rep` : `${repName(r, shown)}: give your verdict, or play to see it again`;
+  }
+  function watchRep() {
+    cancelAnimationFrame(repLoop);
+    const tick = () => {
+      if (video.paused || video.ended || !shown) return;
+      const t = video.currentTime * 1000, r = inRep != null ? shown.reps[inRep] : null;
+      if (oneRep() && r && t >= r.t1 && !judgedRep(shown, r)) {
+        const i = inRep; inRep = null;
+        video.pause(); video.currentTime = r.t1 / 1000;
+        focusRep = i; setWait(i); drawOverlay(r.t1); drawLanes(); renderReps();
+        return;
+      }
+      inRep = repAtTime(t);
+      repLoop = requestAnimationFrame(tick);
+    };
+    repLoop = requestAnimationFrame(tick);
+  }
+  video.addEventListener('play', () => {
+    const r = waitRep != null && shown ? shown.reps[waitRep] : null;
+    /* still waiting at the rep's end and not judged: play shows it again */
+    if (r && !judgedRep(shown, r) && Math.abs(video.currentTime * 1000 - r.t1) < 400) { video.currentTime = r.t0 / 1000; inRep = waitRep; }
+    setWait(null);
+    watchRep();
+  });
+  $('replay-rep').onclick = () => {
+    if (!shown || !video.duration) return;
+    const i = waitRep != null ? waitRep : focusRep != null ? focusRep : repAtTime(video.currentTime * 1000); if (i == null || !shown.reps[i]) return;
+    setWait(null); focusRep = i; inRep = i; video.currentTime = shown.reps[i].t0 / 1000; video.play();
+  };
 
   /* ---------- the reps, one by one ---------- */
   let focusRep = null;
@@ -360,6 +403,10 @@ Moves.ready.then(function () {
       else if (set.has(v)) set.delete(v); else set.add(v);
       return set.size ? { tag: 'faults', faults: [...set] } : { tag: 'clean', faults: [] };
     });
+    /* the rep the video is waiting on: Clean or Not a rep goes on to the next; a fault waits for any other */
+    if (waitRep != null && rec === shown && seg === rec.reps[waitRep] && row.dataset.kind === 'rep') {
+      if ((v === 'clean' || v === 'skip') && judgedRep(rec, seg)) { setWait(null); video.play(); } else setWait(waitRep);
+    }
   }, true);
 
   /* ---------- the numbers recommended from the verdicts, pooled over every recording ---------- */
@@ -391,6 +438,9 @@ Moves.ready.then(function () {
   function renderSuggest() { clearTimeout(suggestTimer); suggestTimer = setTimeout(discoverNow, 250); }
   function discoverNow() {
     const host = $('suggest'), noteEl = $('suggest-note'); if (!host) return;
+    /* suggestions wait for every rep to have the person's verdict: half-classified, the gaps they find are the unclassified reps' */
+    const reps = recordings.reduce((a, r) => a + r.reps.length, 0), judged = recordings.reduce((a, r) => a + r.reps.filter((x) => { const l = Trace.labelOf(r.labels, x); return l && !l.provisional; }).length, 0);
+    if (recordings.length && judged < reps) { host.innerHTML = `<p class="tiny muted">Suggestions appear once every rep has your verdict — ${judged} of ${reps} so far.</p>`; noteEl.textContent = ''; lastDiscovery = null; return; }
     if (!Trace.discover || !recordings.length) { host.innerHTML = `<p class="tiny muted">${recordings.length ? '' : 'Load a recording and classify its reps; anything that tells the reps you mark apart is suggested here.'}</p>`; noteEl.textContent = ''; lastDiscovery = null; return; }
     let d;
     try { d = Trace.discover(move, runs(), { describe: (m) => W.describe(m, move.spec) }); } catch (e) { host.innerHTML = `<p class="tiny muted">Could not look: ${esc(e.message || e)}</p>`; return; }
@@ -417,7 +467,7 @@ Moves.ready.then(function () {
           ? (row.existing.hasFault ? `<span class="tiny">already built as <b>${esc(row.existing.label || row.existing.key)}</b> — its number is tuned in its card above</span>` : `<button class="btn tiny-btn" type="button" data-act="fault" data-g="${gi}" data-r="${ri}">Add a fault on ‘${esc(row.existing.label || row.existing.key)}’</button>`)
           : `<button class="btn tiny-btn" type="button" data-act="add" data-g="${gi}" data-r="${ri}">Add this measure and a fault</button>`;
         const also = row.also && row.also.length ? `<span class="tiny"> · moves with: ${row.also.slice(0, 3).map((a) => esc((a.words && a.words.what) || (a.measurement && a.measurement.key) || '')).join(', ')}${row.also.length > 3 ? ` and ${row.also.length - 3} more` : ''}</span>` : '';
-        return `<div class="suggest-row${row.status === 'existing' ? ' existing' : ''}"><div><b>${esc(sentence)}</b></div>${dots(row)}<div class="why">${esc(w.meaning || '')}${w.meaning ? ' ' : ''}${esc(row.why || '')}${also}</div><div class="row">${act}</div></div>`;
+        return `<div class="suggest-row${row.status === 'existing' ? ' existing' : ''}"><div><span class="sugg-tag">Suggestion</span><b>${esc(sentence)}</b></div>${dots(row)}<div class="why">${esc(w.meaning || '')}${w.meaning ? ' ' : ''}${esc(row.why || '')}${also}</div><div class="row">${act}</div></div>`;
       }).join('') + '</div>';
     }).join('');
     host.querySelectorAll('button[data-act]').forEach((b) => { b.onclick = () => { const g = groups[Number(b.dataset.g)], row = g.rows[Number(b.dataset.r)]; if (!window.__builder) return; if (b.dataset.act === 'add') window.__builder.addDiscovered(row, g); else window.__builder.addFaultOn(row, g); }; });

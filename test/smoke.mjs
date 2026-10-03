@@ -1080,6 +1080,9 @@ try {
     const suggested = Number((await recLine()).match(/Move the number to (\d+)°/)[1]);
     assert.ok(suggested < 14 && suggested > -10, 'under the marked rep, over the clean one: ' + suggested);
     /* Apply writes the draft's own number: the input in the sentence, the file, the coach's copy */
+    /* the cards open closed: the head and a line of what each holds; the fault's card is opened to reach its button */
+    assert.equal(await page.$$eval('#measures .mcard', (l) => l.every((c) => c.classList.contains('collapsed'))), true, 'every card starts closed');
+    await page.evaluate(() => document.querySelector('#measures .rec[data-fault="hipHigh"]').closest('.mcard').querySelector('.fold').click());
     await page.click('#measures .rec[data-fault="hipHigh"] button[data-key="overMax"]');
     await page.waitForFunction((v) => Number(document.getElementById('def-overMax').value) === v, suggested, { timeout: 5000 });
     await rowSays(/fine as it is/);

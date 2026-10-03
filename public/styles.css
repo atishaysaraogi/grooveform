@@ -490,6 +490,19 @@ body.studio .bar .note.bad { color: var(--bad); }
 .mcard .rec ul { margin: 4px 0 0; padding-left: 18px; }
 .mcard .meaning { color: var(--muted); font-size: .82rem; line-height: 1.4; margin: 2px 0 6px; }
 .mcard .mhead b.what { font-size: .98rem; }
+/* a card closes to its head: what it is, its values, and a line of what it holds */
+.mcard .fold { padding: 0 7px; min-height: 0; font-size: .8rem; }
+.mcard .msum { flex-basis: 100%; color: var(--muted); font-size: .8rem; }
+.mcard:not(.collapsed) .msum { display: none; }
+.mcard.collapsed { gap: 0; }
+.mcard.collapsed.has-bad .msum::after { content: ' · something to fix inside'; color: var(--bad); font-weight: 700; }
+.mcard.collapsed.has-warn .msum::after { content: ' · something to look at inside'; color: var(--warn); font-weight: 700; }
+/* a measure the studio found, not one the exercise has */
+.sugg-tag { display: inline-block; font: 800 .68rem var(--font-body); text-transform: uppercase; letter-spacing: .06em; color: #06121f; background: var(--warn); border-radius: 999px; padding: 1px 7px; margin-right: 6px; vertical-align: 1px; }
+/* one rep at a time */
+.stage-bar .one-rep { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--muted); }
+#rep-wait { font-size: .84rem; color: var(--warn); font-weight: 700; }
+#rep-wait:empty { display: none; }
 .mcard .fault-row .edge { color: var(--muted); font-size: .82rem; flex-basis: 100%; }
 .mcard .fault-row .more-f { display: grid; gap: 6px; flex-basis: 100%; padding: 6px 0 2px 8px; border-left: 2px solid var(--line); }
 .mcard .sentence .ghost { color: var(--muted); font-size: .82rem; }
