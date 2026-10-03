@@ -37,6 +37,7 @@
     gapMs: 1500,          // the least silence between any two cues
     settleMs: 700,        // how long in position before the hold clock starts
     returnMs: 400,        // how long back at the start before a rep is over: a frame or two of the model swapping the legs is not a return
+    holdShort: 'stop',    // reps, back down before the hold at the top was done: 'stop', not counted; 'note', counted and the short hold said
     holdTargetSec: 60,    // the set: this many seconds in position
     restSec: 2,           // reps: the quiet after one is counted before the next is asked for
     readyMs: 3000,        // how long the start position is held, still, before the coaching begins: the picture is checked meanwhile
@@ -605,6 +606,17 @@
        The clock is the same clock as a held set, only per rep and reset at the top
        of each one, so the time calls, the settle and the one-at-a-time rule are all
        the shared ones rather than a second implementation that could drift. */
+    /* a rep counted, with a remark about it said on the count */
+    countRep(t, remark) {
+      const total = this.cfg.repCount;
+      this.reps += 1; this.repHoldMs = 0;
+      this.phase = this.reps >= total ? 'done' : 'down';
+      this.countedAt = t;
+      const tail = remark ? ` \u2014 ${remark}` : '';
+      return this.phase === 'done'
+        ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
+        : this.offer('count' + this.reps, t, String(this.reps) + tail, true);
+    }
     stepReps(r, t, v, dt) {
       const cfg = this.cfg, C = this.cues;
       const targetMs = cfg.holdTargetSec * 1000, total = cfg.repCount;
@@ -629,25 +641,24 @@
         this.phase = 'up'; this.repHoldMs = 0; this.inSince = 0; this.called = {}; this.peak = null;
       } else if (this.phase === 'up') {
         if (this.repHoldMs >= targetMs) { this.phase = 'lower'; this.lowerAt = t; cue = this.offer('lower', t, C.lower.text, true); }
-        else if (atStart) {
+        else if (atStart && cfg.holdShort === 'note') {
+          /* the hold as a note, not a rule: the rep reached the top and came back, so it
+             counts, and the words for a short hold ride on the count */
+          this.shortReps = (this.shortReps || 0) + 1;
+          cue = this.countRep(t, C.early.text);
+        } else if (atStart) {
           /* back down before the hold was finished: nothing to count, and worth saying
              so, because the alternative is someone quietly doing ten half reps */
           this.phase = 'down'; this.repHoldMs = 0;
           cue = this.offer('early', t, C.early.text, true);
         }
       } else if (this.phase === 'lower' && atStart) {
-        this.reps += 1; this.repHoldMs = 0;
-        this.phase = this.reps >= total ? 'done' : 'down';
         /* "lower slowly" is judged, not just said: a move that names how long the
            lowering should take is told when it took less. The remark rides on the
            count rather than queueing behind it, so it lands on the rep it is about. */
         const fast = cfg.lowerSec > 0 && this.lowerAt && this.downSince - this.lowerAt < cfg.lowerSec * 1000;   // from the top to the moment the return began
         if (fast) this.fastReps = (this.fastReps || 0) + 1;
-        this.countedAt = t;
-        const tail = fast ? ` \u2014 ${C.fast.text}` : '';
-        cue = this.phase === 'done'
-          ? this.offer('done', t, `${total} reps \u2014 done${tail}`, true)
-          : this.offer('count' + this.reps, t, String(this.reps) + tail, true);
+        cue = this.countRep(t, fast ? C.fast.text : null);
       }
 
       const leftMs = Math.max(0, targetMs - this.repHoldMs);
@@ -808,7 +819,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03e';
+  const VER = '2026-10-03f';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

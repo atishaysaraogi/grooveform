@@ -836,7 +836,7 @@ Moves.ready.then(function () {
     if (none) { host.appendChild(el('p', 'tiny muted', 'The counting, the clocks and the corrections start the moment the body is in the picture. The set-up wait’s checks of the framing, the light and the room for the movement go with it.')); startFeedback(); return; }
     /* how long */
     const hold = el('div', 'sentence'); hold.dataset.at = 'defaults.readyMs';
-    hold.appendChild(words('Before the coaching begins they hold it, still and seen, for'));
+    hold.appendChild(words('Before the coaching begins they stay in it, seen, for'));
     hold.appendChild(num(+(readyMsOf() / 1000).toFixed(2), (v) => { d.defaults.readyMs = Math.max(0, Math.round((v == null ? Core.COMMON.readyMs / 1000 : v) * 1000)); }, null, 'seconds; 0: the moment it is reached'));
     hold.appendChild(words('seconds (0: the moment it is reached). Meanwhile nothing is judged, counted or said but the framing, the light and the room for the movement.'));
     host.appendChild(hold);
@@ -1178,7 +1178,8 @@ Moves.ready.then(function () {
     const host = $('numbers-form'); host.innerHTML = '';
     const d = draft;
     let g = grid('tight');
-    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number', at: 'defaults.repCount', def: 'repCount' })); g.appendChild(field('Hold at the top, seconds (0: the rep counts on reaching the top and coming back)', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec', def: 'holdTargetSec' })); }
+    if (d.type === 'reps') { g.appendChild(field('Reps in a set', d.defaults.repCount, (v) => { d.defaults.repCount = v; }, { type: 'number', at: 'defaults.repCount', def: 'repCount' })); g.appendChild(field('Hold at the top, seconds (0: the rep counts on reaching the top and coming back)', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec', def: 'holdTargetSec' }));
+      g.appendChild(field('Down before the hold is done', d.defaults.holdShort === 'note' ? 'note' : 'stop', (v) => { if (v === 'note') d.defaults.holdShort = 'note'; else delete d.defaults.holdShort; }, { options: [['stop', 'a rule: the rep is not counted'], ['note', 'a note: the rep counts, and the short hold is said']], at: 'defaults.holdShort' })); }
     else g.appendChild(field('Hold the position for, seconds', d.defaults.holdTargetSec, (v) => { d.defaults.holdTargetSec = v; }, { type: 'number', at: 'defaults.holdTargetSec', def: 'holdTargetSec' }));
     g.appendChild(field('Sets', d.defaults.setCount, (v) => { d.defaults.setCount = v; }, { type: 'number', at: 'defaults.setCount', def: 'setCount' }));
     if (d.type === 'hold') g.appendChild(field('Time calls, seconds left', list(d.defaults.callAtSec), (v) => { d.defaults.callAtSec = fromList(v).map(Number).filter((n) => n > 0); }, { at: 'defaults.callAtSec' }));

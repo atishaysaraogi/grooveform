@@ -828,6 +828,7 @@
       if (!f.prompt || !f.prompt.text) err('prompt', 'the words that ask for the movement');
       if (typeof defaults.repCount !== 'number') warn('defaults.repCount', 'reps in a set, 10 unless said');
       if (typeof defaults.holdTargetSec !== 'number') warn('defaults.holdTargetSec', 'the hold at the top, in seconds');
+      if (defaults.holdShort != null && defaults.holdShort !== 'stop' && defaults.holdShort !== 'note') err('defaults.holdShort', "'stop' (a short hold is not counted) or 'note' (it counts, and is said)");
     } else {
       if (typeof defaults.holdTargetSec !== 'number') warn('defaults.holdTargetSec', 'the hold, in seconds (60 unless said)');
     }

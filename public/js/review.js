@@ -361,6 +361,7 @@ Moves.ready.then(function () {
     if (w.unseenMs > 300) parts.push(`not trusted for ${sec(w.unseenMs)}` + (w.edgeMs ? ' \u2014 ' + Object.entries(w.edgeParts).map(([part, ms]) => `the ${part} at the edge of the picture for ${sec(ms)}`).join(', ') : ''));
     if (!r.counted && !r.open) parts.push(r.early ? `back at the start (${past === '≥' ? '≤' : '≥'} ${fmtV(w.downAt, w.unit)} for ${sec(w.returnMs)}) before the hold was done — not counted` : 'not counted');
     if (r.counted && w.targetMs === 0) parts.push('counted on reaching the top and coming back — no hold asked');
+    if (r.counted && w.targetMs > 0 && r.holdMs < w.targetMs) parts.push('counted with a note — the hold was short, and this exercise treats the hold as a note');
     return parts.join(' · ');
   }
   function renderReps() {

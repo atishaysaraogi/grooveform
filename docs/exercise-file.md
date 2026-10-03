@@ -468,12 +468,13 @@ settings a file wants to change. The shared ones and their app-wide defaults:
 | key | default | meaning |
 |---|---|---|
 | `holdTargetSec` | 60 | a hold's target; a rep's hold at the top |
+| `holdShort` | `"stop"` | a rep back down before its hold at the top was done: `"stop"` does not count it and says the `early` words; `"note"` counts it and says them on the count |
 | `callAtSec` | [45, 30, 10, 5] | seconds left at which the time is called |
 | `repCount` | — | reps in a set (10 in every file so far) |
 | `setCount` | 3 | sets in a session |
 | `lowerSec` | — | "lower slowly" is judged: a lowering quicker than this is remarked on |
 | `restSec` | 2 | the quiet after a rep is counted |
-| `readyMs` | 3000 | the start position held this long, still, before coaching begins; the picture is checked meanwhile |
+| `readyMs` | 3000 | the start position held this long, seen and in it throughout, before coaching begins; the picture is checked meanwhile |
 | `deepAt` | 18 | degrees past the band at which the stronger words are used |
 | `persistMs` | 500 | a fault holds this long before it is said |
 | `cooldownMs` | 4000 | the same cue not again inside this |

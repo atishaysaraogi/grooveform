@@ -1345,6 +1345,11 @@ try {
     await page.uncheck('#start-form label[data-at="ready"] input');
     jr = JSON.parse(await page.inputValue('#build-json'));
     assert.deepEqual([jr.defaults.readyMs, jr.ready], [undefined, { atStart: true, ranges: { shin: [45, 150] } }], 'and back as it was');
+    /* the hold at the top: a rule by default, a note when picked */
+    assert.equal(await page.$eval('#numbers-form [data-at="defaults.holdShort"] select', (s) => s.value), 'stop', 'the hold is a rule unless the file says');
+    await page.$eval('#numbers-form [data-at="defaults.holdShort"] select', (s) => { s.value = 'note'; s.dispatchEvent(new Event('change')); });
+    jr = JSON.parse(await page.inputValue('#build-json'));
+    assert.equal(jr.defaults.holdShort, 'note', 'a note: written to the file');
     await page.click('#build-drop');
     await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose

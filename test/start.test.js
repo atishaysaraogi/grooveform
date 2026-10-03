@@ -58,3 +58,25 @@ test('no start position: no rule and no time, and the coaching begins on the fir
   /* the words only: the rep's start is still the default */
   assert.equal(hold(bridge({ nudge: 'Lie down' }), Rig.TOP, 4000).readyAt, null, 'a nudge alone leaves the start as it was');
 });
+
+test('the hold at the top as a rule or as a note', () => {
+  /* the bridge with a long hold the rig's quick rep cannot meet */
+  const run = (holdShort) => {
+    const M = bridge(undefined, Object.assign({ holdTargetSec: 5 }, holdShort ? { holdShort } : {}));
+    if (M.reset) M.reset();
+    const c = new Core.Coach(M, {});
+    const said = []; let last = null;
+    for (const { t, lm } of Rig.take([[Rig.REST, 4000], [Rig.TOP, 2500], [Rig.REST, 3000]])) {
+      last = c.step(M.read(lm, Rig.ASPECT, c.cfg), t);
+      if (last.cue) said.push(last.cue.text);
+    }
+    return { reps: last.reps, said };
+  };
+  const rule = run(), note = run('note');
+  assert.equal(rule.reps, 0, 'a rule: down before the hold is done, not counted');
+  assert.ok(rule.said.some((w) => w === Moves.bridge.spec.words.early), 'and the early words said: ' + rule.said.join(' | '));
+  assert.equal(note.reps, 1, 'a note: the rep counts');
+  assert.ok(note.said.some((w) => w.startsWith('1 — ') && w.includes(Moves.bridge.spec.words.early)), 'the short hold said on the count: ' + note.said.join(' | '));
+  const f = JSON.parse(JSON.stringify(Moves.bridge.spec)); f.defaults.holdShort = 'maybe';
+  assert.ok(Spec.check(f).some((p) => p.level === 'error' && p.at === 'defaults.holdShort'), 'anything else is an error in the file');
+});
