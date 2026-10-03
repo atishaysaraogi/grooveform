@@ -48,6 +48,9 @@
       for (const id of Object.keys(library)) { Moves[id] = library[id]; delete library[id]; }
       order(); return null;
     }
+    /* one draft at a time: a draft under another id is this one before a rename, or one already given up — gone,
+       and any library move it stood over back */
+    for (const m of Moves.list.slice()) if (m.draft && m.id !== json.id) { delete Moves[m.id]; if (library[m.id]) { Moves[m.id] = library[m.id]; delete library[m.id]; } }
     if (Moves[json.id] && !Moves[json.id].draft) library[json.id] = Moves[json.id];
     return add(json, { draft: true });
   }

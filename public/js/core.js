@@ -416,7 +416,9 @@
        movement. */
     relate(r) {
       const fs = this.move.fromStart; if (!fs || !fs.length || !r || !r.ok) return;
-      if (!this.ready || !this.base) { this.base = this.base || {}; for (const { key, how } of fs) if ((how !== 'peak' && how !== 'belowPeak') || this.base[key] == null) this.base[key] = r[key]; }   // before ready the reference is the reading itself: no change, so the start can be held
+      /* a later set of an exercise read against its own start: judged against the last set's start while it settles, the raw readings kept to take the new references from */
+      if (!this.ready && this.prevBase) { this.raws = {}; for (const { key } of fs) this.raws[key] = r[key]; this.base = Object.assign({}, this.prevBase); }
+      else if (!this.ready || !this.base) { this.base = this.base || {}; for (const { key, how } of fs) if ((how !== 'peak' && how !== 'belowPeak') || this.base[key] == null) this.base[key] = r[key]; }   // before ready the reference is the reading itself: no change, so the start can be held
       for (const { key, how } of fs) {
         const raw = r[key];
         /* peak: against the most it has been in the set, which only climbs — a length that
@@ -459,6 +461,8 @@
        fresh coach, so the set-up wait and every reference taken in it start again — the start
        position's baselines, the floor, the side. The count carries on. */
     newSet() {
+      /* an exercise whose start is read against itself is judged, while the next set settles, against the last set's start */
+      this.prevBase = this.base && this.selfStart() ? Object.assign({}, this.base) : null; this.waitSince = 0;
       this.ready = false; this.readySince = 0; this.base = null; this.repRaw = null; delete this.cfg.floorAt;
       this.phase = 'down'; this.repHoldMs = 0; this.countedAt = 0; this.inSince = 0; this.runMs = 0; this.downSince = 0;
       this.since = {}; this.offSince = 0; this.lastNudge = 0; this.peak = null; this.awaySince = 0; this.unseenSince = 0;
@@ -484,11 +488,11 @@
         } else {
           this.unseenSince = 0;
           /* in the picture, away from the start: between reps, or up but never in position (a rest that reads as raised) */
-          const off = reps && !v.atStart && (this.phase === 'down' || (this.phase === 'up' && !v.inPosition));
+          const off = reps && !v.atStart && (this.phase === 'down' || ((this.phase === 'up' || this.phase === 'lower') && !v.inPosition));
           if (off) {
             if (!this.awaySince) this.awaySince = t;
             /* up but out of position may be a long attempt: it gets the rep's own span before it reads as a rest */
-            const span = this.phase === 'up' ? (cfg.settleMs || 0) + cfg.holdTargetSec * 1000 + (cfg.lowerSec || 0) * 1000 : 0;
+            const span = this.phase !== 'down' ? (cfg.settleMs || 0) + cfg.holdTargetSec * 1000 + (cfg.lowerSec || 0) * 1000 : 0;
             if (t - this.awaySince >= brk + span) this.breakDue = true;
           } else if (this.breakDue && reps && v.atStart) {
             if (this.phase === 'lower') this.awaySince = 0;   // a held rep on its way back: counted first, the new set on a later frame at the start
@@ -518,13 +522,15 @@
       }
       this.lostSince = 0;
       if (!this.ready) {
+        /* not back at the last set's start within the set-up wait: the start is read against itself again, with the full wait */
+        if (this.prevBase) { if (!this.waitSince) this.waitSince = t; else if (t - this.waitSince >= (cfg.readyMs || 0)) { this.prevBase = null; this.base = null; this.readySince = 0; } }
         const at = this.move.ready ? !!this.move.ready(r, v, cfg) : reps ? !!v.atStart : true;
         if (at) {
           if (!this.readySince) { this.readySince = t; this.floorSum = 0; this.floorN = 0; }
           /* the floor: the lowest point of the body over the start position, averaged, fixed from now on */
           if (r && r.floorY != null) { this.floorSum += r.floorY; this.floorN += 1; }
           /* a later set in the studio: back at the start for the return time is enough — the film need not hold still as the phone asks */
-          if (t - this.readySince >= ((this.sets || 1) > 1 && !this.selfStart() ? (cfg.returnMs || 0) : (cfg.readyMs || 0))) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
+          if (t - this.readySince >= ((this.sets || 1) > 1 && (!this.selfStart() || this.prevBase) ? (cfg.returnMs || 0) : (cfg.readyMs || 0))) { this.ready = true; if (this.prevBase) { this.base = Object.assign({}, this.raws || {}); this.prevBase = null; } if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
         } else this.readySince = 0;
         if (!this.ready) {
           /* seen, but not at the start position for a while: a move can say what the start
@@ -879,7 +885,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03l';
+  const VER = '2026-10-03m';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

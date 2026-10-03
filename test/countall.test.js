@@ -116,3 +116,44 @@ test('long attempts held up but out of position, and a dropout while lowering, a
   const drop = Trace.run(M, { countAll: true, repCount: 10, readyMs: 2000, holdTargetSec: 2 }, Rig.take(parts), Rig.ASPECT);
   assert.equal(sets(drop), 1, 'a dropout while lowering is no break');
 });
+
+test('a later set of an exercise read against its own start: a prompt restart is counted, judged against the last set\'s start', () => {
+  const { body, SUPINE, lifted } = require('./fixtures/lying.js');
+  const M = Moves.slr, ALL = ['shoulder', 'ear', 'elbow', 'wrist', 'hip', 'knee', 'ankle', 'heel', 'toe'];
+  const take = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 33) frames.push({ t, lm: body(pose) }); return frames; };
+  const rep = [[lifted(30), 3500], [lifted(15), 1000], [lifted(4), 1200], [SUPINE, 2600]];
+  const three = [...rep, ...rep, ...rep], gone = [Object.assign({}, SUPINE, { hide: ALL }), 30000];
+  const tuned = { countAll: true, holdTargetSec: 2, repCount: 10 };
+  const count = (script) => { if (M.reset) M.reset(); const res = Trace.run(M, tuned, take(script), 16 / 9); return [Trace.reps(res, M).filter((r) => r.counted).length, Math.max(...res.rows.map((r) => (r.out && r.out.set) || 1))]; };
+  for (const g of [500, 1500, 2500]) assert.deepEqual(count([[SUPINE, 4000], ...three, gone, [SUPINE, g], ...three]), [6, 2], `back lying down ${g} ms before the first rep of set 2`);
+  assert.deepEqual(count([[SUPINE, 4000], ...three, gone, [lifted(30), 500], [SUPINE, 3000], ...three]), [6, 2], 'seen first with the leg still up, then lying down');
+});
+
+test('a rest that reads as raised is a break for a rep with no hold, and after a held rep with no pause at the start', () => {
+  const M = Moves.bridge;
+  const shifted = (p) => Object.assign({}, p, { foot: p.foot + 14 });
+  const s2 = [[shifted(Rig.REST), 3000]]; for (let i = 0; i < 3; i++) s2.push([shifted(Rig.TOP), 3500], [shifted(Rig.HALF), 1300], [shifted(Rig.REST), 2600]);
+  const raisedRest = Object.assign({}, Rig.REST, { dip: 30, hipAng: 150 });
+  const look = (res) => { const r = Trace.reps(res, M); return { sets: Math.max(...res.rows.map((x) => (x.out && x.out.set) || 1)), counted: r.filter((x) => x.counted).length, heels: r.some((x) => x.counted && x.faults.some((f) => f.id === 'heelsUp')), line: r.map((x) => (x.counted ? 'rep' : 'x') + '[' + x.faults.map((f) => f.id) + ']').join(' ') }; };
+  const reps3 = []; for (let i = 0; i < 3; i++) reps3.push(...Rig.rep());
+  const noHold = look(Trace.run(M, { countAll: true, holdTargetSec: 0, repCount: 10, readyMs: 2000 }, Rig.take([[Rig.REST, 4000], ...reps3, [raisedRest, 20000], ...s2]), Rig.ASPECT));
+  assert.equal(noHold.sets, 2, 'no hold: ' + noHold.line);
+  assert.equal(noHold.heels, false, 'and the second set against its own start: ' + noHold.line);
+  const reps2 = [...Rig.rep(), ...Rig.rep()];
+  const fromTop = look(Trace.run(M, { countAll: true, holdTargetSec: 2, repCount: 10, readyMs: 2000 }, Rig.take([[Rig.REST, 4000], ...reps2, [Rig.TOP, 3500], [raisedRest, 25000], ...s2]), Rig.ASPECT));
+  assert.equal(fromTop.sets, 2, 'from a held rep: ' + fromTop.line);
+  assert.equal(fromTop.counted, 6, fromTop.line);
+});
+
+test('one draft at a time: a renamed draft leaves no stale entry, and the library move it stood over comes back', () => {
+  const f = JSON.parse(JSON.stringify(Moves.bridge.spec));
+  try {
+    f.defaults.repCount = 17; Moves.draft(f);
+    assert.equal(Moves.bridge.draft, true);
+    const g = JSON.parse(JSON.stringify(f)); g.id = 'mybridge'; Moves.draft(g);
+    assert.deepEqual(Moves.list.filter((m) => m.draft).map((m) => m.id), ['mybridge'], 'only the renamed draft');
+    assert.ok(!Moves.bridge.draft && Moves.bridge.defaults.repCount === 10, 'the library bridge is back');
+    assert.deepEqual(Object.keys(Moves.library), []);
+  } finally { Moves.draft(null); }
+  assert.ok(!Moves.mybridge && !Moves.bridge.draft);
+});

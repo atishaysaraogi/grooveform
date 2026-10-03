@@ -201,10 +201,11 @@ Moves.ready.then(function () {
      (its library exercise, whether its id follows its name), not as a copy of itself */
   const keptDraft = (id) => { try { const k = JSON.parse(localStorage.getItem(DRAFT) || 'null'); return k && k.id === id && k.measurements ? k : null; } catch { return null; } };
   function open(id) {
+    /* the parked draft first, even under its library exercise's own id */
+    const k = Moves[id] && Moves[id].draft ? keptDraft(id) : null;
+    if (k) { start(k, k.auto || {}, { source: k.source || null, touched: true }); return; }
     const m = (Moves.library && Moves.library[id]) || Moves[id]; if (!m) return;
-    const k = m.draft ? keptDraft(id) : null;
-    if (k) start(k, k.auto || {}, { source: k.source || null, touched: true });
-    else start(m.spec, {}, { source: id, touched: !!m.draft });
+    start(m.spec, {}, { source: id, touched: !!m.draft });
   }
   /* the library exercise an exercise in the list belongs to: itself, or a parked draft's own */
   const sourceOf = (id) => { const m = Moves[id], k = m && m.draft ? keptDraft(id) : null; return k ? (k.source || null) : id; };
