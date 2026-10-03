@@ -1058,6 +1058,10 @@ try {
     const high = `#reps li.rep[data-rec="${r2}"]`;
     const rep1 = await page.$eval(high, (x) => x.textContent.replace(/\s+/g, ' ').trim());
     assert.match(rep1, /Hips too high \d+\.\ds–\d+\.\ds said at \d+\.\ds/, 'the rep says what flagged, when, and when it was said: ' + rep1);
+    /* under the video, the rep in focus: the coach's own finding marked on its chip, and said in a line */
+    await page.click(high + ' .rep-head');
+    assert.equal(await page.$eval('#stage-verdict .btn.seen', (b) => b.dataset.v + ' | ' + b.title), 'hipHigh | the coach saw this in the rep — said at ' + rep1.match(/said at (\d+\.\ds)/)[1], 'the fault the coach found, with when it was said');
+    assert.match(await page.textContent('#stage-verdict .saw'), /^the coach saw Hips too high at \d+\.\ds$/);
     /* the person classifies the rep: with the hips past the line. The allowance of eight already
        divides it from the clean recording's rep, so the number is recommended as it is */
     assert.match(await page.textContent('#recommend-note'), /nothing classified yet — 2 reps/);

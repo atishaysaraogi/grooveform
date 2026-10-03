@@ -54,7 +54,7 @@
   'use strict';
 
   const LANDMARKS = ['ear', 'shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle', 'heel', 'toe'];
-  const KINDS = ['angle', 'tilt', 'floor', 'bend', 'rise', 'down', 'distance', 'sum'];
+  const KINDS = ['angle', 'tilt', 'floor', 'bend', 'rise', 'down', 'distance', 'lines', 'sum'];
   const REGIONS = ['shoulder', 'arm', 'forearm', 'thigh', 'ham', 'calf', 'chest', 'back', 'abs', 'oblique', 'neck', 'glute'];
   const TONES = ['tick', 'plain', 'up', 'down', 'walking in', 'walking out', 'hold', 'done', 'call'];
   const LOADS = ['none', 'weight', 'band', 'both'];
@@ -63,37 +63,50 @@
   const VIEWS = ['side', 'front'];
   const ORIENTATIONS = ['wide', 'tall'];
   const POSITIONS = ['standing', 'lying', 'sidelying', 'prone', 'kneeling', 'quadruped', 'seated'];
-  const PICKS = ['clearest', 'left', 'right', 'highest', 'measure'];
+  const PICKS = ['clearest', 'left', 'right', 'highest', 'lowest', 'front', 'back', 'moving', 'measure'];
+  const BY_JOINT = ['highest', 'lowest', 'front', 'back', 'moving'];   // the picks that compare one joint across the two sides
+  const SLOT_KEYS = ['a', 'b', 'c', 'd', 'base', 'top', 'at', 'to', 'from'];
   const DRAWS = ['arc', 'readout', 'plumb', 'floor', 'line'];
   const EDGE = 1e-9;
 
   /* ---------- the geometry, per kind ---------- */
   /* a landmark name → the point: 'knee' from the side being measured, 'L.knee' from
-     that side, 'other.knee' from the side not being measured (the resting leg) */
+     that side, 'other.knee' from the side not being measured (the resting leg), and
+     'upper.knee' / 'lower.knee' / 'front.knee' / 'back.knee' whichever side's knee is
+     higher, lower, further the way the body faces or further back this frame */
   const OTHER = { L: 'R', R: 'L' };
-  function pointOf(name, P, both, side) {
+  const DYNAMIC = ['upper', 'lower', 'front', 'back'];
+  function pointOf(name, P, both, side, facing) {
     if (!name) return null;
     const dot = name.indexOf('.');
     if (dot > 0 && both) {
       const pre = name.slice(0, dot), key = name.slice(dot + 1);
+      if (DYNAMIC.includes(pre)) {
+        const l = both.L && both.L[key], r = both.R && both.R[key];
+        if (!l || !r) return l || r || null;
+        if (pre === 'upper') return l.y <= r.y ? l : r;
+        if (pre === 'lower') return l.y >= r.y ? l : r;
+        const f = facing == null ? 1 : facing;
+        return (pre === 'front') === ((l.x - r.x) * f >= 0) ? l : r;
+      }
       const S = pre === 'other' ? (side ? both[OTHER[side]] : null) : both[pre.toUpperCase()];
       return S ? S[key] || null : null;
     }
     return P[name] || null;
   }
   /* `to` may be a list of names: the first the model is sure of */
-  function resolve(name, P, both, cfg, side) {
+  function resolve(name, P, both, cfg, side, facing) {
     if (Array.isArray(name)) {
-      for (const n of name) { const p = pointOf(n, P, both, side); if (p && p.v >= cfg.vis) return { p, name: n }; }
+      for (const n of name) { const p = pointOf(n, P, both, side, facing); if (p && p.v >= cfg.vis) return { p, name: n }; }
       const last = name[name.length - 1];
-      return { p: pointOf(last, P, both, side), name: last };
+      return { p: pointOf(last, P, both, side, facing), name: last };
     }
-    return { p: pointOf(name, P, both, side), name };
+    return { p: pointOf(name, P, both, side, facing), name };
   }
   function measure(m, ctx) {
     const { P, both, cfg, facing, Core, values, side } = ctx;
     const pts = [];
-    const pt = (k) => { const got = resolve(m[k], P, both, cfg, side); pts.push(got.p); return got; };
+    const pt = (k) => { const got = resolve(m[k], P, both, cfg, side, facing); pts.push(got.p); return got; };
     let x = null, used = {};
     switch (m.kind) {
       case 'angle': { const a = pt('a'), b = pt('b'), c = pt('c'); used = { a: a.name, b: b.name, c: c.name };
@@ -108,13 +121,16 @@
         x = a.p && b.p ? Core.rise(a.p, b.p) : null; break; }
       case 'down': { const a = pt('from'), b = pt('to'); used = { from: a.name, to: b.name };
         x = a.p && b.p ? Core.fromDown(a.p, b.p) : null; break; }
+      case 'lines': { const a = pt('a'), b = pt('b'), c = pt('c'), d = pt('d'); used = { a: a.name, b: b.name, c: c.name, d: d.name };
+        /* the angle between the a→b and c→d lines: 0 parallel the same way, 90 square — a shin and a trunk kept parallel */
+        x = a.p && b.p && c.p && d.p ? Core.betweenLines(a.p, b.p, c.p, d.p) : null; break; }
       case 'distance': { const a = pt('a'), b = pt('b'); used = { a: a.name, b: b.name };
         if (a.p && b.p) {
           /* `axis`: the height of b over a ('y', + above) or how far b is ahead of a the way the body
              faces ('x'), each as a share of `per` — a hand's width is two degrees at a metre's
              distance, so a small lift wants a length, not an angle */
           x = m.axis === 'y' ? a.p.y - b.p.y : m.axis === 'x' ? (b.p.x - a.p.x) * facing : Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y);
-          if (m.per) { const c = resolve(m.per[0], P, both, cfg, side), d = resolve(m.per[1], P, both, cfg, side); const ref = c.p && d.p ? Math.hypot(c.p.x - d.p.x, c.p.y - d.p.y) : 0; x = ref ? x / ref : null; }
+          if (m.per) { const c = resolve(m.per[0], P, both, cfg, side, facing), d = resolve(m.per[1], P, both, cfg, side, facing); const ref = c.p && d.p ? Math.hypot(c.p.x - d.p.x, c.p.y - d.p.y) : 0; x = ref ? x / ref : null; }
         }
         break; }
       case 'sum': {
@@ -224,8 +240,8 @@
        frame to frame on the model's wobble alone, and the drawn leg and every number
        would jump between the two sides' points (a recorded take flipped 47 times in a
        minute at rest). With `side.hold` the other side takes over only when it leads by
-       `margin` — for `highest`, a share of the distance from the hip to that joint; for
-       `measure`, in the measurement's own units — for `frames` frames in a row, or at
+       `margin` — for a pick by a joint, a share of the distance from the hip to that joint;
+       for `measure`, in the measurement's own units — for `frames` frames in a row, or at
        once when the held side can no longer be seen. A session starts afresh (reset(),
        called by a new coach). */
     const hold = f.side && f.side.hold ? { margin: f.side.hold.margin == null ? 0.25 : f.side.hold.margin, frames: f.side.hold.frames == null ? 5 : f.side.hold.frames } : null;
@@ -267,23 +283,33 @@
       }
       let best;
       const mm = pick === 'measure' ? byKey[f.side.measure] : null;
-      const val = (o) => (mm ? measure(mm, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg, o.side), Core, values: {}, side: o.side }).x || 0 : 0);   // null reads as 0, as a leg not seen lifted
-      if (pick === 'highest' && f.side.joint) best = usable.slice().sort((a, b) => ((-pointOf(f.side.joint, b.P, both, b.side).y) - (-pointOf(f.side.joint, a.P, both, a.side).y)) || (b.vis - a.vis))[0];
-      else if (mm) best = usable.slice().sort((a, b) => (val(b) - val(a)) || (b.vis - a.vis))[0];
-      else best = usable.slice().sort((a, b) => b.vis - a.vis)[0];
-      if (hold && (pick === 'highest' || mm)) {
+      const J = f.side && f.side.joint, byJoint = !!J && BY_JOINT.includes(pick);
+      /* The score a side is picked on, the higher winning: a joint's height, its lead the way
+         the body faces, how far it has moved over the last half second, or a measurement.
+         Heights, leads and travel are in lengths of the hip-to-joint line (the trunk when the
+         joint is the hip itself), so a hold's margin means the same on every body; a
+         measurement is in its own units. The clearest side decides which way the body faces. */
+      const fc = pick === 'front' || pick === 'back' ? (() => { const c = usable.slice().sort((a, b) => b.vis - a.vis)[0]; return c ? facingOf(c.P, both, cfg, c.side) : 1; })() : 1;
+      const unit = (o) => { const j = pointOf(J, o.P, both, o.side), hip = pointOf('hip', o.P, both, o.side), ref = J === 'hip' ? pointOf('shoulder', o.P, both, o.side) : j; return ref && hip ? Math.hypot(hip.x - ref.x, hip.y - ref.y) || 1 : 1; };
+      /* each side's joint over the last fifteen frames: the furthest it has been from where it is now */
+      const travel = (o) => { const j = pointOf(J, o.P, both, o.side); if (!j) return 0; const h = hist['pos.' + o.side] || (hist['pos.' + o.side] = []); h.push({ x: j.x, y: j.y }); if (h.length > 15) h.shift(); let far = 0; for (const q of h) far = Math.max(far, Math.hypot(j.x - q.x, j.y - q.y)); return far / unit(o); };
+      const score = (o) => {
+        if (mm) return measure(mm, { P: o.P, both, cfg, facing: facingOf(o.P, both, cfg, o.side), Core, values: {}, side: o.side }).x || 0;   // null reads as 0, as a leg not seen lifted
+        if (!byJoint) return 0;
+        if (pick === 'moving') return travel(o);
+        const j = pointOf(J, o.P, both, o.side); if (!j) return -Infinity;
+        return pick === 'highest' ? -j.y : pick === 'lowest' ? j.y : pick === 'front' ? j.x * fc : -j.x * fc;
+      };
+      const scored = usable.map((o) => ({ o, s: score(o) }));
+      best = scored.slice().sort((a, b) => (b.s - a.s) || (b.o.vis - a.o.vis))[0].o;
+      if (hold && (mm || byJoint)) {
         const cur = usable.find((o) => o.side === held.side);
         if (!cur) { held.side = best.side; held.want = null; held.run = 0; }
         else if (best.side !== cur.side) {
-          /* how far the other side leads: the joint's height in hip-to-joint lengths, or the measurement */
-          let lead = 0;
-          if (pick === 'highest') {
-            const jc = pointOf(f.side.joint, cur.P, both, cur.side), jo = pointOf(f.side.joint, best.P, both, best.side), hip = pointOf('hip', cur.P, both, cur.side);
-            /* the lead in hip-to-joint lengths; picked by the hip itself, in lengths of the trunk */
-            const ref = f.side.joint === 'hip' ? pointOf('shoulder', cur.P, both, cur.side) : jc;
-            const scale = ref && hip ? Math.hypot(hip.x - ref.x, hip.y - ref.y) : 0;
-            lead = jc && jo && scale ? (jc.y - jo.y) / scale : 0;
-          } else lead = val(best) - val(cur);
+          /* how far the other side leads: a position's lead in lengths of the held side's hip-to-joint
+             line, travel already in those lengths, a measurement in its own units */
+          const sOf = (o) => scored.find((q) => q.o === o).s;
+          const lead = (sOf(best) - sOf(cur)) / (mm || pick === 'moving' ? 1 : unit(cur));
           if (lead > hold.margin) { held.run = held.want === best.side ? held.run + 1 : 1; held.want = best.side; if (held.run >= hold.frames) { held.side = best.side; held.want = null; held.run = 0; } }
           else { held.want = null; held.run = 0; }
         } else { held.want = null; held.run = 0; }
@@ -363,9 +389,9 @@
     /* what is drawn when the angles are asked for */
     const drawList = f.draw || [];
     function draw(d, r, v) {
-      const P = r.points;
-      /* a plain name from the side measured; other.knee from the other side */
-      const one = (n) => (String(n).startsWith('other.') ? (r.other && r.other[n.slice(6)]) || null : P[n] || null);
+      const P = r.points, bothSides = { [r.side]: P, [OTHER[r.side]]: r.other };
+      /* a plain name from the side measured; other.knee, L.knee, upper.knee as the measurements read them */
+      const one = (n) => pointOf(String(n), P, bothSides, r.side, r.facing);
       const at = (name) => {
         if (!name) return null;
         const i = String(name).indexOf(':');
@@ -387,6 +413,7 @@
           else if (m.kind === 'tilt') { const a = at(u.base), b = at(u.top); if (a && b) d.angleTo(a, b, 0, raw, ok, size); }
           else if (m.kind === 'floor') { const a = at(u.at), b = at(u.to); if (a && b) d.angleTo(a, b, r.facing, raw, ok, size); }
           else if (m.kind === 'down') { const a = at(u.from), b = at(u.to); if (a && b) d.angleTo(a, b, 'down', raw, ok, size); }
+          else if (m.kind === 'lines') { const a = at(u.a), b = at(u.b), c = at(u.c), e = at(u.d); if (a && b && c && e) { d.guide(a, b, ok); d.guide(c, e, ok); d.readout(b, raw, ok, 1); } }
         }
       }
     }
@@ -419,7 +446,7 @@
   const strip = (o) => { const out = {}; for (const k of Object.keys(o)) if (o[k] != null && o[k] !== '') out[k] = o[k]; return out; };
   function uniqueLandmarks(f) {
     const out = new Set();
-    for (const m of f.measurements || []) for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) { const v = m[k]; if (Array.isArray(v)) v.forEach((n) => out.add(n)); else if (v) out.add(v); }
+    for (const m of f.measurements || []) for (const k of SLOT_KEYS) { const v = m[k]; if (Array.isArray(v)) v.forEach((n) => out.add(n)); else if (v) out.add(v); }
     return [...out];
   }
 
@@ -428,8 +455,8 @@
      the number is, what zero means, which way is which, when it is judged. All of that is in
      the geometry, so it is generated from it here rather than typed — the same sentence for the
      same measurement on every page, and never out of date when a point changes. */
-  const PLAIN = (n) => String(n || '').replace(/^(other|L|R|l|r)\./, '');
-  const PREFIX = (n) => { const s = String(n || ''); return s.startsWith('other.') ? 'other' : /^[Ll]\./.test(s) ? 'left' : /^[Rr]\./.test(s) ? 'right' : ''; };
+  const PLAIN = (n) => String(n || '').replace(/^(other|L|R|l|r|upper|lower|front|back)\./, '');
+  const PREFIX = (n) => { const s = String(n || ''); return s.startsWith('other.') ? 'other' : /^[Ll]\./.test(s) ? 'left' : /^[Rr]\./.test(s) ? 'right' : s.startsWith('upper.') ? 'higher' : s.startsWith('lower.') ? 'lower' : s.startsWith('front.') ? 'front' : s.startsWith('back.') ? 'back' : ''; };
   const POINT = { ear: 'ear', shoulder: 'shoulder', elbow: 'elbow', wrist: 'wrist', hip: 'hip', knee: 'knee', ankle: 'ankle', heel: 'heel', toe: 'toes' };
   /* 'the knee', 'the other knee', 'the left knee'; a list of names: the first, with the fallback said */
   function pointWords(name, bare) {
@@ -518,6 +545,12 @@
         meaning = `90° is upright; over 90° ${pointWords(m.to)} is ${fwd} of ${pointWords(m.at)}, under 90° behind it.`;
         short = camel((s.named ? s.seg.replace(/^the /, '') : `${PLAIN(first(m.at))} ${PLAIN(first(m.to))}`) + ' floor'); named = !!m.at && !!m.to;
         break; }
+      case 'lines': {
+        const s1 = segmentOf(m.a, m.b), s2 = segmentOf(m.c, m.d), full = !!(m.a && m.b && m.c && m.d);
+        what = full ? `the angle between ${s1.line} and ${s2.line}` : 'the angle between two lines';
+        meaning = '0° is parallel, both pointing the same way; 90° is square to each other; 180° parallel, pointing opposite ways.';
+        short = camel(`${s1.named ? s1.seg.replace(/^the /, '') : PLAIN(first(m.a)) || 'line'} ${s2.named ? s2.seg.replace(/^the /, '') : PLAIN(first(m.c)) || 'line'}`); zero = 'parallel'; named = full;
+        break; }
       case 'down': {
         const s = segmentOf(m.from, m.to);
         what = `${s.line} lifted from hanging`; meaning = '0° is hanging straight down, 90° level, 180° straight up.';
@@ -525,7 +558,7 @@
         break; }
       case 'rise': {
         if (FOOT(m)) { what = 'the foot line off the floor (heel over toe)'; meaning = '0° is flat on the floor; + the heel up, − the toes up.'; short = 'footLine'; zero = 'flat'; }
-        else if (m.a && m.b && PLAIN(first(m.a)) === PLAIN(first(m.b)) && PREFIX(first(m.a)) !== PREFIX(first(m.b))) { const x = POINT[PLAIN(first(m.b))]; what = `${pointWords(m.b)} over the other ${x} (the line between them off level)`; meaning = `0° is level; + this ${x} higher, − lower.`; short = camel(ACROSS[PLAIN(first(m.b))] || x); zero = 'level'; }
+        else if (m.a && m.b && PLAIN(first(m.a)) === PLAIN(first(m.b)) && PREFIX(first(m.a)) !== PREFIX(first(m.b))) { const x = POINT[PLAIN(first(m.b))], byPlace = ['higher', 'lower', 'front', 'back'].includes(PREFIX(first(m.a))); what = byPlace ? `${pointWords(m.b)} over ${pointWords(m.a)} (the line between the ${ACROSS[PLAIN(first(m.b))] || x + 's'} off level)` : `${pointWords(m.b)} over the other ${x} (the line between them off level)`; meaning = `0° is level; + this ${x} higher, − lower.`; short = camel(ACROSS[PLAIN(first(m.b))] || x); zero = 'level'; }
         else { const s = segmentOf(m.a, m.b); what = m.a && m.b ? `${pointWords(m.b)} over ${pointWords(m.a)} (${s.seg} line off level)` : 'a point over another'; meaning = `0° is level; + ${pointWords(m.b)} higher than ${pointWords(m.a)}, − lower.`; short = camel(`${PLAIN(first(m.b))} over ${PLAIN(first(m.a))}`); zero = 'level'; named = !!(m.a && m.b); }
         break; }
       case 'distance': {
@@ -622,6 +655,7 @@
     else if (m.kind === 'tilt') { const shin = /shin|arm/.test(d.what); why = over ? (shin ? `${pointWords(m.top)} ${fwd} of ${pointWords(m.base)} past ${fmtN(v)}°` : `leaning ${fwd} past ${fmtN(v)}°`) : v < 0 ? (shin ? `${pointWords(m.top)} behind ${pointWords(m.base)} past ${fmtN(Math.abs(v))}°` : `leaning ${back} past ${fmtN(Math.abs(v))}°`) : `leaning ${fwd} less than ${fmtN(v)}°`; }
     else if (m.kind === 'floor') why = over ? (v >= 90 ? `${pointWords(m.to)} ${fwd} of ${pointWords(m.at)}` : `${pointWords(m.to)} less far behind ${pointWords(m.at)}`) : (v <= 90 ? `${pointWords(m.to)} behind ${pointWords(m.at)}` : `${pointWords(m.to)} less far ${fwd}`);
     else if (m.kind === 'down') why = over ? `lifted past ${fmtN(v)}°` : `lifted less than ${fmtN(v)}°`;
+    else if (m.kind === 'lines') why = over ? `more than ${fmtN(v)}° off parallel` : `within ${fmtN(v)}° of parallel`;
     else if (m.kind === 'rise' || (m.kind === 'distance' && m.axis === 'y')) {
       if (FOOT(m)) why = over ? 'the heel up' : v <= 0 ? 'the toes up' : `the heel less than ${fmtN(v)}° up`;
       else why = over ? `${pointWords(m.b)} higher than ${pointWords(m.a)}` : v <= 0 ? `${pointWords(m.b)} lower than ${pointWords(m.a)}` : `${pointWords(m.b)} less than ${fmtN(v)}${u} above ${pointWords(m.a)}`;
@@ -703,6 +737,7 @@
         if (j === 'neck') return over ? { label: 'Head too far back', text: 'Chin level' } : { label: 'Head dropping', text: 'Long neck, eyes down' };
         return over ? { label: `${cap(d.short)} too open`, text: 'Not so far' } : { label: `${cap(d.short)} too closed`, text: 'A little further' }; }
       case 'down': { const S = cap(segmentOf(m.from, m.to).seg.replace(/^the /, '')); return over ? { label: `${S} too high`.slice(0, 26), text: 'Not so high' } : { label: `${S} short`.slice(0, 26), text: 'Lift until it is level' }; }
+      case 'lines': { const s1 = segmentOf(m.a, m.b).seg.replace(/^the /, ''), s2 = segmentOf(m.c, m.d).seg.replace(/^the /, ''); return over ? { label: `${cap(s1)} off the ${s2}`.slice(0, 26), text: `Keep the ${s1} and the ${s2} parallel` } : { label: `${cap(s1)}, ${s2} too close`.slice(0, 26), text: `Open the angle between the ${s1} and the ${s2}` }; }
       case 'bend': return over ? { label: `${B} piked`, text: `Lower ${b}` } : { label: `${B} sagging`, text: `Lift ${b}` };
       case 'distance': if (m.axis === 'y') return over ? { label: `${B} too high`, text: 'Not so high' } : { label: `${B} too low`, text: 'A little higher' };
         if (m.axis === 'x') return over ? { label: `${B} too far forward`.slice(0, 26), text: 'Bring it back' } : { label: `${B} too far back`.slice(0, 26), text: 'Bring it forward' };
@@ -738,8 +773,8 @@
     const ms = f.measurements || [];
     if (!ms.length) err('measurements', 'at least one measurement');
     const keys = new Set();
-    const lmOk = (n) => { if (Array.isArray(n)) return n.every(lmOk); if (typeof n !== 'string') return false; const dot = n.indexOf('.'); const base = dot > 0 ? n.slice(dot + 1) : n; return LANDMARKS.includes(base) && (dot <= 0 || ['L', 'R', 'l', 'r', 'other'].includes(n.slice(0, dot))); };
-    const NEED = { angle: ['a', 'b', 'c'], tilt: ['base', 'top'], floor: ['at', 'to'], bend: ['a', 'b', 'c'], rise: ['a', 'b'], down: ['from', 'to'], distance: ['a', 'b'], sum: [] };
+    const lmOk = (n) => { if (Array.isArray(n)) return n.every(lmOk); if (typeof n !== 'string') return false; const dot = n.indexOf('.'); const base = dot > 0 ? n.slice(dot + 1) : n; return LANDMARKS.includes(base) && (dot <= 0 || ['L', 'R', 'l', 'r', 'other'].concat(DYNAMIC).includes(n.slice(0, dot))); };
+    const NEED = { angle: ['a', 'b', 'c'], tilt: ['base', 'top'], floor: ['at', 'to'], bend: ['a', 'b', 'c'], rise: ['a', 'b'], down: ['from', 'to'], distance: ['a', 'b'], lines: ['a', 'b', 'c', 'd'], sum: [] };
     ms.forEach((m, i) => {
       const at = `measurements[${i}]`;
       if (!isName(m.key)) err(at + '.key', 'one word, lowercase');
@@ -805,18 +840,20 @@
     for (const [bone, key] of Object.entries(lm.limb || {})) if (!keys.has(key)) err('landmarks.limb', `${bone} is coloured by a measurement that is not there: ${key}`);
     if (!lm.bones || !lm.bones.length) warn('landmarks.bones', 'no skeleton to draw');
     if (f.facing && (!lmOk(f.facing.from) || !lmOk(f.facing.to))) err('facing', 'two landmarks: the body faces from the first toward the second');
+    else if (f.facing && [f.facing.from, f.facing.to].some((n) => DYNAMIC.some((d) => String(n).startsWith(d + '.')))) err('facing', 'facing cannot come from a point picked by where it is (front/back need the facing first)');
     if (!f.facing) warn('facing', 'which way the body faces: needed by tilt, floor and bend measurements');
     const side = f.side || {};
     if (side.pick && !PICKS.includes(side.pick)) err('side.pick', 'one of ' + PICKS.join(', '));
-    if (side.pick === 'highest' && !lmOk(side.joint)) err('side.joint', 'the landmark whose higher side is measured');
+    if (BY_JOINT.includes(side.pick) && !lmOk(side.joint)) err('side.joint', `the landmark the two sides are compared on: ${LANDMARKS.join(', ')}`);
+    else if (BY_JOINT.includes(side.pick) && String(side.joint).includes('.')) err('side.joint', 'a plain landmark name: the pick compares that joint on the two sides');
     if (side.pick === 'measure' && !keys.has(side.measure)) err('side.measure', 'the measurement whose larger side is measured');
     if (side.hold != null) {
       if (typeof side.hold !== 'object') err('side.hold', '{ margin, frames }: how far and how long the other side must lead before it is measured instead');
       else {
-        if (side.hold.margin != null && !(side.hold.margin > 0)) err('side.hold.margin', 'a lead above zero: hip-to-joint lengths for highest, the measurement\'s units for measure');
+        if (side.hold.margin != null && !(side.hold.margin > 0)) err('side.hold.margin', 'a lead above zero: hip-to-joint lengths for a pick by a joint, the measurement\'s units for measure');
         if (side.hold.frames != null && !(Number.isInteger(side.hold.frames) && side.hold.frames >= 1)) err('side.hold.frames', 'a whole number of frames, at least one');
       }
-      if (side.pick !== 'highest' && side.pick !== 'measure') warn('side.hold', 'only a pick by height or by measurement is held');
+      if (!BY_JOINT.includes(side.pick) && side.pick !== 'measure') warn('side.hold', 'only a pick by a joint or by a measurement is held');
     }
     (f.draw || []).forEach((g, i) => {
       const at = `draw[${i}]`;
@@ -859,5 +896,5 @@
     };
   }
 
-  return { compile, check, blank, measure, bandKind, bandEdges, words, LANDMARKS, KINDS, REGIONS, TONES, LOADS, SIDES, TYPES, VIEWS, ORIENTATIONS, POSITIONS, PICKS, DRAWS };
+  return { compile, check, blank, measure, pointOf, bandKind, bandEdges, words, LANDMARKS, KINDS, REGIONS, TONES, LOADS, SIDES, TYPES, VIEWS, ORIENTATIONS, POSITIONS, PICKS, BY_JOINT, DYNAMIC, SLOT_KEYS, DRAWS };
 });

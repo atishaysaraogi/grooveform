@@ -50,10 +50,14 @@ Moves.ready.then(function () {
   const source = () => (draft ? draft.source || null : null);
   const touched = () => !!(draft && draft.touched);
   /* the shapes a measurement can take, in the physio's words, and the file kind (and axis) each is */
+  /* what can be measured: an angle at a joint; a line against a reference — upright, the floor,
+     hanging, level, or another line; a point against a line; the lengths */
   const SHAPES = [
-    ['angle', 'an angle at a joint'], ['tilt', 'a line’s lean from upright'], ['floor', 'a line’s angle from the floor'], ['down', 'a line lifted from hanging'],
-    ['rise', 'how high one point is over another, as an angle'], ['height', 'the height of one point over another, as a length'], ['ahead', 'how far one point is ahead of another, as a length'],
-    ['distance', 'the distance between two points'], ['bend', 'a point off a line'],
+    ['angle', 'an angle at a joint'],
+    ['tilt', 'a line — its lean from upright'], ['floor', 'a line — its angle from the floor'], ['down', 'a line — lifted from hanging'],
+    ['rise', 'a line — how far off level (one point over another)'], ['lines', 'two lines — the angle between them'],
+    ['bend', 'a point — how far off a line'],
+    ['height', 'a length — one point’s height over another'], ['ahead', 'a length — one point ahead of another'], ['distance', 'a length — between two points'],
   ];
   const SHAPE_HELP = {
     angle: 'the angle at the middle point between the other two — a knee, a hip, an elbow. 180 is straight. One tap on a joint fills all three from the limbs meeting there.',
@@ -61,6 +65,7 @@ Moves.ready.then(function () {
     floor: 'the angle the line makes with the floor: 90 is upright, over 90 the second point is forward of the first.',
     down: 'how far the line is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
     rise: 'how far the second point sits above the first, as an angle off level: + above, − below. Good for two points close together (heel and toe).',
+    lines: 'the angle between two lines, each from its first point to its second: 0 is parallel the same way, 90 square. A shin and a trunk kept parallel in a squat; a thigh against the trunk. Unsigned, so it needs no facing.',
     height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle.',
     ahead: 'how far the second point is ahead of the first the way the body faces, as a share of a limb: a knee past the toes by so much.',
     distance: 'the straight distance between the two points as a share of a limb: feet apart, a hand from the shoulder.',
@@ -72,11 +77,13 @@ Moves.ready.then(function () {
   const SLOTS = {
     angle: [['a', 'one end'], ['b', 'the joint'], ['c', 'other end']], tilt: [['base', 'base'], ['top', 'top']], floor: [['at', 'at'], ['to', 'to']],
     down: [['from', 'from'], ['to', 'to']], rise: [['a', 'the reference'], ['b', 'the point']], distance: [['a', 'from'], ['b', 'to']], bend: [['a', 'line start'], ['b', 'the point'], ['c', 'line end']],
+    lines: [['a', 'line 1 from'], ['b', 'to'], ['c', 'line 2 from'], ['d', 'to']],
   };
   const SENTENCE = {
     angle: ['at', 'b', 'between', 'a', 'and', 'c'], tilt: ['of the', 'base', '→', 'top', 'line'], floor: ['of the', 'at', '→', 'to', 'line'], down: ['of the', 'from', '→', 'to', 'line'],
     rise: [':', 'b', 'over', 'a'], height: [':', 'b', 'over', 'a', ', as % of', 'per'], ahead: [':', 'b', 'ahead of', 'a', ', as % of', 'per'],
     distance: ['from', 'a', 'to', 'b', ', as % of', 'per'], bend: [':', 'b', 'off the', 'a', '–', 'c', 'line'],
+    lines: ['between the', 'a', '→', 'b', 'line and the', 'c', '→', 'd', 'line'],
   };
   /* which measurement's which slot the next pick from the list fills */
   let editing = null;
@@ -307,8 +314,11 @@ Moves.ready.then(function () {
 
   /* ================= what is derived ================= */
   const keyOf = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^[^a-z]+/, '') || 'newmove';
-  const lmRefs = (m) => { const out = []; for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) { const v = m[k]; if (Array.isArray(v)) out.push(...v); else if (v) out.push(v); } if (m.per) out.push(...m.per); return out; };
-  const plain = (n) => String(n || '').replace(/^(other|L|R)\./, '');
+  const lmRefs = (m) => { const out = []; for (const k of Spec.SLOT_KEYS) { const v = m[k]; if (Array.isArray(v)) out.push(...v); else if (v) out.push(v); } if (m.per) out.push(...m.per); return out; };
+  const plain = (n) => String(n || '').replace(/^(other|L|R|upper|lower|front|back)\./, '');
+  /* the side a point name is taken from: '' this side, 'other.', 'L.', 'R.', or by where it is this frame */
+  const prefixOf = (n) => { const mm = /^(other|L|R|upper|lower|front|back)\./.exec(String(Array.isArray(n) ? n[0] : n || '')); return mm ? mm[0] : ''; };
+  const notThisSide = (n) => /^(other|upper|lower|front|back)\./.test(n);
   const bandedKeys = () => draft.measurements.filter((m) => m.band).map((m) => m.key);
   const progressKey = () => (draft.type === 'reps' && draft.progress ? draft.progress.measure : null);
   const roleOf = (m) => (m.key === progressKey() ? 'progress' : !m.band ? 'reading' : (draft.inPosition || bandedKeys()).includes(m.key) ? 'hold' : 'note');
@@ -332,8 +342,8 @@ Moves.ready.then(function () {
       const used = [], need = [];
       for (const m of d.measurements) for (const n of lmRefs(m)) { if (!used.includes(n)) used.push(n); if (!m.optional && !m.gate && !need.includes(n)) need.push(n); }
       const order = (arr) => arr.slice().sort((x, y) => (LM.indexOf(plain(x)) - LM.indexOf(plain(y))) || x.localeCompare(y));
-      d.landmarks.joints = order(used); d.landmarks.needed = order(need.filter((n) => !/^other\./.test(n)));
-      d.landmarks.dots = order(used.filter((n) => !/^other\./.test(n)));
+      d.landmarks.joints = order(used); d.landmarks.needed = order(need.filter((n) => !notThisSide(n)));
+      d.landmarks.dots = order(used.filter((n) => !notThisSide(n)));
       const chain = [['ear', 'shoulder'], ['shoulder', 'elbow'], ['elbow', 'wrist'], ['shoulder', 'hip'], ['hip', 'knee'], ['knee', 'ankle'], ['ankle', 'heel'], ['ankle', 'toe'], ['heel', 'toe']];
       const has = (n) => used.includes(n);
       const bones = [];
@@ -378,6 +388,16 @@ Moves.ready.then(function () {
   function pointFor(name, K, view) {
     if (!name || !K) return null;
     const P = (k) => (K[k] ? { x: K[k][0], y: K[k][1] } : null);
+    /* a point named by where it is: whichever side's point is higher, lower, in front or behind in this pose */
+    const dyn = /^(upper|lower|front|back)\.(\w+)$/.exec(name);
+    if (dyn) {
+      const [, how, n] = dyn;
+      const [p, q] = view === 'front' ? [pointFor('L.' + n, K, view), pointFor('R.' + n, K, view)] : [pointFor(n, K, view), pointFor('other.' + n, K, view)];
+      if (!p || !q) return p || q || null;
+      if (how === 'upper') return p.y <= q.y ? p : q;
+      if (how === 'lower') return p.y >= q.y ? p : q;
+      return (how === 'front') === ((p.x - q.x) * facingOf(K, view) >= 0) ? p : q;
+    }
     if (view === 'front') {
       const m = /^([LR])\.(\w+)$/.exec(name); const sd = m ? m[1] : 'R', n = m ? m[2] : name;
       const key = { shoulder: 'sh', hip: 'hip', knee: 'kn', ankle: 'an', heel: 'he', toe: 'to', elbow: 'el', wrist: 'wr' }[n];
@@ -405,6 +425,7 @@ Moves.ready.then(function () {
         case 'bend': { const a = P(m.a), b = P(m.b), c = P(m.c); if (a && b && c) x = Core.lineBend(a, b, c, facing); break; }
         case 'rise': { const a = P(m.a), b = P(m.b); if (a && b) x = Core.rise(a, b); break; }
         case 'down': { const a = P(m.from), b = P(m.to); if (a && b) x = Core.fromDown(a, b); break; }
+        case 'lines': { const a = P(m.a), b = P(m.b), c = P(m.c), d = P(m.d); if (a && b && c && d) x = Core.betweenLines(a, b, c, d); break; }
         case 'distance': { const a = P(m.a), b = P(m.b); if (a && b) { x = Math.hypot(a.x - b.x, a.y - b.y); if (m.per) { const c = P(m.per[0]), d = P(m.per[1]); const ref = c && d ? Math.hypot(c.x - d.x, c.y - d.y) : 0; x = ref ? x / ref : null; } } break; }
         default: x = null;
       }
@@ -421,7 +442,7 @@ Moves.ready.then(function () {
   };
   const SEGMENTS = [['hip', 'shoulder', 'torso'], ['hip', 'knee', 'thigh'], ['knee', 'ankle', 'shin'], ['shoulder', 'elbow', 'arm'], ['elbow', 'wrist', 'forearm'], ['heel', 'toe', 'foot'], ['ankle', 'toe', 'foot'], ['shoulder', 'wrist', 'arm'], ['hip', 'ankle', 'leg'], ['shoulder', 'ear', 'neck']];
   /* ================= measuring: a shape, a point per slot, the words from the geometry ================= */
-  const side_ = (n) => (/^other\./.test(n) ? 'other' : /^L\./.test(n) ? 'l' : /^R\./.test(n) ? 'r' : '');
+  const side_ = (n) => prefixOf(n).replace('.', '').toLowerCase();
   const uniqueKey = (base, self) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m !== self && m.key === k)) k = base + n++; return k; };
   const slotsOf = (kind) => SLOTS[kind] || SLOTS.angle;
   const filled = (m) => slotsOf(m.kind).every(([k]) => m[k]) && (!needsPer(m) || (m.per && m.per[0] && m.per[1]));
@@ -442,7 +463,11 @@ Moves.ready.then(function () {
     if (slot === 'per0' || slot === 'per1') { m.per = m.per || [null, null]; m.per[slot === 'per0' ? 0 : 1] = name; }
     else {
       m[slot] = name;
-      if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) { const k = keyOfName(name, figView()); const nb = k && NEIGHBOURS[figView()][k]; if (nb) { m.a = NAME[figView()][nb[0]]; m.c = NAME[figView()][nb[1]]; } }
+      if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) {
+        const view = figView(), pre = prefixOf(name), base = plain(name);
+        const k = keyOfName(view === 'front' ? (pre === 'L.' || pre === 'R.' ? name : 'R.' + base) : base, view), nb = k && NEIGHBOURS[view][k];
+        if (nb) { m.a = pre + plain(NAME[view][nb[0]]); m.c = pre + plain(NAME[view][nb[1]]); }
+      }
     }
     nameIt(m);
     const nxt = nextEmpty(m, slot);
@@ -452,11 +477,11 @@ Moves.ready.then(function () {
   /* the shape changed: the points kept by position, the words and the band's defaults re-derived */
   function setShape(m, shape) {
     const was = slotsOf(m.kind).map(([k]) => m[k]), kind = kindOfShape(shape);
-    for (const k of ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from']) delete m[k];
+    for (const k of Spec.SLOT_KEYS) delete m[k];
     slotsOf(kind).forEach(([k], i) => { if (was[i]) m[k] = was[i]; });
     m.kind = kind;
     if (shape === 'height') m.axis = 'y'; else if (shape === 'ahead') m.axis = 'x'; else delete m.axis;
-    if (kind === 'distance') { m.per = m.per || (figView() === 'front' ? ['R.knee', 'R.ankle'] : ['knee', 'ankle']); m.times = 100; } else { delete m.per; if (m.times === 100) delete m.times; }
+    if (kind === 'distance') { m.per = m.per || ['knee', 'ankle']; m.times = 100; } else { delete m.per; if (m.times === 100) delete m.times; }
     m.named = false;
     if (m.band) setBand(m, Spec.bandKind(m.band));
     nameIt(m);
@@ -464,20 +489,40 @@ Moves.ready.then(function () {
   }
   /* the landmark list over a slot */
   const LIMBS = [['the trunk', ['hip', 'shoulder']], ['the thigh', ['hip', 'knee']], ['the shin', ['knee', 'ankle']], ['the upper arm', ['shoulder', 'elbow']], ['the forearm', ['elbow', 'wrist']], ['the foot', ['heel', 'toe']]];
+  /* the sides a point can be taken from: the side measured (the plain name), the other side,
+     a side by name, or whichever side's point is higher, lower, in front or behind this frame */
+  const PREFIXES = [['', 'this side'], ['other.', 'the other side'], ['L.', 'left'], ['R.', 'right'], ['upper.', 'whichever is higher'], ['lower.', 'whichever is lower'], ['front.', 'whichever is in front'], ['back.', 'whichever is behind']];
   function landmarkPopup(anchor, m, slot) {
     document.querySelectorAll('.lm-pop').forEach((n) => n.remove());
     const pop = el('div', 'lm-pop');
-    const group = (title, names, pick) => { pop.appendChild(el('div', 'lm-title', esc(title))); const g = el('div', 'lm-grid'); for (const n of names) { const b = btn(W.pointWords(n, true), () => { pop.remove(); pick(n); }, 'tiny-btn'); if (m[slot] === n) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } pop.appendChild(g); };
-    if (slot === 'per') {
-      pop.appendChild(el('div', 'lm-title', 'as a share of which limb'));
-      const g = el('div', 'lm-grid'); const pre = figView() === 'front' ? 'R.' : '';
-      for (const [w, [a, b]] of LIMBS) { const bt = btn(w, () => { pop.remove(); if (!touch()) return; m.per = [pre + a, pre + b]; nameIt(m); commit(true); }, 'tiny-btn'); if (m.per && m.per[0] === pre + a && m.per[1] === pre + b) bt.setAttribute('aria-pressed', 'true'); g.appendChild(bt); }
-      pop.appendChild(g);
-      pop.appendChild(el('div', 'lm-title', 'or two points: from'));
-      const g2 = el('div', 'lm-grid'); for (const n of LM) g2.appendChild(btn(W.pointWords(n, true), () => { pop.remove(); fillSlot(m, 'per0', n); }, 'tiny-btn')); pop.appendChild(g2);
-      pop.appendChild(el('div', 'lm-title', 'to')); const g3 = el('div', 'lm-grid'); for (const n of LM) g3.appendChild(btn(W.pointWords(n, true), () => { pop.remove(); fillSlot(m, 'per1', n); }, 'tiny-btn')); pop.appendChild(g3);
-    } else if (figView() === 'front') { group('Left', LM.map((n) => 'L.' + n), (n) => fillSlot(m, slot, n)); group('Right', LM.map((n) => 'R.' + n), (n) => fillSlot(m, slot, n)); }
-    else { group('This side', LM, (n) => fillSlot(m, slot, n)); group('The other side', LM.map((n) => 'other.' + n), (n) => fillSlot(m, slot, n)); }
+    const cur = slot === 'per' ? (m.per && m.per[0]) : m[slot];
+    let pre = prefixOf(cur);
+    const [fwd, back] = W.dirWords(draft);
+    pop.appendChild(el('div', 'lm-title', 'from which side'));
+    const chips = el('div', 'lm-grid lm-sides');
+    const body = el('div', 'lm-body');
+    for (const [v, t] of PREFIXES) {
+      const b = btn(t, () => { pre = v; chips.querySelectorAll('.btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); fill(); }, 'tiny-btn');
+      b.setAttribute('aria-pressed', String(v === pre)); b.title = v === '' ? 'the side the exercise measures — see “Measure the side that…” above the cards' : v === 'other.' ? 'the side not being measured: the resting leg' : v === 'front.' ? `the side whose point is further ${fwd}, decided every frame` : v === 'back.' ? `the side whose point is further ${back}, decided every frame` : /upper|lower/.test(v) ? 'decided every frame, so the point can change sides mid-rep' : 'that side, whichever is measured';
+      chips.appendChild(b);
+    }
+    pop.appendChild(chips);
+    pop.appendChild(el('div', 'lm-help', '“This side” is the side the exercise measures, picked above the cards; “the other side” is the one left. Higher, lower, in front and behind are decided afresh every frame.'));
+    pop.appendChild(body);
+    const isCur = (n) => (Array.isArray(cur) ? cur[0] === n : cur === n);
+    const grid = (pick) => { const g = el('div', 'lm-grid'); for (const n of LM) { const b = btn(W.pointWords(pre + n, true), () => { pop.remove(); pick(pre + n); }, 'tiny-btn'); if (isCur(pre + n)) b.setAttribute('aria-pressed', 'true'); g.appendChild(b); } return g; };
+    function fill() {
+      body.innerHTML = '';
+      if (slot === 'per') {
+        body.appendChild(el('div', 'lm-title', 'as a share of which limb'));
+        const g = el('div', 'lm-grid');
+        for (const [w, [a, b]] of LIMBS) { const bt = btn(w, () => { pop.remove(); if (!touch()) return; m.per = [pre + a, pre + b]; nameIt(m); commit(true); }, 'tiny-btn'); if (m.per && m.per[0] === pre + a && m.per[1] === pre + b) bt.setAttribute('aria-pressed', 'true'); g.appendChild(bt); }
+        body.appendChild(g);
+        body.appendChild(el('div', 'lm-title', 'or two points: from')); body.appendChild(grid((n) => fillSlot(m, 'per0', n)));
+        body.appendChild(el('div', 'lm-title', 'to')); body.appendChild(grid((n) => fillSlot(m, 'per1', n)));
+      } else { body.appendChild(el('div', 'lm-title', 'which point')); body.appendChild(grid((n) => fillSlot(m, slot, n))); }
+    }
+    fill();
     anchor.parentNode.appendChild(pop);
     const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('pointerdown', close, true); } };
     setTimeout(() => document.addEventListener('pointerdown', close, true), 0);
@@ -485,7 +530,7 @@ Moves.ready.then(function () {
   /* what the drawing says the measurement reads, on request: the edges around the end, the
      thresholds between start and end */
   const TOL = (m) => (m.kind === 'angle' || m.kind === 'bend' ? 10 : m.kind === 'distance' ? 10 : 8);
-  const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: m.axis ? { range: [-20, 20], min: -10, max: 10, sym: 10 } : { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
+  const bandDefault = (m) => ({ angle: { range: [90, 180], min: 160, max: 20, sym: 10 }, lines: { range: [0, 20], min: 10, max: 20, sym: 15 }, tilt: { range: [-20, 20], min: -20, max: 20, sym: 10 }, floor: { range: [60, 120], min: 60, max: 120, sym: 10 }, down: { range: [0, 90], min: 45, max: 45, sym: 10 }, rise: { range: [-10, 10], min: 0, max: 10, sym: 10 }, distance: m.axis ? { range: [-20, 20], min: -10, max: 10, sym: 10 } : { range: [50, 150], min: 50, max: 150, sym: 20 }, bend: { range: [-10, 10], min: -5, max: 5, sym: 5 } }[m.kind] || { range: [0, 100], min: 0, max: 100, sym: 10 });
   const settingLabel = (m, words) => `${cap((describe(m).what || m.key))}, ${words}`;
   const ensureSetting = (m, key, value, words, lo, hi) => { if (typeof draft.defaults[key] !== 'number') draft.defaults[key] = Math.round(value); m.settings = m.settings || []; if (!m.settings.some((s) => s.key === key)) m.settings.push({ key, label: settingLabel(m, words), min: Math.round(lo), max: Math.round(hi) }); };
   /* a fault silenced by another names it in `unless`: when that one is gone, so is the mention */
@@ -504,7 +549,7 @@ Moves.ready.then(function () {
     const keep = d.faults.filter((x) => x.measure === m.key && x.own);   // faults the person has worded stay through a change of rule
     clearBand(m);
     if (kind === 'none') return;
-    m.scale = m.kind === 'angle' ? [0, 180] : m.kind === 'distance' ? (m.axis ? [-100, 100] : [0, 200]) : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
+    m.scale = m.kind === 'angle' || m.kind === 'lines' ? [0, 180] : m.kind === 'distance' ? (m.axis ? [-100, 100] : [0, 200]) : m.kind === 'down' ? [0, 180] : m.kind === 'floor' ? [0, 180] : [-90, 90];
     if (kind === 'range') { m.band = { lo: base + 'Min', hi: base + 'Max' }; ensureSetting(m, base + 'Min', def.range[0], 'at least', def.range[0] - span, def.range[1] + span); ensureSetting(m, base + 'Max', def.range[1], 'at most', def.range[0] - span, def.range[1] + span); }
     else if (kind === 'min') { m.band = { min: base + 'Min' }; ensureSetting(m, base + 'Min', def.min, 'at least', def.min - span, def.min + span); }
     else if (kind === 'max') { m.band = { max: base + 'Max' }; ensureSetting(m, base + 'Max', def.max, 'at most', def.max - span, def.max + span); }
@@ -775,9 +820,37 @@ Moves.ready.then(function () {
     foldAllLabel();
   }
   const foldAllLabel = () => { const b = $('measures-fold'); if (b && draft) b.textContent = draft.measurements.some((q) => !shutKeys.has(q.key)) ? 'Close all' : 'Open all'; };
+  /* which side the plain landmark names refer to: a sentence above the cards */
+  const PICK_OPTS = [['clearest', 'the model sees best'], ['left', 'on the left'], ['right', 'on the right'], ['highest', 'with the higher…'], ['lowest', 'with the lower…'], ['front', 'whose… is further forward'], ['back', 'whose… is further back'], ['moving', 'moving its… most'], ['measure', 'reading larger on…']];
+  function sideRow() {
+    const d = draft, sd = d.side || { pick: 'clearest' }, pk = sd.pick || 'clearest', byJ = Spec.BY_JOINT.includes(pk), [fwd, back] = W.dirWords(d);
+    const wrap = el('div', 'side-pick'), row = el('div', 'sentence side'); row.dataset.at = 'side.pick';
+    const set = (fn) => { d.auto.side = false; d.side = Object.assign({ pick: 'clearest' }, d.side); fn(d.side); const x = d.side; if (!Spec.BY_JOINT.includes(x.pick)) delete x.joint; if (x.pick !== 'measure') delete x.measure; if (!Spec.BY_JOINT.includes(x.pick) && x.pick !== 'measure') delete x.hold; };
+    row.appendChild(words('Measure the side'));
+    row.appendChild(pick(pk, PICK_OPTS, (v) => set((x) => { x.pick = v; if (Spec.BY_JOINT.includes(v) && !x.joint) x.joint = 'knee'; if (v === 'measure' && !x.measure) x.measure = (d.measurements[0] || {}).key; if ((Spec.BY_JOINT.includes(v) || v === 'measure') && !x.hold) x.hold = { margin: v === 'measure' ? 10 : 0.2, frames: 5 }; }), 'which of the two sides the plain landmark names refer to, frame by frame', true, 'side.pick'));
+    const JOINT = () => pick(sd.joint || '', LM.map((n) => [n, W.pointWords(n, true)]), (v) => set((x) => { x.joint = v; }), 'the joint compared across the two sides', true, 'side.joint');
+    if (pk === 'highest' || pk === 'lowest') row.appendChild(JOINT());
+    else if (pk === 'front' || pk === 'back') { row.appendChild(JOINT()); row.appendChild(words(pk === 'front' ? `further ${fwd}` : `further ${back}`)); }
+    else if (pk === 'moving') { row.appendChild(JOINT()); row.appendChild(words('most')); }
+    else if (pk === 'measure') row.appendChild(pick(sd.measure || '', d.measurements.map((q) => [q.key, describe(q).what || q.key]), (v) => set((x) => { x.measure = v; }), 'the measurement read on each side; the side reading larger is measured', true, 'side.measure'));
+    if (byJ || pk === 'measure') {
+      const h = sd.hold || {}, mu = pk === 'measure' ? (describe(d.measurements.find((q) => q.key === sd.measure) || {}).unit || '') : '';
+      row.appendChild(words(', keeping it until the other side leads by'));
+      row.appendChild(num(h.margin == null ? '' : h.margin, (v) => set((x) => { if (v == null) delete x.hold; else x.hold = Object.assign({ frames: 5 }, x.hold, { margin: v }); }), null, 'how far the other side must lead before the measured side changes; nothing here: it changes at once'));
+      row.appendChild(words(pk === 'measure' ? `${mu} on that measurement` : pk === 'moving' ? 'hip-to-joint lengths of travel' : 'hip-to-joint lengths'));
+      if (h.margin != null) { row.appendChild(words('for')); row.appendChild(num(h.frames == null ? 5 : h.frames, (v) => set((x) => { x.hold = Object.assign({ margin: 0.2 }, x.hold, { frames: v == null ? 5 : Math.max(1, Math.round(v)) }); }), null, 'frames in a row')); row.appendChild(words('frames')); }
+    }
+    const HOW = { highest: 'is higher', lowest: 'is lower', front: `is further ${fwd}`, back: `is further ${back}`, moving: 'has moved most over the last half second' };
+    const note = el('p', 'tiny muted', (d.auto.side ? 'From the pose. ' : '') + (pk === 'clearest' ? 'With both sides doing the same, the side the model is surer of. Pick by a joint when one limb works and the other rests: the raised knee, the planted foot, the front leg, the one that moves.'
+      : pk === 'left' || pk === 'right' ? 'That side whatever happens; a mirrored phone swaps it.' : byJ ? `“This side” in every measurement below is the side whose ${W.pointWords(sd.joint || 'knee', true)} ${HOW[pk]}; “the other side” is the one left. A point can also be named by where it is on its own — the picker offers higher, lower, in front and behind.`
+      : 'Each side is read with that measurement, and the side reading larger is the one measured.'));
+    wrap.appendChild(row); wrap.appendChild(note);
+    return wrap;
+  }
   function renderMeasures() {
     const host = $('measures'); host.innerHTML = '';
     const d = draft;
+    host.appendChild(sideRow());
     const who = (d.id || '') + '|' + (source() || '');
     if (shutFor !== who) { shutFor = who; shutKeys.clear(); for (const m of d.measurements) shutKeys.add(m.key); }
     const all = $('measures-fold');
@@ -937,10 +1010,6 @@ Moves.ready.then(function () {
     g.appendChild(autoField('facing', 'Faces from', (d.facing || {}).from, (v) => { d.facing = Object.assign({}, d.facing, { from: v }); }, { options: lmOpts('—'), at: 'facing' }));
     g.appendChild(autoField('facing', 'toward', (d.facing || {}).to, (v) => { d.facing = Object.assign({}, d.facing, { to: v }); }, { options: lmOpts('—'), at: 'facing' }));
     g.appendChild(field('The two direction words (forward, back)', (d.facing && d.facing.words || []).join(', '), (v) => { const w = fromList(v); d.facing = Object.assign({}, d.facing); if (w.length === 2) d.facing.words = w; else delete d.facing.words; }, { placeholder: 'forward, back', title: 'what + and − mean in the sentences: forward/back, toward the feet/toward the head' }));
-    g.appendChild(autoField('side', 'Which side is measured', (d.side || {}).pick || 'clearest', (v) => { d.side = { pick: v }; }, { options: [['clearest', 'the side the model sees best'], ['left', 'the left'], ['right', 'the right'], ['highest', 'the side whose joint is higher'], ['measure', 'the side whose measurement is larger']], structural: true, at: 'side.pick' }));
-    if ((d.side || {}).pick === 'highest') g.appendChild(autoField('side', 'that joint', d.side.joint, (v) => { d.side.joint = v; }, { options: lmOpts('—'), at: 'side.joint' }));
-    if ((d.side || {}).pick === 'measure') g.appendChild(autoField('side', 'that measurement', d.side.measure, (v) => { d.side.measure = v; }, { options: optsOf(d.measurements.map((m) => m.key), '—'), at: 'side.measure' }));
-    if (['highest', 'measure'].includes((d.side || {}).pick)) { const h = d.side.hold || {}; g.appendChild(autoField('side', 'held until the other side leads by', h.margin, (v) => { if (v == null) delete d.side.hold; else d.side.hold = Object.assign({ frames: 5 }, d.side.hold, { margin: v }); }, { type: 'number', at: 'side.hold' })); }
     g.appendChild(autoField('draw', 'Drawn on the picture, as JSON', JSON.stringify(d.draw), (v) => { try { d.draw = JSON.parse(v); } catch { } }, { type: 'textarea', rows: 3, wide: true, at: 'draw' }));
     more.appendChild(g); host.appendChild(more);
   }

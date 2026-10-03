@@ -268,7 +268,7 @@ Moves.ready.then(function () {
     $('stage-rep').textContent = focusRep != null && reps[focusRep] ? `${repName(reps[focusRep], shown)} of ${reps.length}` : reps.length ? `${reps.length} rep${reps.length === 1 ? '' : 's'}` : '';
     $('prev-rep').disabled = !reps.length; $('next-rep').disabled = !reps.length;
     const host = $('stage-verdict');
-    host.innerHTML = focusRep != null && reps[focusRep] ? labelRow(shown, focusRep, Trace.labelOf(shown.labels, reps[focusRep]), 'rep') : '';
+    host.innerHTML = focusRep != null && reps[focusRep] ? labelRow(shown, focusRep, Trace.labelOf(shown.labels, reps[focusRep]), 'rep', 'stage') : '';
   }
   const repName = (r, rec) => (move.reps ? (r.counted ? `Rep ${r.n}` : (r.open ? 'Under way at the end' : 'Attempt, not counted')) : `Hold ${r.n}`);
   function focusOn(rec, i) {
@@ -306,7 +306,9 @@ Moves.ready.then(function () {
         focusRep = i; setWait(i); drawOverlay(r.t1); drawLanes(); renderReps();
         return;
       }
-      inRep = repAtTime(t);
+      /* the rep in play is the one under the video: its chips and what the coach saw in it */
+      const now = repAtTime(t);
+      if (now !== inRep) { inRep = now; if (now != null && now !== focusRep) { focusRep = now; renderReps(); } }
       repLoop = requestAnimationFrame(tick);
     };
     repLoop = requestAnimationFrame(tick);
@@ -377,14 +379,19 @@ Moves.ready.then(function () {
   }
   /* the chips under a rep: clean, each fault the exercise knows, a fault named on the spot, not a rep;
      under a short movement: this was a rep. A tap classifies and does not open the rep. */
-  function labelRow(rec, i, lb, kind) {
+  function labelRow(rec, i, lb, kind, where) {
     const label = (id) => (id[0] === '+' ? id.slice(1) : (move.cues[id] && move.cues[id].label) || id);
     const prov = lb && lb.provisional ? ' provisional' : '';
     const pressed = (on) => ` aria-pressed="${on ? 'true' : 'false'}"`;
     if (kind === 'miss') return `<div class="rep-label" data-kind="miss" data-rec="${rec.id}" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean${prov}" type="button" data-v="rep"${pressed(lb && lb.tag === 'rep')}>This was a rep</button></div>`;
+    /* what the coach found in this rep, marked on the chips: a dot for a fault it saw, with when it was said */
+    const seg = rec.reps[i] || { faults: [], before: { faults: [] } };
+    const seen = new Map(seg.faults.map((f) => [f.id, f])), before = new Map(((seg.before && seg.before.faults) || []).map((f) => [f.id, f]));
+    const mark = (id) => { const f = seen.get(id) || before.get(id); if (!f) return '"'; const when = f.said.length ? `said at ${f.said.map(sec).join(', ')}` : 'seen, not said'; return ` seen${seen.has(id) ? '' : ' before'}" title="${esc(seen.has(id) ? `the coach saw this in the rep — ${when}` : `the coach saw this in the pause before the rep — ${when}`)}"`; };
     const ids = Trace.faultIds(move).concat(otherFaults());
-    const faults = ids.map((id) => `<button class="btn ${id[0] === '+' ? 'other' : 'fault'}${prov}" type="button" data-v="${esc(id)}"${pressed(lb && lb.tag === 'faults' && lb.faults.includes(id))}>${esc(label(id))}</button>`).join('');
-    return `<div class="rep-label" data-kind="rep" data-rec="${rec.id}" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean${prov}" type="button" data-v="clean"${pressed(lb && lb.tag === 'clean')}>Clean</button>${faults}<button class="btn other" type="button" data-v="+" title="A fault the exercise does not know yet: name it, and the studio looks for a measure that tells it apart">+ another fault…</button><button class="btn${prov}" type="button" data-v="skip"${pressed(lb && lb.tag === 'skip')}>Not a rep</button>${lb ? (lb.provisional ? '<span class="tiny">from the take\'s tag — tap to confirm</span>' : '') : '<span class="tiny">not yet classified</span>'}</div>`;
+    const faults = ids.map((id) => `<button class="btn ${id[0] === '+' ? 'other' : 'fault'}${prov}${mark(id)} type="button" data-v="${esc(id)}"${pressed(lb && lb.tag === 'faults' && lb.faults.includes(id))}>${esc(label(id))}</button>`).join('');
+    const saw = where === 'stage' ? `<span class="saw">${seen.size ? 'the coach saw ' + [...seen.values()].map((f) => `<b>${esc(label(f.id))}</b>${f.said.length ? ' at ' + sec(f.said[0]) : ' (not said)'}`).join(', ') : 'the coach saw nothing wrong in this rep'}${before.size ? ` · before it: ${[...before.values()].map((f) => esc(label(f.id))).join(', ')}` : ''}</span>` : '';
+    return `<div class="rep-label" data-kind="rep" data-rec="${rec.id}" data-i="${i}"><span class="lbl">Your verdict</span><button class="btn clean${prov}" type="button" data-v="clean"${pressed(lb && lb.tag === 'clean')}>Clean</button>${faults}<button class="btn other" type="button" data-v="+" title="A fault the exercise does not know yet: name it, and the studio looks for a measure that tells it apart">+ another fault…</button><button class="btn${prov}" type="button" data-v="skip"${pressed(lb && lb.tag === 'skip')}>Not a rep</button>${lb ? (lb.provisional ? '<span class="tiny">from the take\'s tag — tap to confirm</span>' : '') : '<span class="tiny">not yet classified</span>'}${saw}</div>`;
   }
   /* one listener for every chip row, in the list and under the stage */
   document.addEventListener('click', (e) => {

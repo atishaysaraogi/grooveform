@@ -101,6 +101,16 @@
     return Math.atan2(dy, -dx) * DEG;
   }
 
+  /* The angle between the a→b and c→d lines, in degrees: 0 parallel and pointing the
+     same way, 90 square, 180 parallel pointing opposite ways. Unsigned, so it needs
+     no facing: a shin and a trunk kept parallel in a squat. */
+  function betweenLines(a, b, c, d) {
+    const ux = b.x - a.x, uy = b.y - a.y, vx = d.x - c.x, vy = d.y - c.y;
+    const m1 = Math.hypot(ux, uy), m2 = Math.hypot(vx, vy);
+    if (!m1 || !m2) return null;
+    return Math.acos(clamp((ux * vx + uy * vy) / (m1 * m2), -1, 1)) * DEG;
+  }
+
   /* How far b sits off the straight line from a to c, as the angle by which the
      line bends at b. 0 is straight. The sign says which side: + when b is above
      the line, − when it is below, with `facing` pointing from b toward a.
@@ -798,7 +808,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03c';
+  const VER = '2026-10-03d';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
@@ -824,5 +834,5 @@
   }
 
   return { VER, SETTINGS_V, stampOf, adjust, SIDE, COMMON, SHARED_CUES, SYSTEM, partWords, fillPart, partTexts, PARTS, trusted, JumpGate, scene, sceneCue, SCENE, roomOf, DEG, clamp, angleAt, tiltFromVertical, fromFloor, wrapWords,
-    lineBend, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
+    lineBend, betweenLines, fromDown, rise, inBand, within, visOf, pickSide, sidePoints, frame, framing, fitRect, rotateLandmarks, Coach, Smoother };
 });

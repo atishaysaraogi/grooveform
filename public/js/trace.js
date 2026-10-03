@@ -373,7 +373,7 @@
      split these reps by luck alone, and hand back the per-rep values so the person can judge
      the separation with their own eyes. */
   const OTHER = { L: 'R', R: 'L' };
-  const SLOTS = ['a', 'b', 'c', 'base', 'top', 'at', 'to', 'from'];
+  const SLOTS = Spec.SLOT_KEYS;
   const pointsOf = (m) => SLOTS.map((k) => m[k]).filter(Boolean).map((x) => (Array.isArray(x) ? x[0] : x));
   const needsOf = (m) => pointsOf(m).concat(m.per || []);
   const geometryOf = (m) => Object.assign({ kind: m.kind }, ...SLOTS.filter((k) => m[k]).map((k) => ({ [k]: m[k] })), m.per ? { per: m.per, times: m.times } : {}, m.fromStart ? { fromStart: m.fromStart } : {});
@@ -397,7 +397,7 @@
   const TIMES = ['', 'once', 'twice', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven'];
   const median = (xs) => { const s = xs.filter((x) => x != null && Number.isFinite(x)).sort((a, b) => a - b); const n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
   const choose = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return r; };
-  const pointIn = (rd, n) => (n.startsWith('other.') ? (rd.other ? rd.other[n.slice(6)] : null) : rd.points[n]) || null;
+  const pointIn = (rd, n) => Spec.pointOf(n, rd.points, { [rd.side]: rd.points, [rd.side === 'L' ? 'R' : 'L']: rd.other }, rd.side, rd.facing) || null;
   const round1 = (v) => Math.round(v * 10) / 10;
   const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 

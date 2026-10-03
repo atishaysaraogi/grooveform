@@ -244,8 +244,13 @@ are taken from the side being measured; `L.knee` / `R.knee` name a side (a
 front view); `other.knee` names the side *not* being measured — the resting
 leg, which is how the straight leg raise measures its lift against the leg
 on the floor rather than the floor itself, and needs no shoulders in the
-picture. A `needed` list of hips and below is enough for a frame; the
-shoulders only have to be seen if a measurement uses them.
+picture. `upper.knee` / `lower.knee` / `front.knee` / `back.knee` name
+whichever side's knee is higher, lower, further the way the body faces or
+further back *this frame* — so `rise` from `lower.knee` to `upper.knee` is
+"the raised knee over the planted one" whichever leg is working, and a
+step-up can read `front.ankle` without picking a side at all. A `needed`
+list of hips and below is enough for a frame; the shoulders only have to be
+seen if a measurement uses them.
 
 `facing` says which way the body faces: from the first landmark toward the
 second (`sign(to.x − from.x)`). Tilt, floor and bend readings are signed by
@@ -258,12 +263,21 @@ it, and the floor line is drawn along it.
 | `clearest` | the side the model is surer of over `joints` (the default) |
 | `left`, `right` | that side always |
 | `highest` + `joint` | the side whose joint is higher (the donkey kick's knee) |
+| `lowest` + `joint` | the side whose joint is lower (the planted foot; the bottom leg) |
+| `front` / `back` + `joint` | the side whose joint is further the way the body faces, or further back (a lunge's front leg) |
+| `moving` + `joint` | the side whose joint has moved most over the last fifteen frames (the working limb, whichever it is) |
 | `measure` + `measure` | the side whose measurement is larger (the knee raise's thigh) |
+
+The side-lying exercises pick by the higher `hip`: with the legs stacked the
+knees and ankles are level and a pick on them is a coin toss, and a reading
+taken against the start (the waist) must be on the same side from the first
+frame.
 
 `hold` keeps a side once picked: `{ "margin": 0.25, "frames": 5 }` means the
 other side is measured only once it leads by a quarter of the hip-to-joint
-distance (for `measure`, by that much of the measurement) for five frames in
-a row, or at once when the held side can no longer be seen. Without it the
+distance (the trunk's length when the joint is the hip; for `moving`, that
+much travel; for `measure`, by that much of the measurement) for five frames
+in a row, or at once when the held side can no longer be seen. Without it the
 higher of two level knees changes from frame to frame on the model's wobble,
 and the drawn leg and every number jump between the two sides' points (a
 recorded straight leg raise flipped 47 times in a minute; with the hold, once).
@@ -291,6 +305,7 @@ Each is a named number read every frame and smoothed.
 | `bend` | `a`, `b`, `c` | how far b sits off the straight line a→c, as the bend at b, + above |
 | `rise` | `a`, `b` | how far b sits above a, as the angle of the line off level, signed |
 | `down` | `from`, `to` | how far from→to is lifted from straight down: 0 hanging, 90 level |
+| `lines` | `a`, `b`, `c`, `d` | the angle between the a→b and c→d lines: 0 parallel the same way, 90 square, 180 opposite; unsigned, so it needs no facing (a shin and a trunk kept parallel) |
 | `distance` | `a`, `b`, `per` | the distance a→b as a share of the distance per[0]→per[1] (unitless; `times: 100` for percent) |
 | `distance` + `axis` | `a`, `b`, `per`, `axis: "y"` or `"x"` | the height of b over a (`y`, + above) or how far b is ahead of a the way the body faces (`x`), as a share of per — a small lift far from its reference wants a length, not an angle |
 | `sum` | `terms` | other measurements added: `[{ "measure": "back" }, { "kind": "rise", "a": "hip", "b": "knee", "times": -1 }]` |
