@@ -1138,6 +1138,20 @@ try {
     assert.equal(await page.evaluate(() => window.__review.recordings.every((r) => !r.labels.length && !r.tag)), true, 'and back: still none');
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));   // the redraw the switch scheduled
     assert.equal(await pressed(), '', 'and none shown either');
+    /* a renamed draft and its library exercise are one exercise: going there and back keeps the verdicts, and the draft its link */
+    await page.$eval('label[data-at="id"] input', (i) => { i.value = 'mybridge'; i.dispatchEvent(new Event('change')); });
+    await page.waitForFunction(() => window.__builder.draft.id === 'mybridge' && window.__review.move.id === 'mybridge', null, { timeout: 5000 });
+    await page.click(`#reps li.rep[data-rec="${r1}"] .rep-label .btn[data-v="clean"]`);
+    await page.selectOption('#move', 'bridge');
+    await page.waitForFunction(() => window.__review.move.id === 'bridge', null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => window.__review.recordings.filter((r) => r.labels.length).length), 1, 'to the library exercise: the verdict stays');
+    await page.selectOption('#move', 'mybridge');
+    await page.waitForFunction(() => window.__builder.draft.id === 'mybridge', null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => window.__review.recordings.filter((r) => r.labels.length).length), 1, 'and back to the draft: still there');
+    assert.equal(await page.evaluate(() => window.__builder.source), 'bridge', 'the draft keeps its library exercise');
+    await page.click('#build-drop');
+    await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => window.__review.recordings.filter((r) => r.labels.length).length), 1, 'dropped back to its library exercise: the verdict stays');
     /* the rest of this step: the two recordings loaded afresh, in order, and their verdicts given — the clean take clean, the high one too high */
     await page.evaluate(() => { for (const r of [...window.__review.recordings]) window.__review.remove(r.id); });
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);

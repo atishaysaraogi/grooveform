@@ -94,9 +94,25 @@ test('set breaks in the studio: a prompt second set, a lone unseen frame, a rep 
   const shifted = (p) => Object.assign({}, p, { foot: p.foot + 14 });
   const s2 = [[shifted(Rig.REST), 3000]]; for (let i = 0; i < 3; i++) s2.push([shifted(Rig.TOP), 3500], [shifted(Rig.HALF), 1300], [shifted(Rig.REST), 2600]);
   const raisedRest = Object.assign({}, Rig.REST, { dip: 30, hipAng: 150 });
-  const half = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [raisedRest, 10000], ...s2]), Rig.ASPECT);
+  const half = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [raisedRest, 20000], ...s2]), Rig.ASPECT);
   const hr = Trace.reps(half, M);
   assert.equal(sets(half), 2, 'a rest that reads as raised is a break once back at the start');
   assert.equal(hr.filter((r) => r.counted).length, 6, hr.map((r) => (r.counted ? 'rep' : 'x') + '[' + r.faults.map((f) => f.id) + ']').join(' '));
   assert.ok(hr.filter((r) => r.counted).every((r) => !r.faults.some((f) => f.id === 'heelsUp')), 'the second set against its own start');
+});
+
+test('long attempts held up but out of position, and a dropout while lowering, are not breaks between sets', () => {
+  const M = Moves.bridge, unseen = (p) => Object.assign({}, p, { vis: 0.05 });
+  const sets = (res) => Math.max(...res.rows.map((r) => (r.out && r.out.set) || 1));
+  const hipLow = Object.assign({}, Rig.REST, { dip: 30, hipAng: 150 });   // raised, but the hips too low to be in position
+  /* a ten-second hold asked; two attempts held ten and a half seconds with the hips low, between good reps */
+  const goodRep = [[Rig.TOP, 11500], [Rig.HALF, 1300], [Rig.REST, 2600]], tryLow = [[hipLow, 10500], [Rig.HALF, 1300], [Rig.REST, 2600]];
+  const long = Trace.run(M, { countAll: true, repCount: 4, readyMs: 2000, holdTargetSec: 10 }, Rig.take([[Rig.REST, 3000], ...goodRep, ...tryLow, ...tryLow, ...goodRep]), Rig.ASPECT);
+  assert.equal(sets(long), 1, 'one set');
+  const lr = Trace.reps(long, M);
+  assert.equal(lr.filter((r) => r.counted).length, 2, 'the two good reps counted: ' + lr.map((r) => (r.counted ? 'rep' : 'x')).join(' '));
+  /* five reps back to back, one of them out of sight for six seconds on the way down */
+  const parts = [[Rig.REST, 3000], ...Rig.rep(), ...Rig.rep(), [Rig.TOP, 3500], [unseen(Rig.HALF), 6000], [Rig.HALF, 800], [Rig.REST, 2600], ...Rig.rep(), ...Rig.rep()];
+  const drop = Trace.run(M, { countAll: true, repCount: 10, readyMs: 2000, holdTargetSec: 2 }, Rig.take(parts), Rig.ASPECT);
+  assert.equal(sets(drop), 1, 'a dropout while lowering is no break');
 });

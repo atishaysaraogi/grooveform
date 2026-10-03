@@ -197,7 +197,17 @@ Moves.ready.then(function () {
     commit(false);
   }
   /* a library exercise opened as an untouched copy; a draft of another exercise stays parked */
-  function open(id) { const m = (Moves.library && Moves.library[id]) || Moves[id]; if (!m) return; start(m.spec, {}, { source: id, touched: !!m.draft }); }
+  /* the one draft there is, as kept: a parked draft reopened from the list comes back with its own bookkeeping
+     (its library exercise, whether its id follows its name), not as a copy of itself */
+  const keptDraft = (id) => { try { const k = JSON.parse(localStorage.getItem(DRAFT) || 'null'); return k && k.id === id && k.measurements ? k : null; } catch { return null; } };
+  function open(id) {
+    const m = (Moves.library && Moves.library[id]) || Moves[id]; if (!m) return;
+    const k = m.draft ? keptDraft(id) : null;
+    if (k) start(k, k.auto || {}, { source: k.source || null, touched: true });
+    else start(m.spec, {}, { source: id, touched: !!m.draft });
+  }
+  /* the library exercise an exercise in the list belongs to: itself, or a parked draft's own */
+  const sourceOf = (id) => { const m = Moves[id], k = m && m.draft ? keptDraft(id) : null; return k ? (k.source || null) : id; };
   const fromLibrary = open;
   /* a file says which banded measurements make the position (inPosition, or all of them):
      that is each measurement's role here, and the role is the builder's, not the file's */
@@ -1332,7 +1342,7 @@ Moves.ready.then(function () {
   }
 
   /* handed to the studio before the first exercise opens, so its very first look at the exercise sees which one it is */
-  window.__builder = { get draft() { return draft; }, get source() { return source(); }, get touched() { return touched(); }, start, open, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, addMeasure, fillSlot, setShape, setRole, setBand, fromDrawing, fromRecording, setNumber, setNumbers, showRecommendations, addDiscovered, addFaultOn, fileOf, link, download, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
+  window.__builder = { get draft() { return draft; }, get source() { return source(); }, sourceOf, get touched() { return touched(); }, start, open, fromLibrary, commit, drop, render, figChanged, fromPose, POSES, valueOf, addMeasure, fillSlot, setShape, setRole, setBand, fromDrawing, fromRecording, setNumber, setNumbers, showRecommendations, addDiscovered, addFaultOn, fileOf, link, download, get editing() { return editing; }, set editing(v) { editing = v; }, keyOfName: (n) => keyOfName(n, figView()) };
   if (window.__studio) Object.assign(window.__studio, { builder: window.__builder });
   /* a draft kept from last time comes back; otherwise the exercise in the address, or the first */
   let kept = null;

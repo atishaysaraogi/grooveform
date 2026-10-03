@@ -42,7 +42,7 @@ Moves.ready.then(function () {
   /* the exercise open now, as the names a trace may carry: the draft's own id and the library exercise it came from */
   /* a new exercise not yet named carries the placeholder id every such draft shares: no identity, so no trace's verdicts */
   const PLACEHOLDER = ['newmove', 'newexercise'];
-  const openIds = () => { const b = window.__builder, d = b && b.draft; return new Set(d ? [b.source || (PLACEHOLDER.includes(d.id) ? null : d.id), b.source ? d.id : null].filter(Boolean) : [move.id]); };
+  const openIds = () => { const b = window.__builder, d = b && b.draft; return new Set((d ? [b.source, d.id] : [move.id]).filter((id) => id && !PLACEHOLDER.includes(id))); };
   const isMine = (rec) => { if (!rec.fileFrom || !rec.fileFrom.length) return true; const ids = openIds(); return rec.fileFrom.some((id) => ids.has(id)); };
   function loadLabels(rec) {
     rec.labels = [];
@@ -189,7 +189,7 @@ Moves.ready.then(function () {
     const { meta, frames } = Trace.unpack(packed);
     /* the first recording, of another exercise than the one open: that exercise is opened, unless a draft is being edited */
     const from = [meta.move, meta.lib].filter(Boolean), want = meta.lib && Moves[meta.lib] ? meta.lib : meta.move;
-    if (want && Moves[want] && !recordings.length && window.__builder && !window.__builder.touched && !isMine({ fileFrom: from })) window.__builder.open(want);
+    if (want && Moves[want] && !PLACEHOLDER.includes(want) && !recordings.length && window.__builder && !window.__builder.touched && !isMine({ fileFrom: from })) window.__builder.open(want);
     return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFrom: [meta.move, meta.lib].filter(Boolean), tag: meta.tag || null });
   }
   function loadTakes(d) {
@@ -1040,7 +1040,7 @@ Moves.ready.then(function () {
   $('render-demo').onclick = renderDemo;
 
   /* another exercise picked: the verdicts go — not for the draft's own library exercise, which is the same one */
-  $('move').onchange = () => { if (!window.__builder) return; const v = $('move').value; if (!isMine({ fileFrom: [v] })) newExercise(); window.__builder.open(v); };
+  $('move').onchange = () => { if (!window.__builder) return; const v = $('move').value, b = window.__builder; if (!isMine({ fileFrom: [v, b.sourceOf ? b.sourceOf(v) : null].filter(Boolean) })) newExercise(); b.open(v); };
   $('fig-edit').addEventListener('toggle', () => { if ($('fig-edit').open) requestAnimationFrame(() => animChanged()); });
   window.addEventListener('resize', () => { if ($('fig-edit').open) drawEditor(); });
 

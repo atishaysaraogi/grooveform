@@ -466,6 +466,9 @@
       if (!this.move.reps) { this.holdMs = 0; this.bestMs = 0; this.called = {}; this.holdDue = 0; this.wasIn = false; }   // a hold's set: its own clock
       if (typeof this.move.reset === 'function') this.move.reset();
     }
+    /* the rep's own measure read against the start: before ready it is 0 by definition, so being at the start
+       proves nothing and only the full set-up wait guards the references a new set takes */
+    selfStart() { const pm = ((this.move.spec || {}).progress || {}).measure; return (this.move.measurements || []).some((m) => m.key === pm && m.fromStart); }
     gate(r, t, v) {
       const cfg = this.cfg, reps = !!this.move.reps;
       /* the studio: a break between two sets, setBreakSec long after the coaching began. Out of sight that long
@@ -481,10 +484,12 @@
         } else {
           this.unseenSince = 0;
           /* in the picture, away from the start: between reps, or up but never in position (a rest that reads as raised) */
-          const off = reps && !v.atStart && (this.phase === 'down' || !v.inPosition);
+          const off = reps && !v.atStart && (this.phase === 'down' || (this.phase === 'up' && !v.inPosition));
           if (off) {
             if (!this.awaySince) this.awaySince = t;
-            if (t - this.awaySince >= brk) this.breakDue = true;
+            /* up but out of position may be a long attempt: it gets the rep's own span before it reads as a rest */
+            const span = this.phase === 'up' ? (cfg.settleMs || 0) + cfg.holdTargetSec * 1000 + (cfg.lowerSec || 0) * 1000 : 0;
+            if (t - this.awaySince >= brk + span) this.breakDue = true;
           } else if (this.breakDue && reps && v.atStart) {
             if (this.phase === 'lower') this.awaySince = 0;   // a held rep on its way back: counted first, the new set on a later frame at the start
             else this.newSet();
@@ -519,7 +524,7 @@
           /* the floor: the lowest point of the body over the start position, averaged, fixed from now on */
           if (r && r.floorY != null) { this.floorSum += r.floorY; this.floorN += 1; }
           /* a later set in the studio: back at the start for the return time is enough — the film need not hold still as the phone asks */
-          if (t - this.readySince >= ((this.sets || 1) > 1 ? (cfg.returnMs || 0) : (cfg.readyMs || 0))) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
+          if (t - this.readySince >= ((this.sets || 1) > 1 && !this.selfStart() ? (cfg.returnMs || 0) : (cfg.readyMs || 0))) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
         } else this.readySince = 0;
         if (!this.ready) {
           /* seen, but not at the start position for a while: a move can say what the start
@@ -874,7 +879,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03k';
+  const VER = '2026-10-03l';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
