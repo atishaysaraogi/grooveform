@@ -1233,6 +1233,8 @@ try {
   });
 
   await step('one rep at a time: the video stops at the end of every rep and waits for a verdict or for play', async () => {
+    await page.goto(base + '/review.html?move=bridge');
+    await page.waitForSelector('#measures .mcard');
     /* two reps of the bridge, and a stand-in film as long as them on the stage */
     const take = await page.evaluate(() => {
       const mk = (script) => { const frames = []; let t = 0; for (const [pose, ms] of script) for (const end = t + ms; t < end; t += 66) { Object.assign(window.__pose, { move: 'bridge' }, pose); frames.push({ t, lm: window.__poseSource() }); } return frames; };
@@ -1240,7 +1242,7 @@ try {
       return mk([[REST, 3000], [TOP, 4000], [HALF, 1300], [REST, 1500], [TOP, 4000], [HALF, 1300], [REST, 2400]]);
     });
     const id = await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'two reps').id, take);
-    await page.click(`#rec-list li[data-rec="${id}"] button[data-act="show"]`);
+    await page.evaluate((i) => window.__review.show(i), id);
     const reps = await page.evaluate(() => window.__review.shown.reps.map((r) => [r.t0, r.t1]));
     assert.equal(reps.length, 2, 'two reps broken out: ' + JSON.stringify(reps));
     await page.evaluate(async (ms) => {
@@ -1279,6 +1281,7 @@ try {
     s = await S();
     assert.ok(!s.paused && s.t > reps[0][1], 'from a rep with a verdict, play goes on to the next: ' + s.t.toFixed(0));
     await page.evaluate(() => document.getElementById('clip').pause());
+    await page.goto(base + '/');   // where the next step starts
   });
 
   await step('programmes: a bundle lists its steps, a step opens with its range and its faults left alone, a copy is adjusted and travels as a link', async () => {
