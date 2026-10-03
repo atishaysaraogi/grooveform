@@ -94,6 +94,16 @@
     }
     return P[name] || null;
   }
+  /* 'floor': not a landmark but the level the body rests on, taken as the lowest point of the body
+     the model is sure of this frame (a planted foot standing, the back or the side lying down).
+     It can be the reference of a height, or the second line of an angle between two lines. */
+  const FLOOR = 'floor';
+  function floorY(P, both, cfg) {
+    let y = null;
+    const vis = cfg && cfg.vis != null ? cfg.vis : 0;
+    for (const S of [both && both.L, both && both.R, P]) if (S) for (const k of Object.keys(S)) { const q = S[k]; if (q && typeof q.y === 'number' && (q.v == null || q.v >= vis) && (y == null || q.y > y)) y = q.y; }
+    return y;
+  }
   /* `to` may be a list of names: the first the model is sure of */
   function resolve(name, P, both, cfg, side, facing) {
     if (Array.isArray(name)) {
@@ -106,7 +116,7 @@
   function measure(m, ctx) {
     const { P, both, cfg, facing, Core, values, side } = ctx;
     const pts = [];
-    const pt = (k) => { const got = resolve(m[k], P, both, cfg, side, facing); pts.push(got.p); return got; };
+    const pt = (k) => { if (m[k] === FLOOR) return { p: null, name: FLOOR }; const got = resolve(m[k], P, both, cfg, side, facing); pts.push(got.p); return got; };
     let x = null, used = {};
     switch (m.kind) {
       case 'angle': { const a = pt('a'), b = pt('b'), c = pt('c'); used = { a: a.name, b: b.name, c: c.name };
@@ -121,10 +131,15 @@
         x = a.p && b.p ? Core.rise(a.p, b.p) : null; break; }
       case 'down': { const a = pt('from'), b = pt('to'); used = { from: a.name, to: b.name };
         x = a.p && b.p ? Core.fromDown(a.p, b.p) : null; break; }
-      case 'lines': { const a = pt('a'), b = pt('b'), c = pt('c'), d = pt('d'); used = { a: a.name, b: b.name, c: c.name, d: d.name };
+      case 'lines': { const a = pt('a'), b = pt('b'), c = pt('c'), d = m.c === FLOOR ? { p: null, name: FLOOR } : pt('d'); used = { a: a.name, b: b.name, c: c.name, d: d.name };
         /* the angle between the a→b and c→d lines: 0 parallel the same way, 90 square — a shin and a trunk kept parallel */
+        /* the floor as the second line: level, pointing the way the body faces, so 0 is the first line
+           level and pointing that way, 90 square to the floor, 180 level and pointing back */
+        if (m.c === FLOOR) { const f = facing || 1; x = a.p && b.p ? Core.betweenLines(a.p, b.p, { x: 0, y: 0 }, { x: f, y: 0 }) : null; used.d = FLOOR; break; }
         x = a.p && b.p && c.p && d.p ? Core.betweenLines(a.p, b.p, c.p, d.p) : null; break; }
       case 'distance': { const a = pt('a'), b = pt('b'); used = { a: a.name, b: b.name };
+        /* the floor as the reference of a height: level with the lowest point of the body the model is sure of */
+        if (m.a === FLOOR && b.p) { const fy = floorY(P, both, cfg); a.p = fy == null ? null : { x: b.p.x, y: fy, v: 1 }; }
         if (a.p && b.p) {
           /* `axis`: the height of b over a ('y', + above) or how far b is ahead of a the way the body
              faces ('x'), each as a share of `per` — a hand's width is two degrees at a metre's
@@ -418,7 +433,11 @@
       }
     }
 
+    /* how long each fault must be seen before it is flagged, where the file says (`afterSec`, 0 at once);
+       the others wait the shared persistMs */
+    const persist = {}; for (const x of faults) if (typeof x.afterSec === 'number' && x.afterSec >= 0) persist[x.id] = Math.round(x.afterSec * 1000);
     const move = {
+      persist,
       v: f.v || 1, id: f.id, name: f.name, order: f.order == null ? 999 : f.order, status: f.status || 'ready',
       category: f.category || '', tags: f.tags || [], equipment: f.equipment || [],
       hint: words.hint || '', start: words.start || '', position: words.position || '', top: words.top || '',
@@ -447,6 +466,7 @@
   function uniqueLandmarks(f) {
     const out = new Set();
     for (const m of f.measurements || []) for (const k of SLOT_KEYS) { const v = m[k]; if (Array.isArray(v)) v.forEach((n) => out.add(n)); else if (v) out.add(v); }
+    out.delete(FLOOR);
     return [...out];
   }
 
@@ -461,6 +481,7 @@
   /* 'the knee', 'the other knee', 'the left knee'; a list of names: the first, with the fallback said */
   function pointWords(name, bare) {
     if (Array.isArray(name)) { const [first, ...rest] = name; return rest.length ? `${pointWords(first, bare)} (or ${pointWords(rest[0], true)} when it is not seen)` : pointWords(first, bare); }
+    if (name === FLOOR) return bare ? 'floor' : 'the floor';
     const p = PREFIX(name), w = POINT[PLAIN(name)] || PLAIN(name) || 'point';
     const the = bare ? '' : 'the ';
     return p === 'other' ? `${the}other ${w}` : p ? `${the}${p} ${w}` : `${the}${w}`;
@@ -546,10 +567,11 @@
         short = camel((s.named ? s.seg.replace(/^the /, '') : `${PLAIN(first(m.at))} ${PLAIN(first(m.to))}`) + ' floor'); named = !!m.at && !!m.to;
         break; }
       case 'lines': {
-        const s1 = segmentOf(m.a, m.b), s2 = segmentOf(m.c, m.d), full = !!(m.a && m.b && m.c && m.d);
+        const fl = m.c === FLOOR, s1 = segmentOf(m.a, m.b), s2 = fl ? { seg: 'the floor', line: 'the floor', named: true } : segmentOf(m.c, m.d), full = !!(m.a && m.b && m.c && (m.d || fl));
         what = full ? `the angle between ${s1.line} and ${s2.line}` : 'the angle between two lines';
-        meaning = '0° is parallel, both pointing the same way; 90° is square to each other; 180° parallel, pointing opposite ways.';
-        short = camel(`${s1.named ? s1.seg.replace(/^the /, '') : PLAIN(first(m.a)) || 'line'} ${s2.named ? s2.seg.replace(/^the /, '') : PLAIN(first(m.c)) || 'line'}`); zero = 'parallel'; named = full;
+        meaning = fl ? `0° is level, ${pointWords(m.b)} ${fwd} of ${pointWords(m.a)}; 90° is square to the floor, pointing up or down; 180° level, pointing ${back}.`
+          : '0° is parallel, both pointing the same way; 90° is square to each other; 180° parallel, pointing opposite ways.';
+        short = camel(`${s1.named ? s1.seg.replace(/^the /, '') : PLAIN(first(m.a)) || 'line'} ${s2.named ? s2.seg.replace(/^the /, '') : PLAIN(first(m.c)) || 'line'}`); zero = fl ? 'level' : 'parallel'; named = full;
         break; }
       case 'down': {
         const s = segmentOf(m.from, m.to);
@@ -563,7 +585,8 @@
         break; }
       case 'distance': {
         const pa = PLAIN(first(m.a)), pb = PLAIN(first(m.b)), per = m.per ? `, as % of ${perOf()}` : '';
-        if (m.axis === 'y') { what = `the height of ${pointWords(m.b)} over ${pointWords(m.a)}${per}`; meaning = `0 is level; + ${pointWords(m.b)} above ${pointWords(m.a)}.`; short = camel(`${pb} height`); zero = 'level'; }
+        if (m.axis === 'y' && m.a === FLOOR) { what = `the height of ${pointWords(m.b)} over the floor${per}`; meaning = `0 is on the floor (level with the lowest point of the body); + ${pointWords(m.b)} above it.`; short = camel(`${pb} floor height`); zero = 'the floor'; }
+        else if (m.axis === 'y') { what = `the height of ${pointWords(m.b)} over ${pointWords(m.a)}${per}`; meaning = `0 is level; + ${pointWords(m.b)} above ${pointWords(m.a)}.`; short = camel(`${pb} height`); zero = 'level'; }
         else if (m.axis === 'x') { what = `how far ${pointWords(m.b)} is ${fwd} of ${pointWords(m.a)}${per}`; meaning = `0 is one over the other; + ${fwd}, − ${back}.`; short = camel(`${pb} ahead`); zero = 'stacked'; }
         else {
           const across = pa === pb && PREFIX(first(m.a)) !== PREFIX(first(m.b));
@@ -608,6 +631,7 @@
       return minus ? `+ ${minus}, − ${plus}.` : null;
     })();
     if (how === 'change') { what += ', as the change since the start'; meaning = `0 is as at the start; ${signs || '+ more than at the start, − less.'}`; zero = 'the start'; short += 'Change'; }
+    else if (how === 'rep') { what += ', as the change since the rep began'; meaning = `0 is as when this rep began (taken afresh at the start of every rep); ${signs || '+ more than then, − less.'}`; zero = 'the rep\'s start'; short += 'RepChange'; }
     else if (how === 'ratio') { what += ', as % of its start'; meaning = '100 is as at the start; less means it has turned toward or away from the camera.'; short += 'Ratio'; }
     else if (how === 'peak') { what += ', as % of its peak this set'; meaning = '100 is the most it has been this set.'; short += 'Peak'; }
     else if (how === 'belowPeak') { what += ', below its peak this set'; meaning = '0 is the most it has been this set; − is under it.'; short += 'Drop'; }
@@ -649,13 +673,14 @@
     const n = `${over ? 'Over' : 'Under'} ${fmtN(v)}${u}`;
     let why = '';
     const how = m.fromStart;
-    if (how === 'change' || how === 'rest') why = over ? (v < 0 ? `dropped less than ${fmtN(Math.abs(v))}${u} from the start` : `risen more than ${fmtN(v)}${u} from the start`) : v < 0 ? `dropped more than ${fmtN(Math.abs(v))}${u} from the start` : `risen less than ${fmtN(v)}${u} from the start`;
+    if (how === 'rep') why = over ? (v < 0 ? `dropped less than ${fmtN(Math.abs(v))}${u} since the rep began` : `risen more than ${fmtN(v)}${u} since the rep began`) : v < 0 ? `dropped more than ${fmtN(Math.abs(v))}${u} since the rep began` : `risen less than ${fmtN(v)}${u} since the rep began`;
+    else if (how === 'change' || how === 'rest') why = over ? (v < 0 ? `dropped less than ${fmtN(Math.abs(v))}${u} from the start` : `risen more than ${fmtN(v)}${u} from the start`) : v < 0 ? `dropped more than ${fmtN(Math.abs(v))}${u} from the start` : `risen less than ${fmtN(v)}${u} from the start`;
     else if (how === 'ratio' || how === 'peak') why = `${over ? 'over' : 'under'} ${fmtN(v)}% of its ${how === 'ratio' ? 'start' : 'peak'}`;
     else if (m.kind === 'angle') { const row = namedAngle(m); why = row ? (over ? row.over : row.under) : (over ? 'wider' : 'tighter'); }
     else if (m.kind === 'tilt') { const shin = /shin|arm/.test(d.what); why = over ? (shin ? `${pointWords(m.top)} ${fwd} of ${pointWords(m.base)} past ${fmtN(v)}°` : `leaning ${fwd} past ${fmtN(v)}°`) : v < 0 ? (shin ? `${pointWords(m.top)} behind ${pointWords(m.base)} past ${fmtN(Math.abs(v))}°` : `leaning ${back} past ${fmtN(Math.abs(v))}°`) : `leaning ${fwd} less than ${fmtN(v)}°`; }
     else if (m.kind === 'floor') why = over ? (v >= 90 ? `${pointWords(m.to)} ${fwd} of ${pointWords(m.at)}` : `${pointWords(m.to)} less far behind ${pointWords(m.at)}`) : (v <= 90 ? `${pointWords(m.to)} behind ${pointWords(m.at)}` : `${pointWords(m.to)} less far ${fwd}`);
     else if (m.kind === 'down') why = over ? `lifted past ${fmtN(v)}°` : `lifted less than ${fmtN(v)}°`;
-    else if (m.kind === 'lines') why = over ? `more than ${fmtN(v)}° off parallel` : `within ${fmtN(v)}° of parallel`;
+    else if (m.kind === 'lines') why = m.c === FLOOR ? (over ? `more than ${fmtN(v)}° from level` : `within ${fmtN(v)}° of level`) : over ? `more than ${fmtN(v)}° off parallel` : `within ${fmtN(v)}° of parallel`;
     else if (m.kind === 'rise' || (m.kind === 'distance' && m.axis === 'y')) {
       if (FOOT(m)) why = over ? 'the heel up' : v <= 0 ? 'the toes up' : `the heel less than ${fmtN(v)}° up`;
       else why = over ? `${pointWords(m.b)} higher than ${pointWords(m.a)}` : v <= 0 ? `${pointWords(m.b)} lower than ${pointWords(m.a)}` : `${pointWords(m.b)} less than ${fmtN(v)}${u} above ${pointWords(m.a)}`;
@@ -714,8 +739,9 @@
     const d = describe(m, file), over = side === 'above';
     const B = m.b ? cap(pointWords(m.b, true)) : 'It', b = m.b ? pointWords(m.b, true) : 'it';
     /* a foot read against its start is still heels or toes lifting */
-    if (m.kind === 'rise' && FOOT(m) && (m.fromStart === 'change' || m.fromStart === 'rest')) return over ? { label: 'Heels lifting', text: 'Keep the heels down' } : { label: 'Toes lifting', text: 'Keep the toes down' };
-    if (m.fromStart === 'change' || m.fromStart === 'rest') {
+    if (m.kind === 'rise' && FOOT(m) && (m.fromStart === 'change' || m.fromStart === 'rest' || m.fromStart === 'rep')) return over ? { label: 'Heels lifting', text: 'Keep the heels down' } : { label: 'Toes lifting', text: 'Keep the toes down' };
+    if (m.fromStart === 'rep' && m.kind === 'distance' && m.axis === 'y' && m.b) return over ? { label: `${B} rising`.slice(0, 26), text: `Keep ${b} down` } : { label: `${B} not rising`.slice(0, 26), text: `Lift ${b} higher` };
+    if (m.fromStart === 'change' || m.fromStart === 'rest' || m.fromStart === 'rep') {
       /* said by the part that moved: the segment of a line, the joint of an angle */
       const two = m.kind === 'angle' ? null : m.a && m.b ? [m.a, m.b] : m.base && m.top ? [m.base, m.top] : m.at && m.to ? [m.at, m.to] : m.from && m.to ? [m.from, m.to] : null;
       const row = m.kind === 'angle' ? namedAngle(m) : null;
@@ -737,7 +763,8 @@
         if (j === 'neck') return over ? { label: 'Head too far back', text: 'Chin level' } : { label: 'Head dropping', text: 'Long neck, eyes down' };
         return over ? { label: `${cap(d.short)} too open`, text: 'Not so far' } : { label: `${cap(d.short)} too closed`, text: 'A little further' }; }
       case 'down': { const S = cap(segmentOf(m.from, m.to).seg.replace(/^the /, '')); return over ? { label: `${S} too high`.slice(0, 26), text: 'Not so high' } : { label: `${S} short`.slice(0, 26), text: 'Lift until it is level' }; }
-      case 'lines': { const s1 = segmentOf(m.a, m.b).seg.replace(/^the /, ''), s2 = segmentOf(m.c, m.d).seg.replace(/^the /, ''); return over ? { label: `${cap(s1)} off the ${s2}`.slice(0, 26), text: `Keep the ${s1} and the ${s2} parallel` } : { label: `${cap(s1)}, ${s2} too close`.slice(0, 26), text: `Open the angle between the ${s1} and the ${s2}` }; }
+      case 'lines': { if (m.c === FLOOR) { const s1 = segmentOf(m.a, m.b).seg.replace(/^the /, ''); return over ? { label: `${cap(s1)} too steep`.slice(0, 26), text: `Bring the ${s1} closer to level` } : { label: `${cap(s1)} too flat`.slice(0, 26), text: `Lift the ${s1} more` }; }
+        const s1 = segmentOf(m.a, m.b).seg.replace(/^the /, ''), s2 = segmentOf(m.c, m.d).seg.replace(/^the /, ''); return over ? { label: `${cap(s1)} off the ${s2}`.slice(0, 26), text: `Keep the ${s1} and the ${s2} parallel` } : { label: `${cap(s1)}, ${s2} too close`.slice(0, 26), text: `Open the angle between the ${s1} and the ${s2}` }; }
       case 'bend': return over ? { label: `${B} piked`, text: `Lower ${b}` } : { label: `${B} sagging`, text: `Lift ${b}` };
       case 'distance': if (m.axis === 'y') return over ? { label: `${B} too high`, text: 'Not so high' } : { label: `${B} too low`, text: 'A little higher' };
         if (m.axis === 'x') return over ? { label: `${B} too far forward`.slice(0, 26), text: 'Bring it back' } : { label: `${B} too far back`.slice(0, 26), text: 'Bring it forward' };
@@ -780,13 +807,18 @@
       if (!isName(m.key)) err(at + '.key', 'one word, lowercase');
       else if (keys.has(m.key)) err(at + '.key', 'used twice: ' + m.key); else keys.add(m.key);
       if (!KINDS.includes(m.kind)) { err(at + '.kind', 'one of ' + KINDS.join(', ')); return; }
-      for (const k of NEED[m.kind]) if (!lmOk(m[k])) err(`${at}.${k}`, 'a landmark: ' + LANDMARKS.join(', '));
+      const floorAt = m.kind === 'distance' && m.axis === 'y' ? 'a' : m.kind === 'lines' ? 'c' : null;
+      for (const k of NEED[m.kind]) {
+        if (m[k] === FLOOR) { if (k !== floorAt) err(`${at}.${k}`, 'the floor can be the reference of a height (a) or the second line of an angle between lines (c)'); continue; }
+        if (k === 'd' && m.c === FLOOR) { if (m.d != null && m.d !== FLOOR) err(`${at}.d`, 'with the floor as the second line, nothing here'); continue; }
+        if (!lmOk(m[k])) err(`${at}.${k}`, 'a landmark: ' + LANDMARKS.join(', ') + (floorAt === k ? ', or floor' : ''));
+      }
       if (m.kind === 'sum') { if (!Array.isArray(m.terms) || !m.terms.length) err(at + '.terms', 'the measurements to add'); }
       if (m.axis != null) { if (m.kind !== 'distance' || !['x', 'y'].includes(m.axis)) err(at + '.axis', '"y" (a height) or "x" (how far ahead), on a distance'); else if (!Array.isArray(m.per) || m.per.length !== 2) err(at + '.axis', 'axis needs per: a height or an offset is a share of a limb'); }
       if (m.kind === 'tilt' && f.facing && [m.base, m.top].every((n) => typeof n === 'string') && ((m.base === f.facing.from && m.top === f.facing.to) || (m.base === f.facing.to && m.top === f.facing.from))) warn(at, 'this tilt is signed by facing, and facing is this same line, so it can never read negative — face the body by another pair (heel to toe, say)');
       if (typeof m.bias === 'string' && typeof defaults[m.bias] !== 'number') err(at + '.bias', `names a setting that is not in defaults: ${m.bias}`);
       if (m.unseen != null && typeof m.unseen !== 'number') err(at + '.unseen', 'a number: the reading when a landmark it needs is hidden');
-      if (m.fromStart != null && !['change', 'ratio', 'peak', 'belowPeak', 'rest'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position), "ratio" (percent of its value at the start), "peak" (percent of the most it has been in the set), "belowPeak" (the reading less the most it has been) or "rest" (the change from the rest position, which follows the reading slowly while it is near)');
+      if (m.fromStart != null && !['change', 'rep', 'ratio', 'peak', 'belowPeak', 'rest'].includes(m.fromStart)) err(at + '.fromStart', '"change" (the reading less its value at the start position), "rep" (less its value when this rep began), "ratio" (percent of its value at the start), "peak" (percent of the most it has been in the set), "belowPeak" (the reading less the most it has been) or "rest" (the change from the rest position, which follows the reading slowly while it is near)');
       if (m.gate != null) {
         const before = (f.measurements || []).slice(0, (f.measurements || []).indexOf(m)).map((q) => q.key);
         if (typeof m.gate !== 'object' || !before.includes(m.gate.measure)) err(at + '.gate', 'names a measurement listed before this one: ' + (before.join(', ') || 'none'));
@@ -817,6 +849,7 @@
       if (!x.text) err(at + '.text', 'the spoken words');
       if (!x.label) err(at + '.label', 'short words for the picture'); else if (x.label.length > 26) err(at + '.label', 'short means 26 characters at most');
       if (x.tone && !TONES.includes(x.tone)) warn(at + '.tone', 'one of ' + TONES.join(', '));
+      if (x.afterSec != null && !(typeof x.afterSec === 'number' && x.afterSec >= 0 && x.afterSec <= 30)) err(at + '.afterSec', 'seconds the fault is seen before it is flagged: 0 (at once) to 30');
       for (const k of x.requires || []) if (!keys.has(k)) err(at + '.requires', 'not a measurement: ' + k);
       if (m && m.band) { const kind = bandKind(m.band); if ((kind === 'min' && x.side === 'above') || (kind === 'max' && x.side === 'below')) warn(at + '.side', `${x.measure}'s band has no edge on that side`); }
     });
@@ -897,5 +930,5 @@
     };
   }
 
-  return { compile, check, blank, measure, pointOf, bandKind, bandEdges, words, LANDMARKS, KINDS, REGIONS, TONES, LOADS, SIDES, TYPES, VIEWS, ORIENTATIONS, POSITIONS, PICKS, BY_JOINT, DYNAMIC, SLOT_KEYS, DRAWS };
+  return { compile, check, blank, measure, pointOf, FLOOR, floorY, bandKind, bandEdges, words, LANDMARKS, KINDS, REGIONS, TONES, LOADS, SIDES, TYPES, VIEWS, ORIENTATIONS, POSITIONS, PICKS, BY_JOINT, DYNAMIC, SLOT_KEYS, DRAWS };
 });

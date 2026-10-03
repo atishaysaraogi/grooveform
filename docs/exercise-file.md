@@ -302,12 +302,12 @@ Each is a named number read every frame and smoothed.
 | `angle` | `a`, `b`, `c` | the angle at joint b between a and c |
 | `tilt` | `base`, `top` | how far base→top leans off vertical, + the way the body faces |
 | `floor` | `at`, `to` | the angle at→to makes with the floor: 90 plumb, more the way the body faces |
-| `bend` | `a`, `b`, `c` | how far b sits off the straight line a→c, as the bend at b, + above |
+| `bend` | `a`, `b`, `c` | how far b sits off the straight line a→c, as the bend at b, + above: 180 less the angle at b between a and c, so the degrees are measured at the point, not at either end of the line |
 | `rise` | `a`, `b` | how far b sits above a, as the angle of the line off level, signed |
 | `down` | `from`, `to` | how far from→to is lifted from straight down: 0 hanging, 90 level |
-| `lines` | `a`, `b`, `c`, `d` | the angle between the a→b and c→d lines: 0 parallel the same way, 90 square, 180 opposite; unsigned, so it needs no facing (a shin and a trunk kept parallel) |
+| `lines` | `a`, `b`, `c`, `d` | the angle between the a→b and c→d lines, by direction alone, as if both started from one point wherever they are: 0 parallel the same way, 90 square, 180 opposite; unsigned, so it needs no facing (a shin and a trunk kept parallel). `c: "floor"` with no `d` makes the second line the floor, pointing the way the body faces: 0 is a→b level that way, 90 square to the floor, 180 level the other way |
 | `distance` | `a`, `b`, `per` | the distance a→b as a share of the distance per[0]→per[1] (unitless; `times: 100` for percent) |
-| `distance` + `axis` | `a`, `b`, `per`, `axis: "y"` or `"x"` | the height of b over a (`y`, + above) or how far b is ahead of a the way the body faces (`x`), as a share of per — a small lift far from its reference wants a length, not an angle |
+| `distance` + `axis` | `a`, `b`, `per`, `axis: "y"` or `"x"` | the height of b over a (`y`, + above) or how far b is ahead of a the way the body faces (`x`), as a share of per — a small lift far from its reference wants a length, not an angle. With `axis: "y"`, `a` can be `"floor"`: the height of b over the floor, the level of the lowest point of the body the model is sure of this frame |
 | `sum` | `terms` | other measurements added: `[{ "measure": "back" }, { "kind": "rise", "a": "hip", "b": "knee", "times": -1 }]` |
 
 `to` may be a list (`["heel", "ankle"]`): the first the model trusts is
@@ -330,7 +330,11 @@ is null, not judged, and with `optional` the frame stands. The side-lying
 raise's toe angle is gated on the foot's length against the shin, so it is
 read only when the foot is long enough in the picture to be in profile.
 `fromStart` reads the measurement against the start position: `"change"` is
-the reading less its value when the set-up wait ended, `"ratio"` is percent
+the reading less its value when the set-up wait ended, `"rep"` the reading
+less its value when this rep began — taken afresh from the last frame back
+at the start before each rep, so a point's height read this way is how far
+it has risen since the rep started, whatever the rests between drifted to
+(a hold reads it as `"change"`), `"ratio"` is percent
 of that value, `"peak"` is percent of the most it has been in the set, a reference
 that only climbs — the prone leg raise's foot length, which foreshortens
 when the leg swings out of the camera's plane — and `"belowPeak"` is the
@@ -425,8 +429,15 @@ said, whatever their sizes.
   "when": "between",                           // top (default: judged while the rep is up) | rep (up and lowering) | always (between reps too) | between (at rest only)
   "requires": ["foot"],                        // only judged while these measurements are good
   "unless": ["liftHigh"],                      // not while these faults are on
+  "afterSec": 0.5,                             // seen this long before it is flagged; 0 at once; absent, the shared persistMs
   "tone": "walking in" }
 ```
+
+`afterSec` is how long the fault must be seen, without a break, before it is
+flagged: said, and counted in the studio's rep breakdown. 0 flags it on the
+first frame it is seen; without it the fault waits the shared `persistMs`
+(half a second). A slow drift wants longer; a fault that must never pass,
+such as a knee locking under load, can be at once.
 
 `side` is `above` or `below` the band. `when` says when the fault is judged:
 `top`, the default, while the rep is up (the hold at the top); `rep`, from the

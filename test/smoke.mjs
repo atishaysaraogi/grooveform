@@ -1350,6 +1350,17 @@ try {
     await page.$eval('#numbers-form [data-at="defaults.holdShort"] select', (s) => { s.value = 'note'; s.dispatchEvent(new Event('change')); });
     jr = JSON.parse(await page.inputValue('#build-json'));
     assert.equal(jr.defaults.holdShort, 'note', 'a note: written to the file');
+    /* a fault's own wait, a reading since the rep began, and the floor as the second line of two */
+    assert.ok(await page.$$eval('#measures input[data-at$=".afterSec"]', (l) => l.length) > 0, 'each fault has a field for how long it is seen before it is flagged');
+    assert.ok(await page.$$eval('#measures option[value="rep"]', (l) => l.length) > 0, 'a reading can be taken since the rep began');
+    await page.click('#add-measure');
+    const lastCard = async () => (await page.$$('#measures .mcard')).at(-1);
+    await (await (await lastCard()).$('select[data-at$=".kind"]')).selectOption('lines');
+    await (await (await lastCard()).$('button[data-at$=".c"]')).click();
+    await page.click('.lm-pop button:has-text("the floor")');
+    jr = JSON.parse(await page.inputValue('#build-json'));
+    const lm = jr.measurements.at(-1);
+    assert.deepEqual([lm.kind, lm.c, lm.d], ['lines', 'floor', undefined], 'the floor as the second line, with no fourth point');
     await page.click('#build-drop');
     await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
     /* removing a measurement takes its drawing and its fault with it — in a loaded file too, whose

@@ -65,11 +65,11 @@ Moves.ready.then(function () {
     floor: 'the angle the line makes with the floor: 90 is upright, over 90 the second point is forward of the first.',
     down: 'how far the line is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
     rise: 'how far the second point sits above the first, as an angle off level: + above, − below. Good for two points close together (heel and toe).',
-    lines: 'the angle between two lines, each from its first point to its second: 0 is parallel the same way, 90 square. A shin and a trunk kept parallel in a squat; a thigh against the trunk. Unsigned, so it needs no facing.',
-    height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle.',
+    lines: 'the angle between two lines, each from its first point to its second, compared by direction alone — as if both started from the same point, wherever they are: 0 is parallel the same way, 90 square, 180 opposite. A shin and a trunk kept parallel in a squat; a thigh against the trunk. The second line can be the floor: then 0 is the first line level pointing the way the body faces, 90 square to the floor, 180 level pointing back.',
+    height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle. The first can be the floor — the lowest point of the body the model is sure of — for a point’s own height. Read “as the change since this rep began” it is how far the point has risen since the rep started.',
     ahead: 'how far the second point is ahead of the first the way the body faces, as a share of a limb: a knee past the toes by so much.',
     distance: 'the straight distance between the two points as a share of a limb: feet apart, a hand from the shoulder.',
-    bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle.',
+    bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle. The degrees are measured at the middle point: 180 less the angle there between the two ends, so 0 is on the line, and it reads the same near the camera or far from it.',
   };
   const shapeOf = (m) => (m.kind === 'distance' ? (m.axis === 'y' ? 'height' : m.axis === 'x' ? 'ahead' : 'distance') : m.kind);
   const kindOfShape = (s) => (s === 'height' || s === 'ahead' ? 'distance' : s);
@@ -314,7 +314,7 @@ Moves.ready.then(function () {
 
   /* ================= what is derived ================= */
   const keyOf = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^[^a-z]+/, '') || 'newmove';
-  const lmRefs = (m) => { const out = []; for (const k of Spec.SLOT_KEYS) { const v = m[k]; if (Array.isArray(v)) out.push(...v); else if (v) out.push(v); } if (m.per) out.push(...m.per); return out; };
+  const lmRefs = (m) => { const out = []; for (const k of Spec.SLOT_KEYS) { const v = m[k]; if (Array.isArray(v)) out.push(...v); else if (v && v !== 'floor') out.push(v); } if (m.per) out.push(...m.per); return out; };
   const plain = (n) => String(n || '').replace(/^(other|L|R|upper|lower|front|back)\./, '');
   /* the side a point name is taken from: '' this side, 'other.', 'L.', 'R.', or by where it is this frame */
   const prefixOf = (n) => { const mm = /^(other|L|R|upper|lower|front|back)\./.exec(String(Array.isArray(n) ? n[0] : n || '')); return mm ? mm[0] : ''; };
@@ -415,7 +415,10 @@ Moves.ready.then(function () {
   }
   function valueOf(m, K) {
     if (!K || !m) return null;
-    const view = figView(), P = (n) => (n ? pointFor(Array.isArray(n) ? n[0] : n, K, view) : null), facing = facingOf(K, view);
+    const view = figView(), facing = facingOf(K, view);
+    /* the floor in the drawing: level with its lowest point */
+    const floorY = () => { let y = null; for (const k of Object.keys(K)) { const q = K[k]; if (Array.isArray(q) && (y == null || q[1] > y)) y = q[1]; } return y; };
+    const P = (n) => (n === 'floor' ? null : n ? pointFor(Array.isArray(n) ? n[0] : n, K, view) : null);
     let x = null;
     try {
       switch (m.kind) {
@@ -425,8 +428,8 @@ Moves.ready.then(function () {
         case 'bend': { const a = P(m.a), b = P(m.b), c = P(m.c); if (a && b && c) x = Core.lineBend(a, b, c, facing); break; }
         case 'rise': { const a = P(m.a), b = P(m.b); if (a && b) x = Core.rise(a, b); break; }
         case 'down': { const a = P(m.from), b = P(m.to); if (a && b) x = Core.fromDown(a, b); break; }
-        case 'lines': { const a = P(m.a), b = P(m.b), c = P(m.c), d = P(m.d); if (a && b && c && d) x = Core.betweenLines(a, b, c, d); break; }
-        case 'distance': { const a = P(m.a), b = P(m.b); if (a && b) { x = Math.hypot(a.x - b.x, a.y - b.y); if (m.per) { const c = P(m.per[0]), d = P(m.per[1]); const ref = c && d ? Math.hypot(c.x - d.x, c.y - d.y) : 0; x = ref ? x / ref : null; } } break; }
+        case 'lines': { const a = P(m.a), b = P(m.b), c = m.c === 'floor' ? { x: 0, y: 0 } : P(m.c), d = m.c === 'floor' ? { x: facing, y: 0 } : P(m.d); if (a && b && c && d) x = Core.betweenLines(a, b, c, d); break; }
+        case 'distance': { const b = P(m.b), fy = m.a === 'floor' && b ? floorY() : null, a = m.a === 'floor' ? (fy == null ? null : { x: b.x, y: fy }) : P(m.a); if (a && b) { x = m.axis === 'y' ? a.y - b.y : m.axis === 'x' ? (b.x - a.x) * facing : Math.hypot(a.x - b.x, a.y - b.y); if (m.per) { const c = P(m.per[0]), d = P(m.per[1]); const ref = c && d ? Math.hypot(c.x - d.x, c.y - d.y) : 0; x = ref ? x / ref : null; } } break; }
         default: x = null;
       }
     } catch { x = null; }
@@ -444,10 +447,12 @@ Moves.ready.then(function () {
   /* ================= measuring: a shape, a point per slot, the words from the geometry ================= */
   const side_ = (n) => prefixOf(n).replace('.', '').toLowerCase();
   const uniqueKey = (base, self) => { base = keyOf(base) || 'm'; let k = base, n = 2; while (draft.measurements.some((m) => m !== self && m.key === k)) k = base + n++; return k; };
-  const slotsOf = (kind) => SLOTS[kind] || SLOTS.angle;
-  const filled = (m) => slotsOf(m.kind).every(([k]) => m[k]) && (!needsPer(m) || (m.per && m.per[0] && m.per[1]));
+  const slotsOf = (kind, m) => (kind === 'lines' && m && m.c === 'floor' ? SLOTS.lines.slice(0, 3) : SLOTS[kind] || SLOTS.angle);
+  /* the slots the floor may fill: a height's reference, an angle between lines' second line */
+  const floorSlot = (m) => (m.kind === 'distance' && m.axis === 'y' ? 'a' : m.kind === 'lines' ? 'c' : null);
+  const filled = (m) => slotsOf(m.kind, m).every(([k]) => m[k]) && (!needsPer(m) || (m.per && m.per[0] && m.per[1]));
   const needsPer = (m) => m.kind === 'distance';
-  const nextEmpty = (m, after) => { const sl = slotsOf(m.kind).map(([k]) => k); const from = after ? sl.indexOf(after) + 1 : 0; return sl.slice(from).concat(sl.slice(0, from)).find((k) => !m[k]) || null; };
+  const nextEmpty = (m, after) => { const sl = slotsOf(m.kind, m).map(([k]) => k); const from = after ? sl.indexOf(after) + 1 : 0; return sl.slice(from).concat(sl.slice(0, from)).find((k) => !m[k]) || null; };
   const describe = (m) => W.describe(m, draft);
   /* the key, the words and the short name follow the geometry until the person names it */
   function nameIt(m) {
@@ -463,6 +468,7 @@ Moves.ready.then(function () {
     if (slot === 'per0' || slot === 'per1') { m.per = m.per || [null, null]; m.per[slot === 'per0' ? 0 : 1] = name; }
     else {
       m[slot] = name;
+      if (m.kind === 'lines' && slot === 'c' && name === 'floor') delete m.d;
       if (m.kind === 'angle' && slot === 'b' && !m.a && !m.c) {
         const view = figView(), pre = prefixOf(name), base = plain(name);
         const k = keyOfName(view === 'front' ? (pre === 'L.' || pre === 'R.' ? name : 'R.' + base) : base, view), nb = k && NEIGHBOURS[view][k];
@@ -476,11 +482,12 @@ Moves.ready.then(function () {
   }
   /* the shape changed: the points kept by position, the words and the band's defaults re-derived */
   function setShape(m, shape) {
-    const was = slotsOf(m.kind).map(([k]) => m[k]), kind = kindOfShape(shape);
+    const was = slotsOf(m.kind, m).map(([k]) => m[k]), kind = kindOfShape(shape);
     for (const k of Spec.SLOT_KEYS) delete m[k];
     slotsOf(kind).forEach(([k], i) => { if (was[i]) m[k] = was[i]; });
     m.kind = kind;
     if (shape === 'height') m.axis = 'y'; else if (shape === 'ahead') m.axis = 'x'; else delete m.axis;
+    for (const k of Spec.SLOT_KEYS) if (m[k] === 'floor' && floorSlot(m) !== k) delete m[k];   // the floor only where it means something
     if (kind === 'distance') { m.per = m.per || ['knee', 'ankle']; m.times = 100; } else { delete m.per; if (m.times === 100) delete m.times; }
     m.named = false;
     if (m.band) setBand(m, Spec.bandKind(m.band));
@@ -520,7 +527,15 @@ Moves.ready.then(function () {
         body.appendChild(g);
         body.appendChild(el('div', 'lm-title', 'or two points: from')); body.appendChild(grid((n) => fillSlot(m, 'per0', n)));
         body.appendChild(el('div', 'lm-title', 'to')); body.appendChild(grid((n) => fillSlot(m, 'per1', n)));
-      } else { body.appendChild(el('div', 'lm-title', 'which point')); body.appendChild(grid((n) => fillSlot(m, slot, n))); }
+      } else {
+        if (floorSlot(m) === slot) {
+          const g = el('div', 'lm-grid'), fb = btn(m.kind === 'lines' ? 'the floor (a level line)' : 'the floor', () => { pop.remove(); fillSlot(m, slot, 'floor'); }, 'tiny-btn');
+          fb.title = 'The floor: level, at the lowest point of the body the model is sure of — a planted foot standing, the back or the side lying down';
+          if (cur === 'floor') fb.setAttribute('aria-pressed', 'true');
+          g.appendChild(fb); body.appendChild(el('div', 'lm-title', m.kind === 'lines' ? 'the second line' : 'over')); body.appendChild(g);
+        }
+        body.appendChild(el('div', 'lm-title', floorSlot(m) === slot ? 'or a point' : 'which point')); body.appendChild(grid((n) => fillSlot(m, slot, n)));
+      }
     }
     fill();
     anchor.parentNode.appendChild(pop);
@@ -1000,9 +1015,10 @@ Moves.ready.then(function () {
       if (!val) b.classList.add('empty');
       return b;
     };
-    for (const tok of SENTENCE[shape] || SENTENCE.angle) { if (tok === 'per') what.appendChild(slotBtn('per', 'a limb')); else if (SLOTS[m.kind].some(([k]) => k === tok)) what.appendChild(slotBtn(tok, (SLOTS[m.kind].find(([k]) => k === tok) || [])[1])); else what.appendChild(words(tok)); }
+    const toks = shape === 'lines' && m.c === 'floor' ? ['between the', 'a', '→', 'b', 'line and', 'c'] : SENTENCE[shape] || SENTENCE.angle;
+    for (const tok of toks) { if (tok === 'per') what.appendChild(slotBtn('per', 'a limb')); else if (SLOTS[m.kind].some(([k]) => k === tok)) what.appendChild(slotBtn(tok, (SLOTS[m.kind].find(([k]) => k === tok) || [])[1])); else what.appendChild(words(tok)); }
     what.appendChild(words(', read'));
-    what.appendChild(pick(m.fromStart || '', [['', 'as is'], ['change', 'as the change since the start position'], ['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been this set'], ['belowPeak', 'as how far under the most it has been this set'], ['rest', 'as the change from the rest position (which follows slowly)']], (v) => { if (v) m.fromStart = v; else delete m.fromStart; m.named = false; nameIt(m); }, 'the coach reads the value when the set-up wait ends and from then on gives the change from it, or the percentage of it', true, at + '.fromStart'));
+    what.appendChild(pick(m.fromStart || '', [['', 'as is'], ['change', 'as the change since the start position']].concat(d.type === 'reps' ? [['rep', 'as the change since this rep began']] : []).concat([['ratio', 'as % of its value at the start position'], ['peak', 'as % of the most it has been this set'], ['belowPeak', 'as how far under the most it has been this set'], ['rest', 'as the change from the rest position (which follows slowly)']]), (v) => { if (v) m.fromStart = v; else delete m.fromStart; m.named = false; nameIt(m); }, 'the coach reads the value when the set-up wait ends and from then on gives the change from it, or the percentage of it', true, at + '.fromStart'));
     inner.appendChild(what);
     /* the meaning line: what the number is, which way is which */
     if (desc.meaning || desc.notes.length) inner.appendChild(el('div', 'meaning', esc([desc.meaning].concat(desc.notes.map((n) => cap(n) + '.')).filter(Boolean).join(' '))));
@@ -1057,6 +1073,10 @@ Moves.ready.then(function () {
         row.appendChild(text(x.text, (v) => { x.text = v; x.own = true; }, 'what the coach says', 'wide', fat + '.text'));
         row.appendChild(words('well past'));
         row.appendChild(text(x.deep, (v) => { x.deep = v; }, 'stronger words (optional)', 'wide'));
+        row.appendChild(words('once seen for'));
+        row.appendChild(num(x.afterSec != null ? x.afterSec : '', (v) => { if (v == null) delete x.afterSec; else x.afterSec = Math.max(0, Math.min(30, v)); }, null, `seconds it must be seen before it is flagged; 0: at once; empty: the shared ${+((d.defaults.persistMs != null ? d.defaults.persistMs : Core.COMMON.persistMs) / 1000).toFixed(2)} s`));
+        row.lastChild.dataset.at = fat + '.afterSec'; row.lastChild.placeholder = String(+((d.defaults.persistMs != null ? d.defaults.persistMs : Core.COMMON.persistMs) / 1000).toFixed(2));
+        row.appendChild(words('s'));
         const more = btn('⋯', () => { ex.hidden = !ex.hidden; }, 'tiny-btn'); more.title = 'this fault\'s side, when, tone, and what silences it'; row.appendChild(more);
         const rm = btn('✕', () => { if (!touch()) return; d.faults = d.faults.filter((q) => q !== x); commit(true); }, 'tiny-btn'); rm.title = 'remove this fault'; row.appendChild(rm);
         const ex = el('div', 'more-f'); ex.hidden = true;

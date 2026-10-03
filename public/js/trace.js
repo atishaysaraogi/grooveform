@@ -94,7 +94,7 @@
      the line", and nothing is judged on the way down), and it has to hold for the
      persist time, the coach's own threshold for a fault worth saying. A flicker
      shorter than that never reaches the voice and is left out here too. */
-  function within(result, id, t0, t1) {
+  function within(result, id, t0, t1, move) {
     const out = []; let open = null;
     for (const r of result.rows) {
       if (r.t < t0 || r.t > t1) continue;
@@ -104,12 +104,13 @@
       else if (open) { out.push(open); open = null; }
     }
     if (open) out.push(open);
-    const persist = (result.cfg && result.cfg.persistMs) || 0;
+    const own = move && move.persist && move.persist[id];
+    const persist = own != null ? own : (result.cfg && result.cfg.persistMs) || 0;
     return out.filter((s) => s.t1 - s.t0 >= persist);
   }
   function faultsIn(result, move, t0, t1, ids) {
     return (ids || faultIds(move)).map((id) => {
-      const stretches = within(result, id, t0, t1);
+      const stretches = within(result, id, t0, t1, move);
       if (!stretches.length) return null;
       const said = result.cues.filter((c) => c.id === id && c.t >= t0 && c.t <= t1).map((c) => c.t);
       return { id, stretches, said, ms: stretches.reduce((a, s) => a + (s.t1 - s.t0), 0) };
@@ -374,7 +375,7 @@
      the separation with their own eyes. */
   const OTHER = { L: 'R', R: 'L' };
   const SLOTS = Spec.SLOT_KEYS;
-  const pointsOf = (m) => SLOTS.map((k) => m[k]).filter(Boolean).map((x) => (Array.isArray(x) ? x[0] : x));
+  const pointsOf = (m) => SLOTS.map((k) => m[k]).filter(Boolean).map((x) => (Array.isArray(x) ? x[0] : x)).filter((x) => x !== Spec.FLOOR);
   const needsOf = (m) => pointsOf(m).concat(m.per || []);
   const geometryOf = (m) => Object.assign({ kind: m.kind }, ...SLOTS.filter((k) => m[k]).map((k) => ({ [k]: m[k] })), m.per ? { per: m.per, times: m.times } : {}, m.fromStart ? { fromStart: m.fromStart } : {});
   /* tilt, floor, rise and down are one direction angle in four sign conventions, and bend is

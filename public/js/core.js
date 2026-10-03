@@ -402,6 +402,7 @@
       this.lastT = t; this.totalMs += dt;
       this.relate(r);
       const v = this.move.judge(r, this.cfg);
+      this.prevAtStart = !!(v && v.ok && v.atStart);   // for a reading taken since the rep began: its reference follows while back at the start
       const held = this.gate(r, t, v);
       if (held) return held;
       return this.move.reps ? this.stepReps(r, t, v, dt) : this.stepHold(r, t, v, dt);
@@ -426,6 +427,15 @@
            position, which the reference follows slowly, and only while the reading is near
            it — a lift leaves it where it was, a rest that settles as the set goes on carries
            it along, and one flat frame does not set a bar the rest then sits under */
+        /* rep: the change since this rep began. Between reps, while the last frame was back at the
+           start, the reference follows the reading; once the rep is under way it holds still */
+        if (how === 'rep') {
+          /* the reference is the last frame that was itself back at the start: this frame may
+             already be under way */
+          const last = (this.repRaw || (this.repRaw = {}))[key];
+          if (this.ready && this.move.reps && this.phase === 'down' && this.prevAtStart && last != null) this.base[key] = last;
+          this.repRaw[key] = raw;
+        }
         if (how === 'rest' && raw != null && b != null && this.ready && Math.abs(raw - b) < (this.cfg.restNear == null ? 6 : this.cfg.restNear)) this.base[key] = b + (raw - b) * 0.05;
         const bb = this.base[key];
         r[key] = raw == null || bb == null ? null : how === 'ratio' || how === 'peak' ? (bb ? (100 * raw) / bb : null) : raw - bb;
@@ -589,7 +599,9 @@
         else this.since[id] = 0;
       }
       /* nobody in the frame is said by the gate, on its own clock, never here */
-      const ready = this.move.faults.filter((id) => id !== 'lost' && on[id] != null && this.since[id] && t - this.since[id] >= cfg.persistMs);
+      /* each fault waits its own time where the file gives one (0: flagged on the first frame it is seen) */
+      const P = this.move.persist || {};
+      const ready = this.move.faults.filter((id) => id !== 'lost' && on[id] != null && this.since[id] && t - this.since[id] >= (P[id] != null ? P[id] : cfg.persistMs));
       for (const id of ready) {
         const c = this.cues[id];
         const cue = this.offer(id, t, (on[id] > cfg.deepAt && c.deep) || c.text);
@@ -819,7 +831,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03f';
+  const VER = '2026-10-03g';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
