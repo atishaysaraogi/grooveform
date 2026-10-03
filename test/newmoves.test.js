@@ -14,7 +14,9 @@ const D = Math.PI / 180;
    figure's own convention: torso from vertical (+ the way the body faces), thigh
    and shin from straight down (+ forward), foot from horizontal-forward (+ toes
    up), arms from straight down. Both legs are given, near (the side measured is
-   whichever the move picks) and far. facing +1 = the body faces the image right. */
+   whichever the move picks) and far. facing +1 = the body faces the image right.
+   `farBelow` drops the far side by that share of the picture: lying on the side facing
+   the phone, the bottom hip and shoulder sit below the top ones. */
 function body(o) {
   const f = o.facing == null ? 1 : o.facing, aspect = o.aspect || 16 / 9;
   const L = { torso: o.torsoLen || 0.24, thigh: 0.19, shin: 0.19, foot: 0.07, heel: 0.02, uarm: 0.14, farm: 0.13 };
@@ -34,7 +36,8 @@ function body(o) {
   };
   const near = leg(o.thigh || 0, o.shin == null ? (o.thigh || 0) : o.shin, o.foot || 0);
   const far = leg(o.thighF == null ? (o.thigh || 0) : o.thighF, o.shinF == null ? (o.thighF == null ? (o.shin == null ? (o.thigh || 0) : o.shin) : o.thighF) : o.shinF, o.footF == null ? (o.foot || 0) : o.footF);
-  const sides = { R: Object.assign({ shoulder, ear, elbow, wrist, hip }, near), L: Object.assign({ shoulder, ear, elbow, wrist, hip }, far) };
+  const drop = (P) => { const k = o.farBelow || 0; if (!k) return P; const out = {}; for (const [n, q] of Object.entries(P)) out[n] = { x: q.x, y: q.y + k }; return out; };
+  const sides = { R: Object.assign({ shoulder, ear, elbow, wrist, hip }, near), L: drop(Object.assign({ shoulder, ear, elbow, wrist, hip }, far)) };
   const hide = new Set(o.hide || []);
   /* `tilt` turns the whole body about the hip, as a phone not laid level would */
   const t = (o.tilt || 0) * D, turn = (p) => (!t ? p : { x: hip.x + (p.x - hip.x) * Math.cos(t) - (p.y - hip.y) * Math.sin(t), y: hip.y + (p.x - hip.x) * Math.sin(t) + (p.y - hip.y) * Math.cos(t) });
@@ -142,9 +145,12 @@ test('the side measured is held: level knees wobbling do not flip it, a real lif
 test('side-lying leg raise: the lift from level, forty five is the top, past fifty too high, the knee straight, the waist long', () => {
   const M = Moves.sideraise;
   /* the foot short in the picture, as a foot pointing at the phone shows: a fifth of the shin */
-  const LYING = { torso: 90, thigh: -90, shin: -90, foot: 0, thighF: -90, shinF: -90, footF: 0, uarm: -90, farm: -90, hipAt: [1.0, 0.7], footLen: 0.04 };
+  const LYING = { torso: 90, thigh: -90, shin: -90, foot: 0, thighF: -90, shinF: -90, footF: 0, uarm: -90, farm: -90, hipAt: [1.0, 0.62], footLen: 0.04, farBelow: 0.12 };
   let { r, v } = coached(M, LYING);
   assert.ok(r.ok && v.atStart && !v.raised, 'lying in line is the start: ' + JSON.stringify(v));
+  /* the top leg is the one measured from the start, the legs stacked: picked by the higher hip, not the
+     higher ankle, so the waist is read against its own start and not the bottom side's */
+  assert.equal(r.side, 'R', 'the top leg at rest');
   assert.equal(M.view, 'front', 'lying on the side facing the phone is a front view');
   ({ r, v } = coached(M, LYING, Object.assign({}, LYING, { thigh: -135, shin: -135 })));
   assert.ok(r.side === 'R', 'the higher ankle is the leg measured');

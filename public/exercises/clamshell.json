@@ -217,9 +217,9 @@
   },
   "side": {
     "pick": "highest",
-    "joint": "knee",
+    "joint": "hip",
     "hold": {
-      "margin": 0.3,
+      "margin": 0.2,
       "frames": 5
     }
   },

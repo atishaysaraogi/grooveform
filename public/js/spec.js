@@ -279,7 +279,9 @@
           let lead = 0;
           if (pick === 'highest') {
             const jc = pointOf(f.side.joint, cur.P, both, cur.side), jo = pointOf(f.side.joint, best.P, both, best.side), hip = pointOf('hip', cur.P, both, cur.side);
-            const scale = jc && hip ? Math.hypot(hip.x - jc.x, hip.y - jc.y) : 0;
+            /* the lead in hip-to-joint lengths; picked by the hip itself, in lengths of the trunk */
+            const ref = f.side.joint === 'hip' ? pointOf('shoulder', cur.P, both, cur.side) : jc;
+            const scale = ref && hip ? Math.hypot(hip.x - ref.x, hip.y - ref.y) : 0;
             lead = jc && jo && scale ? (jc.y - jo.y) / scale : 0;
           } else lead = val(best) - val(cur);
           if (lead > hold.margin) { held.run = held.want === best.side ? held.run + 1 : 1; held.want = best.side; if (held.run >= hold.frames) { held.side = best.side; held.want = null; held.run = 0; } }
