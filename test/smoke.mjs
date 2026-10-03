@@ -164,6 +164,8 @@ const browser = await chromium.launch({
 });
 const ctx = await browser.newContext({ viewport: { width: 900, height: 1200 }, permissions: ['camera'] });
 const page = await ctx.newPage();
+/* leaving the studio with verdicts not saved to a file asks first: the tests leave; every other dialog is dismissed, as Playwright does by default */
+page.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss()).catch(() => {}));
 /* the brand's fonts come from Google; this sandbox cannot reach it, and a font is not the app */
 await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 /* SMOKE_SLOW=4 runs the page on a quarter of the processor, the way a busy CI
@@ -1100,19 +1102,47 @@ try {
     assert.equal(await page.isVisible('#build-drop'), true, 'the changes can be dropped');
   });
 
-  await step('the studio keeps each recording\'s verdicts, pools them, takes a recording\'s tag as its verdict, suggests a measure, and saves the session', async () => {
+  await step('the studio starts every recording with no verdicts, pools them, takes a recording\'s tag as its verdict, suggests a measure, and saves the session', async () => {
     const traces = page.__traces;
-    /* the verdicts come back with the recordings after a reload, each to its own */
+    const pressed = () => page.$$eval('#reps .rep-label .btn[aria-pressed="true"]', (l) => l.map((b) => b.dataset.v).join(','));
+    /* a clean slate: a verdict given, then the page opened again and the same recordings loaded — none comes back */
     await page.click(`#reps li.rep[data-rec="${(await page.evaluate(() => window.__review.recordings[0].id))}"] .rep-label .btn[data-v="clean"]`);
     await page.reload();
     await page.waitForSelector('#measures .mcard');
     await page.click('#build-drop');
     await page.waitForFunction(() => /as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => localStorage.getItem('ontrack.labels')), null, 'nothing about verdicts is kept in the browser');
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
     await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
     await page.waitForFunction(() => window.__review.recordings.length === 2 && document.querySelectorAll('#reps li.rep').length === 2, null, { timeout: 5000 });
-    const [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
-    assert.equal(await page.$$eval('#reps .rep-label .btn[aria-pressed="true"]', (l) => l.map((b) => b.dataset.v).join(',')), 'clean,hipHigh', 'both verdicts back on their reps');
+    let [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
+    assert.equal(await pressed(), '', 'the same recordings, loaded again: no verdicts');
+    /* removed and loaded again in the same visit: none either */
+    await page.click(`#reps li.rep[data-rec="${r1}"] .rep-label .btn[data-v="clean"]`);
+    await page.evaluate((id) => window.__review.remove(id), r1);
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
+    await page.waitForFunction(() => window.__review.recordings.length === 2, null, { timeout: 5000 });
+    assert.equal(await pressed(), '', 'a recording removed and loaded again starts with none');
+    [r2, r1] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
+    /* another exercise: every verdict goes; back to this one, they stay gone */
+    await page.click(`#reps li.rep[data-rec="${r1}"] .rep-label .btn[data-v="clean"]`);
+    assert.equal(await pressed(), 'clean');
+    await page.selectOption('#move', 'sideraise');
+    await page.waitForFunction(() => window.__review.move.id === 'sideraise' || /side/i.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    assert.equal(await page.evaluate(() => window.__review.recordings.every((r) => !r.labels.length)), true, 'another exercise: no verdicts');
+    await page.selectOption('#move', 'bridge');
+    await page.waitForFunction(() => /bridge\.json · as in the library/.test(document.getElementById('build-note').textContent), null, { timeout: 5000 });
+    assert.equal(await pressed(), '', 'and back: still none');
+    /* the rest of this step: the two recordings loaded afresh, in order, and their verdicts given — the clean take clean, the high one too high */
+    await page.evaluate(() => { for (const r of [...window.__review.recordings]) window.__review.remove(r.id); });
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'clean'), traces.clean);
+    await page.evaluate((f) => window.__review.loadTrace(f, 16 / 9, 'too high'), traces.high);
+    await page.waitForFunction(() => window.__review.recordings.length === 2 && document.querySelectorAll('#reps li.rep').length === 2, null, { timeout: 5000 });
+    [r1, r2] = await page.evaluate(() => window.__review.recordings.map((r) => r.id));
+    assert.equal(await pressed(), '');
+    await page.click(`#reps li.rep[data-rec="${r1}"] .rep-label .btn[data-v="clean"]`);
+    await page.click(`#reps li.rep[data-rec="${r2}"] .rep-label .btn[data-v="hipHigh"]`);
+    assert.equal(await pressed(), 'clean,hipHigh', 'both verdicts on their reps');
     assert.match(await page.textContent('#reps-note'), /2 classified, 0 not yet/);
     /* pooled: one recommendation from the two recordings, with the reps it was made from */
     assert.match(await page.textContent('#recommend-note'), /from 2 classified reps in 2 recordings/);

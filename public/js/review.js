@@ -31,25 +31,27 @@ Moves.ready.then(function () {
   const video = $('clip'), overlay = $('overlay'), lanes = $('lanes'), reader = $('reader');
 
   /* ---------- the person's verdicts, per recording ----------
-     kept by time, with the recording, under the exercise it was judged as (the library
-     exercise a draft came from, so renaming a draft keeps them), in this browser and in the
-     trace file when it is saved */
-  const LABELS = 'ontrack.labels';
+     kept by time, with the recording, for as long as it is loaded, and in its trace file when
+     it is saved. Nothing is remembered elsewhere: a video removed and loaded again, or the page
+     opened again, starts with no verdicts, and so does every recording when the exercise
+     changes (another exercise, not an edit of this one — tuning against the verdicts is what
+     they are for). A saved trace brings its verdicts back only to the exercise they were given
+     under (the library exercise a draft came from, so renaming a draft keeps them). */
   const lineage = () => (window.__builder && window.__builder.source) || move.id;
-  const labelKey = (rec) => `${lineage()}|${rec.name}|${rec.frames.length}`;
+  try { localStorage.removeItem('ontrack.labels'); } catch { }   // verdicts this browser kept before: forgotten
   function loadLabels(rec) {
     rec.labels = [];
-    try { const all = JSON.parse(localStorage.getItem(LABELS) || '{}'); if (Array.isArray(all[labelKey(rec)])) rec.labels = all[labelKey(rec)]; } catch { }
-    if (!rec.labels.length && Array.isArray(rec.fileLabels) && rec.fileLabels.length) rec.labels = rec.fileLabels.slice();
+    const mine = rec.fileFor == null || rec.fileFor === lineage() || rec.fileFor === move.id;
+    if (mine && Array.isArray(rec.fileLabels) && rec.fileLabels.length) rec.labels = rec.fileLabels.map((l) => Object.assign({}, l, { faults: (l.faults || []).slice() }));
+    else if (!mine && Array.isArray(rec.fileLabels) && rec.fileLabels.length) note(`${rec.name}: its verdicts were given under another exercise (${rec.fileFor}), so it starts without them`);
+    rec.dirty = false;
   }
-  function saveLabels(rec) {
-    try {
-      const all = JSON.parse(localStorage.getItem(LABELS) || '{}'), k = labelKey(rec);
-      if (rec.labels.length) all[k] = rec.labels; else delete all[k];
-      const keys = Object.keys(all); for (const old of keys.slice(0, Math.max(0, keys.length - 60))) delete all[old];
-      localStorage.setItem(LABELS, JSON.stringify(all));
-    } catch { }
-  }
+  /* a verdict given or changed: not in any file yet, so leaving the page asks first */
+  function saveLabels(rec) { rec.dirty = true; }
+  window.addEventListener('beforeunload', (e) => {
+    if (!recordings.some((r) => r.dirty && r.labels.some((l) => !l.provisional))) return;
+    e.preventDefault(); e.returnValue = '';
+  });
   /* a rep's label replaced whole, since a label is by time */
   function setLabel(rec, seg, fn) {
     const cur = Trace.labelOf(rec.labels, seg);
@@ -68,7 +70,11 @@ Moves.ready.then(function () {
   let lastLineage = null;
   function setMove(m) {
     move = m || move; $('move').value = move.id;
-    if (lineage() !== lastLineage) { lastLineage = lineage(); for (const r of recordings) loadLabels(r); }
+    /* another exercise: every recording starts again with no verdicts and no tag, its faults being another exercise's */
+    if (lineage() !== lastLineage) {
+      const first = lastLineage == null; lastLineage = lineage();
+      for (const r of recordings) { if (!first) { r.fileLabels = null; r.tag = null; } loadLabels(r); }
+    }
     rerun();
   }
   function save(blob, name) {
@@ -178,7 +184,7 @@ Moves.ready.then(function () {
   function takeIn(packed, fallbackName) {
     const { meta, frames } = Trace.unpack(packed);
     if (meta.move && Moves[meta.move] && meta.move !== move.id && !recordings.length && window.__builder) window.__builder.open(meta.move);
-    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], tag: meta.tag || null });
+    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFor: meta.lineage || meta.move || null, tag: meta.tag || null });
   }
   function loadTakes(d) {
     if (!d || !Array.isArray(d.takes)) throw new Error('not a takes file');
@@ -191,10 +197,11 @@ Moves.ready.then(function () {
     }
     e.target.value = '';
   };
-  const packed = (rec) => Trace.pack({ move: move.id, aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
-  function saveTrace(rec) { save(new Blob([JSON.stringify(packed(rec))], { type: 'application/json' }), `${move.id}-${String(rec.name).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-trace.json`); }
+  const packed = (rec) => Trace.pack({ move: move.id, lineage: lineage(), aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
+  function saveTrace(rec) { rec.dirty = false; save(new Blob([JSON.stringify(packed(rec))], { type: 'application/json' }), `${move.id}-${String(rec.name).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-trace.json`); }
   $('save-all').onclick = () => {
     if (!recordings.length) return;
+    for (const r of recordings) r.dirty = false;
     const out = { v: 1, kind: 'takes', move: move.id, saved: new Date().toISOString(), draft: window.__builder && window.__builder.touched ? window.__builder.fileOf() : undefined, takes: recordings.map(packed) };
     save(new Blob([JSON.stringify(out)], { type: 'application/json' }), `${move.id}-recordings-${new Date().toISOString().slice(0, 10)}.json`);
   };
@@ -230,7 +237,8 @@ Moves.ready.then(function () {
     let fig = null; try { fig = window.Figure ? Figure.figureOf(move) : null; } catch { fig = null; }
     const edge = cfgNow().edge;
     const room = fig && fig.A && fig.B ? (r) => Core.roomOf(fig.A, fig.B, r, rec.aspect, edge) : null;
-    rec.result = Trace.run(move, {}, rec.frames, rec.aspect, room ? { room } : undefined);
+    /* every rep in the recording, however many the set asks for */
+    rec.result = Trace.run(move, { countAll: true }, rec.frames, rec.aspect, room ? { room } : undefined);
     rec.reps = Trace.reps(rec.result, move);
     rec.misses = move.reps ? Trace.misses(rec.result, move) : [];
   }
@@ -726,7 +734,7 @@ Moves.ready.then(function () {
     }
     if (P && !move.bands.some((b) => b.key === P.key)) { const val = rd && rd.ok ? rd[P.of] : null; rows.push(`<tr><th>REP</th><td class="v">${fmtV(val, P.unit)}</td><td class="muted">starts ${P.dir > 0 ? '\u2265' : '\u2264'} ${fmtV(P.raiseAt, P.unit)}</td><td></td></tr>`); }
     const phase = o ? (o.ready ? (o.phase || (o.holding ? 'holding' : 'in position')) : 'set-up wait') : '\u2014';
-    rows.push(`<tr><th>coach</th><td colspan="3">${esc(phase)}${o && o.reps != null ? ` \u00b7 rep ${o.reps} of ${o.repTarget}` : ''}${o && o.holdMs ? ` \u00b7 held ${sec(o.holdMs)}` : ''}</td></tr>`);
+    rows.push(`<tr><th>coach</th><td colspan="3">${esc(phase)}${o && o.reps != null ? ` \u00b7 rep ${o.reps}${o.reps > o.repTarget ? ` (a set is ${o.repTarget})` : ` of ${o.repTarget}`}` : ''}${o && o.holdMs ? ` \u00b7 held ${sec(o.holdMs)}` : ''}</td></tr>`);
     const seen = rd ? (rd.ok ? `the ${rd.side === 'L' ? 'left' : 'right'} side` : (rd.why || 'not seen')) : 'no frame';
     const needed = move.needed || [], cert = rd && rd.ok && rd.points ? Math.round((100 * needed.reduce((a, k) => a + ((rd.points[k] && rd.points[k].v) || 0), 0)) / Math.max(1, needed.length)) : null;
     rows.push(`<tr class="${rd && rd.ok ? '' : 'out'}"><th>seen</th><td colspan="3">${esc(seen)}${cert != null ? ` \u00b7 needed points ${cert}% sure` : ''}${r && r.held ? ` \u00b7 ${r.held} joint${r.held === 1 ? '' : 's'} held` : ''}</td></tr>`);

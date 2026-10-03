@@ -626,7 +626,8 @@
     countRep(t, remark) {
       const total = this.cfg.repCount;
       this.reps += 1; this.repHoldMs = 0;
-      this.phase = this.reps >= total ? 'done' : 'down';
+      /* countAll (the studio): every rep in a recording is counted and judged, past the set's number */
+      this.phase = this.reps >= total && !this.cfg.countAll ? 'done' : 'down';
       this.countedAt = t;
       const tail = remark ? ` \u2014 ${remark}` : '';
       return this.phase === 'done'
@@ -835,7 +836,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03h';
+  const VER = '2026-10-03i';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
