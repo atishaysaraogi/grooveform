@@ -288,6 +288,17 @@ body.review .btn { border-width: 1px; border-color: var(--line); color: var(--in
 body.review .btn.primary { background: var(--accent); border-color: var(--accent); color: #06121f; }
 body.review .panel, body.review .read { border-width: 1px; }
 body.review .grid input, body.review .grid select { background: #0b0f16; border-width: 1px; }
+/* a select's list is drawn by the system, which keeps its own white unless told: the dark page's options say their colours outright */
+body.review select { background-color: #0b0f16; color: var(--ink); }
+body.review option, body.review optgroup { background-color: #161b22; color: #e8edf4; }
+/* the cue said at the playhead, under the picture */
+#stage-cue { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; min-height: 1.6em; padding: 4px 2px 0; font-size: .92rem; }
+#stage-cue .said { font-weight: 800; color: var(--ink); }
+#stage-cue .said.bad { color: var(--bad); }
+#stage-cue .faults { font-size: .82rem; font-weight: 700; color: var(--bad); }
+/* the graph's readout under the pointer */
+.lanes-tip { position: fixed; z-index: 50; pointer-events: none; max-width: 300px; background: #0b0f16; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: 600 .78rem/1.35 var(--font-body); box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.lanes-tip b { color: var(--ink); } .lanes-tip .bad { color: var(--bad); } .lanes-tip .good { color: var(--good); } .lanes-tip .dim { color: var(--muted); }
 .tabs { display: flex; gap: 6px; }
 .tab { background: var(--surface); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font: 700 .85rem var(--font-body); cursor: pointer; }
 .tab[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
@@ -456,7 +467,6 @@ body.studio .bar .note.bad { color: var(--bad); }
 .studio-grid .col > * { min-width: 0; }
 @media (min-width: 900px) {
   .studio-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  #stage-wrap { position: sticky; top: 8px; z-index: 5; background: var(--bg); padding-bottom: 6px; }
   .stage.small { max-height: 34vh; }
 }
 @media (max-width: 899px) {

@@ -19,6 +19,8 @@
      cues          the coach's cue table, for the fault words
      points        the model's raw landmarks this frame (all 33, or null), drawn with their
                    certainty when cfg.showPoints is on — a review aid
+     noCue         leave the cue and the fault words off the picture (the studio writes
+                   them under it instead)
    --------------------------------------------------------------------------- */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory(require('./core.js'));
@@ -158,14 +160,15 @@
       };
     };
     const L = stack(pad, 'left');
+    let leftEnd = pad;
     if (cfg.angles) for (const b of move.bands) {
       const val = live && r[b.of] != null ? `${Math.round(r[b.of])}°` : '—';
-      L(`${b.hud} ${val}`, `${b.note} ${bandText(b, cfg)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
+      leftEnd = L(`${b.hud} ${val}`, `${b.note} ${bandText(b, cfg)}`, live ? (v.good[b.key] ? C.good : C.bad) : C.dim);
     }
     /* which set this is, and under it the reps counted so far */
     const setNo = st.setNo || 0, setCount = cfg.setCount || 1;
-    if (setNo) L(`SET ${setNo} of ${setCount}`, out.between ? 'done' : '', C.ink);
-    if (setNo && move.reps) L(`REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : '', C.ink);
+    if (setNo) leftEnd = L(`SET ${setNo} of ${setCount}`, out.between ? 'done' : '', C.ink);
+    if (setNo && move.reps) leftEnd = L(`REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : '', C.ink);
 
     /* the countdown, which is what the set is: the hold, or the hold at the top of a rep */
     const R = stack(W - pad, 'right');
@@ -185,14 +188,15 @@
     ctx.save(); ctx.globalAlpha = 0.72;
     line('OnTrack', W - pad, H - pad - wmSize, wmSize, C.ink, 'right');
     ctx.restore();
-    let floor = H - pad - wmSize - fs * 0.5;
+    if (st.noCue) return;
+    const measure = (str) => ctx.measureText(str).width;
 
     /* the cue, kept on screen a moment after it was said so the recording shows
        it. Wrapped to the frame, never past its edge: a long instruction takes
        two or three lines, and shrinks a little rather than take four. */
-    const measure = (str) => ctx.measureText(str).width;
-    const banner = st.banner;
-    if (banner && st.now - banner.at < BANNER_MS) {
+    const banner = st.banner && st.now - st.banner.at < BANNER_MS ? st.banner : null;
+    let bl = null;
+    if (banner) {
       const maxW = W - pad * 2 - fs * 1.6;
       let size = fs, lines;
       for (;;) {
@@ -202,27 +206,51 @@
         size = Math.round(size * 0.88);
       }
       const lh = size * 1.22, bh = lh * lines.length + size;
-      const bw = Math.min(W - pad * 2, Math.max(...lines.map(measure)) + fs * 1.6);
-      const y = floor - bh;
-      ctx.fillStyle = 'rgba(13,17,23,.82)';
-      ctx.beginPath(); ctx.roundRect((W - bw) / 2, y, bw, bh, Math.min(bh / 2, fs * 1.1)); ctx.fill();
-      ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = banner.colour;
-      lines.forEach((str, i) => ctx.fillText(str, W / 2, y + size * 0.5 + lh * (i + 0.5)));
-      banner.lines = lines; banner.size = size; banner.width = bw; banner.frame = W;
-      floor = y - fs * 0.4;
+      bl = { lines, size, lh, bh, bw: Math.min(W - pad * 2, Math.max(...lines.map(measure)) + fs * 1.6) };
     }
-    /* every fault present right now, in words, above the cue: the voice keeps to
+    /* every fault present right now, in words, with the cue: the voice keeps to
        one thing at a time, the picture need not. Faults are the one thing in red. */
     const words = out.between ? (setNo >= setCount ? 'All sets done' : `Set ${setNo} done — tap Next set when you are ready`) : faultWords(out, st.cues);
-    if (words) {
-      const ws = fs * 0.62;
+    const ws = fs * 0.62;
+    let wl = [];
+    if (words) { ctx.font = `700 ${ws}px ${FONT}`; wl = Core.wrapWords(words, W - pad * 2, measure); }
+    const need = (bl ? bl.bh + fs * 0.4 : 0) + wl.length * ws * 1.2;
+    if (!need) return;
+
+    /* where they go: at the foot of the frame, unless the body is there and the
+       top is clearer — someone lying on the floor fills the bottom of the picture */
+    const floor = H - pad - wmSize - fs * 0.5;
+    const ceiling = Math.max(leftEnd, ry + (st.rec ? fs * 0.8 : 0), pad + fs * 0.9) + fs * 0.3;
+    const body = st.bodyBox;
+    const overlap = (a0, a1) => (body ? Math.max(0, Math.min(a1, body.bottom) - Math.max(a0, body.top)) : 0);
+    const atTop = !!body && ceiling + need <= floor && overlap(ceiling, ceiling + need) < overlap(floor - need, floor);
+
+    const drawBanner = (y) => {
+      ctx.font = `800 ${bl.size}px ${FONT}`;
+      ctx.fillStyle = 'rgba(13,17,23,.82)';
+      ctx.beginPath(); ctx.roundRect((W - bl.bw) / 2, y, bl.bw, bl.bh, Math.min(bl.bh / 2, fs * 1.1)); ctx.fill();
+      ctx.strokeStyle = banner.colour; ctx.lineWidth = Math.max(2, W * 0.003); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = banner.colour;
+      bl.lines.forEach((str, k) => ctx.fillText(str, W / 2, y + bl.size * 0.5 + bl.lh * (k + 0.5)));
+      banner.lines = bl.lines; banner.size = bl.size; banner.width = bl.bw; banner.frame = W; banner.top = y;
+    };
+    const drawWords = (y0) => {
       ctx.font = `700 ${ws}px ${FONT}`;
-      const wl = Core.wrapWords(words, W - pad * 2, measure);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = fs * 0.18; ctx.strokeStyle = C.shadow; ctx.lineJoin = 'round';
       ctx.fillStyle = out.between ? C.ink : C.bad;
-      wl.forEach((str, i) => { const y = floor - ws * 1.2 * (wl.length - i - 0.5); ctx.strokeText(str, W / 2, y); ctx.fillText(str, W / 2, y); });
+      wl.forEach((str, k) => { const y = y0 + ws * 1.2 * (k + 0.5); ctx.strokeText(str, W / 2, y); ctx.fillText(str, W / 2, y); });
+    };
+    if (atTop) {
+      /* the cue first, under the counters, and the fault words under it */
+      let y = ceiling;
+      if (bl) { drawBanner(y); y += bl.bh + fs * 0.4; }
+      if (wl.length) drawWords(y);
+    } else {
+      /* the cue at the foot, and the fault words above it */
+      let y = floor;
+      if (bl) { y -= bl.bh; drawBanner(y); y -= fs * 0.4; }
+      if (wl.length) drawWords(y - wl.length * ws * 1.2);
     }
   }
 
@@ -305,6 +333,17 @@
     ctx.restore();
   }
 
+  /* the body's height on the canvas, from the points the exercise draws: where the
+     cue must not go */
+  function bodyBox(st, A, fit) {
+    const r = st.reading; if (!r || !r.ok || !r.points) return null;
+    let top = Infinity, bottom = -Infinity;
+    for (const k of Object.keys(r.points)) { const p = r.points[k]; if (!p) continue; const y = fit.y + p.y * fit.h; top = Math.min(top, y); bottom = Math.max(bottom, y); }
+    if (!isFinite(top)) return null;
+    const m = fit.h * 0.06;   // the head above the ear, the hand past the wrist
+    return { top: top - m, bottom: bottom + m };
+  }
+
   /* the whole frame: the picture, all of it and none of it stretched (a squashed
      body reads squashed angles), the body over it, the HUD over that */
   function draw(ctx, st) {
@@ -327,7 +366,7 @@
     if (st.cfg.showPoints) drawPoints(ctx, st.points || null, A, fit, st.cfg, st.move, st.reading);
     ctx.restore();
     if (st.cfg.showPoints) drawPointTable(ctx, st.points || null, W, H, st.cfg, st.reading);
-    if (st.out) drawHud(ctx, st);
+    if (st.out) drawHud(ctx, Object.assign({}, st, { bodyBox: bodyBox(st, A, fit) }));
     return fit;
   }
 

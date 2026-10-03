@@ -88,3 +88,19 @@ test('the review aid draws every point the model returns, with its certainty, an
   Overlay.draw(ctx, Object.assign({}, st, { points: null, reading: null }));
   assert.ok(calls.some((c) => c[0] === 'fillText' && c[1][0] === 'no one found'));
 });
+
+test('the cue goes where the body is not: at the foot of the frame, or at the top when the body lies along the bottom', () => {
+  const ctx = new Proxy({}, { get: (_, k) => (k === 'measureText' ? (s) => ({ width: String(s).length * 8 }) : () => {}), set: () => true });
+  const M = Moves.bridge;
+  const at = (y0, y1) => { const P = {}; ['shoulder', 'hip', 'knee', 'ankle', 'heel', 'toe', 'ear'].forEach((k, i) => { P[k] = { x: 0.4 + i * 0.1, y: y0 + ((y1 - y0) * i) / 6 }; }); return P; };
+  const frame = (points, extra) => {
+    const banner = { text: 'Not so high — stop at one line, knees to shoulders', colour: Overlay.C.bad, at: 1000 };
+    Overlay.draw(ctx, Object.assign({ W: 640, H: 360, source: null, aspect: 16 / 9, move: M, cfg: { mirror: false, angles: false, setCount: 1 },
+      reading: { ok: true, points }, verdict: { ok: true, inPosition: true, good: {} },
+      out: { active: ['hipHigh'], reps: 0, repTarget: 10, leftMs: 0, targetMs: 3000, phase: 'up' }, setNo: 1, banner, now: 1500, cues: M.cues }, extra || {}));
+    return banner;
+  };
+  assert.ok(frame(at(0.7, 0.9)).top < 360 / 2, 'lying along the bottom: the cue is at the top');
+  assert.ok(frame(at(0.1, 0.45)).top > 360 / 2, 'up in the frame: the cue stays at the foot');
+  assert.equal(frame(at(0.7, 0.9), { noCue: true }).top, undefined, 'and left off the picture when asked');
+});

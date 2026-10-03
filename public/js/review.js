@@ -426,7 +426,7 @@ Moves.ready.then(function () {
   /* a fault named on the spot that the builder has now built: the labels follow the new id */
   function renameFault(from, to) { for (const r of recordings) { let changed = false; for (const l of r.labels) { const i = (l.faults || []).indexOf(from); if (i >= 0) { l.faults[i] = to; changed = true; } } if (changed) saveLabels(r); } renderReps(); }
 
-  let lanesReps = [], lanesMisses = [];
+  let lanesReps = [], lanesMisses = [], lanesGeom = null;
   const bandColour = (ok) => (ok == null ? C.dim : ok ? C.good : C.bad);
   const PH = { setup: 'rgba(232,237,244,.10)', down: 'rgba(90,169,255,.18)', up: 'rgba(53,208,127,.30)', lower: 'rgba(255,181,69,.30)', done: 'rgba(53,208,127,.5)' };
   function drawLanes() {
@@ -439,9 +439,11 @@ Moves.ready.then(function () {
     const ctx = lanes.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.textBaseline = 'top';
+    lanesGeom = null;
     if (!result) { ctx.fillStyle = C.dim; ctx.fillText('Load a video or a trace', 8, 8); return; }
     const rows = result.rows, dur = Math.max(1, trace.duration || rows[rows.length - 1].t);
     const c = result.cfg, left = 92, span = W - left;
+    lanesGeom = { left, span, dur, progH, P, bands, laneH, gap, yBands: progH + (P ? gap : 0), yb: progH + (P ? gap : 0) + bands.length * (laneH + gap), c };
     const x = (t) => left + (t / dur) * span, fw = Math.max(1, span / rows.length);
     const line = (Kf, y0, h, key, colour, width) => { ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.beginPath(); let pen = false; for (const r of rows) { const v = r.reading && r.reading.ok ? r.reading[key] : null; if (v == null) { pen = false; continue; } const px = x(r.t), py = Kf(v); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); } ctx.stroke(); };
     /* the rep lane: the reading a rep is judged on, its lines, its top, and the coach's phases behind it */
@@ -525,6 +527,59 @@ Moves.ready.then(function () {
     /* the playhead */
     if (video.duration) { const px = x(video.currentTime * 1000); ctx.strokeStyle = C.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke(); }
   }
+  /* ---------- the graph under the pointer: what a line or a red mark is, in words ---------- */
+  const lanesTip = document.createElement('div'); lanesTip.className = 'lanes-tip'; lanesTip.hidden = true; document.body.appendChild(lanesTip);
+  const PHASE_WORDS = { setup: 'waiting for the start position', down: 'at the start, between reps', up: 'on the way up / at the top', lower: 'lowering', done: 'set done' };
+  /* the faults on a measurement, and which of them a reading this far out would be */
+  function faultsFor(key, value, lo, hi) {
+    const side = value == null ? null : value > hi ? 'above' : value < lo ? 'below' : null;
+    return (move.spec.faults || []).filter((f) => f.measure === key && (!side || f.side === side));
+  }
+  function faultLine(f, o) {
+    const id = f.id, label = (move.cues[id] && move.cues[id].label) || f.label || id;
+    const when = (move.when && move.when[id]) || f.when || 'top';
+    const on = o && o.active && o.active.includes(id);
+    return `<span class="bad">‘${esc(label)}’</span> ${on ? '<b>— on now</b>' : `<span class="dim">— judged ${esc(W.whenWords(move.spec, when))}${o && o.phase ? ', not at this moment' : ''}</span>`}`;
+  }
+  function lanesHover(e) {
+    const g = lanesGeom; if (!g || !result) { lanesTip.hidden = true; return; }
+    const rect = lanes.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
+    if (px < g.left) { lanesTip.hidden = true; return; }
+    const t = Math.max(0, ((px - g.left) / g.span) * g.dur), r = rowAt(t), rd = r && r.reading, v = r && r.verdict, o = r && r.out;
+    const out = [`<b>${sec(t)}</b>${o ? ` <span class="dim">· ${esc(o.between ? 'set done' : PHASE_WORDS[o.phase] || '')}${o.holding ? ' · hold clock running' : ''}</span>` : ''}`];
+    if (!rd || !rd.ok) out.push('<span class="dim">no reading here: the body was not seen well enough</span>');
+    else if (g.P && py < g.progH) {
+      const P = g.P, val = rd[P.of];
+      out.push(`${esc(P.label)}: <b>${fmtV(val, P.unit)}</b> <span class="dim">· a rep starts ${P.dir > 0 ? 'above' : 'below'} ${fmtV(P.raiseAt, P.unit)}, back at the start ${P.dir > 0 ? 'below' : 'above'} ${fmtV(P.downAt, P.unit)}</span>`);
+      if (P.band) {
+        const { lo, hi } = Trace.bandRange(P.band, g.c), bad = v && v.good && v.good[P.key] === false;
+        out.push(bad ? `<span class="bad">red: outside the top band ${fmtV(lo, P.unit)} to ${fmtV(hi, P.unit)}</span>` : `<span class="dim">top band ${fmtV(lo, P.unit)} to ${fmtV(hi, P.unit)}</span>`);
+        if (bad) for (const f of faultsFor(P.key, val, lo, hi)) out.push(faultLine(f, o));
+      }
+    } else if (py < g.yb) {
+      const i = Math.floor((py - g.yBands) / (g.laneH + g.gap)), b = g.bands[i];
+      if (b) {
+        const { lo, hi } = Trace.bandRange(b, g.c), val = rd[b.of], u = unitOf(b.key), bad = v && v.good && v.good[b.key] === false;
+        out.push(`${esc(b.label || b.hud)}: <b>${fmtV(val, u)}</b> <span class="dim">· allowed ${fmtV(lo, u)} to ${fmtV(hi, u)}</span>`);
+        if (bad) { out.push('<span class="bad">red: outside what is allowed</span>'); for (const f of faultsFor(b.key, val, lo, hi)) out.push(faultLine(f, o)); }
+        else out.push('<span class="good">inside what is allowed</span>');
+      }
+    } else {
+      /* the coach's lane: the cue nearest the pointer, if one is close */
+      let best = null; for (const cue of result.cues) { const d = Math.abs(g.left + (cue.t / g.dur) * g.span - px); if (d < 8 && (!best || d < best.d)) best = { cue, d }; }
+      if (best) {
+        const cue = best.cue, label = move.cues[cue.id] && move.cues[cue.id].label;
+        out.push(`<span class="${isCorrection(cue) ? 'bad' : 'good'}">said at ${sec(cue.t)}: “${esc(cue.text)}”</span>${label && label !== cue.text ? ` <span class="dim">(${esc(label)})</span>` : ''}`);
+      } else out.push('<span class="dim">no cue here</span>');
+    }
+    if (o && o.active && o.active.length) out.push(`faults on now: <span class="bad">${esc(Overlay.faultWords(o, move.cues))}</span>`);
+    lanesTip.innerHTML = out.join('<br>'); lanesTip.hidden = false;
+    const tw = lanesTip.offsetWidth, th = lanesTip.offsetHeight;
+    lanesTip.style.left = Math.min(window.innerWidth - tw - 8, e.clientX + 14) + 'px';
+    lanesTip.style.top = (e.clientY + 14 + th > window.innerHeight ? e.clientY - th - 10 : e.clientY + 14) + 'px';
+  }
+  lanes.onmousemove = lanesHover;
+  lanes.onmouseleave = () => { lanesTip.hidden = true; };
   lanes.onclick = (e) => {
     if (!result) return;
     const rect = lanes.getBoundingClientRect(), left = 92, W = rect.width;
@@ -565,9 +620,19 @@ Moves.ready.then(function () {
       W: overlay.width, H: overlay.height, source: null, aspect: trace.aspect,
       move, cfg: Object.assign({}, Trace.defaults(move), { mirror: false, angles: true, setCount: 1, showPoints: allPoints() }),
       reading: r.reading, verdict: r.verdict, out: r.out, setNo: 1, points: f ? f.lm : null,
-      banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues,
+      banner: Overlay.bannerAt(result.cues, t, isCorrection), now: t, rec: false, cues: move.cues, noCue: true,
     });
+    stageCue(t, r);
     renderTracked(t);
+  }
+  /* the cue and the faults of the moment, under the picture rather than over the body */
+  function stageCue(t, r) {
+    const host = $('stage-cue'); if (!host) return;
+    const b = result && Overlay.bannerAt(result.cues, t, isCorrection), o = r && r.out;
+    const said = host.querySelector('.said'), faults = host.querySelector('.faults');
+    said.textContent = b ? b.text : '';
+    said.classList.toggle('bad', !!b && b.colour === Overlay.C.bad);
+    faults.textContent = o && !o.between ? Overlay.faultWords(o, move.cues) : '';
   }
   /* ---------- beside the video: what is tracked, at the playhead, and the take in numbers ---------- */
   const unitOf = (key) => { const m = (move.measurements || []).find((q) => q.key === key); const kind = m ? m.kind : 'angle'; return ['angle', 'tilt', 'floor', 'down', 'bend'].includes(kind) ? '\u00b0' : kind === 'distance' ? '%' : ''; };
