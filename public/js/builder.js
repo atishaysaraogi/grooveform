@@ -305,10 +305,13 @@ Moves.ready.then(function () {
   }
   function drop() {
     try { localStorage.removeItem(DRAFT); } catch { }
+    const was = source();
     Moves.draft(null);
-    const back = source() || Moves.list[0].id;
+    const back = was && Moves[was] ? was : Moves.list[0].id;
+    /* back to the draft's own library exercise: the same one, the verdicts stay; anywhere else is another exercise */
+    if (back !== was && window.__review && window.__review.newExercise) window.__review.newExercise();
     draft = null; editing = null;
-    open(Moves[back] ? back : Moves.list[0].id);
+    open(back);
   }
   const debounce = (fn) => { clearTimeout(timer); timer = setTimeout(fn, 250); };
 
@@ -1286,7 +1289,7 @@ Moves.ready.then(function () {
       if (j && j.move && j.defaults && !j.measurements) { /* a numbers file from an earlier studio: its numbers into the open exercise */ if (touch()) { Object.assign(draft.defaults, j.defaults); commit(true); } return; }
       if (touched() && !window.confirm(`Replace the draft of “${draft.name}” with this file? Download it first if you want it.`)) return;
       /* another exercise's file: the studio's verdicts go; the same exercise's (or a draft of the same library one) keeps them */
-      const same = draft && (j.id === draft.id || (source() && j.id === source()));
+      const same = draft && !['newmove', 'newexercise'].includes(j.id) && (j.id === draft.id || (source() && j.id === source()));
       if (!same && window.__review && window.__review.newExercise) window.__review.newExercise();
       Moves.draft(null);
       start(j, {}, { source: Moves[j.id] && !Moves[j.id].draft ? j.id : null, touched: true });

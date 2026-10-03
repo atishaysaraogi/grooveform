@@ -461,7 +461,7 @@
     newSet() {
       this.ready = false; this.readySince = 0; this.base = null; this.repRaw = null; delete this.cfg.floorAt;
       this.phase = 'down'; this.repHoldMs = 0; this.countedAt = 0; this.inSince = 0; this.runMs = 0; this.downSince = 0;
-      this.since = {}; this.offSince = 0; this.lastNudge = 0; this.peak = null; this.awaySince = 0;
+      this.since = {}; this.offSince = 0; this.lastNudge = 0; this.peak = null; this.awaySince = 0; this.unseenSince = 0;
       this.sets = (this.sets || 1) + 1; this.setFrom = this.reps; this.breakDue = false;
       if (!this.move.reps) { this.holdMs = 0; this.bestMs = 0; this.called = {}; this.holdDue = 0; this.wasIn = false; }   // a hold's set: its own clock
       if (typeof this.move.reset === 'function') this.move.reset();
@@ -474,16 +474,21 @@
          with no rep begun; a rep begun cancels it */
       if (cfg.countAll && this.ready) {
         const brk = (cfg.setBreakSec == null ? 8 : cfg.setBreakSec) * 1000;
-        const off = reps && this.phase === 'down' && !v.atStart;
-        if (!v.ok || off) {
-          if (!this.awaySince) this.awaySince = t;
-          if (t - this.awaySince >= brk) {
-            if (!v.ok && (reps || this.holdMs >= cfg.holdTargetSec * 1000)) this.newSet();
-            else if (off) this.breakDue = true;
-          }
+        if (!v.ok) {
+          /* out of sight: its own clock, a break only between reps (or after a finished hold) — a rep under way carries on */
+          if (!this.unseenSince) this.unseenSince = t;
+          if (t - this.unseenSince >= brk && (reps ? this.phase === 'down' : this.holdMs >= cfg.holdTargetSec * 1000)) this.newSet();
         } else {
-          if (this.breakDue && reps && this.phase === 'down' && v.atStart) this.newSet();
-          this.awaySince = 0; this.breakDue = false;
+          this.unseenSince = 0;
+          /* in the picture, away from the start: between reps, or up but never in position (a rest that reads as raised) */
+          const off = reps && !v.atStart && (this.phase === 'down' || !v.inPosition);
+          if (off) {
+            if (!this.awaySince) this.awaySince = t;
+            if (t - this.awaySince >= brk) this.breakDue = true;
+          } else if (this.breakDue && reps && v.atStart) {
+            if (this.phase === 'lower') this.awaySince = 0;   // a held rep on its way back: counted first, the new set on a later frame at the start
+            else this.newSet();
+          } else { this.awaySince = 0; this.breakDue = false; }
         }
       }
       const targetMs = cfg.holdTargetSec * 1000;
@@ -513,7 +518,8 @@
           if (!this.readySince) { this.readySince = t; this.floorSum = 0; this.floorN = 0; }
           /* the floor: the lowest point of the body over the start position, averaged, fixed from now on */
           if (r && r.floorY != null) { this.floorSum += r.floorY; this.floorN += 1; }
-          if (t - this.readySince >= (cfg.readyMs || 0)) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
+          /* a later set in the studio: back at the start for the return time is enough — the film need not hold still as the phone asks */
+          if (t - this.readySince >= ((this.sets || 1) > 1 ? (cfg.returnMs || 0) : (cfg.readyMs || 0))) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
         } else this.readySince = 0;
         if (!this.ready) {
           /* seen, but not at the start position for a while: a move can say what the start
@@ -868,7 +874,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03j';
+  const VER = '2026-10-03k';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so

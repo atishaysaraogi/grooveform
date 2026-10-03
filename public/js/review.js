@@ -40,7 +40,9 @@ Moves.ready.then(function () {
      they were given under: the same exercise, or a draft of the same library exercise. */
   try { localStorage.removeItem('ontrack.labels'); } catch { }   // verdicts this browser kept before: forgotten
   /* the exercise open now, as the names a trace may carry: the draft's own id and the library exercise it came from */
-  const openIds = () => { const b = window.__builder, d = b && b.draft; return new Set(d ? [d.id, b.source].filter(Boolean) : [move.id]); };
+  /* a new exercise not yet named carries the placeholder id every such draft shares: no identity, so no trace's verdicts */
+  const PLACEHOLDER = ['newmove', 'newexercise'];
+  const openIds = () => { const b = window.__builder, d = b && b.draft; return new Set(d ? [b.source || (PLACEHOLDER.includes(d.id) ? null : d.id), b.source ? d.id : null].filter(Boolean) : [move.id]); };
   const isMine = (rec) => { if (!rec.fileFrom || !rec.fileFrom.length) return true; const ids = openIds(); return rec.fileFrom.some((id) => ids.has(id)); };
   function loadLabels(rec) {
     rec.labels = [];
@@ -186,9 +188,9 @@ Moves.ready.then(function () {
   function takeIn(packed, fallbackName) {
     const { meta, frames } = Trace.unpack(packed);
     /* the first recording, of another exercise than the one open: that exercise is opened, unless a draft is being edited */
-    const from = [meta.move, meta.source].filter(Boolean), want = meta.source && Moves[meta.source] ? meta.source : meta.move;
+    const from = [meta.move, meta.lib].filter(Boolean), want = meta.lib && Moves[meta.lib] ? meta.lib : meta.move;
     if (want && Moves[want] && !recordings.length && window.__builder && !window.__builder.touched && !isMine({ fileFrom: from })) window.__builder.open(want);
-    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFrom: [meta.move, meta.source].filter(Boolean), tag: meta.tag || null });
+    return addRecording({ frames, aspect: meta.aspect || 16 / 9, name: meta.name || fallbackName || 'trace', source: 'trace', fps: meta.fps || null, duration: frames.length ? frames[frames.length - 1].t : 0, fileLabels: Array.isArray(meta.labels) ? meta.labels : [], fileFrom: [meta.move, meta.lib].filter(Boolean), tag: meta.tag || null });
   }
   function loadTakes(d) {
     if (!d || !Array.isArray(d.takes)) throw new Error('not a takes file');
@@ -201,7 +203,7 @@ Moves.ready.then(function () {
     }
     e.target.value = '';
   };
-  const packed = (rec) => Trace.pack({ move: (window.__builder && window.__builder.draft && window.__builder.draft.id) || move.id, source: (window.__builder && window.__builder.source) || undefined, aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
+  const packed = (rec) => Trace.pack({ move: (window.__builder && window.__builder.draft && window.__builder.draft.id) || move.id, lib: (window.__builder && window.__builder.source) || undefined, aspect: rec.aspect, name: rec.name, source: rec.source, fps: rec.fps || null, labels: rec.labels, tag: rec.tag || undefined }, rec.frames);
   function saveTrace(rec) { rec.dirty = false; save(new Blob([JSON.stringify(packed(rec))], { type: 'application/json' }), `${move.id}-${String(rec.name).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-trace.json`); }
   $('save-all').onclick = () => {
     if (!recordings.length) return;
@@ -738,7 +740,7 @@ Moves.ready.then(function () {
     }
     if (P && !move.bands.some((b) => b.key === P.key)) { const val = rd && rd.ok ? rd[P.of] : null; rows.push(`<tr><th>REP</th><td class="v">${fmtV(val, P.unit)}</td><td class="muted">starts ${P.dir > 0 ? '\u2265' : '\u2264'} ${fmtV(P.raiseAt, P.unit)}</td><td></td></tr>`); }
     const phase = o ? (o.ready ? (o.phase || (o.holding ? 'holding' : 'in position')) : 'set-up wait') : '\u2014';
-    rows.push(`<tr><th>coach</th><td colspan="3">${esc(phase)}${o && o.reps != null ? ` \u00b7 rep ${o.reps}${o.reps > o.repTarget ? ` (a set is ${o.repTarget})` : ` of ${o.repTarget}`}` : ''}${o && o.holdMs ? ` \u00b7 held ${sec(o.holdMs)}` : ''}</td></tr>`);
+    rows.push(`<tr><th>coach</th><td colspan="3">${esc(phase)}${o && o.reps != null ? ` \u00b7 rep ${o.reps}${o.reps > o.repTarget || (o.set || 1) > 1 ? ` (a set is ${o.repTarget})` : ` of ${o.repTarget}`}` : ''}${o && o.holdMs ? ` \u00b7 held ${sec(o.holdMs)}` : ''}</td></tr>`);
     const seen = rd ? (rd.ok ? `the ${rd.side === 'L' ? 'left' : 'right'} side` : (rd.why || 'not seen')) : 'no frame';
     const needed = move.needed || [], cert = rd && rd.ok && rd.points ? Math.round((100 * needed.reduce((a, k) => a + ((rd.points[k] && rd.points[k].v) || 0), 0)) / Math.max(1, needed.length)) : null;
     rows.push(`<tr class="${rd && rd.ok ? '' : 'out'}"><th>seen</th><td colspan="3">${esc(seen)}${cert != null ? ` \u00b7 needed points ${cert}% sure` : ''}${r && r.held ? ` \u00b7 ${r.held} joint${r.held === 1 ? '' : 's'} held` : ''}</td></tr>`);
@@ -1037,14 +1039,15 @@ Moves.ready.then(function () {
   }
   $('render-demo').onclick = renderDemo;
 
-  $('move').onchange = () => { if (!window.__builder) return; if ($('move').value !== move.id) newExercise(); window.__builder.open($('move').value); };
+  /* another exercise picked: the verdicts go — not for the draft's own library exercise, which is the same one */
+  $('move').onchange = () => { if (!window.__builder) return; const v = $('move').value; if (!isMine({ fileFrom: [v] })) newExercise(); window.__builder.open(v); };
   $('fig-edit').addEventListener('toggle', () => { if ($('fig-edit').open) requestAnimationFrame(() => animChanged()); });
   window.addEventListener('resize', () => { if ($('fig-edit').open) drawEditor(); });
 
   window.__review = {
     get demo() { return demo; },
     get recordings() { return recordings; }, get shown() { return shown; }, get trace() { return trace; }, get result() { return result; }, get move() { return move; },
-    get labels() { return shown ? shown.labels : []; }, newExercise,
+    get labels() { return shown ? shown.labels : []; }, newExercise, isMine,
     get fig() { return figureJson(); }, get ev() { return ev; }, editBox: fitBox, editTransform, setFig, animLoad, animChanged, refreshMoves, setMove, rerun, judgeAll,
     /* a moment in a recording, on the stage: from the builder's start-position lines */
     seek(t, id) { const rec = id ? recordings.find((r) => r.id === id) : shown; if (rec && rec !== shown) show(rec); if (video.duration) video.currentTime = t / 1000; else { drawOverlay(t); drawLanes(); } },

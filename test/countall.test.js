@@ -71,3 +71,32 @@ test('a slow rep after a pause is not a break, and "done" falls at the end of ea
   assert.equal(done.length, 1, 'one "done": ' + two.cues.map((c) => c.id).join(','));
   assert.ok(/^5 reps|^3 reps/.test(done[0].text) || /done/.test(done[0].text), done[0].text);
 });
+
+test('set breaks in the studio: a prompt second set, a lone unseen frame, a rep out of sight, a rest that reads as raised', () => {
+  const M = Moves.bridge, base = { countAll: true, repCount: 10, holdTargetSec: 2 };
+  const unseen = (p) => Object.assign({}, p, { vis: 0.05 });
+  const reps = (n) => { const out = []; for (let i = 0; i < n; i++) out.push(...Rig.rep()); return out; };
+  const counted = (res) => Trace.reps(res, M).filter((r) => r.counted).length;
+  const sets = (res) => Math.max(...res.rows.map((r) => (r.out && r.out.set) || 1));
+  /* the set-up wait left at its three seconds: after a break the second set starts a second and a half after lying back down */
+  const prompt = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [unseen(Rig.REST), 30000], [Rig.REST, 1500], ...reps(3)]), Rig.ASPECT);
+  assert.equal(counted(prompt), 6, 'a second set started promptly is counted');
+  assert.equal(sets(prompt), 2);
+  /* ten seconds hovering above the start, then one frame unseen, then a rep: still one set, the rep counted */
+  const lone = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [Rig.HALF, 10000], [unseen(Rig.HALF), 40], ...reps(1)]), Rig.ASPECT);
+  assert.equal(counted(lone), 4, 'a lone unseen frame does not cut the pending break short');
+  assert.equal(sets(lone), 1);
+  /* out of sight for eight and a half seconds at the top of a rep: the rep carries on and counts */
+  const top = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [Rig.TOP, 1000], [unseen(Rig.TOP), 8500], [Rig.TOP, 3000], [Rig.HALF, 1300], [Rig.REST, 2600]]), Rig.ASPECT);
+  assert.equal(counted(top), 4, 'a rep out of sight at the top still counts');
+  assert.equal(sets(top), 1);
+  /* between sets the hips rest half up (read as raised, never in position) with the feet re-planted: a break all the same */
+  const shifted = (p) => Object.assign({}, p, { foot: p.foot + 14 });
+  const s2 = [[shifted(Rig.REST), 3000]]; for (let i = 0; i < 3; i++) s2.push([shifted(Rig.TOP), 3500], [shifted(Rig.HALF), 1300], [shifted(Rig.REST), 2600]);
+  const raisedRest = Object.assign({}, Rig.REST, { dip: 30, hipAng: 150 });
+  const half = Trace.run(M, base, Rig.take([[Rig.REST, 4000], ...reps(3), [raisedRest, 10000], ...s2]), Rig.ASPECT);
+  const hr = Trace.reps(half, M);
+  assert.equal(sets(half), 2, 'a rest that reads as raised is a break once back at the start');
+  assert.equal(hr.filter((r) => r.counted).length, 6, hr.map((r) => (r.counted ? 'rep' : 'x') + '[' + r.faults.map((f) => f.id) + ']').join(' '));
+  assert.ok(hr.filter((r) => r.counted).every((r) => !r.faults.some((f) => f.id === 'heelsUp')), 'the second set against its own start');
+});

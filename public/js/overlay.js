@@ -169,7 +169,7 @@
     const setNo = st.setNo || 0, setCount = cfg.setCount || 1;
     if (setNo) leftEnd = L(setNo > setCount ? `SET ${setNo}` : `SET ${setNo} of ${setCount}`, out.between ? 'done' : '', C.ink);
     /* the studio counts on past the set's number: then the count alone, and what a set is under it */
-    const past = out.reps > out.repTarget;
+    const past = out.reps > out.repTarget || (out.set || 1) > 1;
     if (setNo && move.reps) leftEnd = L(past ? `REP ${out.reps}` : `REP ${out.reps} of ${out.repTarget}`, out.done ? 'done' : past ? `a set is ${out.repTarget}` : '', C.ink);
 
     /* the countdown, which is what the set is: the hold, or the hold at the top of a rep */
