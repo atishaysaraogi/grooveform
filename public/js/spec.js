@@ -94,8 +94,10 @@
     }
     return P[name] || null;
   }
-  /* 'floor': not a landmark but the level the body rests on, taken as the lowest point of the body
-     the model is sure of this frame (a planted foot standing, the back or the side lying down).
+  /* 'floor': not a landmark but the level the body rests on: the lowest point of the body the model
+     is sure of, averaged over the start position and fixed when the coaching begins (the coach
+     keeps it as cfg.floorAt), so a heel or a hip that lifts later does not take the floor with it.
+     As the second line of an angle only its direction counts: level.
      It can be the reference of a height, or the second line of an angle between two lines. */
   const FLOOR = 'floor';
   function floorY(P, both, cfg) {
@@ -138,8 +140,9 @@
         if (m.c === FLOOR) { const f = facing || 1; x = a.p && b.p ? Core.betweenLines(a.p, b.p, { x: 0, y: 0 }, { x: f, y: 0 }) : null; used.d = FLOOR; break; }
         x = a.p && b.p && c.p && d.p ? Core.betweenLines(a.p, b.p, c.p, d.p) : null; break; }
       case 'distance': { const a = pt('a'), b = pt('b'); used = { a: a.name, b: b.name };
-        /* the floor as the reference of a height: level with the lowest point of the body the model is sure of */
-        if (m.a === FLOOR && b.p) { const fy = floorY(P, both, cfg); a.p = fy == null ? null : { x: b.p.x, y: fy, v: 1 }; }
+        /* the floor as the reference of a height: the level of the lowest point of the body seen in
+           the start position, fixed when the coaching begins (cfg.floorAt); until then, this frame's */
+        if (m.a === FLOOR && b.p) { const fy = cfg && cfg.floorAt != null ? cfg.floorAt : floorY(P, both, cfg); a.p = fy == null ? null : { x: b.p.x, y: fy, v: 1 }; }
         if (a.p && b.p) {
           /* `axis`: the height of b over a ('y', + above) or how far b is ahead of a the way the body
              faces ('x'), each as a share of `per` — a hand's width is two degrees at a metre's
@@ -343,7 +346,7 @@
       const facing = facingOf(P, both, cfg, s.side);
       /* `nulls`: the readings whose null is meant — a gate closed — and is to pass through
          the smoothing as null rather than hold the last value */
-      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, near: s.near, angles: ms.map(nameOf), nulls: ms.filter((m) => m.gate).map(nameOf), of: {} };
+      const r = { ok: true, side: s.side, vis: s.vis, points: P, other: both[OTHER[s.side]], facing, near: s.near, floorY: floorY(P, both, cfg), angles: ms.map(nameOf), nulls: ms.filter((m) => m.gate).map(nameOf), of: {} };
       const values = {};   // by key, for a sum's terms
       const ctx = { P, both, cfg, facing, Core, values, side: s.side };
       for (const m of ms) { const got = measure(m, ctx); r[nameOf(m)] = got.x; values[m.key] = got.x; r.of[m.key] = got.used; }
@@ -585,7 +588,7 @@
         break; }
       case 'distance': {
         const pa = PLAIN(first(m.a)), pb = PLAIN(first(m.b)), per = m.per ? `, as % of ${perOf()}` : '';
-        if (m.axis === 'y' && m.a === FLOOR) { what = `the height of ${pointWords(m.b)} over the floor${per}`; meaning = `0 is on the floor (level with the lowest point of the body); + ${pointWords(m.b)} above it.`; short = camel(`${pb} floor height`); zero = 'the floor'; }
+        if (m.axis === 'y' && m.a === FLOOR) { what = `the height of ${pointWords(m.b)} over the floor${per}`; meaning = `0 is on the floor (the lowest point of the body in the start position); + ${pointWords(m.b)} above it.`; short = camel(`${pb} floor height`); zero = 'the floor'; }
         else if (m.axis === 'y') { what = `the height of ${pointWords(m.b)} over ${pointWords(m.a)}${per}`; meaning = `0 is level; + ${pointWords(m.b)} above ${pointWords(m.a)}.`; short = camel(`${pb} height`); zero = 'level'; }
         else if (m.axis === 'x') { what = `how far ${pointWords(m.b)} is ${fwd} of ${pointWords(m.a)}${per}`; meaning = `0 is one over the other; + ${fwd}, − ${back}.`; short = camel(`${pb} ahead`); zero = 'stacked'; }
         else {

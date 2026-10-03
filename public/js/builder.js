@@ -66,7 +66,7 @@ Moves.ready.then(function () {
     down: 'how far the line is lifted from hanging straight down: 0 hanging, 90 level, 180 straight up. A thigh from the hip, an arm from the shoulder.',
     rise: 'how far the second point sits above the first, as an angle off level: + above, − below. Good for two points close together (heel and toe).',
     lines: 'the angle between two lines, each from its first point to its second, compared by direction alone — as if both started from the same point, wherever they are: 0 is parallel the same way, 90 square, 180 opposite. A shin and a trunk kept parallel in a squat; a thigh against the trunk. The second line can be the floor: then 0 is the first line level pointing the way the body faces, 90 square to the floor, 180 level pointing back.',
-    height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle. The first can be the floor — the lowest point of the body the model is sure of — for a point’s own height. Read “as the change since this rep began” it is how far the point has risen since the rep started.',
+    height: 'the height of the second point over the first as a share of a limb: a small lift far from its reference wants a length, not an angle. The first can be the floor — the lowest point of the body seen in the start position, fixed when the coaching begins — for a point’s own height. Read “as the change since this rep began” it is how far the point has risen since the rep started.',
     ahead: 'how far the second point is ahead of the first the way the body faces, as a share of a limb: a knee past the toes by so much.',
     distance: 'the straight distance between the two points as a share of a limb: feet apart, a hand from the shoulder.',
     bend: 'how far the middle point sits off the straight line between the other two, + above: a back sagging or arching between shoulder and ankle. The degrees are measured at the middle point: 180 less the angle there between the two ends, so 0 is on the line, and it reads the same near the camera or far from it.',
@@ -416,8 +416,8 @@ Moves.ready.then(function () {
   function valueOf(m, K) {
     if (!K || !m) return null;
     const view = figView(), facing = facingOf(K, view);
-    /* the floor in the drawing: level with its lowest point */
-    const floorY = () => { let y = null; for (const k of Object.keys(K)) { const q = K[k]; if (Array.isArray(q) && (y == null || q[1] > y)) y = q[1]; } return y; };
+    /* the floor in the drawing: level with the lowest point of the start pose (A), the same in both poses */
+    const floorY = () => { const F = (draft.figure && draft.figure.points && draft.figure.points.A) || K; let y = null; for (const k of Object.keys(F)) { const q = F[k]; if (Array.isArray(q) && (y == null || q[1] > y)) y = q[1]; } return y; };
     const P = (n) => (n === 'floor' ? null : n ? pointFor(Array.isArray(n) ? n[0] : n, K, view) : null);
     let x = null;
     try {
@@ -530,7 +530,7 @@ Moves.ready.then(function () {
       } else {
         if (floorSlot(m) === slot) {
           const g = el('div', 'lm-grid'), fb = btn(m.kind === 'lines' ? 'the floor (a level line)' : 'the floor', () => { pop.remove(); fillSlot(m, slot, 'floor'); }, 'tiny-btn');
-          fb.title = 'The floor: level, at the lowest point of the body the model is sure of — a planted foot standing, the back or the side lying down';
+          fb.title = m.kind === 'lines' ? 'The floor as a line: level. Only its direction counts, so where the floor is does not matter' : 'The floor: the lowest point of the body seen in the start position (a planted foot standing, the back or the side lying down), fixed when the coaching begins';
           if (cur === 'floor') fb.setAttribute('aria-pressed', 'true');
           g.appendChild(fb); body.appendChild(el('div', 'lm-title', m.kind === 'lines' ? 'the second line' : 'over')); body.appendChild(g);
         }

@@ -105,3 +105,20 @@ test('a fault flagged at once, after its own time, or after the shared wait', ()
   const f = JSON.parse(JSON.stringify(Moves.bridge.spec)); f.faults[0].afterSec = -1;
   assert.ok(Spec.check(f).some((p) => p.level === 'error' && p.at.endsWith('.afterSec')), 'a negative wait is an error');
 });
+
+test('the floor is fixed in the start position: a point lifting later does not take it along', () => {
+  const f = JSON.parse(JSON.stringify(Moves.bridge.spec));
+  f.measurements.push({ key: 'hipup', kind: 'distance', axis: 'y', a: 'floor', b: 'hip', per: ['hip', 'knee'], times: 100, label: 'Hip', hud: 'H', role: 'reading' });
+  const M = Spec.compile(f, Core); if (M.reset) M.reset();
+  const c = new Core.Coach(M, {});
+  let restFloor = null;
+  for (const { t, lm } of Rig.take([[Rig.REST, 4000]])) { const r = M.read(lm, Rig.ASPECT, c.cfg); if (!c.ready) restFloor = r.floorY; c.step(r, t); }
+  assert.ok(c.ready && c.cfg.floorAt != null, 'fixed once the coaching begins');
+  assert.ok(Math.abs(c.cfg.floorAt - restFloor) < 1e-9, 'the lowest point over the start position');
+  /* every point lifted together, as if the body rose off the floor: measured against the fixed floor it reads higher */
+  const P = { hip: at(0.5, 0.3), knee: at(0.5, 0.2), heel: at(0.5, 0.4) };
+  const free = read(f.measurements.at(-1), P), fixed = Spec.measure(f.measurements.at(-1), { P, both: { L: P, R: {} }, cfg: Object.assign({ vis: 0.5 }, { floorAt: c.cfg.floorAt }), facing: 1, Core, values: {}, side: 'L' }).x;
+  assert.ok(fixed > free + 50, 'against the fixed floor, not this frame\'s lowest point: ' + fixed.toFixed(0) + ' vs ' + free.toFixed(0));
+  c.reset();
+  assert.equal(c.cfg.floorAt, undefined, 'a new set finds the floor again');
+});

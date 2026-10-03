@@ -389,7 +389,7 @@
       this.base = null;                 // readings at the start position, for a move that measures change from it
       if (typeof move.reset === 'function') move.reset();   // the side the move held last session goes with it
     }
-    reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; }
+    reset() { const { move, cfg } = this; Object.assign(this, new Coach(move)); this.cfg = cfg; delete cfg.floorAt; }
 
     /* Nothing is said before `untilMs` on the coach's clock: the opening words
        are being said, and a correction over them is two voices at once. */
@@ -480,8 +480,12 @@
       this.lostSince = 0;
       if (!this.ready) {
         const at = this.move.ready ? !!this.move.ready(r, v, cfg) : reps ? !!v.atStart : true;
-        if (at) { if (!this.readySince) this.readySince = t; if (t - this.readySince >= (cfg.readyMs || 0)) this.ready = true; }
-        else this.readySince = 0;
+        if (at) {
+          if (!this.readySince) { this.readySince = t; this.floorSum = 0; this.floorN = 0; }
+          /* the floor: the lowest point of the body over the start position, averaged, fixed from now on */
+          if (r && r.floorY != null) { this.floorSum += r.floorY; this.floorN += 1; }
+          if (t - this.readySince >= (cfg.readyMs || 0)) { this.ready = true; if (this.floorN) cfg.floorAt = this.floorSum / this.floorN; else if (r && r.floorY != null) cfg.floorAt = r.floorY; }
+        } else this.readySince = 0;
         if (!this.ready) {
           /* seen, but not at the start position for a while: a move can say what the start
              needs (ready.nudge), once, then on the slow clock */
@@ -831,7 +835,7 @@
      and the Review page write and read the same stamp. */
   const stampOf = (m) => JSON.stringify([m.v == null ? 1 : m.v, m.defaults]);
   /* Stamped onto every script URL so a phone that cached the last version loads this one. Bumped with each release. */
-  const VER = '2026-10-03g';
+  const VER = '2026-10-03h';
 
   /* Words laid into lines no wider than `maxWidth`, by `measure` (a string's
      width). A single word wider than the line is broken where it must be, so
